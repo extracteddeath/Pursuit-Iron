@@ -46,7 +46,8 @@ data class ProgramProgressionAssignment(
     /** Explicit week overrides are authoritative, never displaced by basic DP. */
     val authoredWeekNumbers:Set<Int>,
     val explanation:String,
-    val selectedStyle:NativeProgressionStyle?=null
+    val selectedStyle:NativeProgressionStyle?=null,
+    val savedMethod:SavedProgressionMethod?=null
 ) {
     val mayChangeSavedProgram:Boolean get()=false
     val mayModifyIssuedSet:Boolean get()=false
@@ -73,6 +74,36 @@ sealed interface ProgramProgressionPlan {
  * explicitly here so generation cannot accidentally substitute linear DP.
  */
 object BasicProgramProgressionPlanDomain {
+    /** One canonical mapping for generated, reviewed decisions to stored
+     * per-slot choices. Authoring/codec never invents a second strategy. */
+    fun savedChoice(assignment:ProgramProgressionAssignment):SavedProgressionMethod? =
+        when(assignment.route) {
+            ProgramProgressionRoute.BASIC_BODYWEIGHT_REPS ->
+                SavedProgressionMethod.BODYWEIGHT_REPS
+            ProgramProgressionRoute.MANUAL -> SavedProgressionMethod.MANUAL
+            ProgramProgressionRoute.BASIC_WEIGHTED ->
+                when(assignment.basicStrategy) {
+                    BasicProgressionStrategy.MANUAL_LOGGING ->
+                        SavedProgressionMethod.MANUAL
+                    BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION ->
+                        SavedProgressionMethod.DOUBLE
+                    BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION ->
+                        SavedProgressionMethod.DYNAMIC
+                    BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION ->
+                        SavedProgressionMethod.LINEAR
+                    BasicProgressionStrategy.REP_TARGET_PROGRESSION ->
+                        SavedProgressionMethod.REP_TARGETS
+                    BasicProgressionStrategy.REP_LADDER_PROGRESSION ->
+                        SavedProgressionMethod.LADDER
+                    BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION ->
+                        SavedProgressionMethod.ASSISTANCE_DOUBLE
+                    null -> null
+                }
+            // Other routes are deliberate specialist plans/holds, not an
+            // earned baseline strategy masquerading as a stored method.
+            else -> null
+        }
+
     fun review(
         cycle:CustomTrainingCycle,
         /** Only the explicitly selected slots can use independent per-set load progression. */
@@ -140,7 +171,32 @@ object BasicProgramProgressionPlanDomain {
                 it.weekday==day.weekday && it.slotId==slot.slotId
             }.map {it.weekInBlock}.toSet()
             val amplifier=working.any {it.amplifier!=null}
-            val style=selectedStyles[key]
+            val saved=slot.progressionMethod
+            if(saved!=null && (key in selectedPerSetDynamic ||
+                key in selectedStrategies || key in selectedStyles))
+                return no("The saved progression owns this slot; edit its reviewed source revision rather than overlaying a second selection.")
+            val savedStyle=when(saved) {
+                SavedProgressionMethod.AUTO -> NativeProgressionStyle.AUTO
+                SavedProgressionMethod.DOUBLE -> NativeProgressionStyle.DOUBLE
+                SavedProgressionMethod.DYNAMIC -> NativeProgressionStyle.DYNAMIC
+                SavedProgressionMethod.LADDER -> NativeProgressionStyle.LADDER
+                SavedProgressionMethod.LINEAR -> NativeProgressionStyle.LINEAR
+                SavedProgressionMethod.WAVE -> NativeProgressionStyle.WAVE
+                SavedProgressionMethod.E1RM -> NativeProgressionStyle.E1RM
+                else -> null
+            }
+            val savedBasic=when(saved) {
+                SavedProgressionMethod.MANUAL ->
+                    BasicProgressionStrategy.MANUAL_LOGGING
+                SavedProgressionMethod.REP_TARGETS ->
+                    BasicProgressionStrategy.REP_TARGET_PROGRESSION
+                SavedProgressionMethod.ASSISTANCE_DOUBLE ->
+                    BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION
+                else -> null
+            }
+            if(saved==SavedProgressionMethod.BODYWEIGHT_REPS && !bodyweight)
+                return no("Saved bodyweight rep progression cannot apply to a loaded station.")
+            val style=selectedStyles[key] ?: savedStyle
             val styledBasic=when(style) {
                 NativeProgressionStyle.DOUBLE ->
                     BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION
@@ -154,7 +210,7 @@ object BasicProgramProgressionPlanDomain {
                 NativeProgressionStyle.WAVE,
                 NativeProgressionStyle.E1RM, null -> null
             }
-            val requested=selectedStrategies[key] ?: styledBasic ?:
+            val requested=selectedStrategies[key] ?: savedBasic ?: styledBasic ?:
                 if(key in selectedPerSetDynamic)
                     BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION else null
             if(style==NativeProgressionStyle.WAVE && authored.isEmpty())
@@ -179,7 +235,8 @@ object BasicProgramProgressionPlanDomain {
                     (!assistance &&
                         requested==BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION) ||
                     ((requested==BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION ||
-                        requested==BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION) &&
+                        requested==BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION ||
+                        requested==BasicProgressionStrategy.REP_LADDER_PROGRESSION) &&
                         !sameWeights)))
                 return no("The requested basic progression cannot operate on this authored set scheme.")
             if(selectedDynamic && (bodyweight || assistance))
@@ -266,7 +323,7 @@ object BasicProgramProgressionPlanDomain {
             }
             assignments+=ProgramProgressionAssignment(
                 key,slot.exerciseId,route,strategy,working.size,amplifier,
-                Collections.unmodifiableSet(authored),note,style)
+                Collections.unmodifiableSet(authored),note,style,saved)
         }
         return ProgramProgressionPlan.Ready(
             Collections.unmodifiableList(assignments))

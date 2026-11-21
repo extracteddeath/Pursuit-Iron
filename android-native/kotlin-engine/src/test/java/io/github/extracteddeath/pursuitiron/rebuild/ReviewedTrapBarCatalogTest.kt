@@ -137,7 +137,7 @@ class ReviewedTrapBarCatalogTest {
         assertEquals(FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,old.status)
         assertEquals(FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,fresh.status)
         assertEquals("v9",old.policy?.revision)
-        assertEquals("v11",fresh.policy?.revision)
+        assertEquals("v12",fresh.policy?.revision)
         assertEquals(TrainingMuscleCoverage.legacyV2,old.policy?.selectedBounds?.map{it.muscle})
         assertEquals(TrainingMuscleCoverage.legacyV4,fresh.policy?.selectedBounds?.map{it.muscle})
         assertEquals(old.prescription?.sessions,fresh.prescription?.sessions)

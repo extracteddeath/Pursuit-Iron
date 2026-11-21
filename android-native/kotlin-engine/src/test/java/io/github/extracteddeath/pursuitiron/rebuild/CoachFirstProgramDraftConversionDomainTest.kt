@@ -45,9 +45,54 @@ class CoachFirstProgramDraftConversionDomainTest {
         assertTrue(plan.assignments.all{
             it.basicStrategy==BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION
         })
+        // This independently authored fixture is intentionally NOT a new
+        // first-program v12 policy, so its old cycle is byte-compatible.
+        assertTrue(savedSlots.all{it.progressionMethod==null})
+        val reopenedPlan=BasicProgramProgressionPlanDomain.review(
+            cycle,reviewedCatalog=source.catalog.associateBy{it.exerciseId},
+            experience=checkNotNull(source.setup.reviewed).experience)
+            as ProgramProgressionPlan.Ready
+        assertEquals(plan.assignments.map{it.basicStrategy},
+            reopenedPlan.assignments.map{it.basicStrategy})
         assertFalse(proposed.mayApproveProgram)
         assertFalse(proposed.mayIssueWorkout)
         assertEquals(candidate,reviewed())
+    }
+
+    @Test fun v12PersistsChoicesWhileLegacyPolicyNeverRewritesExistingCycles() {
+        val source=GeneratedAdaptiveBlockFixture.generation()
+        val legacy=reviewed()
+        val modern=legacy.copy(policy=checkNotNull(legacy.policy).copy(
+            policyId=CoachFirstProgramStartDomain.POLICY_VERSION))
+        val old=CoachFirstProgramDraftConversionDomain.propose(
+            legacy,source.setup,source.catalog,"same-id","Same title",4)
+        val next=CoachFirstProgramDraftConversionDomain.propose(
+            modern,source.setup,source.catalog,"same-id","Same title",4)
+        assertEquals(FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT,old.status)
+        assertEquals(FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT,next.status)
+        val oldCycle=checkNotNull(old.cycle)
+        val nextCycle=checkNotNull(next.cycle)
+        assertTrue(oldCycle.blocks.flatMap{it.days}.flatMap{it.slots}
+            .all{it.progressionMethod==null})
+        assertTrue(nextCycle.blocks.flatMap{it.days}.flatMap{it.slots}
+            .all{it.progressionMethod==SavedProgressionMethod.DYNAMIC})
+        // Only saved methods and the separately versioned explanatory source
+        // differ. No added, reduced, reshuffled, or transformed working sets.
+        assertEquals(oldCycle.blocks.map{block->
+            block.copy(days=block.days.map{day->
+                day.copy(slots=day.slots.map{slot->
+                    slot.copy(progressionMethod=null)
+                })
+            })
+        }, nextCycle.blocks.map{block->
+            block.copy(days=block.days.map{day->
+                day.copy(slots=day.slots.map{slot->
+                    slot.copy(progressionMethod=null)
+                })
+            })
+        })
+        assertEquals(legacy.policy?.revision,
+            modern.policy?.revision)
     }
 
     @Test fun invalidProgramNameAndUnresolvedPrescriptionNeverBecomeSavedDraft() {

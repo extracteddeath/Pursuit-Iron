@@ -18,7 +18,7 @@ import java.util.Collections
  */
 internal object NativeCustomCycleDraftCodec {
     private const val MAGIC = 0x50494344 // PICD
-    private const val VERSION = 5
+    private const val VERSION = 6
     const val MAX_BYTES = 2_500_000
     private val id = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
@@ -119,12 +119,18 @@ internal object NativeCustomCycleDraftCodec {
         writeBoolean(value.pinned)
         writeUTF(value.coachNote)
         if(version>=3)optionalString(value.machineInstanceId)
+        if(version>=6) {
+            writeBoolean(value.progressionMethod!=null)
+            value.progressionMethod?.let{enum(it)}
+        }
     }
     private fun DataInputStream.slot(version:Int): CustomExerciseSlot =
         CustomExerciseSlot(readUTF(), readUTF(), enum<ComposerRole>(),
             items(20) { set(version) }, optionalString(), optionalString(),
             readBoolean(), readUTF(),
-            if(version>=3)optionalString() else null)
+            if(version>=3)optionalString() else null,
+            if(version>=6 && readBoolean())
+                enum<SavedProgressionMethod>() else null)
 
     private fun DataOutputStream.day(value: CustomTrainingDay,version:Int) {
         writeInt(value.weekday)
@@ -263,7 +269,16 @@ internal object NativeCustomCycleDraftCodec {
                 }} || value.weekOverrides.values.any{rows->rows.any{row->
                     row.sets.any{it.amplifier?.secondDropLoad!=null}
                 }}
-                val version=if(hasSecondDrop)VERSION else if(hasStages)4
+                val hasSavedProgression=value.blocks.any{block->
+                    block.days.any{day->day.slots.any{
+                        it.progressionMethod!=null
+                    }}
+                }
+                // Legacy byte-for-byte fingerprints are crucial to restored
+                // reviews and already-signed cycle receipts. Only a new
+                // explicitly saved choice opts into the new wire version.
+                val version=if(hasSavedProgression)VERSION else if(hasSecondDrop)5
+                    else if(hasStages)4
                     else if(hasMachineBinding)3
                     else if(hasNewTime)2 else 1
                 writeInt(MAGIC); writeInt(version)

@@ -771,7 +771,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
             "one_arm_db_row","db_rdl")))
         if(includeNewTargets) {
             assertTrue(selected.containsAll(setOf("serratus-pushup","tibialis-raise")))
-            assertEquals("v11",inputs.policiesByPhase.getValue(phase).revision)
+            assertEquals("v12",inputs.policiesByPhase.getValue(phase).revision)
             assertEquals(TrainingMuscleCoverage.legacyV4,inputs.policiesByPhase.getValue(phase).selectedBounds.map{it.muscle})
             for(slot in days.flatMap{it.slots}.filter{it.exerciseId in setOf("serratus-pushup","tibialis-raise")})
                 assertTrue(slot.sets.all{it.load==DraftSetLoad.ExplicitBodyweight && it.type==DraftSetType.WORKING})

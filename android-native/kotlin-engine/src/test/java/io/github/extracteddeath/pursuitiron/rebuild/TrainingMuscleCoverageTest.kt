@@ -127,7 +127,8 @@ class TrainingMuscleCoverageTest {
     @Test fun originalFirstProgramV11Remains22RowsWhenNewNeckV5Exists() {
         val input=StarterProgramReleaseFixture.request(
             ComposerSplit.FULL_BODY,TrainingPhase.HYPERTROPHY)
-        val original=CoachFirstProgramStartDomain.review(input)
+        val original=CoachFirstProgramStartDomain.review(input.copy(
+            policyVersion=CoachFirstProgramStartDomain.V11_POLICY_VERSION))
         assertEquals(FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,
             original.status)
         assertEquals("v11",original.policy?.revision)

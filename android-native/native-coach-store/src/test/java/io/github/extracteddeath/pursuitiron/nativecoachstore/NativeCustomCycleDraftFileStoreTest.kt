@@ -95,6 +95,52 @@ class NativeCustomCycleDraftFileStoreTest {
         assertNull(CustomTrainingCycleDomain.review(blank, emptyList()).verifiedDraft)
     }
 
+    @Test fun savedPerSlotProgressionSurvivesBinaryCodecAndColdOwnerRecovery() {
+        val legacy=original()
+        // Old custom training-cycle bytes and signoff fingerprints remain
+        // unchanged until the athlete deliberately sets a new method.
+        val before=NativeCustomCycleDraftCodec.encode(legacy)
+        assertEquals(1,java.nio.ByteBuffer.wrap(before).getInt(4))
+        assertEquals(legacy,NativeCustomCycleDraftCodec.decode(before))
+        assertTrue(legacy.blocks.flatMap{it.days}.flatMap{it.slots}
+            .all {it.progressionMethod==null})
+
+        val base=legacy.blocks.first()
+        val upper=base.days.first()
+        val changed=legacy.copy(blocks=listOf(
+            base.copy(days=listOf(upper.copy(slots=upper.slots.map {slot->
+                when(slot.slotId) {
+                    "bench-1" -> slot.copy(
+                        progressionMethod=SavedProgressionMethod.DOUBLE)
+                    "pull-1" -> slot.copy(
+                        progressionMethod=SavedProgressionMethod.BODYWEIGHT_REPS)
+                    else -> slot
+                }
+            }))),
+            legacy.blocks.last().copy(days=legacy.blocks.last().days.map {day->
+                day.copy(slots=day.slots.map{it.copy(
+                    progressionMethod=SavedProgressionMethod.LINEAR)})
+            })))
+        val payload=NativeCustomCycleDraftCodec.encode(changed)
+        assertEquals(6,java.nio.ByteBuffer.wrap(payload).getInt(4))
+        assertEquals(changed,NativeCustomCycleDraftCodec.decode(payload))
+        assertEquals(saved(1),repository().save("owner-1","cycle-1",0,changed))
+        val cold=repository().read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found
+        assertEquals(changed,cold.draft)
+        val first=cold.draft.blocks.first().days.first().slots
+        assertEquals(SavedProgressionMethod.DOUBLE,first.first().progressionMethod)
+        assertEquals(SavedProgressionMethod.BODYWEIGHT_REPS,first.last().progressionMethod)
+        // CAS and restarts do not erase the athlete's previous choice.
+        val next=changed.copy(revision=2,authorNote="Revised week")
+        assertEquals(saved(2),repository().save("owner-1","cycle-1",1,next))
+        assertEquals(next,(repository().read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft)
+        assertEquals(NativeCustomDraftWriteResult.Rejected(
+            NativeCustomDraftRefusal.STALE_REVISION),
+            repository().save("owner-1","cycle-1",1,next))
+    }
+
     @Test fun nativeOwnedDraftSurvivesColdOpenAndRevisionedEdits() {
         val draft = original()
         assertEquals(NativeCustomDraftReadResult.Missing,

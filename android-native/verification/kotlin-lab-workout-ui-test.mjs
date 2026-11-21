@@ -248,7 +248,11 @@ assert.match(restPauseSheet,/secondDropLoad=row.getOrNull\(13\)/);
 assert.match(restPauseSheet,/extraRounds=="2"/);
 assert.match(restPauseSheet,/Drop 2 · verified load below drop 1/);
 assert.match(journal,/Drop \$stageOrdinal of \$stageTotal/);
-assert.match(twoDropDraftCodec,/private const val VERSION = 5/);
+assert.match(twoDropDraftCodec,/private const val VERSION = 6/);
+// New per-slot progression choices use v6; a legacy two-drop draft still
+// writes v5, preserving historical fingerprints and signed custom cycles.
+assert.match(twoDropDraftCodec,/if\(hasSavedProgression\)VERSION else if\(hasSecondDrop\)5/);
+assert.match(twoDropDraftCodec,/if\(version>=6\) \{/);
 assert.match(twoDropDraftCodec,/if\(version>=5\) \{/);
 assert.match(twoDropSnapshotCodec,/private const val VERSION=6/);
 assert.match(twoDropSnapshotCodec,/if\(version>=6\) \{/);
@@ -868,12 +872,13 @@ assert.ok(starterVariantRetention.includes('val calibratedPrimaryFamilies=select
   starterVariantRetention.includes('it.familyId in calibratedPrimaryFamilies') &&
   starterVariantRetention.includes('choices[index]=choices[index].copy(requiredVisits=1)') &&
   starterVariantRetention.includes('if(input.policyVersion in setOf(') &&
-  starterVariantRetention.includes('V6_POLICY_VERSION,V7_POLICY_VERSION,V8_POLICY_VERSION,V9_POLICY_VERSION,V10_POLICY_VERSION,POLICY_VERSION') &&
+  starterVariantRetention.includes('V6_POLICY_VERSION,V7_POLICY_VERSION,V8_POLICY_VERSION,V9_POLICY_VERSION,V10_POLICY_VERSION,V11_POLICY_VERSION,POLICY_VERSION') &&
   starterVariantRetention.includes('V7_POLICY_VERSION->"v7"') &&
   starterVariantRetention.includes('V8_POLICY_VERSION->"v8"') &&
   starterVariantRetention.includes('V9_POLICY_VERSION->"v9"') &&
   starterVariantRetention.includes('V10_POLICY_VERSION->"v10"') &&
-  starterVariantRetention.includes('else->"v11"'),
+  starterVariantRetention.includes('V11_POLICY_VERSION->"v11"') &&
+  starterVariantRetention.includes('else->"v12"'),
   'V6/V7 replay and V8 strength/peak policies must retain calibrated related incline presses');
 const machineLast=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/WorkoutLastReferenceDomain.kt');
 assert.ok(machineLast.includes('data class WorkoutMachineReferenceKey(') &&

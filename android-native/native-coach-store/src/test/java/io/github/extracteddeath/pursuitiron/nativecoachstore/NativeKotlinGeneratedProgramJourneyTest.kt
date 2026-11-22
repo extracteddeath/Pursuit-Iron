@@ -1324,7 +1324,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
             assertEquals(accepted,issued.snapshot)
             assertEquals(accepted,(Disk().journals.open(owner,nextWorkoutId)
                 as NativeCustomJournalResult.Durable).issued.journal.snapshot)
-            assertEquals(original,(Disk().journals.open(owner,firstId)
+            assertEquals(original.snapshot,(Disk().journals.open(owner,firstId)
                 as NativeCustomJournalResult.Durable).issued.journal.snapshot)
         }
     }

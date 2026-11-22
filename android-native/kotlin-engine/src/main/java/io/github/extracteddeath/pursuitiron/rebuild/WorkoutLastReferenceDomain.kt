@@ -228,30 +228,21 @@ object WorkoutLastReferenceDomain {
             // new keys. No arbitrary replacement-to-old-slot mapping exists
             // in a finished receipt, so conservatively inspect the whole
             // same-day main working record.
-            val visits=source.evidence.visits.filter {
-                it.part==CustomWorkoutVisitPart.MAIN &&
-                    it.setType==DraftSetType.WORKING &&
-                    (previous==null || it.slotId==previous.slotId)
-            }
-            val uncertain=visits.isEmpty() || visits.any { visit ->
-                val id=visit.actual?.machineInstanceId
-                val issued=visit.prescribedLoad as? DraftSetLoad.Verified
-                // A station ID on an unloaded/bodyweight set is not proof
-                // of an independently calibrated physical weight station.
-                // Reuse the journal's one fact validator, rather than
-                // treating an arbitrary historical ID string as evidence.
-                id==null || !KotlinMachineAlternativesDomain.validInstanceId(id) ||
-                    issued==null || visit.actual?.load==null ||
-                    !KotlinSetNumberAuthorityDomain.valid(
-                        issued,visit.outcome,visit.actual)
-            }
-            val actualMachines=visits.mapNotNull{
-                it.actual?.machineInstanceId
-            }.toSet()
+            // This is the SAME complete, issued-set verification used by
+            // basic progression and V2/V3 coaching. Seeing one recorded B
+            // set is not proof that missing/failed sets could not involve A.
+            // A native Swap changes the slot and set keys; an ordinary
+            // substitute may preserve them. Neither scenario gets to infer
+            // station independence from the exercise label alone.
+            val machines=if(previous==null)
+                CustomVerifiedSwappedStationEvidenceDomain
+                    .machinesWhenOriginalSlotAbsent(source,slot.slotId)
+            else CustomVerifiedSwappedStationEvidenceDomain
+                    .machinesForVerifiedSlot(source,slot.slotId)
             val currentKeys=slot.sets.map{it.setKey}.toSet()
             destination.keys.removeAll {
                 it.key.setKey in currentKeys &&
-                    (uncertain || it.machineId in actualMachines)
+                    (machines==null || it.machineId in machines)
             }
         }
     }

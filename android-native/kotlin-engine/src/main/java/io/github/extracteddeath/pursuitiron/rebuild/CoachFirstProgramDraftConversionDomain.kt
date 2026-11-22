@@ -230,7 +230,7 @@ object CoachFirstProgramDraftConversionDomain {
                         slot.copy(progressionMethod=selectedMethod,
                             sets=if(initializesReps)Collections.unmodifiableList(
                                 slot.sets.map{set->
-                                    if(set.type==DraftSetType.WORKING)
+                                    if(set.type==DraftSetType.WORKING && set.exactRepTarget==null)
                                         set.copy(exactRepTarget=set.reps.minimum)
                                     else set
                                 }) else slot.sets)
@@ -255,7 +255,8 @@ object CoachFirstProgramDraftConversionDomain {
             replay.assignments.zip(progressionPlan.assignments).any{(actual,planned)->
                 actual.key!=planned.key ||
                     actual.route!=planned.route ||
-                    actual.basicStrategy!=planned.basicStrategy
+                    actual.basicStrategy!=planned.basicStrategy ||
+                    (persistChoices && actual.savedMethod != BasicProgramProgressionPlanDomain.savedChoice(planned))
             })
             return reject(FirstProgramDraftStatus.CYCLE_REVIEW_FAILED,
                 "Saved progression choices could not reproduce the original reviewed program.")
@@ -265,6 +266,6 @@ object CoachFirstProgramDraftConversionDomain {
             if(includeMyoFinisher)
                 "Optional myo-reps on one reviewed accessory have passed the full-cycle audit. Explicit program approval and workout issuance are still required."
             else "Reviewed native draft; still requires full-cycle coaching audit, athlete consent and separate workout approval.",
-            progressionPlan)
+            replay)
     }
 }

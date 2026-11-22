@@ -81,7 +81,9 @@ object BasicProgramProgressionPlanDomain {
     fun savedChoice(assignment:ProgramProgressionAssignment):SavedProgressionMethod? =
         when(assignment.route) {
             ProgramProgressionRoute.BASIC_BODYWEIGHT_REPS ->
-                SavedProgressionMethod.BODYWEIGHT_REPS
+                if (assignment.selectedStyle == NativeProgressionStyle.LADDER)
+                    SavedProgressionMethod.LADDER
+                else SavedProgressionMethod.BODYWEIGHT_REPS
             ProgramProgressionRoute.MANUAL -> SavedProgressionMethod.MANUAL
             ProgramProgressionRoute.BASIC_WEIGHTED ->
                 when(assignment.basicStrategy) {

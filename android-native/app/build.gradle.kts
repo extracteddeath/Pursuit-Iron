@@ -151,7 +151,6 @@ androidComponents.onVariants { variant ->
 }
 
 dependencies {
-    implementation(project(":domain-contract"))
     // One canonical, independently tested Kotlin coach and native persistence.
     // No JavaScript engine-runtime dependency in any app variant.
     implementation(project(":kotlin-engine"))
@@ -174,53 +173,72 @@ dependencies {
 //   2. Independently checked, on-device complete-workout acceptance evidence.
 // Source CI and debug compilation can run without issuing a release APK/AAB.
 // The evidence file is intentionally NOT checked in during development.
-val verifyEarlyBetaRuntime by tasks.registering {
+val verifyKotlinOnlyRuntimeClasspath by tasks.registering {
     group = "verification"
-    description = "Require Kotlin-only runtime and actual beta device acceptance"
+    description = "Check both native app runtime variants and staged Kotlin sources, without building an APK"
+    dependsOn(stageKotlinBetaSources)
     doLast {
-        val components = configurations.getByName("releaseRuntimeClasspath")
-            .incoming.resolutionResult.allComponents
-        val forbiddenProjectPaths = setOf(
-            ":engine-runtime", ":engine-bridge", ":legacy-engine", ":web-engine"
+        val forbiddenProjects = setOf(
+            ":domain-contract", ":engine-runtime", ":engine-bridge",
+            ":legacy-engine", ":web-engine"
         )
         val forbiddenExternalModules = setOf(
-            "org.mozilla:rhino", "org.graalvm.js:js", "org.graalvm.polyglot:js",
-            "com.eclipsesource.j2v8:j2v8", "com.squareup.duktape:duktape-android"
+            "androidx.javascriptengine:javascriptengine",
+            "org.mozilla:rhino", "org.graalvm.js:js",
+            "org.graalvm.polyglot:js", "com.eclipsesource.j2v8:j2v8",
+            "com.squareup.duktape:duktape-android"
         )
-        val forbiddenComponents = components.mapNotNull { result ->
-            val project = result.id as? ProjectComponentIdentifier
-            val identity = result.id.displayName
-            when {
-                project?.projectPath in forbiddenProjectPaths -> identity
-                forbiddenExternalModules.any { identity.startsWith(it + ":") ||
-                    identity == it } -> identity
-                else -> null
+        for (variant in listOf("debugRuntimeClasspath", "releaseRuntimeClasspath")) {
+            val components = configurations.getByName(variant)
+                .incoming.resolutionResult.allComponents
+            val forbidden = components.mapNotNull { component ->
+                val identity = component.id.displayName
+                val project = component.id as? ProjectComponentIdentifier
+                when {
+                    project?.projectPath in forbiddenProjects -> identity
+                    forbiddenExternalModules.any { identity == it ||
+                        identity.startsWith(it + ":") } -> identity
+                    else -> null
+                }
+            }
+            check(forbidden.isEmpty()) {
+                "Kotlin-only $variant contains forbidden legacy or JavaScript runtime: " +
+                    forbidden.joinToString()
             }
         }
-        check(forbiddenComponents.isEmpty()) {
-            "Early beta release blocked: forbidden JavaScript runtime dependencies: " +
-                forbiddenComponents.joinToString()
-        }
-        // Guard the staged Kotlin sources, not every historical source in
-        // the repository. Native beta screens must not instantiate a web
-        // execution surface or dynamically evaluate JavaScript.
-        val stagedSources = fileTree(
+        // Inspect what Gradle ACTUALLY stages as app Kotlin, rather than
+        // historical preview files left elsewhere in the repository.
+        val staged = fileTree(
             layout.buildDirectory.dir("generated/kotlin-beta-src")
         ).matching { include("**/*.kt") }.files
+        check(staged.isNotEmpty()) {
+            "The native Kotlin app staged no sources; runtime audit cannot pass"
+        }
         val forbiddenSourcePatterns = listOf(
             Regex("""\b(?:android\.webkit\.)?WebView\s*\("""),
             Regex("""\b(?:evaluateJavascript|loadUrl)\s*\("""),
-            Regex("""\b(?:ScriptEngineManager|JavaScriptEngine)\s*\(""")
+            Regex("""\b(?:ScriptEngineManager|JavaScriptEngine)\s*\("""),
+            Regex("""\bio\.github\.extracteddeath\.pursuitiron\.domain\.""")
         )
-        val violations = stagedSources.flatMap { source ->
+        val violations = staged.flatMap { source ->
             val body = source.readText()
             forbiddenSourcePatterns.filter { it.containsMatchIn(body) }
-                .map { source.relativeTo(projectDir).path + " : " + it.pattern }
+                .map { source.name + ": " + it.pattern }
         }
         check(violations.isEmpty()) {
-            "Early beta release blocked: web/JavaScript execution in staged native code: " +
+            "Native Kotlin app contains a legacy engine reference: " +
                 violations.joinToString()
         }
+    }
+}
+
+// Release packaging is separately blocked until real device acceptance.
+// The source/runtime audit is independently executable in routine PR CI.
+val verifyEarlyBetaRuntime by tasks.registering {
+    group = "verification"
+    description = "Require Kotlin-only runtime and actual beta device acceptance"
+    dependsOn(verifyKotlinOnlyRuntimeClasspath)
+    doLast {
         check(rootProject.file("verification/BETA_DEVICE_ACCEPTANCE.md").isFile) {
             "Early beta release blocked: verified Android-device onboarding, " +
                 "workout, cold resume and History acceptance evidence is missing."

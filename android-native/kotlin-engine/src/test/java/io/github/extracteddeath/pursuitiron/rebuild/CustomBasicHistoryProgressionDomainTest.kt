@@ -520,7 +520,8 @@ class CustomBasicHistoryProgressionDomainTest {
             // snapshot and visit evidence after that acknowledged swap.
             val replacementId="replacement-main"
             val changedSets=original.sets.mapIndexed { index,set ->
-                set.copy(slotId=replacementId,setKey="replacement-set-${index+1}")
+                set.copy(slotId=replacementId,
+                    setKey="cycle:w2:d0:${replacementId}:s${index+1}")
             }
             val replacement=original.copy(slotId=replacementId,
                 exerciseId="substitute-press",sets=changedSets)
@@ -549,6 +550,55 @@ class CustomBasicHistoryProgressionDomainTest {
         }
         assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
             (forA(ambiguous) as CustomBasicHistoryResult.Rejected).reason)
+    }
+
+    @Test fun finishedRealJournalSwapCannotEarnAnOlderSameStationIncrease() {
+        val earlierA=completed(1,week=1,machine="A")
+        fun finishSwap(machine:String):CustomCoachingHistoricalSession {
+            val original=snapshot(2,machine=machine)
+            var journal=CustomWorkoutJournalDomain.begin(
+                "real-swap-$machine",original,"a".repeat(64))
+            val priorSlot=original.slots.single()
+            val newId="replacement-main"
+            val replacement=priorSlot.copy(slotId=newId,
+                exerciseId="substitute-press",
+                sets=priorSlot.sets.map{set ->
+                    set.copy(slotId=newId,
+                        setKey="cycle:w2:d0:${newId}:s${set.ordinalInSlot}")
+                })
+            journal=(CustomWorkoutJournalDomain.reduce(journal,
+                CustomWorkoutJournalOperation.Swap(
+                    "swap-$machine",journal.revision,"main",replacement))
+                as CustomWorkoutJournalDecision.Proposed).draft
+            for(set in replacement.sets) {
+                journal=(CustomWorkoutJournalDomain.reduce(journal,
+                    CustomWorkoutJournalOperation.Record(
+                        "record-$machine-${set.ordinalInSlot}",journal.revision,
+                        CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN),
+                        KotlinJournalSetOutcome.COMPLETED,
+                        KotlinPerformedSet(n(100),LoadUnit.LB,10,null,machine)))
+                    as CustomWorkoutJournalDecision.Proposed).draft
+            }
+            journal=(CustomWorkoutJournalDomain.reduce(journal,
+                CustomWorkoutJournalOperation.Finish(
+                    "finish-$machine",journal.revision))
+                as CustomWorkoutJournalDecision.Proposed).draft
+            val evidence=(CustomWorkoutHistoryEvidenceDomain.project(journal)
+                as CustomHistoryEvidenceResult.Candidate).evidence
+            assertEquals(newId,journal.snapshot.slots.single().slotId)
+            assertTrue(evidence.visits.all{it.slotId==newId})
+            return CustomCoachingHistoricalSession(2,journal.snapshot,evidence)
+        }
+        fun nextA(replacement:CustomCoachingHistoricalSession)=review(
+            next=snapshot(3,machine="A"),machine="A",
+            sessions=listOf(earlierA,replacement))
+        assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+            (nextA(finishSwap("A")) as CustomBasicHistoryResult.Rejected).reason)
+        val anotherStation=nextA(finishSwap("B"))
+            as CustomBasicHistoryResult.Reviewed
+        assertEquals("workout-1",anotherStation.historyWorkoutId)
+        assertEquals(listOf(n(105),n(105)),
+            anotherStation.candidate.proposedWorkingLoads)
     }
 
     @Test fun unloadedBodyweightUsesVerifiedExactRepsWithoutAnyLoadOrUnit() {

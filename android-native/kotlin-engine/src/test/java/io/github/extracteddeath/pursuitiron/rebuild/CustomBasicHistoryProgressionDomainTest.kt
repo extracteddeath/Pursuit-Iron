@@ -510,6 +510,47 @@ class CustomBasicHistoryProgressionDomainTest {
             (nextA(unknown) as CustomBasicHistoryResult.Rejected).reason)
     }
 
+    @Test fun nativeSwapWithNewSlotAndSetKeysMustNotPromoteOldMachineAProgression() {
+        val earlierA=completed(1,week=1,machine="A")
+        fun actuallySwapped(machine:String):CustomCoachingHistoricalSession {
+            val prior=completed(2,week=2,machine=machine)
+            val original=prior.snapshot.slots.single()
+            // The real journal Swap reducer forbids reusing the old slot
+            // identity AND its set keys. Model the independently finished
+            // snapshot and visit evidence after that acknowledged swap.
+            val replacementId="replacement-main"
+            val changedSets=original.sets.mapIndexed { index,set ->
+                set.copy(slotId=replacementId,setKey="replacement-set-${index+1}")
+            }
+            val replacement=original.copy(slotId=replacementId,
+                exerciseId="substitute-press",sets=changedSets)
+            val visits=prior.evidence.visits.mapIndexed { index,fact ->
+                fact.copy(slotId=replacementId,exerciseId="substitute-press",
+                    setKey=changedSets[index].setKey)
+            }
+            return prior.copy(
+                snapshot=prior.snapshot.copy(slots=listOf(replacement)),
+                evidence=prior.evidence.copy(visits=visits))
+        }
+        fun forA(newer:CustomCoachingHistoricalSession)=review(
+            next=snapshot(3,machine="A"),machine="A",
+            sessions=listOf(earlierA,newer))
+        assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+            (forA(actuallySwapped("A")) as CustomBasicHistoryResult.Rejected).reason)
+        val independent=forA(actuallySwapped("B"))
+            as CustomBasicHistoryResult.Reviewed
+        assertEquals("workout-1",independent.historyWorkoutId)
+        assertEquals(listOf(n(105),n(105)),independent.candidate.proposedWorkingLoads)
+        val ambiguous=actuallySwapped("B").let{session->
+            session.copy(evidence=session.evidence.copy(visits=
+                session.evidence.visits.map {fact->
+                    fact.copy(actual=fact.actual?.copy(machineInstanceId=null))
+                }))
+        }
+        assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+            (forA(ambiguous) as CustomBasicHistoryResult.Rejected).reason)
+    }
+
     @Test fun unloadedBodyweightUsesVerifiedExactRepsWithoutAnyLoadOrUnit() {
         fun plan(target:Int, method:SavedProgressionMethod = SavedProgressionMethod.BODYWEIGHT_REPS):CustomTrainingCycle {
             val source=cycle(method)

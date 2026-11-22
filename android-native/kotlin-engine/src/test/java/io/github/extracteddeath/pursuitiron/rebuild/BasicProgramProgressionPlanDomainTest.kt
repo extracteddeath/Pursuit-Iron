@@ -381,6 +381,8 @@ class BasicProgramProgressionPlanDomainTest {
             assertTrue(review(11) is ProgramProgressionPlan.Refused)
             val ready = review(8) as ProgramProgressionPlan.Ready
             assertEquals(ProgramProgressionRoute.BASIC_BODYWEIGHT_REPS, ready.assignments.single().route)
+            assertEquals(SavedProgressionMethod.LADDER,
+                BasicProgramProgressionPlanDomain.savedChoice(ready.assignments.single()))
         }
     }
 

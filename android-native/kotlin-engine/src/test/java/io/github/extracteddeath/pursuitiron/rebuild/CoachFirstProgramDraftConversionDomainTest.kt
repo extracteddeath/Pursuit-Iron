@@ -76,6 +76,13 @@ class CoachFirstProgramDraftConversionDomainTest {
             .all{it.progressionMethod==null})
         assertTrue(nextCycle.blocks.flatMap{it.days}.flatMap{it.slots}
             .all{it.progressionMethod==SavedProgressionMethod.DYNAMIC})
+        val reopened = BasicProgramProgressionPlanDomain.review(
+            nextCycle, reviewedCatalog = source.catalog.associateBy { it.exerciseId },
+            experience = checkNotNull(source.setup.reviewed).experience)
+        assertEquals(reopened, next.progressionPlan)
+        assertTrue(checkNotNull(next.progressionPlan).assignments.all {
+            it.savedMethod == SavedProgressionMethod.DYNAMIC
+        })
         // Only saved methods and the separately versioned explanatory source
         // differ. No added, reduced, reshuffled, or transformed working sets.
         assertEquals(oldCycle.blocks.map{block->

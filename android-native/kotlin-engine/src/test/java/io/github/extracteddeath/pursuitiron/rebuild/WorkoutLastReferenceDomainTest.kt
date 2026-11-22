@@ -319,6 +319,143 @@ class WorkoutLastReferenceDomainTest {
             failed.machineSets.getValue(WorkoutMachineReferenceKey(laterKey,"A")).outcome)
     }
 
+    @Test fun realNativeSwapOnBDoesNotEraseAWhileSameStationSwapBlocksOldLast() {
+        val original=session(custom(1),1).let {previous ->
+            previous.copy(evidence=previous.evidence.copy(visits=
+                previous.evidence.visits.map { fact ->
+                    fact.copy(actual=fact.actual?.copy(
+                        machineInstanceId="A",load=BigDecimal("200")))
+                }))
+        }
+        fun swapped(machine:String?,skip:Boolean=false):
+            CustomCoachingHistoricalSession {
+            val source=custom(2)
+            var journal=CustomWorkoutJournalDomain.begin(
+                "swap-${machine ?: "unknown"}-${if(skip)"skip" else "done"}",
+                source,"a".repeat(64))
+            val previous=source.slots.single()
+            val newSlotId="swapped-bench"
+            val replacement=previous.copy(
+                slotId=newSlotId,exerciseId="paused_bench",
+                sets=previous.sets.map { set ->
+                    set.copy(slotId=newSlotId,
+                        setKey="cycle:w2:d0:${newSlotId}:s${set.ordinalInSlot}")
+                })
+            journal=(CustomWorkoutJournalDomain.reduce(journal,
+                CustomWorkoutJournalOperation.Swap(
+                    "swap-receipt",journal.revision,previous.slotId,replacement))
+                as CustomWorkoutJournalDecision.Proposed).draft
+            for(set in replacement.sets) {
+                val target=set.prescription.load as DraftSetLoad.Verified
+                journal=(CustomWorkoutJournalDomain.reduce(journal,
+                    CustomWorkoutJournalOperation.Record(
+                        "record-${set.ordinalInSlot}",journal.revision,
+                        CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN),
+                        if(skip)KotlinJournalSetOutcome.SKIPPED
+                        else KotlinJournalSetOutcome.COMPLETED,
+                        if(skip)null else KotlinPerformedSet(
+                            target.value,target.unit,5,null,machine)))
+                    as CustomWorkoutJournalDecision.Proposed).draft
+            }
+            journal=(CustomWorkoutJournalDomain.reduce(journal,
+                CustomWorkoutJournalOperation.Finish(
+                    "finish-swap",journal.revision))
+                as CustomWorkoutJournalDecision.Proposed).draft
+            val evidence=(CustomWorkoutHistoryEvidenceDomain.project(journal)
+                as CustomHistoryEvidenceResult.Candidate).evidence
+            assertEquals(newSlotId,journal.snapshot.slots.single().slotId)
+            assertTrue(evidence.visits.all{it.slotId==newSlotId})
+            return CustomCoachingHistoricalSession(2,journal.snapshot,evidence)
+        }
+
+        val upcoming=custom(3)
+        val key=WorkoutReferenceKey(upcoming.slots.single().sets[1].setKey)
+        val machineA=WorkoutMachineReferenceKey(key,"A")
+        val afterB=WorkoutLastReferenceDomain.custom(
+            "current",upcoming,listOf(original,swapped("B")))
+            as WorkoutLastReferenceResult.Ready
+        // Generic Last still refuses the changed exercise. The A-specific
+        // view alone recovers its valid, older station observation.
+        assertTrue(afterB.sets.isEmpty())
+        assertEquals("prior-1",afterB.machineSets.getValue(machineA).workoutId)
+        assertEquals(BigDecimal("200"),afterB.machineSets.getValue(machineA).actual?.load)
+        assertFalse(afterB.machineSets.keys.any{it.machineId=="B"})
+
+        val afterA=WorkoutLastReferenceDomain.custom(
+            "current",upcoming,listOf(original,swapped("A")))
+            as WorkoutLastReferenceResult.Ready
+        assertTrue(afterA.sets.isEmpty())
+        assertTrue(afterA.machineSets.isEmpty())
+
+        for(unknown in listOf(swapped(null),swapped("B",skip=true))) {
+            val result=WorkoutLastReferenceDomain.custom(
+                "current",upcoming,listOf(original,unknown))
+                as WorkoutLastReferenceResult.Ready
+            assertTrue(result.machineSets.isEmpty())
+        }
+    }
+
+    @Test fun changedExerciseInTheSameSlotAlsoHonorsActualStationEvidence() {
+        val old=session(custom(1),1).let {record ->
+            record.copy(evidence=record.evidence.copy(visits=
+                record.evidence.visits.map{fact ->
+                    fact.copy(actual=fact.actual?.copy(machineInstanceId="A"))
+                }))
+        }
+        fun substituted(machine:String)=session(custom(2,exercise="paused_bench"),2)
+            .let {record ->record.copy(evidence=record.evidence.copy(visits=
+                record.evidence.visits.map{fact ->
+                    fact.copy(actual=fact.actual?.copy(machineInstanceId=machine))
+                })) }
+        val next=custom(3)
+        val key=WorkoutMachineReferenceKey(
+            WorkoutReferenceKey(next.slots.single().sets[1].setKey),"A")
+        val b=WorkoutLastReferenceDomain.custom(
+            "current",next,listOf(old,substituted("B")))
+            as WorkoutLastReferenceResult.Ready
+        assertTrue(b.sets.isEmpty())
+        assertEquals("prior-1",b.machineSets.getValue(key).workoutId)
+        val a=WorkoutLastReferenceDomain.custom(
+            "current",next,listOf(old,substituted("A")))
+            as WorkoutLastReferenceResult.Ready
+        assertTrue(a.machineSets.isEmpty())
+    }
+
+    @Test fun aMachineLabelOnUnloadedReplacementDoesNotAuthenticateWeightStationB() {
+        val sourceA=session(custom(1),1).let {prior ->
+            prior.copy(evidence=prior.evidence.copy(visits=
+                prior.evidence.visits.map{fact ->
+                    fact.copy(actual=fact.actual?.copy(machineInstanceId="A"))
+                }))
+        }
+        // This is valid as a factual bodyweight observation, but a string B
+        // alone is not proof that the unloaded substitute used a separately
+        // calibrated weighted machine B. Do not revive older A Last.
+        val unloaded=session(custom(2,exercise="paused_bench"),2).let{prior ->
+            prior.copy(
+                snapshot=prior.snapshot.copy(slots=prior.snapshot.slots.map{slot ->
+                    slot.copy(sets=slot.sets.map{set ->
+                        set.copy(prescription=set.prescription.copy(
+                            load=DraftSetLoad.ExplicitBodyweight))
+                    })
+                }),
+                evidence=prior.evidence.copy(visits=prior.evidence.visits.map{fact ->
+                    fact.copy(prescribedLoad=DraftSetLoad.ExplicitBodyweight,
+                        actual=fact.actual?.copy(load=null,unit=null,
+                            machineInstanceId="B"))
+                }))
+        }
+        assertTrue(unloaded.evidence.visits.all{
+            KotlinSetNumberAuthorityDomain.valid(it.prescribedLoad,
+                it.outcome,it.actual)
+        })
+        val result=WorkoutLastReferenceDomain.custom(
+            "current",custom(3),listOf(sourceA,unloaded))
+            as WorkoutLastReferenceResult.Ready
+        assertTrue(result.sets.isEmpty())
+        assertTrue(result.machineSets.isEmpty())
+    }
+
     @Test fun anUnknownSkippedMachineBlocksStaleLastInsteadOfPromotingAnOldPr() {
         val first=session(custom(1),1)
         val tagged=first.copy(evidence=first.evidence.copy(visits=

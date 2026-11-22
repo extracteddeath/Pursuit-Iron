@@ -149,6 +149,17 @@ object CustomSameBlockLoadContinuityDomain {
             return result(CustomSameBlockLoadStatus.RESTRICTED_OR_LOW_READINESS,
                 "Recovery or restriction takes precedence over repeating a prior working load.",
                 prior.evidence.workoutId)
+        // Preserving a load after fatigue must obey the same free-barbell
+        // versus physical-machine provenance rule as basic progression.
+        if((oldWork+nextWork).any { set ->
+                (set.prescription.load as? DraftSetLoad.Verified)?.let { issued ->
+                    KotlinSetNumberAuthorityDomain.machineTagContradictsFreeBarbell(
+                        issued.basis, selected.machineInstanceId)
+                } == true
+            })
+            return result(CustomSameBlockLoadStatus.EQUIPMENT_UNVERIFIED,
+                "A tagged physical machine is not free-barbell recovery evidence.",
+                prior.evidence.workoutId)
         val facts=prior.evidence.visits.filter{it.slotId==oldSlot.slotId}
         val workingFacts=facts.filter{
             it.part==CustomWorkoutVisitPart.MAIN && it.setType==DraftSetType.WORKING

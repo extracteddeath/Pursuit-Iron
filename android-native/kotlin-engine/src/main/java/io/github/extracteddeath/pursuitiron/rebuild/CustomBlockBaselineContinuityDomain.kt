@@ -157,6 +157,23 @@ object CustomBlockBaselineContinuityDomain {
             priorSlot.supersetGroup!=nextSlot.supersetGroup)
             return refuse(CustomBlockBaselineStatus.PRESCRIPTION_CHANGED,
                 "Set count, order, weight, rep range, RIR, rest or technique changed.")
+        // A labeled Machine A/B cannot be evidence of a free-barbell
+        // loading basis, even when both blocks repeat that older label.
+        // Reject the source before considering its actual loads or phase
+        // handoff; do not invent a physical barbell baseline from the station.
+        if((oldWorking.any { set ->
+                (set.prescription.load as? DraftSetLoad.Verified)?.let { issued ->
+                    KotlinSetNumberAuthorityDomain.machineTagContradictsFreeBarbell(
+                        issued.basis, priorSlot.machineInstanceId)
+                } == true
+            }) || targetSets.any { set ->
+                (set.prescription.load as? DraftSetLoad.Verified)?.let { issued ->
+                    KotlinSetNumberAuthorityDomain.machineTagContradictsFreeBarbell(
+                        issued.basis, nextSlot.machineInstanceId)
+                } == true
+            })
+            return refuse(CustomBlockBaselineStatus.EQUIPMENT_UNVERIFIED,
+                "A physical machine cannot supply a free-barbell block baseline.")
         val allFacts=previous.evidence.visits.filter {
             it.slotId==priorSlot.slotId
         }

@@ -94,7 +94,10 @@ assert.match(host,/prior\.snapshot\.revision!=expectedRevision/);
 assert.match(picker,/initialMachineScopedLoad\(/);
 assert.match(picker,/saved\.machineInstanceId==selectedMachineId/);
 assert.match(picker,/physicalMachineLastReferences\(/);
-assert.match(picker,/filterKeys \{ it\.machineId==requested \}/);
+assert.match(picker,/WorkoutLastReferenceDomain\.physicalStation\(previous,selectedMachineId\)/);
+const lastAuthority=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/WorkoutLastReferenceDomain.kt');
+assert.match(lastAuthority,/history\.machineSets\.filter/);
+assert.match(lastAuthority,/selectedMachineId==null && history\.machineSets\.isEmpty\(\)/);
 // Creating a surprise physical machine must remain on an actual workout +
 // exact source gym, never act as a new program prescription or a JS fallback.
 assert.match(picker,/onCreate:\(String,String,Boolean\)->Unit/);

@@ -318,34 +318,9 @@ object CustomNextWorkoutCoachingDomain {
         // recognize it as a verified DIFFERENT-station visit, but must not
         // skip an unknown station or let an unperformed/foreign set pose as
         // authentic Machine B evidence. Frozen V1 keeps its old policy.
-        fun swappedStationMachines(session:CustomCoachingHistoricalSession):Set<String> {
-            if(session.snapshot.slots.any{it.slotId==target.slotId})return emptySet()
-            val facts=session.evidence.visits.filter {
-                it.part==CustomWorkoutVisitPart.MAIN &&
-                    it.setType==DraftSetType.WORKING
-            }
-            val authoredCount=session.snapshot.slots.sumOf { slot ->
-                slot.sets.count{it.prescription.type==DraftSetType.WORKING}
-            }
-            if(authoredCount==0 || facts.size!=authoredCount ||
-                session.snapshot.slots.any { slot ->
-                    val prescribed=slot.sets.filter{
-                        it.prescription.type==DraftSetType.WORKING
-                    }
-                    val observed=facts.filter{it.slotId==slot.slotId}
-                    !matchingReceipts(observed,prescribed) ||
-                        observed.any { fact ->
-                            val issued=fact.prescribedLoad as? DraftSetLoad.Verified
-                            val machine=fact.actual?.machineInstanceId
-                            fact.exerciseId!=slot.exerciseId ||
-                                fact.outcome!=KotlinJournalSetOutcome.COMPLETED ||
-                                issued==null || fact.actual?.load==null ||
-                                machine==null ||
-                                !KotlinMachineAlternativesDomain.validInstanceId(machine)
-                        }
-                })return emptySet()
-            return facts.mapNotNull{it.actual?.machineInstanceId}.toSet()
-        }
+        fun swappedStationMachines(session:CustomCoachingHistoricalSession):Set<String> =
+            CustomVerifiedSwappedStationEvidenceDomain.machinesWhenOriginalSlotAbsent(
+                session,target.slotId) ?: emptySet()
         fun machines(session:CustomCoachingHistoricalSession):Set<String> {
             val original=session.evidence.visits.filter {
                 it.slotId==target.slotId &&

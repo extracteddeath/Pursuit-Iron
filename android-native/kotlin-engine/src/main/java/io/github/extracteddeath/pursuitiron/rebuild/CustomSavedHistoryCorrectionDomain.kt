@@ -216,6 +216,15 @@ object CustomSavedHistoryCorrectionDomain {
                 load, operation.outcome, operation.performed))
             return reject(CustomSavedCorrectionRefusal.INVALID_VALUES)
 
+        if (operation.visit.part == CustomWorkoutVisitPart.FOLLOW_UP) {
+            val replacement = effective.copy(outcome = operation.outcome, performed = operation.performed)
+            val requiredVisits = CustomWorkoutExecutionDomain.followUpVisits(target) { key ->
+                if (key == operation.visit) replacement else current(state, key)
+            }
+            if (requiredVisits.any { it !in savedFollowKeys })
+                return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
+        }
+
         val receipt = CustomSavedVisitCorrectionReceipt(
             state.correctionRevision + 1, operation)
         val next = LinkedHashMap(state.effectiveCorrections)

@@ -1205,9 +1205,11 @@ class NativeKotlinGeneratedProgramJourneyTest {
                 "serratus-corrected-reps",0,visit,prior.eventId,
                 KotlinJournalSetOutcome.COMPLETED,
                 oldActual.copy(reps=oldActual.reps+1))
+            val correctionDisk=Disk()
             assertTrue(NativeKotlinCustomHistoryCorrectionTransaction(
-                Disk().history,Disk().journals,Disk().corrections,Disk().fence,
-                identity).correct(owner,athlete,sourceWorkoutId,correction)
+                correctionDisk.history,correctionDisk.journals,
+                correctionDisk.corrections,correctionDisk.fence,identity)
+                .correct(owner,athlete,sourceWorkoutId,correction)
                 is NativeCustomCorrectionTransactionResult.Committed)
             val ownerReview=Disk()
             val basic=NativeKotlinCustomBasicNextReview(

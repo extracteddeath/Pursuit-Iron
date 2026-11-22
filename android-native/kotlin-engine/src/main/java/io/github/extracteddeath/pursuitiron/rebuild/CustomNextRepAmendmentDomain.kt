@@ -56,7 +56,9 @@ object CustomNextRepAmendmentDomain {
             val effort=runCatching {ProgressionEffortDomain.forCompletedSet(
                 proposal.actualRir,set.prescription.targetRir)}.getOrNull()
                 ?:return fail(CustomNextRepAmendmentRefusal.SUGGESTIONS_CHANGED)
-            if(proposal.observedReps !in range.minimum..range.maximum ||
+            val exact=set.prescription.exactRepTarget
+            if((exact!=null && exact !in range.minimum..range.maximum) ||
+                proposal.observedReps !in range.minimum..range.maximum ||
                 effort.rir==null || effort.rir<2 ||
                 proposal.progressionRir!=effort.rir || proposal.effortSource!=effort.source ||
                 proposal.proposedNextReps !in range.minimum..range.maximum ||
@@ -94,7 +96,8 @@ object CustomNextRepAmendmentDomain {
                 else {
                     val floor=updated[index++]
                     set.copy(prescription=set.prescription.copy(
-                        reps=RepBand(floor,set.prescription.reps.maximum)))
+                        reps=RepBand(floor,set.prescription.reps.maximum),
+                        exactRepTarget=set.prescription.exactRepTarget?.coerceAtLeast(floor)))
                 }
             }))
         val amended=original.copy(slots=Collections.unmodifiableList(

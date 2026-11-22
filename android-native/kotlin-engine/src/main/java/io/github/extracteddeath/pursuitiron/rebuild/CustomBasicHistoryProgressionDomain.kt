@@ -21,7 +21,9 @@ data class CustomBasicHistoryRequest(
     val completed: List<CustomCoachingHistoricalSession>,
     val selectedMachineInstanceId: String?,
     val verifiedStock: VerifiedLoadStock?,
-    val maximumAuthorizedIncrement: BigDecimal
+    val maximumAuthorizedIncrement: BigDecimal,
+    val reviewedCatalog: Map<String, CatalogMovement> = emptyMap(),
+    val experience: AthleteExperience? = null
 )
 
 enum class CustomBasicHistoryRefusal {
@@ -121,15 +123,14 @@ object CustomBasicHistoryProgressionDomain {
                 }!=true})
             return no(CustomBasicHistoryRefusal.EXACT_REP_TARGETS_UNAVAILABLE)
         val plan=BasicProgramProgressionPlanDomain.review(cycle,
+            reviewedCatalog = request.reviewedCatalog, experience = request.experience,
             previewWeek = ProgramProgressionWeek(block.blockId, next.weekInBlock))
             as? ProgramProgressionPlan.Ready
             ?:return no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE)
         val assignment=plan.assignments.singleOrNull { it.key==
             ProgramProgressionSlotKey(block.blockId,next.weekday,request.slotId) }
             ?:return no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE)
-        val unweighted=assignment.route==ProgramProgressionRoute.BASIC_BODYWEIGHT_REPS &&
-            saved.progressionMethod in setOf(SavedProgressionMethod.BODYWEIGHT_REPS,
-                SavedProgressionMethod.LADDER)
+        val unweighted=assignment.route==ProgramProgressionRoute.BASIC_BODYWEIGHT_REPS
         val strategy=when(assignment.route) {
             ProgramProgressionRoute.MANUAL -> BasicProgressionStrategy.MANUAL_LOGGING
             ProgramProgressionRoute.BASIC_WEIGHTED -> assignment.basicStrategy

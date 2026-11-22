@@ -448,17 +448,22 @@ object KotlinGlobalHistoryIndexDomain {
                     }
                     continue
                 }
-                val key = KotlinHistoryLoadKey(
-                    record.exerciseId, record.unit, record.basis)
-                if (heaviest[key] == null ||
-                    record.actualLoad > checkNotNull(heaviest[key]).actualLoad ||
-                    (record.actualLoad.compareTo(checkNotNull(heaviest[key]).actualLoad) == 0 &&
-                        record.actualReps >= checkNotNull(heaviest[key]).actualReps))
-                    heaviest[key] = record
-                val repsKey = key to record.actualLoad
-                if (maxRepsAtLoad[repsKey] == null ||
-                    record.actualReps >= checkNotNull(maxRepsAtLoad[repsKey]).actualReps)
-                    maxRepsAtLoad[repsKey] = record
+                // A physical machine cannot provide an untagged barbell
+                // strength estimate, even when an old issued basis says
+                // BARBELL_TOTAL. Retain it only in verified station history.
+                if (record.basis != LoadBasis.BARBELL_TOTAL || record.machineInstanceId == null) {
+                    val key = KotlinHistoryLoadKey(
+                        record.exerciseId, record.unit, record.basis)
+                    if (heaviest[key] == null ||
+                        record.actualLoad > checkNotNull(heaviest[key]).actualLoad ||
+                        (record.actualLoad.compareTo(checkNotNull(heaviest[key]).actualLoad) == 0 &&
+                            record.actualReps >= checkNotNull(heaviest[key]).actualReps))
+                        heaviest[key] = record
+                    val repsKey = key to record.actualLoad
+                    if (maxRepsAtLoad[repsKey] == null ||
+                        record.actualReps >= checkNotNull(maxRepsAtLoad[repsKey]).actualReps)
+                        maxRepsAtLoad[repsKey] = record
+                }
                 if(heaviestByMachine[machineKey]==null ||
                     record.actualLoad>checkNotNull(heaviestByMachine[machineKey]).actualLoad ||
                     (record.actualLoad.compareTo(

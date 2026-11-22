@@ -11,6 +11,16 @@ class NativeKotlinRecordedLoadLabelsTest {
     private fun actual(value:String?,unit:LoadUnit?)=
         KotlinPerformedSet(value?.let(::BigDecimal),unit,8,null)
 
+    @Test fun planOutlineKeepsTheExactTargetInsideItsAuthoredRange() {
+        val set=CustomAuthoredSet(DraftSetType.WORKING,target(LoadBasis.DUMBBELL_PER_HAND),
+            RepBand(8,12),2,40,90,exactRepTarget=10)
+        assertEquals("Set 2 · Working · 25 lb · per hand · 10 reps (8–12 range) · RIR 2 · 90s rest",
+            authoredSetDescription(set,2))
+        val ranged=set.copy(load=DraftSetLoad.ExplicitBodyweight,exactRepTarget=null)
+        assertEquals("Set 1 · Working · Bodyweight · 8–12 reps · RIR 2 · 90s rest",
+            authoredSetDescription(ranged,1))
+    }
+
     @Test fun dumbbellsAndKettlebellsRemainPerImplementWithoutDoubling() {
         val db=target(LoadBasis.DUMBBELL_PER_HAND)
         val bell=target(LoadBasis.KETTLEBELL_EACH)

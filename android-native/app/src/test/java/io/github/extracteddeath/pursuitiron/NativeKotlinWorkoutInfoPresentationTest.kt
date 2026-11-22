@@ -24,6 +24,16 @@ class NativeKotlinWorkoutInfoPresentationTest {
         assertEquals(listOf(1,2,3,4),sets.map{it.ordinalInSlot})
         assertEquals(listOf("Not set","Not set","2","2"),shown.map{it.targetRir})
     }
+    @Test fun customInfoShowsTheIssuedRepTargetForEachWorkingSet() {
+        val first=custom("press-1",1,DraftSetType.WORKING)
+        val second=custom("press-2",2,DraftSetType.WORKING)
+        val rows=customWorkoutInfoSets(listOf(
+            first.copy(prescription=first.prescription.copy(exactRepTarget=10)),
+            second.copy(prescription=second.prescription.copy(exactRepTarget=9)),
+            custom("press-3",3,DraftSetType.WORKING)))
+        assertEquals(listOf("10 reps (8–12 range)","9 reps (8–12 range)","8–12 reps"),
+            rows.map{it.reps})
+    }
     @Test fun eachAuthoredSlotKeepsItsOwnNumberingEvenForRepeatedMovement() {
         val sets=listOf(custom("a-warm",1,DraftSetType.WARMUP,"a"),
             custom("a-work",2,DraftSetType.WORKING,"a"),

@@ -76,6 +76,15 @@ class NativeKotlinBasicProgressionPreviewShapeTest {
                 proposedWorkingLoads=listOf(BigDecimal("-5"),BigDecimal("25"))))))
     }
 
+    @Test fun zeroCandidateRequiresAnAddedPlateConvention() {
+        val proposal=reviewed(candidate().copy(proposedWorkingLoads=listOf(
+            BigDecimal.ZERO,BigDecimal("25"))))
+        assertFalse(NativeKotlinBasicProgressionPreviewShape.canRender(listOf(slot()),proposal))
+        val landmine=slot(load=DraftSetLoad.Verified(
+            LoadUnit.LB,LoadBasis.LANDMINE_ADDED_PLATES,BigDecimal.ZERO))
+        assertTrue(NativeKotlinBasicProgressionPreviewShape.canRender(listOf(landmine),proposal))
+    }
+
     @Test fun bodyweightManualModeMustHaveItsOwnSignedBodyweightSlot() {
         val manual=CustomBasicHistoryResult.ManualBodyweight("slot")
         assertTrue(NativeKotlinBasicProgressionPreviewShape.canRender(

@@ -36,8 +36,7 @@ object CustomBasicProgressionDraftDomain {
                     val before = original[setIndex]
                     val oldLoad = before.load as DraftSetLoad.Verified
                     val proposedLoad = candidate.proposedWorkingLoads[workingIndex]
-                    if (!KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(proposedLoad) ||
-                        (proposedLoad.signum() == 0 && !oldLoad.basis.permitsZeroAddedLoad))
+                    if (!KotlinSetNumberAuthorityDomain.validPrescribedLoad(proposedLoad,oldLoad.basis))
                         return null
                     if (proposedLoad.compareTo(oldLoad.value) != 0)
                         changedLoads.add(workingIndex)

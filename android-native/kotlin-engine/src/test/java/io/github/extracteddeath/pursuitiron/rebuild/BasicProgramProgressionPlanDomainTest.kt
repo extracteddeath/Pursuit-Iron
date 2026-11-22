@@ -35,6 +35,18 @@ class BasicProgramProgressionPlanDomainTest {
         (BasicProgramProgressionPlanDomain.review(cycle,selected)
             as ProgramProgressionPlan.Ready).assignments.single()
 
+    @Test fun progressionAssignmentRespectsWhatZeroPhysicallyMeans() {
+        for (basis in LoadBasis.entries) {
+            val set=working().copy(load=DraftSetLoad.Verified(LoadUnit.KG,basis,n("0.000")))
+            val result=BasicProgramProgressionPlanDomain.review(
+                cycle(block(slots=listOf(slot(sets=listOf(set))))))
+            if (basis==LoadBasis.LANDMINE_ADDED_PLATES)
+                assertTrue(basis.name,result is ProgramProgressionPlan.Ready)
+            else
+                assertTrue(basis.name,result is ProgramProgressionPlan.Refused)
+        }
+    }
+
     @Test fun unknownExperienceDoesNotInventLinearStrengthProgression() {
         val hypertrophy=assignment(cycle(block()))
         assertEquals(ProgramProgressionRoute.BASIC_WEIGHTED,hypertrophy.route)

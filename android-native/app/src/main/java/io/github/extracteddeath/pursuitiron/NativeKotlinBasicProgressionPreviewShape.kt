@@ -48,8 +48,11 @@ internal object NativeKotlinBasicProgressionPreviewShape {
                 val proposedReps = candidate.proposedRepTargets
                 working.all { it.prescription.load is DraftSetLoad.Verified } &&
                     candidate.proposedWorkingLoads.size == working.size &&
-                    candidate.proposedWorkingLoads.all {
-                        KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(it)
+                    working.indices.all { index ->
+                        val load = working[index].prescription.load as DraftSetLoad.Verified
+                        KotlinSetNumberAuthorityDomain.validPrescribedLoad(load.value,load.basis) &&
+                            KotlinSetNumberAuthorityDomain.validPrescribedLoad(
+                                candidate.proposedWorkingLoads[index],load.basis)
                     } &&
                     candidate.increasedOrdinals.all { it in working.indices } &&
                     candidate.changedRepOrdinals.all { it in working.indices } &&

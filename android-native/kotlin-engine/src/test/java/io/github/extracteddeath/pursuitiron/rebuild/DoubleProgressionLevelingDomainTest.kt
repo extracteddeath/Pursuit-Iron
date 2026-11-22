@@ -237,6 +237,48 @@ class DoubleProgressionLevelingDomainTest {
                 currentKeys(),machines,"machine-A",band,2,stock))
     }
 
+    @Test fun priorLevelingUsesTheSelectedPhysicalStationInsteadOfGenericLast() {
+        val keys=currentKeys().map{it.first}
+        val machineA=priorSession(listOf("100","120","125","130"),
+            sessionFor={"older-A"},machineFor={"machine-A"})
+        val machineB=priorSession(listOf("130","130","130","130"),
+            sessionFor={"newer-B"},machineFor={"machine-B"})
+        val stationFacts=keys.associate { key ->
+            WorkoutMachineReferenceKey(key,"machine-A") to checkNotNull(machineA.sets[key])
+        }
+        val history=WorkoutLastReferenceResult.Ready(
+            sets=machineB.sets,machineSets=stationFacts)
+
+        val review=DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout(
+            currentKeys(),history,"machine-A",band,2,stock
+        ) as LevelingReviewResult.Candidate
+        assertEquals(n("118.75"),review.averageObservedLoad)
+        assertEquals(n("120"),review.proposedStraightSetLoad)
+        assertFalse(review.mayModifyIssuedWorkout)
+
+        // Never substitute the latest other-station workout for an absent
+        // or damaged per-station receipt.
+        assertEquals(LevelingReviewResult.Rejected(LevelingRefusal.INCOMPLETE_OR_INVALID),
+            DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout(
+                currentKeys(),history.copy(machineSets=emptyMap()),
+                "machine-A",band,2,stock))
+        val mixed=stationFacts.toMutableMap()
+        val last=WorkoutMachineReferenceKey(keys.last(),"machine-A")
+        mixed[last]=checkNotNull(mixed[last]).copy(
+            workoutId="different-A-workout",completionOrder=4)
+        assertEquals(LevelingReviewResult.Rejected(LevelingRefusal.INCOMPLETE_OR_INVALID),
+            DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout(
+                currentKeys(),history.copy(machineSets=mixed),
+                "machine-A",band,2,stock))
+        val skipped=stationFacts.toMutableMap()
+        skipped[last]=checkNotNull(skipped[last]).copy(
+            outcome=KotlinJournalSetOutcome.SKIPPED,actual=null)
+        assertEquals(LevelingReviewResult.Rejected(LevelingRefusal.INCOMPLETE_OR_INVALID),
+            DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout(
+                currentKeys(),history.copy(machineSets=skipped),
+                "machine-A",band,2,stock))
+    }
+
     @Test fun priorLevelingRequiresVerifiedStockAndRespectsLowActualRir() {
         val loads=listOf("100","120","125","130")
         assertEquals(LevelingReviewResult.Rejected(

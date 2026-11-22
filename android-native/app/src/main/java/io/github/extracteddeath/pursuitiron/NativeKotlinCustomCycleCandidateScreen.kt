@@ -1130,9 +1130,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                             it.savedMethod!=null &&
                             (it.route in setOf(ProgramProgressionRoute.BASIC_WEIGHTED,
                                 ProgramProgressionRoute.MANUAL) ||
-                                (it.route == ProgramProgressionRoute.BASIC_BODYWEIGHT_REPS &&
-                                    it.savedMethod in setOf(SavedProgressionMethod.BODYWEIGHT_REPS,
-                                        SavedProgressionMethod.LADDER)))
+                                it.route == ProgramProgressionRoute.BASIC_BODYWEIGHT_REPS)
                     }?.associateBy { it.key.slotId }.orEmpty()
                     val loadStepSlots = basicSlots.filterValues { assignment ->
                         assignment.route == ProgramProgressionRoute.BASIC_WEIGHTED &&

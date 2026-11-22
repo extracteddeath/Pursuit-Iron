@@ -80,7 +80,8 @@ enum class BasicProgressionDecision {
     EARNED_INCREMENT,
     MAXIMUM_LOAD_REACHED,
     AUTHORIZED_INCREMENT_TOO_SMALL,
-    EARNED_REP_TARGET
+    EARNED_REP_TARGET,
+    REP_CEILING_REACHED
 }
 
 sealed interface BasicProgressionResult {
@@ -205,11 +206,15 @@ object BasicProgressionPolicyDomain {
             // Rep ladder remains at the same physical weight until EVERY
             // completed set reaches its rep ceiling. Rep-only NEVER changes
             // load, even after reaching the ceiling.
-            if(!ladder || facts.any{it.actualReps!!<request.repBand.maximum})
-                return candidate(loads, emptySet(),
-                    if (changed.isEmpty()) BasicProgressionDecision.BUILD_REPS
-                    else BasicProgressionDecision.EARNED_REP_TARGET,
-                    previous.workoutId, proposed, changed)
+            val allAtCeiling = facts.all { it.actualReps!! >= request.repBand.maximum }
+            if (!ladder || !allAtCeiling) {
+                val decision = when {
+                    changed.isNotEmpty() -> BasicProgressionDecision.EARNED_REP_TARGET
+                    allAtCeiling -> BasicProgressionDecision.REP_CEILING_REACHED
+                    else -> BasicProgressionDecision.BUILD_REPS
+                }
+                return candidate(loads, emptySet(), decision, previous.workoutId, proposed, changed)
+            }
         }
 
         val stock = request.verifiedStock
@@ -291,7 +296,7 @@ object BasicProgressionPolicyDomain {
             return candidate(loads,emptySet(),
                 if(atMaximum)BasicProgressionDecision.MAXIMUM_LOAD_REACHED
                 else BasicProgressionDecision.AUTHORIZED_INCREMENT_TOO_SMALL,
-                previous.workoutId)
+                previous.workoutId, repTargets = if (ladder) request.issuedRepTargets else null)
 
         val ladderReset=if(ladder && changed.size==facts.size)
             List(facts.size){request.repBand.minimum} else null

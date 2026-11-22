@@ -1232,7 +1232,7 @@ assert.ok(journey.includes('workoutScreens.SaveableStateProvider("custom:$custom
   'Both workout paths must preserve exact identity, timers and drafts, and generated workouts need an explicit resume shortcut');
 assert.ok(timer.includes('var observedEvent by remember(workoutId,ownerId) { mutableStateOf(latestReceiptOperationId) }') &&
   timer.includes('observedEvent=latestReceiptOperationId') &&
-  timer.includes('if(autoCue.seconds==0)'),
+  timer.includes('if(confirmedCue.seconds==0)'),
   'Remount must baseline old saved receipts; an immediate follow-up must clear a preceding countdown');
 assert.ok(composer.includes('NativeKotlinFinishedComposerHandoff.inspect(stored,history)') &&
   composer.includes('host.reviewVerifiedKotlinHistory()') &&

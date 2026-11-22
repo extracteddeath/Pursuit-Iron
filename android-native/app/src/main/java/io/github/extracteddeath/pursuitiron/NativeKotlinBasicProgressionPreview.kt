@@ -87,7 +87,8 @@ internal fun NativeKotlinBasicProgressionPreview(
                     BasicProgressionDecision.AUTHORIZED_INCREMENT_TOO_SMALL ->
                         "The next physical step exceeds the selected increment limit."
                 }
-                Text(description,style=MaterialTheme.typography.bodySmall)
+                if (candidate.dynamicSetDecisions.isEmpty())
+                    Text(description,style=MaterialTheme.typography.bodySmall)
                 val working = workingSets(projection.slotId)
                 candidate.proposedWorkingLoads.forEachIndexed { index, weight ->
                     val prescription = working[index].prescription
@@ -101,7 +102,14 @@ internal fun NativeKotlinBasicProgressionPreview(
                         " · " + repLabel(prescription.exactRepTarget, it, index in candidate.changedRepOrdinals)
                     } ?: if (candidate.decision == BasicProgressionDecision.MANUAL_REPEAT)
                         " · " + prescription.repTargetLabel() else ""
-                    Text("Working set ${index+1} · $load$reps",
+                    val reason = when (candidate.dynamicSetDecisions.getOrNull(index)) {
+                        BasicProgressionDecision.BUILD_REPS -> " · build to ${prescription.reps.maximum} reps"
+                        BasicProgressionDecision.MAXIMUM_LOAD_REACHED -> " · highest available load"
+                        BasicProgressionDecision.AUTHORIZED_INCREMENT_TOO_SMALL -> " · next step exceeds your limit"
+                        BasicProgressionDecision.EARNED_INCREMENT -> " · rep target met"
+                        else -> ""
+                    }
+                    Text("Working set ${index+1} · $load$reps$reason",
                         style=MaterialTheme.typography.bodyMedium)
                 }
             }

@@ -9,14 +9,18 @@ import java.math.BigDecimal
 
 private fun BigDecimal.creditText() = stripTrailingZeros().toPlainString()
 private fun Enum<*>.editLabel() = name.lowercase().replace('_',' ')
+internal fun CustomAuthoredSet.repTargetLabel(): String {
+    if (reps.minimum == reps.maximum) return "${reps.minimum} reps"
+    val range = "${reps.minimum}–${reps.maximum}"
+    return exactRepTarget?.let { "$it reps ($range range)" } ?: "$range reps"
+}
+
 private fun CustomAuthoredSet.editDescription(): String {
     fun loadText(load: DraftSetLoad): String = when(load) {
         DraftSetLoad.ExplicitBodyweight -> "Bodyweight"
         is DraftSetLoad.Verified -> "${load.value.toPlainString()} ${load.unit} · ${kotlinLoadBasisLabel(load.basis)}"
     }
-    val displayedReps=exactRepTarget?.let { "$it target reps (${reps.minimum}–${reps.maximum} range)" }
-        ?: "${reps.minimum}–${reps.maximum} reps"
-    return "${type.editLabel()} · ${loadText(load)} · $displayedReps · RIR ${targetRir ?: "unset"} · ${activeSeconds}s work / ${restSeconds}s rest"+
+    return "${type.editLabel()} · ${loadText(load)} · ${repTargetLabel()} · RIR ${targetRir ?: "unset"} · ${activeSeconds}s work / ${restSeconds}s rest"+
         (amplifier?.let { amp -> " · ${amp.kind.editLabel()} · ${amp.followUpReps} follow-up reps / ${amp.followUpRestSeconds}s rest / ${amp.followUpActiveSeconds?.let{"${it}s extra work"}?:"extra work time unset"}"+
             (amp.followUpLoad?.let { " · ${loadText(it)}" } ?: " · same load") } ?: "")
 }

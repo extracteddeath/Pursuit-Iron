@@ -149,6 +149,9 @@ class BasicProgressionExtendedCoverageTest {
         val newTarget = candidate(listOf(9, 9, 9), listOf(9, 9, 9))
         assertEquals(listOf(10, 10, 10), newTarget.proposedExactReps)
         assertFalse(newTarget.atRepCeiling)
+        val aheadOfTarget = candidate(listOf(8, 10, 10), listOf(10, 11, 10))
+        assertEquals(listOf(9, 10, 10), aheadOfTarget.proposedExactReps)
+        assertFalse(aheadOfTarget.atRepCeiling)
         assertFalse(candidate(listOf(10, 10, 10), listOf(10, 8, 10)).atRepCeiling)
         assertTrue(candidate(listOf(10, 10, 10), listOf(10, 11, 10)).atRepCeiling)
     }

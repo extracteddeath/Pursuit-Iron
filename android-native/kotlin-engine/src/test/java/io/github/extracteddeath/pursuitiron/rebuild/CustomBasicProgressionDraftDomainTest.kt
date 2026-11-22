@@ -82,6 +82,18 @@ class CustomBasicProgressionDraftDomainTest {
         assertEquals(original.map { it.load },next.map { it.load })
     }
 
+    @Test fun ceilingLabelsRequireEveryIssuedTargetToBeAtTheCap() {
+        val body = set(100, 8).copy(load = DraftSetLoad.ExplicitBodyweight)
+        val cap = CustomBasicHistoryResult.UnloadedReviewed("previous", 1,
+            BasicUnloadedProgressionResult.Candidate(listOf(9), setOf(0), "previous", atRepCeiling = true),
+            "block", 0, "slot")
+        assertNull(CustomBasicProgressionDraftDomain.reviewedSets("slot", listOf(body), cap))
+        val weightedCap = weighted(BasicProgressionResult.Candidate(
+            BasicProgressionStrategy.REP_TARGET_PROGRESSION, listOf(BigDecimal(100)), emptySet(),
+            BasicProgressionDecision.REP_CEILING_REACHED, "previous", proposedRepTargets = listOf(8)))
+        assertNull(CustomBasicProgressionDraftDomain.reviewedSets("slot", listOf(set(100, 8)), weightedCap))
+    }
+
     @Test fun assistedProgressionCopiesTheLowerCounterweightNotAHeavierLoad() {
         val assisted = DraftSetLoad.Verified(
             LoadUnit.LB,LoadBasis.ASSISTANCE_COUNTERWEIGHT,BigDecimal(70))

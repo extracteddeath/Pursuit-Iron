@@ -111,6 +111,6 @@ object BasicBodyweightRepProgressionDomain {
         val changed=proposal.indices.filter {proposal[it]!=request.issuedExactReps[it]}.toSet()
         return BasicUnloadedProgressionResult.Candidate(proposal,
             Collections.unmodifiableSet(changed),previous.workoutId,
-            completedReps.all{it>=request.repBand.maximum})
+            changed.isEmpty() && completedReps.all{it>=request.repBand.maximum})
     }
 }

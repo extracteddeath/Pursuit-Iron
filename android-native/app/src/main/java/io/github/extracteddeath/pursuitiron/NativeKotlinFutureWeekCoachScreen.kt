@@ -573,7 +573,7 @@ internal fun NativeKotlinFutureWeekCoachScreen(
                             ?.value
                         val changed=(pair.second.prescription.load as? DraftSetLoad.Verified)
                             ?.value
-                        Text("Set ${index+1}: ${old ?: "unverified"} → ${changed ?: "unverified"} · ${pair.second.prescription.reps.minimum}–${pair.second.prescription.reps.maximum} reps",
+                        Text("Set ${index+1}: ${old ?: "unverified"} → ${changed ?: "unverified"} · ${pair.second.prescription.repTargetLabel()}",
                             style=MaterialTheme.typography.bodyMedium)
                     }
                     Text("No changes to reps, RIR, warmups, other slots or the authored cycle.",

@@ -20,45 +20,38 @@ internal object NativeSupersetRoundReview {
             .groupBy{checkNotNull(it.round).number}.values.toList()
     }
 
-    fun reviewVisit(journal:CustomWorkoutJournalDraft,
-        set:CustomWorkoutSetSnapshot):CustomWorkoutVisitKey? {
-        // The engine owns which visits can actually appear. Only an
-        // already-triggered, still-unrecorded follow-up supersedes the
-        // main-set review target; do not call an engine-internal helper
-        // across module boundaries or fabricate future amplifier visits.
-        val visible=CustomWorkoutVisitFocusDomain.visibleOrder(journal).toSet()
+    data class SetReview(val visit:CustomWorkoutVisitKey,val outcome:String)
+
+    fun review(journal:CustomWorkoutJournalDraft,set:CustomWorkoutSetSnapshot):SetReview {
         val main=CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN)
-        val follow=CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.FOLLOW_UP)
-        return when {
-            follow in visible && follow !in journal.effectiveVisits -> follow
-            main in visible -> main
-            else -> null
+        fun outcome(key:CustomWorkoutVisitKey)=(journal.effectiveVisits[key]?.operation
+            as? CustomWorkoutJournalOperation.Record)?.outcome
+        when(outcome(main)) {
+            null -> return SetReview(main,"Not logged")
+            KotlinJournalSetOutcome.SKIPPED -> return SetReview(main,"Skipped")
+            KotlinJournalSetOutcome.FAILED_ATTEMPT -> return SetReview(main,"Failed attempt")
+            KotlinJournalSetOutcome.COMPLETED -> Unit
+        }
+        // The engine exposes stages in order and stops at the first pending
+        // stage or protocol stop. An unsafe drop can yield no follow-up.
+        val last=CustomWorkoutExecutionDomain.followUpVisits(journal,set).lastOrNull()
+            ?: return SetReview(main,"Completed")
+        val multi=(set.prescription.amplifier?.followUpRounds ?: 1)>1
+        val label=if(multi)"Follow-up ${last.stage}" else "Amplifier follow-up"
+        return when(outcome(last)) {
+            null -> SetReview(last,"$label due")
+            KotlinJournalSetOutcome.COMPLETED -> SetReview(main,
+                if(multi)"Main + ${last.stage} follow-up${if(last.stage==1) "" else "s"} completed"
+                else "Main + follow-up completed")
+            KotlinJournalSetOutcome.SKIPPED -> SetReview(main,
+                if(multi)"Main completed · follow-up ${last.stage} skipped"
+                else "Main completed · follow-up skipped")
+            KotlinJournalSetOutcome.FAILED_ATTEMPT -> SetReview(main,
+                if(multi)"Main completed · follow-up ${last.stage} failed"
+                else "Main completed · follow-up failed")
         }
     }
 
-    fun outcome(journal:CustomWorkoutJournalDraft,
-        set:CustomWorkoutSetSnapshot):String {
-        val main=CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN)
-        val follow=CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.FOLLOW_UP)
-        val mainResult=(journal.effectiveVisits[main]?.operation
-            as? CustomWorkoutJournalOperation.Record)
-        val followResult=(journal.effectiveVisits[follow]?.operation
-            as? CustomWorkoutJournalOperation.Record)
-        return when(mainResult?.outcome) {
-            null -> "Not logged"
-            KotlinJournalSetOutcome.SKIPPED -> "Skipped"
-            KotlinJournalSetOutcome.FAILED_ATTEMPT -> "Failed attempt"
-            KotlinJournalSetOutcome.COMPLETED -> when {
-                set.prescription.amplifier==null -> "Completed"
-                followResult==null -> "Amplifier follow-up due"
-                followResult.outcome==KotlinJournalSetOutcome.COMPLETED ->
-                    "Main + follow-up completed"
-                followResult.outcome==KotlinJournalSetOutcome.SKIPPED ->
-                    "Main completed · follow-up skipped"
-                else -> "Main completed · follow-up failed"
-            }
-        }
-    }
 }
 
 /**
@@ -103,20 +96,18 @@ internal fun NativeKotlinSupersetRoundSheet(
                         val ordinal=slot.sets.filter{
                             it.prescription.type==DraftSetType.WORKING
                         }.indexOfFirst{it.setKey==set.setKey}+1
-                        val reps=set.prescription.reps
-                        val target=if(reps.minimum==reps.maximum)
-                            reps.minimum.toString()
-                        else "${reps.minimum}–${reps.maximum}"
+                        val target=set.prescription.repTargetLabel()
                         Text(
                             kotlinExerciseLabel(slot.exerciseId)+
-                                " · set $ordinal · $target reps"+
+                                " · set $ordinal · $target"+
                                 set.prescription.targetRir?.let{" · RIR $it"}.orEmpty(),
                             style=MaterialTheme.typography.bodyMedium)
-                        Text(NativeSupersetRoundReview.outcome(journal,set),
+                        val review=NativeSupersetRoundReview.review(journal,set)
+                        Text(review.outcome,
                             style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
-                        val visit=NativeSupersetRoundReview.reviewVisit(journal,set)
-                        if(visit!=null)OutlinedButton(
+                        val visit=review.visit
+                        OutlinedButton(
                             onClick={onChoose(visit)},enabled=!busy,
                             modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
                             Text(when {

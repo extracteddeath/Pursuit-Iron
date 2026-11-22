@@ -362,20 +362,20 @@ object CustomCycleTransitionDomain {
         val a = CustomTrainingCycleDomain.review(original, availableExercises)
         val b = CustomTrainingCycleDomain.review(proposed, availableExercises)
         val delta = Collections.unmodifiableList(differences(original, proposed))
-        val methodChanged=delta.any{it.kind==CustomCycleChangeKind.PROGRESSION_METHOD}
-        // A method edit must also survive the one canonical source
-        // progression-plan review. Consent cannot legalize an incompatible
-        // basic method on a loaded/assisted/periodized working set.
-        val methodReady=!methodChanged ||
-            BasicProgramProgressionPlanDomain.review(proposed) is ProgramProgressionPlan.Ready
+        // Edits to sets, equipment or phase can invalidate a retained method.
+        val hasSavedMethod = proposed.blocks.any { block ->
+            block.days.any { day -> day.slots.any { it.progressionMethod != null } }
+        }
         val blocked = if (origin == CustomCycleEditOrigin.COACH_SUGGESTION)
             delta.map { it.kind }.filterNot(permissions::permits).toSet()
         else emptySet()
         val status = when {
             original.cycleId != proposed.cycleId ||
                 original.athleteId != proposed.athleteId ||
-                a.verifiedDraft == null || b.verifiedDraft == null ||
-                !methodReady ->
+                a.verifiedDraft == null || b.verifiedDraft == null ->
+                    CustomCycleTransitionStatus.INVALID_SOURCE_OR_CANDIDATE
+            hasSavedMethod && BasicProgramProgressionPlanDomain.review(proposed)
+                is ProgramProgressionPlan.Refused ->
                     CustomCycleTransitionStatus.INVALID_SOURCE_OR_CANDIDATE
             proposed.revision != original.revision + 1 ->
                 CustomCycleTransitionStatus.STALE_REVISION

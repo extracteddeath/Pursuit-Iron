@@ -25,10 +25,11 @@ internal fun NativeKotlinFirstBlockCalendarPanel(
     cycleId:String,
     cycleRevision:Long,
     sourceRevision:Long?,
+    firstWeekday:Int?,
     nextSlot:NativeCustomNextCycleSlot?
 ) {
     if(nextSlot !is NativeCustomNextCycleSlot.Next ||
-        nextSlot.absoluteWeek!=1)return
+        nextSlot.absoluteWeek!=1 || nextSlot.weekday!=firstWeekday)return
     var monday by remember(host,athleteId,cycleId,cycleRevision,sourceRevision) {
         mutableStateOf<LocalDate?>(null)
     }
@@ -52,7 +53,7 @@ internal fun NativeKotlinFirstBlockCalendarPanel(
     PursuitCard {
         PursuitSectionHeading(
             "First-block calendar preview",
-            "Only signed Week 1 training positions are shown. A date preview is not an approved start or a workout record.")
+            "Preview dates for your first week of training.")
         when(val reviewed=preview) {
             is NativeFirstBlockCalendarPreview.Ready -> {
                 val plan=reviewed.proposal.takeIf {
@@ -69,12 +70,9 @@ internal fun NativeKotlinFirstBlockCalendarPanel(
                 else {
                     Text("Proposed Week 1 · ${plan.selectedMonday.format(firstBlockDayLabel)}",
                         style=MaterialTheme.typography.titleSmall)
-                    Text("Scheduled positions only · not activated, missed, or completed",
-                        style=MaterialTheme.typography.bodySmall,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                     Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
                         plan.firstWeek.forEach { day ->
-                            Text(day.localDate.format(firstBlockDayLabel),
+                            Text("${day.localDate.format(firstBlockDayLabel)} · ${day.workoutName}",
                                 style=MaterialTheme.typography.bodyMedium)
                         }
                     }
@@ -94,9 +92,6 @@ internal fun NativeKotlinFirstBlockCalendarPanel(
                         TextButton(onClick={monday=null}) {
                             Text("Return to this week's preview")
                         }
-                    Text("Initial start-date approval is not yet enabled. These previews cannot issue, move, skip, or update training.",
-                        style=MaterialTheme.typography.bodySmall,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             is NativeFirstBlockCalendarPreview.Rejected -> {

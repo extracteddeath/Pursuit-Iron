@@ -19,7 +19,8 @@ import java.time.temporal.TemporalAdjusters
 data class NativeFirstBlockCalendarDay(
     val absoluteWeek:Int,
     val weekday:Int,
-    val localDate:LocalDate
+    val localDate:LocalDate,
+    val workoutName:String
 )
 
 data class NativeFirstBlockCalendarProposal(
@@ -71,7 +72,7 @@ internal data class NativeFirstBlockCalendarBasis(
     val draftSha256:String,
     val signoffFingerprint:String,
     val timezoneId:String,
-    val weekdays:Set<Int>
+    val workoutNames:Map<Int,String>
 )
 
 internal object NativeFirstBlockCalendarDomain {
@@ -83,11 +84,12 @@ internal object NativeFirstBlockCalendarDomain {
         observedAt:Long,
         requestedMonday:LocalDate?
     ):NativeFirstBlockCalendarPreview {
+        val weekdays = basis.workoutNames.keys
         val zone=runCatching{ZoneId.of(basis.timezoneId)}.getOrNull()
             ?:return NativeFirstBlockCalendarPreview.Rejected(
                 NativeFirstBlockCalendarRefusal.TIMEZONE_OR_CLOCK_UNAVAILABLE)
-        if(zone.id!=basis.timezoneId || basis.weekdays.size !in 3..6 ||
-            basis.weekdays.any{it !in 0..6} ||
+        if(zone.id!=basis.timezoneId || weekdays.size !in 3..6 ||
+            weekdays.any{it !in 0..6} ||
             observedAt<=0 || !KotlinHistoryCompletionTime.valid(observedAt))
             return NativeFirstBlockCalendarPreview.Rejected(
                 NativeFirstBlockCalendarRefusal.TIMEZONE_OR_CLOCK_UNAVAILABLE)
@@ -102,20 +104,23 @@ internal object NativeFirstBlockCalendarDomain {
             monday.isBefore(earliest) || monday.isAfter(earliest.plusWeeks(12)))
             return NativeFirstBlockCalendarPreview.Rejected(
                 NativeFirstBlockCalendarRefusal.INVALID_LOCAL_MONDAY)
-        val dates=basis.weekdays.sorted().map{day->
-            NativeFirstBlockCalendarDay(1,day,monday.plusDays(day.toLong()))
+        val dates=weekdays.sorted().map{day->
+            NativeFirstBlockCalendarDay(1,day,monday.plusDays(day.toLong()),basis.workoutNames.getValue(day))
         }
         val bytes=ByteArrayOutputStream()
         DataOutputStream(bytes).use {out->
-            out.writeInt(1) // preview fingerprint schema, not approval schema
+            out.writeInt(2) // preview fingerprint schema, not approval schema
             listOf(basis.athleteId,basis.cycleId,basis.blockId,
                 basis.sourceSha256,basis.draftSha256,
                 basis.signoffFingerprint,basis.timezoneId,
                 monday.toString()).forEach(out::writeUTF)
             out.writeLong(basis.sourceRevision)
             out.writeLong(basis.draftRevision)
-            out.writeInt(basis.weekdays.size)
-            basis.weekdays.sorted().forEach(out::writeInt)
+            out.writeInt(weekdays.size)
+            weekdays.sorted().forEach { day ->
+                out.writeInt(day)
+                out.writeUTF(basis.workoutNames.getValue(day))
+            }
         }
         return NativeFirstBlockCalendarPreview.Ready(
             NativeFirstBlockCalendarProposal(
@@ -123,7 +128,7 @@ internal object NativeFirstBlockCalendarDomain {
                 basis.sourceRevision,basis.sourceSha256,
                 basis.draftRevision,basis.draftSha256,
                 basis.signoffFingerprint,monday,basis.timezoneId,
-                basis.weekdays.toSortedSet().toSet(),dates,digest(bytes.toByteArray()),
+                weekdays.toSortedSet().toSet(),dates,digest(bytes.toByteArray()),
                 monday.minusWeeks(1).takeIf { it >= earliest && it.year >= 2000 },
                 monday.plusWeeks(1).takeIf { it <= earliest.plusWeeks(12) && it.year <= 2100 }))
     }
@@ -220,7 +225,7 @@ class NativeKotlinFirstBlockCalendarPreflight(
                     sha(NativeKotlinCustomAuthoringSourceCodec.encode(source)),
                     cycle.revision,sha(NativeCustomCycleDraftCodec.encode(cycle)),
                     verified.receipt.fingerprintSha256,
-                    profile.timezoneId,days.toSet()),
+                    profile.timezoneId,block.days.associate { it.weekday to it.label }),
                 at,selectedMonday)
         }}.getOrElse{
             refuse(NativeFirstBlockCalendarRefusal.STORAGE_UNAVAILABLE)

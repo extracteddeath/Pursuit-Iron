@@ -9,7 +9,7 @@ class NativeKotlinFirstBlockCalendarPreflightTest {
     private fun basis(weekdays:Set<Int> =setOf(0,2,4),
         timezone:String="America/New_York")=NativeFirstBlockCalendarBasis(
         "athlete-1","cycle-1","base",2,"a".repeat(64),
-        7,"b".repeat(64),"c".repeat(64),timezone,weekdays)
+        7,"b".repeat(64),"c".repeat(64),timezone,weekdays.associateWith { "Session $it" })
 
     private val springBefore=Instant.parse("2026-03-07T16:00:00Z")
         .toEpochMilli()
@@ -29,6 +29,8 @@ class NativeKotlinFirstBlockCalendarPreflightTest {
             second.proposal.firstWeek.map{it.localDate.toString()})
         assertEquals(listOf(0,2,4),
             second.proposal.firstWeek.map{it.weekday})
+        assertEquals(listOf("Session 0", "Session 2", "Session 4"),
+            second.proposal.firstWeek.map { it.workoutName })
         assertTrue(second.proposal.firstWeek.all{it.absoluteWeek==1})
         assertEquals("America/New_York",second.proposal.timezoneId)
         assertFalse(second.proposal.isApproved)

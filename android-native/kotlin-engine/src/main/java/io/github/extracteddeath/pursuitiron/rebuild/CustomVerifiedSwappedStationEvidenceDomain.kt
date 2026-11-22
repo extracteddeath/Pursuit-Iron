@@ -1,44 +1,44 @@
 package io.github.extracteddeath.pursuitiron.rebuild
 
 /**
- * ONE strict evidence rule shared by basic progression and optional V2/V3
- * coaching when a native workout Swap replaced an original slot with new
- * slot and set identities. It cannot infer which movement was replaced:
- * only a complete, independently attributed, weighted and performed visit
- * can establish that the day occurred on a different physical station.
+ * One strict historical machine-evidence reader, shared by the basic
+ * progression and opt-in coaching consumers. A B visit can leave older
+ * Machine A history independent ONLY when every relevant issued working
+ * set has a distinct, matching, completed and physically identified receipt.
  *
- * Null is an ambiguous/unverified visit, not evidence of another machine.
- * The caller separately compares the returned station set with its own
- * requested station; no historical receipt or future prescription is edited.
+ * No station is guessed from the authored machine label or exercise name;
+ * unknown, skipped and partially recorded work cannot certify separation.
+ * This projection cannot issue, revise or save any training targets.
  */
 internal object CustomVerifiedSwappedStationEvidenceDomain {
-    fun machinesWhenOriginalSlotAbsent(
+    private fun completeMachines(
         session: CustomCoachingHistoricalSession,
-        originalSlotId: String
+        slots: List<CustomWorkoutSlotSnapshot>
     ): Set<String>? {
         val snapshot = session.snapshot
         val evidence = session.evidence
-        if (originalSlotId.isBlank() || snapshot.slots.any { it.slotId == originalSlotId } ||
-            snapshot.stamp.athleteId != evidence.athleteId ||
+        if (slots.isEmpty() || snapshot.stamp.athleteId != evidence.athleteId ||
             snapshot.stamp.cycleId != evidence.cycleId ||
-            snapshot.stamp.cycleRevision != evidence.cycleRevision)
+            snapshot.stamp.cycleRevision != evidence.cycleRevision ||
+            slots.map { it.slotId }.distinct().size != slots.size)
             return null
 
-        val prescribed = snapshot.slots.flatMap { slot ->
+        val slotIds = slots.map { it.slotId }.toSet()
+        val prescribed = slots.flatMap { slot ->
             slot.sets.filter { it.prescription.type == DraftSetType.WORKING }
         }
         val visits = evidence.visits.filter {
             it.part == CustomWorkoutVisitPart.MAIN &&
-                it.setType == DraftSetType.WORKING
+                it.setType == DraftSetType.WORKING && it.slotId in slotIds
         }
-        // A partial set history may hide work on the original machine.
+        // A missing, duplicated or foreign set can hide an attempt at A.
         if (prescribed.isEmpty() || prescribed.size != visits.size ||
             prescribed.map { it.setKey }.toSet().size != prescribed.size ||
             visits.map { it.setKey }.toSet().size != visits.size)
             return null
         val byKey = visits.associateBy { it.setKey }
         val stations = mutableSetOf<String>()
-        for (slot in snapshot.slots) for (set in slot.sets) {
+        for (slot in slots) for (set in slot.sets) {
             if (set.prescription.type != DraftSetType.WORKING) continue
             val fact = byKey[set.setKey] ?: return null
             val target = set.prescription
@@ -47,7 +47,7 @@ internal object CustomVerifiedSwappedStationEvidenceDomain {
             val machine = actual.machineInstanceId ?: return null
             if (fact.slotId != slot.slotId || fact.exerciseId != slot.exerciseId ||
                 fact.part != CustomWorkoutVisitPart.MAIN ||
-                fact.setType != DraftSetType.WORKING ||
+                fact.stage != 1 || fact.setType != DraftSetType.WORKING ||
                 fact.prescribedLoad != target.load ||
                 fact.prescribedReps != target.reps ||
                 fact.prescribedRir != target.targetRir ||
@@ -62,5 +62,37 @@ internal object CustomVerifiedSwappedStationEvidenceDomain {
             stations.add(machine)
         }
         return stations.takeIf { it.isNotEmpty() }
+    }
+
+    /** A real native Swap removes the original slot and creates new keys.
+     * Every working set on that day needs verified station attribution. */
+    fun machinesWhenOriginalSlotAbsent(
+        session: CustomCoachingHistoricalSession,
+        originalSlotId: String
+    ): Set<String>? {
+        if (originalSlotId.isBlank() ||
+            session.snapshot.slots.any { it.slotId == originalSlotId })
+            return null
+        return completeMachines(session,session.snapshot.slots).takeIf {
+            // No extra unassigned main working receipts may be discarded.
+            it != null && session.evidence.visits.count { fact ->
+                fact.part == CustomWorkoutVisitPart.MAIN &&
+                    fact.setType == DraftSetType.WORKING
+            } == session.snapshot.slots.sumOf { slot ->
+                slot.sets.count { set -> set.prescription.type == DraftSetType.WORKING }
+            }
+        }
+    }
+
+    /** When a known slot still exists, verify only that actual exercise's
+     * full original working-set ledger. Other unrelated lifts need not be
+     * weighted-machine sets for this station-specific history decision. */
+    fun machinesForVerifiedSlot(
+        session: CustomCoachingHistoricalSession,
+        slotId: String
+    ): Set<String>? {
+        val slot = session.snapshot.slots.singleOrNull { it.slotId == slotId }
+            ?:return null
+        return completeMachines(session,listOf(slot))
     }
 }

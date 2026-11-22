@@ -101,7 +101,7 @@ internal fun customWorkoutInfoSets(
         type=target.type,
         title=infoTitle(target.type,position),
         load=infoLoad(target.load),
-        reps=infoReps(target.reps),
+        reps=target.repTargetLabel(),
         targetRir=target.targetRir?.toString() ?: "Not set",
         workSeconds=target.activeSeconds,
         restSeconds=target.restSeconds,

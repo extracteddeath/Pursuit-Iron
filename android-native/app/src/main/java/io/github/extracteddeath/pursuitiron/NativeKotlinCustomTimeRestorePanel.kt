@@ -109,12 +109,6 @@ internal object NativeKotlinCustomRestorePresentation {
     }
 }
 
-private fun customRestoredLoad(load:DraftSetLoad):String=when(load) {
-    DraftSetLoad.ExplicitBodyweight -> "Bodyweight"
-    is DraftSetLoad.Verified ->
-        "${load.value.stripTrailingZeros().toPlainString()} ${load.unit.name.lowercase()} · ${kotlinLoadBasisLabel(load.basis)}"
-}
-
 /** Two explicit steps: inspect the Full original, then confirm its restore.
  * Cancel closes only this read-only review. Issued sessions can never enter
  * the writer, and a reopened stale preview cannot change workout history. */
@@ -175,21 +169,14 @@ internal fun NativeKotlinCustomTimeRestorePanel(
                 full.slots.forEach{slot->
                     Text(kotlinExerciseLabel(slot.exerciseId),
                         style=MaterialTheme.typography.titleSmall)
-                    slot.sets.forEach{set->
-                        val target=set.prescription
+                    customWorkoutInfoSets(slot.sets).forEach{set->
+                        val action=if(set.setKey in returningKeys)"Return" else "Keep"
                         Text(
-                            "${if(set.setKey in returningKeys)"Return" else "Keep"} · " +
-                            "${target.type.name.lowercase()} ${set.ordinalInSlot} · " +
-                            "${customRestoredLoad(target.load)} · " +
-                            "${target.reps.minimum}–${target.reps.maximum} reps · " +
-                            "RIR ${target.targetRir?.toString()?:"not set"} · " +
-                            "${target.activeSeconds}s work / ${target.restSeconds}s rest",
+                            "$action · ${set.title} · ${set.load} · ${set.reps} · " +
+                            "RIR ${set.targetRir} · ${set.workSeconds}s work / ${set.restSeconds}s rest",
                             style=MaterialTheme.typography.bodySmall)
-                        target.amplifier?.let{amp->
-                            Text("${amp.kind.name.replace('_',' ').lowercase()} · " +
-                                "${amp.followUpReps} follow-up reps · " +
-                                "${amp.followUpRestSeconds}s intra-set rest · " +
-                                "${amp.followUpActiveSeconds?.let{"${it}s extra work"}?:"extra work time not declared"}",
+                        set.technique?.let{technique->
+                            Text(technique,
                                 style=MaterialTheme.typography.labelSmall,
                                 color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }

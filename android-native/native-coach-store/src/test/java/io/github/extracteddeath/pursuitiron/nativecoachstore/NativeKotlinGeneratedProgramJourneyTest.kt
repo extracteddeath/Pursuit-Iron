@@ -745,6 +745,147 @@ class NativeKotlinGeneratedProgramJourneyTest {
             .slots.map { it.exerciseId }, nextWeek.slots.map { it.exerciseId })
     }
 
+    @Test fun completedBasicProgramEarnsReviewedWeekTwoLoadsOnlyAfterExplicitConsent() {
+        val (cycle, inputs) = saveGenerated()
+        val days = cycle.blocks.single().days.sortedBy { it.weekday }
+        val firstDay = days.first()
+        val selected = firstDay.slots.first { slot ->
+            slot.progressionMethod in setOf(SavedProgressionMethod.AUTO,
+                SavedProgressionMethod.DOUBLE, SavedProgressionMethod.DYNAMIC,
+                SavedProgressionMethod.LINEAR) &&
+                slot.sets.filter { it.type == DraftSetType.WORKING }.let { work ->
+                    work.size >= 2 && work.all {
+                        val load = it.load as? DraftSetLoad.Verified
+                        load?.basis == LoadBasis.DUMBBELL_PER_HAND &&
+                            it.amplifier == null
+                    }
+                }
+        }
+        val finishedWeekOne = linkedMapOf<String, CustomWorkoutDaySnapshot>()
+        for ((dayIndex, day) in days.withIndex()) {
+            val workoutId = "earned-basic-w1-$dayIndex"
+            assertTrue(Disk().prepared.prepare(owner, workoutId, cycleId,
+                1, day.weekday, inputs) is NativeCustomPrepareResult.Prepared)
+            var journal = (Disk().journals.issue(owner, workoutId, cycleId,
+                1, day.weekday, inputs) as NativeCustomJournalResult.Durable).issued.journal
+            val immutable = journal.snapshot
+            for ((setIndex, set) in immutable.slots.flatMap { it.sets }.withIndex()) {
+                val prescription = set.prescription
+                val earned = day.weekday == firstDay.weekday &&
+                    set.slotId == selected.slotId &&
+                    prescription.type == DraftSetType.WORKING
+                val performedReps = if (earned) prescription.reps.maximum
+                    else prescription.reps.minimum
+                val performed = when (val load = prescription.load) {
+                    is DraftSetLoad.Verified ->
+                        KotlinPerformedSet(load.value, load.unit, performedReps, null)
+                    DraftSetLoad.ExplicitBodyweight ->
+                        KotlinPerformedSet(null, null, performedReps, null)
+                }
+                journal = (Disk().journals.record(owner, workoutId,
+                    CustomWorkoutJournalOperation.Record(
+                        "earned-w1-$dayIndex-$setIndex", journal.revision,
+                        CustomWorkoutVisitKey(set.setKey, CustomWorkoutVisitPart.MAIN),
+                        KotlinJournalSetOutcome.COMPLETED, performed))
+                    as NativeCustomJournalResult.Durable).issued.journal
+                assertEquals(immutable, (Disk().journals.open(owner, workoutId)
+                    as NativeCustomJournalResult.Durable).issued.journal.snapshot)
+            }
+            assertEquals(0, journal.unresolvedVisitCount)
+            assertTrue(NativeKotlinCustomHistoryTransaction(
+                Disk().history, Disk().journals, Disk().fence, identity).complete(
+                owner, athlete, workoutId,
+                CustomWorkoutJournalOperation.Finish(
+                    "earned-finish-$dayIndex", journal.revision))
+                is NativeCustomFinishResult.Committed)
+            finishedWeekOne[workoutId] = immutable
+        }
+        assertEquals(NativeCustomNextCycleSlot.Next(2, firstDay.weekday,
+            firstDay.label), Disk().next(inputs))
+
+        val signedReader = Disk()
+        val basic = NativeKotlinCustomBasicNextReview(
+            signedReader.fence, identity, signedReader.drafts,
+            signedReader.sources, signedReader.preflight, signedReader.timeline,
+            signedReader.journals, signedReader.machines)
+        val review = basic.reviewAuthored(owner, cycleId, inputs,
+            2, firstDay.weekday, selected.slotId, "earned-basic-future",
+            n("5")) as NativeCustomBasicNextReadResult.Reviewed
+        assertEquals(cycle.revision, review.next.stamp.cycleRevision)
+        val projection = review.projection as CustomBasicHistoryResult.Reviewed
+        assertEquals("earned-basic-w1-0", projection.historyWorkoutId)
+        assertTrue("Expected a verified physical next increment",
+            projection.candidate.increasedOrdinals.isNotEmpty())
+        val before = review.next.slots.single {
+            it.slotId == selected.slotId
+        }.sets.map { it.prescription }
+        val offered = checkNotNull(CustomBasicProgressionDraftDomain.forWeekEdit(
+            selected.slotId, before, projection))
+        assertEquals(before.size, offered.size)
+        assertEquals(before.filter { it.type == DraftSetType.WARMUP },
+            offered.filter { it.type == DraftSetType.WARMUP })
+        assertEquals(before.map { it.reps }, offered.map { it.reps })
+        assertEquals(before.map { it.targetRir }, offered.map { it.targetRir })
+
+        val compared = CustomCoachWeekEditDomain.review(
+            cycle, cycle.revision, 2, firstDay.weekday, selected.slotId,
+            offered, setup(), catalog, inputs)
+        assertTrue(compared.toString(),
+            compared is CustomCoachWeekEditResult.Reviewed)
+        val approvedDraft = (compared as CustomCoachWeekEditResult.Reviewed)
+            .review.proposal.draft
+        assertEquals(cycle, (Disk().drafts.read(owner, cycleId)
+            as NativeCustomDraftReadResult.Found).draft)
+        val beforeConsent = (Disk().preflight.inspect(owner, cycleId,
+            2, firstDay.weekday, inputs)
+            as NativeCustomPreflightResult.ReviewedPreview).session
+        assertEquals(before, beforeConsent.slots.single {
+            it.slotId == selected.slotId
+        }.sets.map { it.prescription })
+        // Reviewing the optional progression cannot issue or change a set.
+        assertFalse(review.mayIssueWorkout)
+        assertFalse(review.maySaveProgram)
+        assertFalse(compared.review.mayIssueWorkout)
+        assertTrue(Disk().drafts.save(owner, cycleId,
+            cycle.revision, approvedDraft) is NativeCustomDraftWriteResult.Committed)
+        val obsolete = (Disk().consent.read(owner, cycleId, inputs)
+            as NativeCustomSignoffRead.Found)
+        assertFalse(obsolete.isCurrent)
+        assertFalse(Disk().preflight.inspect(owner, cycleId,
+            2, firstDay.weekday, inputs)
+            is NativeCustomPreflightResult.ReviewedPreview)
+        assertTrue(Disk().consent.confirm(owner, cycleId,
+            approvedDraft.revision, 1, obsolete.receipt.recordRevision,
+            inputs, true) is NativeCustomSignoffWrite.Committed)
+
+        // Only this explicitly accepted week changes. A fresh preparation,
+        // issue, and cold journal reopen must agree on all set prescriptions.
+        val accepted = (Disk().preflight.inspect(owner, cycleId,
+            2, firstDay.weekday, inputs)
+            as NativeCustomPreflightResult.ReviewedPreview).session
+        assertEquals(offered, accepted.slots.single {
+            it.slotId == selected.slotId
+        }.sets.map { it.prescription })
+        assertEquals(before, (Disk().preflight.inspect(owner, cycleId,
+            3, firstDay.weekday, inputs)
+            as NativeCustomPreflightResult.ReviewedPreview).session.slots.single {
+                it.slotId == selected.slotId
+            }.sets.map { it.prescription })
+        val id = "earned-basic-new-issue"
+        assertTrue(Disk().prepared.prepare(owner, id, cycleId,
+            2, firstDay.weekday, inputs) is NativeCustomPrepareResult.Prepared)
+        val issued = (Disk().journals.issue(owner, id, cycleId,
+            2, firstDay.weekday, inputs)
+            as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals(accepted, issued.snapshot)
+        assertEquals(accepted, (Disk().journals.open(owner, id)
+            as NativeCustomJournalResult.Durable).issued.journal.snapshot)
+        for ((oldId, snapshot) in finishedWeekOne) {
+            assertEquals(snapshot, (Disk().journals.open(owner, oldId)
+                as NativeCustomJournalResult.Durable).issued.journal.snapshot)
+        }
+    }
+
     @Test fun savedV2ProgramColdReopensWithoutBeingRegeneratedWithV3Timing() {
         val (cycle,inputs)=saveGenerated(CoachFirstProgramStartDomain.PREVIOUS_POLICY_VERSION)
         val disk=Disk()

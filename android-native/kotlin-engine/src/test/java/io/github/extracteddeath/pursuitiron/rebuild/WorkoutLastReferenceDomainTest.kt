@@ -421,6 +421,41 @@ class WorkoutLastReferenceDomainTest {
         assertTrue(a.machineSets.isEmpty())
     }
 
+    @Test fun aMachineLabelOnUnloadedReplacementDoesNotAuthenticateWeightStationB() {
+        val sourceA=session(custom(1),1).let {prior ->
+            prior.copy(evidence=prior.evidence.copy(visits=
+                prior.evidence.visits.map{fact ->
+                    fact.copy(actual=fact.actual?.copy(machineInstanceId="A"))
+                }))
+        }
+        // This is valid as a factual bodyweight observation, but a string B
+        // alone is not proof that the unloaded substitute used a separately
+        // calibrated weighted machine B. Do not revive older A Last.
+        val unloaded=session(custom(2,exercise="paused_bench"),2).let{prior ->
+            prior.copy(
+                snapshot=prior.snapshot.copy(slots=prior.snapshot.slots.map{slot ->
+                    slot.copy(sets=slot.sets.map{set ->
+                        set.copy(prescription=set.prescription.copy(
+                            load=DraftSetLoad.ExplicitBodyweight))
+                    })
+                }),
+                evidence=prior.evidence.copy(visits=prior.evidence.visits.map{fact ->
+                    fact.copy(prescribedLoad=DraftSetLoad.ExplicitBodyweight,
+                        actual=fact.actual?.copy(load=null,unit=null,
+                            machineInstanceId="B"))
+                }))
+        }
+        assertTrue(unloaded.evidence.visits.all{
+            KotlinSetNumberAuthorityDomain.valid(it.prescribedLoad,
+                it.outcome,it.actual)
+        })
+        val result=WorkoutLastReferenceDomain.custom(
+            "current",custom(3),listOf(sourceA,unloaded))
+            as WorkoutLastReferenceResult.Ready
+        assertTrue(result.sets.isEmpty())
+        assertTrue(result.machineSets.isEmpty())
+    }
+
     @Test fun anUnknownSkippedMachineBlocksStaleLastInsteadOfPromotingAnOldPr() {
         val first=session(custom(1),1)
         val tagged=first.copy(evidence=first.evidence.copy(visits=

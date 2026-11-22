@@ -180,6 +180,28 @@ class BasicProgressionExtendedCoverageTest {
             stockLimit.decision)
         assertEquals(listOf(n("120"),n("120"),n("120")),
             stockLimit.proposedWorkingLoads)
+        assertEquals(all.issuedRepTargets, stockLimit.proposedRepTargets)
+        val limited = BasicProgressionPolicyDomain.review(all.copy(maximumAuthorizedIncrement=n("2.5")))
+            as BasicProgressionResult.Candidate
+        assertEquals(BasicProgressionDecision.AUTHORIZED_INCREMENT_TOO_SMALL, limited.decision)
+        assertEquals(all.issuedRepTargets, limited.proposedRepTargets)
+        assertTrue(limited.changedRepOrdinals.isEmpty())
+    }
+
+    @Test fun repOnlyCeilingRequiresCompletedRepsAndNoRemainingTargetStep() {
+        val base = request(BasicProgressionStrategy.REP_TARGET_PROGRESSION)
+        fun result(reps: List<Int>, targets: List<Int>) =
+            BasicProgressionPolicyDomain.review(request(base.strategy, reps=reps).copy(
+                verifiedStock=null, maximumAuthorizedIncrement=BigDecimal.ZERO,
+                issuedRepTargets=targets)) as BasicProgressionResult.Candidate
+        val capped = result(listOf(10, 10, 11), listOf(10, 10, 10))
+        assertEquals(BasicProgressionDecision.REP_CEILING_REACHED, capped.decision)
+        assertTrue(capped.increasedOrdinals.isEmpty())
+        assertEquals(listOf(10, 10, 10), capped.proposedRepTargets)
+        assertEquals(BasicProgressionDecision.BUILD_REPS,
+            result(listOf(10, 9, 10), listOf(10, 10, 10)).decision)
+        assertEquals(BasicProgressionDecision.EARNED_REP_TARGET,
+            result(listOf(10, 10, 10), listOf(8, 10, 10)).decision)
     }
 
     @Test fun repOnlyAndManualDoNotRequireAWeightIncrement() {

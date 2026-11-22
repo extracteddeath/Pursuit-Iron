@@ -471,6 +471,45 @@ class CustomBasicHistoryProgressionDomainTest {
         }
     }
 
+    @Test fun latestRealSubstitutionOnTheSameStationBlocksAnOlderEarnedLoad() {
+        val previousA=completed(1,week=1,machine="A")
+        fun substituted(machine:String):CustomCoachingHistoricalSession {
+            val prior=completed(2,week=2,machine=machine)
+            // Both the ISSUED slot and the independently saved observation
+            // identify a different movement. It is not merely a bad history
+            // fact or a stale label for the original press.
+            return prior.copy(
+                snapshot=prior.snapshot.copy(slots=prior.snapshot.slots.map{
+                    it.copy(exerciseId="substitute-press")
+                }),
+                evidence=prior.evidence.copy(visits=prior.evidence.visits.map{
+                    it.copy(exerciseId="substitute-press")
+                }))
+        }
+        fun nextA(newer:CustomCoachingHistoricalSession) = review(
+            next=snapshot(3,machine="A"),machine="A",
+            sessions=listOf(previousA,newer))
+        // A different lift trained later ON MACHINE A invalidates the
+        // earlier A press as an automatically earned next-session step.
+        assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+            (nextA(substituted("A")) as CustomBasicHistoryResult.Rejected).reason)
+        // A verified, distinct Machine B remains an independent thread:
+        // its substitution must not erase valid prior Machine A press work.
+        val recovered=nextA(substituted("B"))
+            as CustomBasicHistoryResult.Reviewed
+        assertEquals("workout-1",recovered.historyWorkoutId)
+        assertEquals(listOf(n(105),n(105)),recovered.candidate.proposedWorkingLoads)
+        // A new workout on an unknown station is NOT evidence it happened on B.
+        val unknown=substituted("B").let{session->
+            session.copy(evidence=session.evidence.copy(visits=
+                session.evidence.visits.map{
+                    it.copy(actual=it.actual?.copy(machineInstanceId=null))
+                }))
+        }
+        assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+            (nextA(unknown) as CustomBasicHistoryResult.Rejected).reason)
+    }
+
     @Test fun unloadedBodyweightUsesVerifiedExactRepsWithoutAnyLoadOrUnit() {
         fun plan(target:Int, method:SavedProgressionMethod = SavedProgressionMethod.BODYWEIGHT_REPS):CustomTrainingCycle {
             val source=cycle(method)

@@ -45,13 +45,16 @@ class WorkoutLastReferenceDomainTest {
                     outcome,actual,null)) as CustomWorkoutJournalDecision.Proposed).draft
             val amplifier=set.prescription.amplifier
             if(outcome==KotlinJournalSetOutcome.COMPLETED && amplifier!=null) {
-                val followLoad=amplifier.followUpLoad as? DraftSetLoad.Verified ?:target
-                journal=(CustomWorkoutJournalDomain.reduce(journal,
-                    CustomWorkoutJournalOperation.Record("follow-${set.setKey}",journal.revision,
-                        CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.FOLLOW_UP),
-                        outcome,KotlinPerformedSet(followLoad.value,followLoad.unit,
-                            amplifier.followUpReps,null),null))
-                    as CustomWorkoutJournalDecision.Proposed).draft
+                for(stage in 1..amplifier.followUpRounds) {
+                    val followLoad=AdvancedAmplifierProtocolDomain.followUpLoadForStage(
+                        amplifier,target,stage) as DraftSetLoad.Verified
+                    journal=(CustomWorkoutJournalDomain.reduce(journal,
+                        CustomWorkoutJournalOperation.Record("follow-$stage-${set.setKey}",journal.revision,
+                            CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.FOLLOW_UP,stage),
+                            outcome,KotlinPerformedSet(followLoad.value,followLoad.unit,
+                                amplifier.followUpReps,null),null))
+                        as CustomWorkoutJournalDecision.Proposed).draft
+                }
             }
         }}
         journal=(CustomWorkoutJournalDomain.reduce(journal,
@@ -181,6 +184,49 @@ class WorkoutLastReferenceDomainTest {
         assertEquals(4,references[WorkoutReferenceKey(key,true)]?.actual?.reps)
         val changed=sets(result(amplified(3,CustomAmplifierKind.MYO_REPS),listOf(session(previous))))
         assertTrue(changed.keys.none{it.followUp})
+    }
+
+    @Test fun doubleDropLastKeepsBothActualsAndDoesNotResurrectAnOlderSecondDrop() {
+        fun snapshot(week:Int, rounds:Int):CustomWorkoutDaySnapshot {
+            val snap=custom(week,warmup=false)
+            val amp=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+                load(95),30,rounds,if(rounds==2)load(75) else null)
+            return snap.copy(slots=snap.slots.map { slot ->
+                slot.copy(sets=slot.sets.mapIndexed { index,set ->
+                    if(index==0)set else set.copy(prescription=set.prescription.copy(amplifier=amp))
+                })
+            })
+        }
+        val prior=session(snapshot(1,2),1)
+        val next=snapshot(3,2)
+        val key=next.slots.single().sets.last().setKey
+        val both=sets(result(next,listOf(prior)))
+        assertEquals(BigDecimal(135),both.getValue(WorkoutReferenceKey(key)).actual?.load)
+        assertEquals(BigDecimal(95),both.getValue(WorkoutReferenceKey(key,true,1)).actual?.load)
+        assertEquals(BigDecimal(75),both.getValue(WorkoutReferenceKey(key,true,2)).actual?.load)
+        val latest=result(next,listOf(prior,session(snapshot(2,1),2))) as WorkoutLastReferenceResult.Ready
+        assertFalse(WorkoutReferenceKey(key,true,2) in latest.sets)
+        assertTrue(latest.machineSets.keys.none { it.key==WorkoutReferenceKey(key,true,2) })
+        val duplicate=prior.evidence.visits.last()
+        assertEquals(WorkoutLastReferenceResult.Unavailable,result(next,listOf(prior.copy(
+            evidence=prior.evidence.copy(visits=prior.evidence.visits+duplicate)))))
+    }
+
+    @Test fun myoMiniSetsRemainDistinctFromTheActivationAndOrdinaryWorkingSets() {
+        fun myo(week:Int):CustomWorkoutDaySnapshot {
+            val snap=custom(week,warmup=false)
+            return snap.copy(slots=snap.slots.map { slot ->slot.copy(sets=slot.sets.mapIndexed { i,set ->
+                if(i==0)set else set.copy(prescription=set.prescription.copy(amplifier=
+                    CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,20,followUpRounds=3)))
+            }) })
+        }
+        val next=myo(3)
+        val refs=sets(result(next,listOf(session(myo(2)))))
+        val last=next.slots.single().sets.last().setKey
+        assertEquals(5,refs.size)
+        assertEquals(5,refs.getValue(WorkoutReferenceKey(last)).actual?.reps)
+        for(stage in 1..3)
+            assertEquals(4,refs.getValue(WorkoutReferenceKey(last,true,stage)).actual?.reps)
     }
 
     @Test fun viewingAnOldFinishedWorkoutNeverUsesAFutureCompletion() {

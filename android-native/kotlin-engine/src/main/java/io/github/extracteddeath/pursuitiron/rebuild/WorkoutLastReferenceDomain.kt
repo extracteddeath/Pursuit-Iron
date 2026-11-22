@@ -3,7 +3,7 @@ package io.github.extracteddeath.pursuitiron.rebuild
 import java.util.Collections
 
 /** Display-only facts. Neither a target nor an instruction to progress. */
-data class WorkoutReferenceKey(val setKey:String,val followUp:Boolean=false)
+data class WorkoutReferenceKey(val setKey:String,val followUp:Boolean=false,val stage:Int=1)
 data class WorkoutLastSetReference(
     val workoutId:String,
     val completionOrder:Long,
@@ -101,20 +101,30 @@ object WorkoutLastReferenceDomain {
                     val facts=prior.evidence.visits.filter{
                         it.slotId==slot.slotId && it.setKey==oldSet.setKey && it.part==part
                     }
-                    if(facts.size>1)return WorkoutLastReferenceResult.Unavailable
-                    val fact=facts.singleOrNull() ?:continue
-                    val oldLoad=if(followUp)oldSet.prescription.amplifier?.followUpLoad
-                        ?:oldSet.prescription.load else oldSet.prescription.load
-                    val newLoad=if(followUp)set.prescription.amplifier?.followUpLoad
-                        ?:set.prescription.load else set.prescription.load
-                    if(!compatible(oldLoad,newLoad))continue
-                    if(fact.exerciseId!=slot.exerciseId || fact.setType!=type ||
-                        fact.prescribedLoad!=oldLoad ||
-                        !CustomWorkoutJournalDomain.actualValid(oldLoad,fact.outcome,fact.actual))
+                    val priorAmp=oldSet.prescription.amplifier
+                    val oldStages=if(followUp) checkNotNull(priorAmp).followUpRounds else 1
+                    val newStages=if(followUp) checkNotNull(amplifier).followUpRounds else 1
+                    if(facts.any { it.stage !in 1..oldStages } ||
+                        facts.distinctBy { it.stage }.size!=facts.size)
                         return WorkoutLastReferenceResult.Unavailable
-                    result[WorkoutReferenceKey(set.setKey,followUp)]=WorkoutLastSetReference(
-                        prior.evidence.workoutId,prior.completionOrder,fact.outcome,
-                        fact.actual,(oldLoad as? DraftSetLoad.Verified)?.basis)
+                    for(fact in facts) {
+                        val oldLoad=if(followUp) AdvancedAmplifierProtocolDomain.followUpLoadForStage(
+                            checkNotNull(priorAmp),oldSet.prescription.load,fact.stage)
+                            else oldSet.prescription.load
+                        if(fact.exerciseId!=slot.exerciseId || fact.setType!=type ||
+                            !KotlinSetNumberAuthorityDomain.sameIssuedTarget(fact.prescribedLoad,oldLoad) ||
+                            followUp && fact.amplifierKind!=priorAmp?.kind ||
+                            !CustomWorkoutJournalDomain.actualValid(oldLoad,fact.outcome,fact.actual))
+                            return WorkoutLastReferenceResult.Unavailable
+                        if(fact.stage>newStages)continue
+                        val newLoad=if(followUp) AdvancedAmplifierProtocolDomain.followUpLoadForStage(
+                            checkNotNull(amplifier),set.prescription.load,fact.stage)
+                            else set.prescription.load
+                        if(!compatible(oldLoad,newLoad))continue
+                        result[WorkoutReferenceKey(set.setKey,followUp,fact.stage)]=WorkoutLastSetReference(
+                            prior.evidence.workoutId,prior.completionOrder,fact.outcome,
+                            fact.actual,(oldLoad as? DraftSetLoad.Verified)?.basis)
+                    }
                 }
             }
         }
@@ -164,6 +174,14 @@ object WorkoutLastReferenceDomain {
         destination:MutableMap<WorkoutMachineReferenceKey,WorkoutLastSetReference>,
         source:Map<WorkoutReferenceKey,WorkoutLastSetReference>
     ) {
+        // A later visit replaces the whole technique on that station. An early
+        // stop or a shorter prescription cannot revive an older mini-set.
+        val mainBySet=source.filterKeys { !it.followUp }.mapKeys { it.key.setKey }
+        destination.keys.removeAll { previous ->
+            val main=mainBySet[previous.key.setKey]
+            previous.key.followUp && main!=null && (main.actual==null ||
+                previous.machineId==KotlinMachineAlternativesDomain.normalizeMachineId(main.actual.machineInstanceId))
+        }
         source.forEach { (key,fact) ->
             if(fact.outcome==KotlinJournalSetOutcome.SKIPPED && fact.actual==null) {
                 // The station used for an unattempted set is unknowable.

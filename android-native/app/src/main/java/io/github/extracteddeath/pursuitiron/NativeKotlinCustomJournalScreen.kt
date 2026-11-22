@@ -1808,6 +1808,7 @@ private fun NativeKotlinCustomVisitEditor(
     // A/B and exercise/day/source identity are pinned to the immutable
     // ISSUED workout. This private entry cannot issue prescriptions, save
     // observations or authorize a future session after cold restart.
+    val referenceKey=WorkoutReferenceKey(set.setKey,part==CustomWorkoutVisitPart.FOLLOW_UP,stageOrdinal)
     val exactMainTarget = prescription.exactRepTarget.takeIf { part == CustomWorkoutVisitPart.MAIN }
     val expectedReps=if(part==CustomWorkoutVisitPart.FOLLOW_UP)
         follower?.followUpReps?.let{RepBand(it,it)} ?:prescription.reps
@@ -1909,8 +1910,7 @@ private fun NativeKotlinCustomVisitEditor(
                 PursuitUseLastCompletedSet(
                 mode=referenceMode,
                 history=physicalMachineLastReferences(lastReferences,machineInstanceId),
-                key=WorkoutReferenceKey(
-                    set.setKey,part==CustomWorkoutVisitPart.FOLLOW_UP),
+                key=referenceKey,
                 currentLoad=target,
                 enabled=!locked,
                 onApply={last->
@@ -2091,8 +2091,7 @@ private fun NativeKotlinCustomVisitEditor(
         if(saved==null && (editing || initiallyExpanded)) {
             PursuitWorkoutSetReference(referenceMode,target,expectedReps,
                 if(part==CustomWorkoutVisitPart.FOLLOW_UP)null else prescription.targetRir,
-                physicalMachineLastReferences(lastReferences,machineInstanceId),WorkoutReferenceKey(set.setKey,
-                    part==CustomWorkoutVisitPart.FOLLOW_UP), exactRepTarget = exactMainTarget)
+                physicalMachineLastReferences(lastReferences,machineInstanceId),referenceKey, exactRepTarget = exactMainTarget)
         }
         if(saved!=null){
             Text(nativeSavedSetCaption("Recorded",saved.outcome,saved.performed,
@@ -2129,7 +2128,7 @@ private fun NativeKotlinCustomVisitEditor(
             PursuitWorkoutSetReference(referenceMode,target,expectedReps,
                 if(part==CustomWorkoutVisitPart.FOLLOW_UP)null else prescription.targetRir,
                 physicalMachineLastReferences(lastReferences,machineInstanceId),
-                WorkoutReferenceKey(set.setKey,part==CustomWorkoutVisitPart.FOLLOW_UP), exactRepTarget = exactMainTarget)
+                referenceKey, exactRepTarget = exactMainTarget)
             entryFields()
         }
     }

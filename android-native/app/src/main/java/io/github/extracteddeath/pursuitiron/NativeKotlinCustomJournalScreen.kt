@@ -960,7 +960,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                     .toBigDecimalOrNull()
                             val reps=if(visit!=null)actual?.reps else
                                 (editor?.reps ?:
-                                    set.prescription.reps.minimum.toString())
+                                    (set.prescription.exactRepTarget ?: set.prescription.reps.minimum).toString())
                                     .toIntOrNull()
                             val verified=set.prescription.load as? DraftSetLoad.Verified
                             CurrentWorkoutLevelingRow(
@@ -1808,6 +1808,7 @@ private fun NativeKotlinCustomVisitEditor(
     // A/B and exercise/day/source identity are pinned to the immutable
     // ISSUED workout. This private entry cannot issue prescriptions, save
     // observations or authorize a future session after cold restart.
+    val exactMainTarget = prescription.exactRepTarget.takeIf { part == CustomWorkoutVisitPart.MAIN }
     val expectedReps=if(part==CustomWorkoutVisitPart.FOLLOW_UP)
         follower?.followUpReps?.let{RepBand(it,it)} ?:prescription.reps
     else prescription.reps
@@ -1847,7 +1848,7 @@ private fun NativeKotlinCustomVisitEditor(
         startingLoad,
         saved?.performed?.reps?.toString() ?:
             (if(part==CustomWorkoutVisitPart.FOLLOW_UP)
-                follower?.followUpReps else prescription.reps.minimum)
+                follower?.followUpReps else exactMainTarget ?: prescription.reps.minimum)
                 ?.toString().orEmpty(),
         saved?.performed?.actualRir?.toString().orEmpty())
     val draftEditor=rememberNativePendingWorkoutDraftEditor(
@@ -2088,13 +2089,10 @@ private fun NativeKotlinCustomVisitEditor(
             }
         }
         if(saved==null && (editing || initiallyExpanded)) {
-            val referenceReps=if(part==CustomWorkoutVisitPart.FOLLOW_UP)
-                follower?.followUpReps?.let{RepBand(it,it)} ?:prescription.reps
-            else prescription.reps
-            PursuitWorkoutSetReference(referenceMode,target,referenceReps,
+            PursuitWorkoutSetReference(referenceMode,target,expectedReps,
                 if(part==CustomWorkoutVisitPart.FOLLOW_UP)null else prescription.targetRir,
                 physicalMachineLastReferences(lastReferences,machineInstanceId),WorkoutReferenceKey(set.setKey,
-                    part==CustomWorkoutVisitPart.FOLLOW_UP))
+                    part==CustomWorkoutVisitPart.FOLLOW_UP), exactRepTarget = exactMainTarget)
         }
         if(saved!=null){
             Text(nativeSavedSetCaption("Recorded",saved.outcome,saved.performed,
@@ -2128,13 +2126,10 @@ private fun NativeKotlinCustomVisitEditor(
             }
             saveError?.let {Text(it,color=MaterialTheme.colorScheme.error,
                 style=MaterialTheme.typography.bodySmall)}
-            val referenceReps=if(part==CustomWorkoutVisitPart.FOLLOW_UP)
-                follower?.followUpReps?.let{RepBand(it,it)} ?:prescription.reps
-            else prescription.reps
-            PursuitWorkoutSetReference(referenceMode,target,referenceReps,
+            PursuitWorkoutSetReference(referenceMode,target,expectedReps,
                 if(part==CustomWorkoutVisitPart.FOLLOW_UP)null else prescription.targetRir,
                 physicalMachineLastReferences(lastReferences,machineInstanceId),
-                WorkoutReferenceKey(set.setKey,part==CustomWorkoutVisitPart.FOLLOW_UP))
+                WorkoutReferenceKey(set.setKey,part==CustomWorkoutVisitPart.FOLLOW_UP), exactRepTarget = exactMainTarget)
             entryFields()
         }
     }

@@ -1779,3 +1779,13 @@ assert.ok(
   !basicPreviewPanel.includes('onClick='),
   'Basic Plan preview must remain owner-verified, independent of optional coach assistance and non-issuable'
 );
+
+const customRepEditor = read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomJournalScreen.kt');
+const repReference = read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutReference.kt');
+assert.ok(
+  customRepEditor.includes('follower?.followUpReps else exactMainTarget ?: prescription.reps.minimum') &&
+  customRepEditor.includes('set.prescription.exactRepTarget ?: set.prescription.reps.minimum') &&
+  customRepEditor.split('exactRepTarget = exactMainTarget').length === 3 &&
+  repReference.includes('if(exactRepTarget != null) exactRepTarget.toString()'),
+  'Authored main-set reps must reach the logger, correction reference and Leveling draft; follow-ups use their own reps'
+);

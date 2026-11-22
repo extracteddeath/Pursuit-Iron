@@ -1119,8 +1119,9 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     val maxStep=runCatching{BigDecimal(coachMaxStep.trim())}
                         .getOrNull()?.takeIf{it>BigDecimal.ZERO && it<=BigDecimal("10000") &&
                             it.stripTrailingZeros().scale()<=3}
-                    val basicPlan=remember(draft.cycleId,draft.revision){
-                        BasicProgramProgressionPlanDomain.review(draft)
+                    val basicPlan=remember(draft, session.blockId, session.weekInBlock) {
+                        BasicProgramProgressionPlanDomain.review(draft,
+                            previewWeek = ProgramProgressionWeek(session.blockId, session.weekInBlock))
                             as? ProgramProgressionPlan.Ready
                     }
                     val basicSlots=basicPlan?.assignments?.filter{

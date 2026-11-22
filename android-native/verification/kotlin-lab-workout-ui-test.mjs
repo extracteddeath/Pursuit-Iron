@@ -1762,6 +1762,9 @@ assert.ok(
   basicPreviewScreen.includes('slot.slotId in basicSlots') &&
   basicPreviewScreen.includes('ProgramProgressionRoute.BASIC_WEIGHTED') &&
   basicPreviewScreen.includes('ProgramProgressionRoute.MANUAL') &&
+  basicPreviewScreen.includes('ProgramProgressionRoute.BASIC_BODYWEIGHT_REPS') &&
+  basicPreviewScreen.includes('if (slot.slotId in loadStepSlots) maxStep else BigDecimal.ZERO') &&
+  basicPreviewScreen.includes('checkNotNull(basicStep)') &&
   basicPreviewScreen.includes('Preview basic progression') &&
   basicPreviewScreen.includes('!session.prescriptionEditedForTime') &&
   basicPreviewScreen.includes('state.basicDayProgressionSlotId==slot.slotId') &&

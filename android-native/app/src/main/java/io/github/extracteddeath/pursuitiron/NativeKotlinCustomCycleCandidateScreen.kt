@@ -1184,7 +1184,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                 is DraftSetLoad.Verified ->
                                     "${weight.value.toPlainString()} ${weight.unit} · ${kotlinLoadBasisLabel(weight.basis)}"
                             }
-                            Text("Set ${set.ordinalInSlot} · ${pretty(target.type)} · $load · ${target.reps.minimum}–${target.reps.maximum} reps · RIR ${target.targetRir?.toString() ?: "not set"}",
+                            Text("Set ${set.ordinalInSlot} · ${pretty(target.type)} · $load · ${target.repTargetLabel()} · RIR ${target.targetRir?.toString() ?: "not set"}",
                                 style=MaterialTheme.typography.bodyMedium)
                             Text("${target.activeSeconds}s work · ${target.restSeconds}s rest",
                                 style=MaterialTheme.typography.bodySmall)

@@ -32,7 +32,7 @@ internal fun savedProgressionLabel(method:SavedProgressionMethod?):String =
         SavedProgressionMethod.BODYWEIGHT_REPS -> "Bodyweight reps"
     }
 
-private fun savedProgressionExplanation(method:SavedProgressionMethod?):String =
+private fun savedProgressionExplanation(method:SavedProgressionMethod?, bodyweight: Boolean):String =
     when(method) {
         null -> "Use the current program's default without locking a method."
         SavedProgressionMethod.AUTO ->
@@ -42,7 +42,8 @@ private fun savedProgressionExplanation(method:SavedProgressionMethod?):String =
         SavedProgressionMethod.DYNAMIC ->
             "Each working set earns its own next available weight."
         SavedProgressionMethod.LADDER ->
-            "Build rep targets; after all sets reach the ceiling, increase load and reset reps."
+            if (bodyweight) "Each working set can earn one more rep within its saved range."
+            else "Build reps on each set. When all sets reach the ceiling, increase load and restart at the rep floor."
         SavedProgressionMethod.LINEAR ->
             "Earn one physical load increment when all sets reach the rep floor."
         SavedProgressionMethod.WAVE ->
@@ -73,6 +74,8 @@ internal fun NativeKotlinProgressionMethodPicker(
         ?.days?.singleOrNull{it.weekday==weekday}
         ?.slots?.singleOrNull{it.slotId==slotId}
     if(slot==null)return
+    val bodyweight = slot.sets.filter { it.type == DraftSetType.WORKING }
+        .all { it.load == DraftSetLoad.ExplicitBodyweight }
     val available=remember(draft.cycleId,draft.revision,blockId,weekday,slotId){
         CustomCycleBuilderDomain.availableProgressionMethods(
             draft, ProgramProgressionSlotKey(blockId, weekday, slotId))
@@ -114,7 +117,7 @@ internal fun NativeKotlinProgressionMethodPicker(
                             Column(Modifier.weight(1f)) {
                                 Text(savedProgressionLabel(method),
                                     style=MaterialTheme.typography.bodyMedium)
-                                Text(savedProgressionExplanation(method),
+                                Text(savedProgressionExplanation(method, bodyweight),
                                     style=MaterialTheme.typography.bodySmall,
                                     color=MaterialTheme.colorScheme.onSurfaceVariant)
                             }

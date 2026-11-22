@@ -40,6 +40,8 @@ sealed interface CustomBasicHistoryResult {
         val reason: CustomBasicHistoryRefusal,
         val evaluatorReason: BasicProgressionRefusal? = null
     ): CustomBasicHistoryResult
+    /** Manual bodyweight sets use their signed prescription without a numerical proposal. */
+    data class ManualBodyweight(val slotId: String): CustomBasicHistoryResult
     data class UnloadedReviewed(
         val historyWorkoutId:String,
         val completionOrder:Long,
@@ -140,9 +142,17 @@ object CustomBasicHistoryProgressionDomain {
             return no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE)
 
         val working=selected.sets.filter {it.prescription.type==DraftSetType.WORKING}
-        if(working.size !in 1..32 ||
-            working.any {it.prescription.amplifier!=null} ||
-            working.map {it.prescription.reps}.distinct().size!=1)
+        if (working.size !in 1..32)
+            return no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE)
+        val manual = strategy == BasicProgressionStrategy.MANUAL_LOGGING
+        if (manual && working.all { it.prescription.load == DraftSetLoad.ExplicitBodyweight }) {
+            if (request.selectedMachineInstanceId != null || next.stamp.gymId.isBlank() ||
+                block.blockId.isBlank() || selected.exerciseId.isBlank())
+                return no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE)
+            return CustomBasicHistoryResult.ManualBodyweight(selected.slotId)
+        }
+        if(!manual && (working.any {it.prescription.amplifier!=null} ||
+            working.map {it.prescription.reps}.distinct().size!=1))
             return no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE)
         val targetReps=working.first().prescription.reps
         if(unweighted && working.any{
@@ -171,16 +181,16 @@ object CustomBasicHistoryProgressionDomain {
         if(scope!=null && !scope.valid())
             return no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE)
 
-        if(strategy==BasicProgressionStrategy.MANUAL_LOGGING) {
-            val manual=BasicProgressionPolicyDomain.review(BasicProgressionRequest(
-                strategy,request.nextWorkoutId,checkNotNull(scope),null,null,targetReps,
+        if(manual) {
+            val repeat=BasicProgressionPolicyDomain.review(BasicProgressionRequest(
+                BasicProgressionStrategy.MANUAL_LOGGING,request.nextWorkoutId,checkNotNull(scope),null,null,targetReps,
                 loads.map{it.value},null,request.maximumAuthorizedIncrement))
-            return when(manual) {
+            return when(repeat) {
                 is BasicProgressionResult.Candidate -> CustomBasicHistoryResult.Reviewed(
-                    null,null,manual,next.blockId,next.weekday,request.slotId,
+                    null,null,repeat,next.blockId,next.weekday,request.slotId,
                     request.selectedMachineInstanceId)
                 is BasicProgressionResult.Refused ->
-                    no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE,manual.reason)
+                    no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE,repeat.reason)
             }
         }
 

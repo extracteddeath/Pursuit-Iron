@@ -1048,8 +1048,8 @@ assert.ok(composer.includes('NativeSetValueFields(') &&
   sharedSetFields.includes('showFieldHelp:Boolean=true') &&
   sharedSetFields.includes('Bodyweight movement · no external load.') &&
   sharedSetFields.includes('RIR is optional; leave it blank if unreported.') &&
-  sharedSetFields.includes('NativeSetEntryPolicy.stepRepsBy(') &&
-  sharedSetFields.includes('NativeSetEntryPolicy.stepRirBy(') &&
+  sharedSetFields.includes('KotlinSetDraftStepDomain.stepRepsBy(') &&
+  sharedSetFields.includes('KotlinSetDraftStepDomain.stepRirBy(') &&
   composer.includes('showFieldHelp=false') &&
   journal.includes('showFieldHelp=false'),
   'Generated workout must use shared accessible reps/RIR steppers and omit the load field for source-verified bodyweight sets');
@@ -1207,7 +1207,7 @@ for(const source of [journal,composer]) {
 assert.ok(restBridge.includes('if(!rest.hasRemainingWork)return') &&
   restBridge.includes('NativeRestTimer(workoutId,rest.manualRestSeconds,enabled,') &&
   restBridge.includes('latestReceiptOperationId=rest.latestReceiptEventId') &&
-  restBridge.includes('NativeRestCue(it.eventId,it.seconds,it.exerciseIndex)'),
+  restBridge.includes('NativeKotlinRestCue(it.eventId,it.seconds,it.exerciseIndex)'),
   'Both journal paths share the native timer with exact receipt-bound durations and no final rest');
 for(const source of [journal,composer]) {
   assert.ok(source.includes('.widthIn(max=920.dp).align(Alignment.CenterHorizontally)') &&

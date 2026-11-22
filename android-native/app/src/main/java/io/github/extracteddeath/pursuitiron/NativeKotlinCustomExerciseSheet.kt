@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.rebuild.*
+import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomBasicNextReadResult
 import java.math.BigDecimal
 
 /**
@@ -188,7 +189,8 @@ internal fun NativeKotlinCustomExerciseSheet(
      * saved block; null for any week override or unknown catalog source. */
     otherWeekdayExerciseIds:List<List<String>>?=null,
     /** Search suggestion only. Never preselects or transfers a load/target. */
-    initialSearchQuery:String = ""
+    initialSearchQuery:String = "",
+    basicReference:NativeCustomBasicNextReadResult.Reviewed? = null
 ) {
     // The issued/current source identity and *all* authored prescriptions
     // fence restoration. An amended source must not inherit an old editor.
@@ -312,6 +314,7 @@ internal fun NativeKotlinCustomExerciseSheet(
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         scopeLabel?.let { Text(it,style=MaterialTheme.typography.titleMedium) }
+        basicReference?.let { NativeKotlinBasicProgressionPreview(it) }
         feedback?.let { Text(it,style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.error) }
         Text("Every set stays yours. The coach will not silently round loads, swap movements or replace your target reps.",

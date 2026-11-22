@@ -1374,7 +1374,7 @@ const priorLeveling=read('android-native/app/src/main/java/io/github/extractedde
 for(const required of [
   '"Leveling · review previous workout"',
   'rememberPriorWorkoutLevelingReview(',
-  'previous=physicalMachineLastReferences(',
+  'previous=lastReferences,',
   'currentSets=workingSets.map { set->',
   'goalRir=first.targetRir?.takeIf{sameGoal}',
   'levelWeight=prior.proposedStraightSetLoad',
@@ -1424,6 +1424,18 @@ for(const required of [
   'Prior-session Leveling must be cancellation-scoped and avoid UI-thread equipment inspection: '+required);
 assert.ok(!priorLeveling.includes('DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout('),
   'No expensive verified equipment review on the generated Compose UI thread');
+// An A/B Leveling review must receive all authenticated per-station facts.
+// The display-only filtered Target/Last projection intentionally drops
+// machineSets and is suitable only for the observed-value rows in the dialog.
+for (const [source,kind] of [[priorLeveling,'generated'],[journal,'custom']]) {
+  const start=source.indexOf('rememberPriorWorkoutLevelingReview(');
+  const review=source.slice(start,start+850);
+  assert.ok(start>=0 && review.includes('previous=lastReferences,') &&
+    !review.includes('previous=physicalMachineLastReferences('),
+    kind+' Leveling must receive complete per-machine references');
+  assert.ok(source.includes('val matchingLast=physicalMachineLastReferences('),
+    kind+' visible historical values still require a physical station filter');
+}
 
 const waveSixFixtures=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGymFacilityChoices.kt');
 assert.match(waveSixFixtures,/"45-degree-back-extension-station" to /);

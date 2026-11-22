@@ -229,6 +229,21 @@ internal fun NativeKotlinCustomExerciseSheet(
         mutableStateOf(existing?.sets?.map { it.toFields() }
             ?:freshReplacementStructure())
     }
+    // Compare against the exact reviewed week before offering an explicit copy.
+    // No suggestion may replace a different attachment, variant or edited source.
+    val basicDraft = remember(existing,basicReference) {
+        if (existing == null || basicReference == null) null
+        else basicReference.next.slots.singleOrNull { it.slotId == existing.slotId }
+            ?.takeIf { slot ->
+                slot.exerciseId == existing.exerciseId &&
+                    slot.attachmentId == existing.attachmentId &&
+                    slot.machineInstanceId == existing.machineInstanceId &&
+                    slot.sets.map { it.prescription } == existing.sets
+            }?.let {
+                CustomBasicProgressionDraftDomain.forWeekEdit(
+                    existing.slotId,existing.sets,basicReference.projection)
+            }
+    }
     val option = available.firstOrNull { it.exerciseId == exerciseId }
     val parsed = parsedSets(forms, option)
     // A query can span the movement, equipment variant, attachment and muscle.
@@ -315,6 +330,16 @@ internal fun NativeKotlinCustomExerciseSheet(
         }
         scopeLabel?.let { Text(it,style=MaterialTheme.typography.titleMedium) }
         basicReference?.let { NativeKotlinBasicProgressionPreview(it) }
+        basicDraft?.let { reviewed ->
+            OutlinedButton(
+                onClick = { forms = reviewed.map { it.toFields() } },
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth().heightIn(min=48.dp)
+            ) { Text("Use reviewed targets in this edit") }
+            Text("This replaces unsaved set entries in the editor only. Check the resulting sets and compare full-cycle effects before separately approving a change.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         feedback?.let { Text(it,style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.error) }
         Text("Every set stays yours. The coach will not silently round loads, swap movements or replace your target reps.",

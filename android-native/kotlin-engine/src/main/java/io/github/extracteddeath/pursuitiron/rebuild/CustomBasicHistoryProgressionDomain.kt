@@ -125,7 +125,8 @@ object CustomBasicHistoryProgressionDomain {
             ProgramProgressionSlotKey(block.blockId,next.weekday,request.slotId) }
             ?:return no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE)
         val unweighted=assignment.route==ProgramProgressionRoute.BASIC_BODYWEIGHT_REPS &&
-            saved.progressionMethod==SavedProgressionMethod.BODYWEIGHT_REPS
+            saved.progressionMethod in setOf(SavedProgressionMethod.BODYWEIGHT_REPS,
+                SavedProgressionMethod.LADDER)
         val strategy=when(assignment.route) {
             ProgramProgressionRoute.MANUAL -> BasicProgressionStrategy.MANUAL_LOGGING
             ProgramProgressionRoute.BASIC_WEIGHTED -> assignment.basicStrategy
@@ -192,10 +193,12 @@ object CustomBasicHistoryProgressionDomain {
                 request.completed.size)
             return no(CustomBasicHistoryRefusal.INVALID_HISTORY)
         var latest:CustomCoachingHistoricalSession?=null
+        var latestStationIncompatible=false
         for(session in request.completed) {
             val snap=session.snapshot
             val evidence=session.evidence
-            if(snap.stamp.athleteId!=evidence.athleteId ||
+            if(snap.stamp.athleteId!=cycle.athleteId ||
+                snap.stamp.athleteId!=evidence.athleteId ||
                 snap.stamp.cycleId!=evidence.cycleId ||
                 snap.stamp.cycleRevision!=evidence.cycleRevision ||
                 snap.shortSessionOmittedSetKeys!=evidence.shortSessionOmittedSetKeys)
@@ -224,35 +227,22 @@ object CustomBasicHistoryProgressionDomain {
                 !KotlinMachineAlternativesDomain.validInstanceId(it)})
                 return no(CustomBasicHistoryRefusal.INVALID_HISTORY)
             val observedMachines=actualMachineIds.filterNotNull().toSet()
-            // An issued physical station with no recorded actual station is
-            // ambiguous. Do not relabel its performance as a generic load,
-            // even if an older same-day visit at the desired station passed.
-            // A fully recorded actual station may still legitimately differ
-            // from the issued default when the athlete switched machines.
-            if(unweighted && (historicalSlot.machineInstanceId!=null ||
-                actualMachineIds.any{it!=null}))
-                return no(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE)
-            if(observedMachines.isEmpty() &&
-                historicalSlot.machineInstanceId!=null)
-                return no(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE)
-            // A wholly different, explicitly observed machine is its OWN
-            // history. An unknown/partial station is never quietly bypassed.
-            // A real observed B workout must not suppress an earlier
-            // completed A baseline just because the program's default was
-            // A when the athlete switched stations during the session.
-            // But an unrecorded/skipped set has no authenticated station:
-            // do NOT skip past that ambiguous missed work to an older win.
-            if(observedMachines.size==1 &&
+            // Skip only visits fully attributed to a different physical station.
+            // Ambiguous visits stay candidates until a newer visit supersedes them.
+            if(!unweighted && observedMachines.size==1 &&
                 normalizedMachine !in observedMachines &&
-                visits.all{it.actual?.machineInstanceId!=null})
+                visits.all { it.actual?.machineInstanceId!=null })
                 continue
-            if(observedMachines.size>1 ||
-                (observedMachines.isNotEmpty() &&
-                    normalizedMachine !in observedMachines))
-                return no(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE)
+            latestStationIncompatible =
+                (unweighted && (historicalSlot.machineInstanceId != null || observedMachines.isNotEmpty())) ||
+                (historicalSlot.machineInstanceId != null && observedMachines.isEmpty()) ||
+                (observedMachines.isNotEmpty() && (observedMachines.size != 1 ||
+                    normalizedMachine !in observedMachines || actualMachineIds.any { it == null }))
             latest=session
         }
         val prior=latest ?:return no(CustomBasicHistoryRefusal.NO_COMPARABLE_HISTORY)
+        if(latestStationIncompatible)
+            return no(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE)
         val original=prior.snapshot
         if(original.stamp.cycleRevision!=next.stamp.cycleRevision ||
             original.stamp.gymCatalogSourceRevision!=

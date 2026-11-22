@@ -212,6 +212,28 @@ class CustomBasicHistoryProgressionDomainTest {
             (mixedReview as CustomBasicHistoryResult.Rejected).reason)
     }
 
+    @Test fun newerVerifiedStationSupersedesAnOlderAmbiguousVisit() {
+        val ambiguous = completed(1, machine="A").let { visit ->
+            visit.copy(evidence=visit.evidence.copy(visits=visit.evidence.visits.map {
+                it.copy(actual=it.actual?.copy(machineInstanceId=null))
+            }))
+        }
+        val verified = completed(2, week=2, machine="A")
+        val result = review(next=snapshot(3, machine="A"), machine="A",
+            sessions=listOf(ambiguous, verified)) as CustomBasicHistoryResult.Reviewed
+        assertEquals("workout-2", result.historyWorkoutId)
+        assertEquals(listOf(n(105), n(105)), result.candidate.proposedWorkingLoads)
+    }
+
+    @Test fun consistentlyLabeledOtherAthleteCannotSupplyTheBaseline() {
+        val other = completed(1).let { visit ->
+            visit.copy(snapshot=visit.snapshot.copy(stamp=visit.snapshot.stamp.copy(
+                athleteId="another-athlete")), evidence=visit.evidence.copy(athleteId="another-athlete"))
+        }
+        val result = review(sessions=listOf(other)) as CustomBasicHistoryResult.Rejected
+        assertEquals(CustomBasicHistoryRefusal.INVALID_HISTORY, result.reason)
+    }
+
     @Test fun programDayAndAuthoredWeekOverridesCannotBorrowOtherNumericalOwners() {
         assertEquals(CustomBasicHistoryRefusal.NO_COMPARABLE_HISTORY,
             (review(next=snapshot(2,day=2)) as
@@ -349,8 +371,8 @@ class CustomBasicHistoryProgressionDomainTest {
     }
 
     @Test fun unloadedBodyweightUsesVerifiedExactRepsWithoutAnyLoadOrUnit() {
-        fun plan(target:Int):CustomTrainingCycle {
-            val source=cycle(SavedProgressionMethod.BODYWEIGHT_REPS)
+        fun plan(target:Int, method:SavedProgressionMethod = SavedProgressionMethod.BODYWEIGHT_REPS):CustomTrainingCycle {
+            val source=cycle(method)
             return source.copy(blocks=source.blocks.map{block ->
                 block.copy(days=block.days.map{day ->
                     day.copy(slots=day.slots.map{slot ->
@@ -387,6 +409,9 @@ class CustomBasicHistoryProgressionDomainTest {
                             machineInstanceId=machine))
                 }))
         }
+        val ladder = review(program=plan(8, SavedProgressionMethod.LADDER), next=next(8),
+            sessions=listOf(prior(listOf(8, 7)))) as CustomBasicHistoryResult.UnloadedReviewed
+        assertEquals(listOf(9, 8), ladder.candidate.proposedExactReps)
         val athletePlan=plan(8)
         val earned=review(program=athletePlan,next=next(8),
             sessions=listOf(prior(listOf(8,7))))

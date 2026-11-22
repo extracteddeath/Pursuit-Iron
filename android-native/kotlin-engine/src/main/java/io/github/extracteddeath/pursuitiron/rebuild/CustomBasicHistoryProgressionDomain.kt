@@ -232,17 +232,12 @@ object CustomBasicHistoryProgressionDomain {
                 // Only independently verified work performed EXCLUSIVELY on
                 // other physical machines can leave this station's history
                 // unchanged. Unknown/skipped stations fail closed.
-                val otherWork=evidence.visits.filter {
-                    it.part==CustomWorkoutVisitPart.MAIN &&
-                        it.setType==DraftSetType.WORKING
-                }
-                val definitelyOtherMachine=!unweighted &&
-                    otherWork.isNotEmpty() && otherWork.all { visit ->
-                        val machine=visit.actual?.machineInstanceId
-                        machine!=null &&
-                            KotlinMachineAlternativesDomain.validInstanceId(machine) &&
-                            machine!=normalizedMachine
-                    }
+                val independentlyVerifiedStation=if(unweighted)null else
+                    CustomVerifiedSwappedStationEvidenceDomain
+                        .machinesWhenOriginalSlotAbsent(session,request.slotId)
+                        ?.singleOrNull()
+                val definitelyOtherMachine=independentlyVerifiedStation!=null &&
+                    independentlyVerifiedStation!=normalizedMachine
                 if(definitelyOtherMachine)continue
                 latestStationIncompatible=true
                 latest=session

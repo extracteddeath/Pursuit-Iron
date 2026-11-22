@@ -780,6 +780,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         host=ownerHost,cycleId=draft.cycleId,
                         athleteId=draft.athleteId,cycleRevision=draft.revision,
                         sourceRevision=state.sourceRevision,
+                        firstWeekday=draft.blocks.firstOrNull()?.days?.minOfOrNull { it.weekday },
                         nextSlot=currentSelection)
                     NativeKotlinApprovedBlockCalendarPanel(
                         host=ownerHost,cycleId=draft.cycleId,

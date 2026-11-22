@@ -410,7 +410,9 @@ class CustomNextWorkoutCoachingDomainTest {
             // A new-slot A substitution invalidates A's older performance;
             // its own actuals must not be credited to the old exercise.
             val sameA=propose(realSwap("A"),policy)
-            assertEquals(CustomNextWorkoutCoachingStatus.CHANGED_DAY_OR_EXERCISE,
+            // The V2/V3 evidence-window gate rejects this before the later
+            // changed-slot check: A's own swapped workout is incompatible.
+            assertEquals(CustomNextWorkoutCoachingStatus.MISSED_OR_FAILED_SETS,
                 sameA.status)
             assertNull(sameA.loadReviewCandidate)
             for(unverified in listOf(realSwap(null),realSwap("B",skipLast=true))) {

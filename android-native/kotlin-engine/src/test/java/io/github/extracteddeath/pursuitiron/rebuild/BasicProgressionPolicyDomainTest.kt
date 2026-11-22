@@ -87,6 +87,22 @@ class BasicProgressionPolicyDomainTest {
         assertFalse(result.maySaveFutureProgram)
     }
 
+    @Test fun dynamicPreviewKeepsEachSetsReasonWhenEquipmentAndRepLimitsDiffer() {
+        val available = VerifiedLoadStock.Totals(LoadUnit.LB, LoadBasis.MACHINE_STACK,
+            listOf("95", "100", "105", "115").map(::n))
+        val result = candidate(request(BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION,
+            reps=listOf(10, 9, 10, 10), loads=listOf("95", "100", "105", "115"),
+            verifiedStock=available))
+        assertEquals(listOf("100", "100", "105", "115").map(::n), result.proposedWorkingLoads)
+        assertEquals(setOf(0), result.increasedOrdinals)
+        assertEquals(listOf(BasicProgressionDecision.EARNED_INCREMENT,
+            BasicProgressionDecision.BUILD_REPS, BasicProgressionDecision.AUTHORIZED_INCREMENT_TOO_SMALL,
+            BasicProgressionDecision.MAXIMUM_LOAD_REACHED), result.dynamicSetDecisions)
+        val hold = candidate(request(BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION,
+            reps=listOf(6, 8, 9)))
+        assertEquals(List(3) { BasicProgressionDecision.BUILD_REPS }, hold.dynamicSetDecisions)
+    }
+
     @Test fun mixedVerifiedWorkingLoadsCanProgressIndividuallyButNotAsStrictStraightSets() {
         val weights=listOf("100","95","90")
         val dynamic=candidate(request(BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION,

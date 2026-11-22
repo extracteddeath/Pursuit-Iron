@@ -1630,38 +1630,46 @@ assert.match(measuredEntry,/unit==MeasuredEntryUnit\.FEET && !exact/);
 assert.match(measuredEntry,/rounding/);
 assert.match(measuredEntry,/MeasuredExerciseDomain\.validActual\(plan,outcome,actual\)/);
 
-// An issued last-set reduction is labeled as planned, never confused with
-// an unapproved fatigue downstep or a user's different performed weight.
+// Source-issued working-set reductions may occur before the final set
+// (e.g. a descending pyramid). A numeric downstep is NOT evidence of a
+// back-off scheme, a fatigue decision or the athlete's logged actual.
 const plannedLoadNote=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinPlannedBackoffNote.kt');
 const plannedLoadNoteTest=read('android-native/app/src/test/java/io/github/extracteddeath/pursuitiron/NativeKotlinPlannedBackoffNoteTest.kt');
 assert.ok(
   plannedLoadNote.includes('it.target.exerciseId==selected.exerciseId') &&
   plannedLoadNote.includes('selected.type!=DraftSetType.WORKING') &&
-  plannedLoadNote.includes('last.value>=base.value') &&
-  plannedLoadNote.includes('Planned last-set back-off') &&
-  plannedLoadNote.includes('not an automatic weight drop') &&
+  plannedLoadNote.includes('working.map{it.target.ordinal}!=(0 until working.size).toList()') &&
+  plannedLoadNote.includes('working.map{it.target.setKey}.distinct().size!=working.size') &&
+  plannedLoadNote.includes('working[index].target!=selected') &&
+  plannedLoadNote.includes('previous.unit!=current.unit || previous.basis!=current.basis') &&
+  plannedLoadNote.includes('current.value.compareTo(previous.value)>=0') &&
+  plannedLoadNote.includes('Issued lighter working set') &&
+  plannedLoadNote.includes('not lowered by fatigue coaching') &&
+  !plannedLoadNote.includes('Planned last-set back-off') &&
   generatedFocus.includes('plannedBackoffNote=NativeKotlinPlannedBackoffNote.fromIssuedTargets(') &&
   generatedFocus.includes('plannedBackoffNote?.let { note ->') &&
   plannedLoadNoteTest.includes('labelsOnlyTheAuthoredLowerFinalWorkingSet') &&
-  plannedLoadNoteTest.includes('straightAndMixedOrUnverifiedLoadsCannotBeLabeledAsBackoff'),
-  'Generated Train must distinguish verified authored final-set back-offs from actuals and unapproved load drops'
+  plannedLoadNoteTest.includes('straightAndUnverifiedLoadsAreNotMisrepresentedAsReductions') &&
+  plannedLoadNoteTest.includes('actualsAndStaleTargetCopiesCannotInventPrescribedLoadDifferences'),
+  'Generated Train must explain source-issued working-set reductions without inventing a backoff or fatigue change'
 );
 
-// Keep source-authored final-set reductions visible in custom Train as well
-// as generated Train. This is a read-only label, not exercise load mutation,
-// program editing or a newly inferred dynamic coaching rule.
-const customLighterNoteSource=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinPlannedBackoffNote.kt');
-const customLighterNoteTests=read('android-native/app/src/test/java/io/github/extracteddeath/pursuitiron/NativeKotlinPlannedBackoffNoteTest.kt');
-assert.ok(customLighterNoteSource.includes('fun fromCustomSlot(') &&
-  customLighterNoteSource.includes('slotSets.any{it.slotId!=selected.slotId}') &&
-  customLighterNoteSource.includes('working.last()!=selected') &&
-  customLighterNoteSource.includes('Authored lighter final set') &&
+// Custom Train uses the same signed source-only display contract. No actual
+// weight or coaching proposal becomes an issued prescription; warmups
+// appearing after work and missing ordinals cannot be relabeled as a scheme.
+assert.ok(plannedLoadNote.includes('fun fromCustomSlot(') &&
+  plannedLoadNote.includes('slotSets.any{it.slotId!=selected.slotId}') &&
+  plannedLoadNote.includes('slotSets.map{it.setKey}.distinct().size!=slotSets.size') &&
+  plannedLoadNote.includes('slotSets.drop(firstWorking).any{') &&
+  plannedLoadNote.includes('working[index]!=selected') &&
+  plannedLoadNote.includes('Authored lighter working set') &&
+  !plannedLoadNote.includes('Authored lighter final set') &&
   journal.includes('plannedLoadNote=NativeKotlinPlannedBackoffNote.fromCustomSlot(') &&
   journal.includes('if(part==CustomWorkoutVisitPart.MAIN)plannedLoadNote?.let {note->') &&
-  customLighterNoteTests.includes('customLastSetReductionIsExplicitWithoutChangingTargets') &&
-  customLighterNoteTests.includes('customLabelRejectsStraightMixedAndMismatchedPhysicalLoads') &&
-  customLighterNoteTests.includes('customLabelRejectsWarmupsOmittedOrdinalsAndDuplicateReceipts'),
-  'Custom Train must label exact source-authored lighter final sets, never an inferred load drop'
+  plannedLoadNoteTest.includes('customLastSetReductionIsExplicitWithoutChangingTargets') &&
+  plannedLoadNoteTest.includes('customLabelRejectsStraightAndMismatchedPhysicalLoads') &&
+  plannedLoadNoteTest.includes('customLabelRejectsWarmupsOmittedOrdinalsAndDuplicateReceipts'),
+  'Custom Train must label only exact source-authored reductions and reject malformed or mismatched targets'
 );
 
 

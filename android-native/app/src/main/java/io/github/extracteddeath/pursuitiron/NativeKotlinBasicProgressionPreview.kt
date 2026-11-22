@@ -57,6 +57,12 @@ internal fun NativeKotlinBasicProgressionPreview(
     review:NativeCustomBasicNextReadResult.Reviewed
 ) {
     val projection=review.projection
+    if (!NativeKotlinBasicProgressionPreviewShape.canRender(review.next.slots,projection)) {
+        Text("The saved workout no longer matches this progression preview. Refresh the Plan before reviewing changes.",
+            style=MaterialTheme.typography.bodySmall,
+            color=MaterialTheme.colorScheme.onSurfaceVariant)
+        return
+    }
     fun workingSets(slotId: String) = review.next.slots.single { it.slotId == slotId }
         .sets.filter { it.prescription.type == DraftSetType.WORKING }
 

@@ -19,7 +19,7 @@ class NativeStrengthClubDomainTest {
             athleteId="verified-owner",manifestRevision=1L,
             completedWorkoutIds=listOf("w"),
             lastByExercise=emptyMap(),highestCompletedLoad=emptyMap(),
-            mostRepsAtLoad=rows.toList(),
+            mostRepsAtLoad=rows.toList(), estimateSetsAtLoad=rows.toList(),
             bestLoggedSingleByLoad=rows.filter{it.reps==1}
                 .groupBy{it.key}.mapValues{(_,facts)->facts.maxBy{it.actualLoad}}
         )

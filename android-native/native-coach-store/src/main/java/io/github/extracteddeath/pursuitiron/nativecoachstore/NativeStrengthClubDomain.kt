@@ -34,7 +34,7 @@ object NativeStrengthClubDomain {
     fun review(facts:NativeKotlinMixedHistoryFacts):NativeStrengthClubEvidence {
         val projected=linkedMapOf<String,BigDecimal>()
         val singles=linkedMapOf<String,BigDecimal>()
-        for(fact in facts.mostRepsAtLoad) {
+        for(fact in facts.estimateSetsAtLoad) {
             if(fact.key.exerciseId !in requiredLiftIds ||
                 fact.key.basis!=LoadBasis.BARBELL_TOTAL)continue
             val estimate=StrengthStandardsMeasurementDomain.epley(

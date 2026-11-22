@@ -72,6 +72,19 @@ class NativeKotlinMixedHistoryFactsDomainTest {
         return (result as NativeMixedFactsResult.Review).facts
     }
 
+    @Test fun highRepBestPreservesTheBestQualifyingSetForStrengthEstimates() {
+        val earlier = composer(1, composerFact(1, reps = 8, basis = LoadBasis.BARBELL_TOTAL))
+        val later = custom(2, customVisit(2, "a", CustomWorkoutVisitPart.MAIN,
+            KotlinJournalSetOutcome.COMPLETED, reps = 12, basis = LoadBasis.BARBELL_TOTAL))
+        val tagged = composer(3, composerFact(3, reps = 10, basis = LoadBasis.BARBELL_TOTAL, machineId = "B"))
+        val result = facts(earlier, later, tagged)
+        assertEquals(12, result.mostRepsAtLoad.single().reps)
+        assertEquals(8, result.estimateSetsAtLoad.single().reps)
+        assertEquals("workout-1", result.estimateSetsAtLoad.single().workoutId)
+        val corrected = composer(1, composerFact(1, reps = 11, basis = LoadBasis.BARBELL_TOTAL))
+        assertTrue(facts(corrected, later, tagged).estimateSetsAtLoad.isEmpty())
+    }
+
     @Test fun customSkippedLastNeverBacktracksToEarlierStrongComposerSession() {
         val old = composer(1, composerFact(1))
         val latest = custom(2, customVisit(2, "a",

@@ -280,6 +280,30 @@ class DoubleProgressionLevelingDomainTest {
                 "machine-A",band,2,stock))
     }
 
+    @Test fun unassignedPriorLevelingUsesTheSameVisitAsLastDisplay() {
+        val old = priorSession(listOf("100","120","125","130"))
+        val latest = priorSession(listOf("130","130","130","130"),
+            sessionFor={"machine-day"}, machineFor={"machine-A"})
+        val physical = latest.sets.mapKeys { (key, _) -> WorkoutMachineReferenceKey(key,"machine-A") }
+        val unassigned = old.sets.mapKeys { (key, _) ->
+            WorkoutMachineReferenceKey(key,KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID)
+        }
+
+        // The latest generic visit used A. Its loads must not hide the
+        // separately indexed unassigned visit that Target/Last displays.
+        val history = WorkoutLastReferenceResult.Ready(latest.sets,physical + unassigned)
+        val proposal = DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout(
+            currentKeys(),history,null,band,2,stock) as LevelingReviewResult.Candidate
+        assertEquals(n("118.75"),proposal.averageObservedLoad)
+
+        // Conversely, generic unassigned rows cannot fill holes in the
+        // station ledger after its unassigned visit was invalidated.
+        val missing = WorkoutLastReferenceResult.Ready(old.sets,physical)
+        assertEquals(LevelingReviewResult.Rejected(LevelingRefusal.INCOMPLETE_OR_INVALID),
+            DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout(
+                currentKeys(),missing,null,band,2,stock))
+    }
+
     @Test fun priorLevelingRequiresVerifiedStockAndRespectsLowActualRir() {
         val loads=listOf("100","120","125","130")
         assertEquals(LevelingReviewResult.Rejected(

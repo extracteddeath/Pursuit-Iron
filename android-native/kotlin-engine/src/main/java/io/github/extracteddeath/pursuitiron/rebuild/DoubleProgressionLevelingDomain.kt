@@ -166,20 +166,10 @@ object DoubleProgressionLevelingDomain {
         if (issued.map { it.unit }.distinct().size != 1 ||
             issued.map { it.basis }.distinct().size != 1)
             return invalid()
-        val saved = previous as? WorkoutLastReferenceResult.Ready ?: return invalid()
-        val requestedMachine = KotlinMachineAlternativesDomain.normalizeMachineId(machineInstanceId)
-        if (machineInstanceId != null &&
-            machineInstanceId != KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID &&
-            !KotlinMachineAlternativesDomain.validInstanceId(machineInstanceId))
-            return invalid()
+        val station = WorkoutLastReferenceDomain.physicalStation(previous, machineInstanceId)
+            as? WorkoutLastReferenceResult.Ready ?: return invalid()
         val observed = currentSets.map { (key, load) ->
-            // A physical A/B choice uses that station's last authenticated
-            // visit, not the generic most-recent visit on another machine.
-            // There is no fallback to an older success or to the generic
-            // exercise-level Last when a station has no evidence.
-            val reference = (if (machineInstanceId == null) saved.sets[key]
-                else saved.machineSets[WorkoutMachineReferenceKey(key,requestedMachine)])
-                ?: return invalid()
+            val reference = station.sets[key] ?: return invalid()
             if (reference.outcome != KotlinJournalSetOutcome.COMPLETED)
                 return invalid()
             val actual = reference.actual ?: return invalid()
@@ -187,8 +177,6 @@ object DoubleProgressionLevelingDomain {
             if (reference.loadBasis != basis ||
                 !CustomWorkoutJournalDomain.actualValid(
                     load,KotlinJournalSetOutcome.COMPLETED,actual) ||
-                KotlinMachineAlternativesDomain.normalizeMachineId(
-                    actual.machineInstanceId) != requestedMachine ||
                 actual.unit != issued.first().unit || actual.load == null)
                 return invalid()
             reference to actual

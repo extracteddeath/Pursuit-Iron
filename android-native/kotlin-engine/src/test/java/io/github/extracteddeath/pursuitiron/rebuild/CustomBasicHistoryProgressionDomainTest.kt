@@ -246,6 +246,43 @@ class CustomBasicHistoryProgressionDomainTest {
                 CustomBasicHistoryResult.Rejected).reason)
     }
 
+    @Test fun savedDoubleProgressionAppliesOutsideItsWeekOverride() {
+        val override = CustomWeekSlotOverride(3, 0, "main", listOf(set(105), set(105)))
+        val program = cycle(overrides = mapOf("base" to listOf(override)))
+        val earlier = review(program = program, next = snapshot(2)) as CustomBasicHistoryResult.Reviewed
+        assertEquals(listOf(n(105), n(105)), earlier.candidate.proposedWorkingLoads)
+
+        val editedWeek = review(program = program, next = snapshot(3, loads = listOf(105, 105)))
+        assertEquals(CustomBasicHistoryRefusal.AUTHORED_OR_SPECIALIST_OWNS_LOAD,
+            (editedWeek as CustomBasicHistoryResult.Rejected).reason)
+
+        // Returning to 100 after the authored 105 week needs a comparable baseline.
+        val later = review(program = program, next = snapshot(4),
+            sessions = listOf(completed(1), completed(2, week = 3, loads = listOf(105, 105))))
+        assertEquals(BasicProgressionRefusal.BASELINE_DIFFERS_FROM_HISTORY,
+            (later as CustomBasicHistoryResult.Rejected).evaluatorReason)
+    }
+
+    @Test fun waveKeepsItsAuthoredFirstWeekAndRejectsIncompleteSchedules() {
+        val overrides = (2..4).map { CustomWeekSlotOverride(it, 0, "main", listOf(set(), set())) }
+        val source = cycle(overrides = mapOf("base" to overrides))
+        val block = source.blocks.single()
+        val wave = source.copy(blocks = listOf(block.copy(days = block.days.map { day ->
+            day.copy(slots = day.slots.map { slot -> if (slot.slotId == "main")
+                slot.copy(progressionMethod = SavedProgressionMethod.WAVE) else slot })
+        })))
+        val week = ProgramProgressionWeek("base", 1)
+        val plan = BasicProgramProgressionPlanDomain.review(wave, previewWeek = week)
+            as ProgramProgressionPlan.Ready
+        assertEquals(ProgramProgressionRoute.AUTHORED_WEEKLY_PERIODIZATION,
+            plan.assignments.single { it.key.slotId == "main" }.route)
+        assertTrue(BasicProgramProgressionPlanDomain.review(wave.copy(
+            weekOverrides = mapOf("base" to overrides.dropLast(1))), previewWeek = week)
+            is ProgramProgressionPlan.Refused)
+        assertTrue(BasicProgramProgressionPlanDomain.review(wave,
+            previewWeek = week.copy(weekInBlock = 5)) is ProgramProgressionPlan.Refused)
+    }
+
     @Test fun sourceExactTargetsAdvanceAndLadderResetsAtTrueBandFloor() {
         fun planned(method:SavedProgressionMethod,target:Int):CustomTrainingCycle {
             val base=cycle(method)

@@ -16,7 +16,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import io.github.extracteddeath.pursuitiron.domain.NativeRestCue
+/** Factual receipt-only cue for the native Kotlin UI timer; no legacy engine. */
+internal data class NativeKotlinRestCue(
+    val operationId:String,val seconds:Int,val exerciseIndex:Int
+)
 
 /**
  * A presentation-only rest countdown. The target comes from the pinned,
@@ -34,7 +37,7 @@ internal fun NativeRestTimer(
     prescribedSeconds: Int,
     enabled: Boolean,
     latestReceiptOperationId: String? = null,
-    autoCue: NativeRestCue? = null,
+    autoCue: NativeKotlinRestCue? = null,
     /** Null disables persistent UI recovery for older, unscoped callers. */
     ownerId: String? = null
 ) {

@@ -154,6 +154,24 @@ object CustomWorkoutExecutionDomain {
         return visits
     }
 
+    /** A correction may change reps or effort on an earlier stage only while
+     * every later receipt still has its original physical anchor and is reachable. */
+    internal fun preservesRecordedFollowUps(
+        set: CustomWorkoutSetSnapshot,
+        replacement: CustomWorkoutJournalOperation.Record,
+        recorded: Collection<CustomWorkoutVisitKey>,
+        finished: Boolean,
+        recordFor: (CustomWorkoutVisitKey) -> CustomWorkoutJournalOperation.Record?
+    ): Boolean {
+        val visit = replacement.visit
+        if (recorded.any { it.stage > visit.stage } &&
+            !sameActualLoadAndStation(recordFor(visit)?.performed, replacement.performed)) return false
+        val reachable = followUpVisits(set) { key ->
+            if (key == visit) replacement else recordFor(key)
+        }
+        return reachable.containsAll(recorded) && (!finished || recorded.containsAll(reachable))
+    }
+
     internal fun unresolvedVisit(journal:CustomWorkoutJournalDraft,
         set:CustomWorkoutSetSnapshot):CustomWorkoutVisitKey? {
         val main=CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN)

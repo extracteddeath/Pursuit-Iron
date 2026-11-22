@@ -129,7 +129,6 @@ object CustomSavedHistoryCorrectionDomain {
             it.setKey==operation.visit.setKey &&
                 it.part==CustomWorkoutVisitPart.FOLLOW_UP
         }
-        val hasLaterStage=savedFollowKeys.any{it.stage>operation.visit.stage}
         val load = when (operation.visit.part) {
             CustomWorkoutVisitPart.MAIN -> {
                 // Invalid physical units, missing weight or impossible RIR
@@ -171,8 +170,7 @@ object CustomSavedHistoryCorrectionDomain {
                 if (amplifier == null ||
                     main.outcome != KotlinJournalSetOutcome.COMPLETED ||
                     original.visit.part != CustomWorkoutVisitPart.FOLLOW_UP ||
-                    operation.visit.stage !in 1..amplifier.followUpRounds ||
-                    hasLaterStage)
+                    operation.visit.stage !in 1..amplifier.followUpRounds)
                     return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
                 // Same canonical authored stage policy as the live journal:
                 // a second drop is NEVER checked against the first drop's
@@ -218,10 +216,8 @@ object CustomSavedHistoryCorrectionDomain {
 
         if (operation.visit.part == CustomWorkoutVisitPart.FOLLOW_UP) {
             val replacement = effective.copy(outcome = operation.outcome, performed = operation.performed)
-            val requiredVisits = CustomWorkoutExecutionDomain.followUpVisits(target) { key ->
-                if (key == operation.visit) replacement else current(state, key)
-            }
-            if (requiredVisits.any { it !in savedFollowKeys })
+            if (!CustomWorkoutExecutionDomain.preservesRecordedFollowUps(
+                    target, replacement, savedFollowKeys, finished = true) { key -> current(state, key) })
                 return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
         }
 

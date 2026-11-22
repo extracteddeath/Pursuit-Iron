@@ -346,6 +346,17 @@ class CustomSavedHistoryCorrectionDomainTest {
         assertEquals(listOf(5,4,2),minis.map{it.actual?.reps})
         assertEquals(listOf("myo-1","myo-2","fix-myo-3"),
             minis.map{it.effectiveEventId})
+        val firstEdit = CustomSavedVisitCorrection("edit-first", 1, stage1, "myo-1",
+            KotlinJournalSetOutcome.COMPLETED, KotlinPerformedSet(BigDecimal("20"), LoadUnit.LB, 4, 1))
+        val earlier = accept(corrected, firstEdit)
+        val earlierFacts = (CustomSavedHistoryEvidenceDomain.projectSaved(earlier)
+            as CustomSavedHistoryProjectionResult.Candidate).corrected.evidence.visits
+        assertEquals(listOf(4, 4, 2), earlierFacts.filter {
+            it.part == CustomWorkoutVisitPart.FOLLOW_UP
+        }.map { it.actual?.reps })
+        assertEquals(CustomSavedCorrectionDecision.Rejected(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER),
+            CustomSavedHistoryCorrectionDomain.reduce(corrected, firstEdit.copy(
+                performed = KotlinPerformedSet(BigDecimal("20"), LoadUnit.LB, 2, 1))))
         val impossible=CustomSavedVisitCorrection("fix-myo-1",1,stage1,
             "myo-1",KotlinJournalSetOutcome.SKIPPED,null)
         assertEquals(CustomSavedCorrectionDecision.Rejected(

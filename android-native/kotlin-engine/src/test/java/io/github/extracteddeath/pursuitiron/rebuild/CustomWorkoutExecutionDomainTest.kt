@@ -446,6 +446,10 @@ class CustomWorkoutExecutionDomainTest {
             KotlinJournalSetOutcome.COMPLETED,
             KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,2,2),
             old.operation.eventId)
+        val compatible = revise.copy(performed = KotlinPerformedSet(BigDecimal("20.000"), LoadUnit.LB, 5, 1))
+        val edited = CustomWorkoutJournalDomain.reduce(j, compatible) as CustomWorkoutJournalDecision.Proposed
+        assertEquals(next(j), next(edited.draft))
+        assertEquals(j.effectiveVisits.size, edited.draft.effectiveVisits.size)
         assertEquals(CustomWorkoutJournalRefusal.INVALID_CORRECTION,
             (CustomWorkoutJournalDomain.reduce(j,revise)
                 as CustomWorkoutJournalDecision.Rejected).reason)

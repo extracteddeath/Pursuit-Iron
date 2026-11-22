@@ -366,6 +366,24 @@ class BasicProgramProgressionPlanDomainTest {
             is ProgramProgressionPlan.Refused)
     }
 
+    @Test fun bodyweightLadderNeedsAnAuthoredRungForEveryWorkingSet() {
+        val key = ProgramProgressionSlotKey("block", 0, "slot")
+        val first = working().copy(load = DraftSetLoad.ExplicitBodyweight, exactRepTarget = 7)
+        for (saved in listOf(false, true)) {
+            val styles = if (saved) emptyMap() else mapOf(key to NativeProgressionStyle.LADDER)
+            fun review(lastTarget: Int?): ProgramProgressionPlan {
+                val movement = slot(sets = listOf(first, first.copy(exactRepTarget = lastTarget)))
+                    .copy(progressionMethod = if (saved) SavedProgressionMethod.LADDER else null)
+                return BasicProgramProgressionPlanDomain.review(
+                    cycle(block(slots = listOf(movement))), selectedStyles = styles)
+            }
+            assertTrue(review(null) is ProgramProgressionPlan.Refused)
+            assertTrue(review(11) is ProgramProgressionPlan.Refused)
+            val ready = review(8) as ProgramProgressionPlan.Ready
+            assertEquals(ProgramProgressionRoute.BASIC_BODYWEIGHT_REPS, ready.assignments.single().route)
+        }
+    }
+
     @Test fun sourceReadinessRequiresExactTargetsForSelectedRepModes() {
         val key=ProgramProgressionSlotKey("block",0,"slot")
         val unset=cycle(block())

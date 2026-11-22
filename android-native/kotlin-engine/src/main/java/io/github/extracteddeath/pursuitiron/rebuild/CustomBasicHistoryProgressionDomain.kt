@@ -207,6 +207,7 @@ object CustomBasicHistoryProgressionDomain {
             return no(CustomBasicHistoryRefusal.INVALID_HISTORY)
         var latest:CustomCoachingHistoricalSession?=null
         var latestStationIncompatible=false
+        var latestSourceChanged=false
         for(session in request.completed) {
             val snap=session.snapshot
             val evidence=session.evidence
@@ -224,6 +225,21 @@ object CustomBasicHistoryProgressionDomain {
             if(snap.absoluteWeek>=next.absoluteWeek)
                 return no(CustomBasicHistoryRefusal.TARGET_ALREADY_TRAINED)
             if(snap.stamp.gymId!=next.stamp.gymId)continue
+            // A verified B visit is independent of A's physical load, but
+            // not independent of the approved coaching source. An
+            // intervening changed gym inventory/profile/phase cannot be
+            // silently skipped to resurrect an older A increase.
+            val sourceMatches=snap.stamp==next.stamp &&
+                snap.phase==next.phase &&
+                snap.blockPurpose==next.blockPurpose &&
+                snap.split==next.split &&
+                snap.sessionPurpose==next.sessionPurpose
+            if(!sourceMatches) {
+                latestStationIncompatible=true
+                latestSourceChanged=true
+                latest=session
+                continue
+            }
             val historicalSlot=snap.slots.singleOrNull {it.slotId==request.slotId}
             if(historicalSlot==null) {
                 // Native Swap issues a NEW slot ID and new set keys. A later
@@ -240,6 +256,7 @@ object CustomBasicHistoryProgressionDomain {
                     independentlyVerifiedStation!=normalizedMachine
                 if(definitelyOtherMachine)continue
                 latestStationIncompatible=true
+                latestSourceChanged=false
                 latest=session
                 continue
             }
@@ -266,10 +283,16 @@ object CustomBasicHistoryProgressionDomain {
             val observedMachines=actualMachineIds.filterNotNull().toSet()
             // Skip only visits fully attributed to a different physical station.
             // Ambiguous visits stay candidates until a newer visit supersedes them.
-            if(!unweighted && observedMachines.size==1 &&
-                normalizedMachine !in observedMachines &&
-                visits.all { it.actual?.machineInstanceId!=null })
+            // A single recorded B set is not proof that a second
+            // unrecorded/failed working set was also performed on B. Use
+            // the SAME complete-receipt authority as native Swap evidence.
+            val independentStation=if(unweighted)null else
+                CustomVerifiedSwappedStationEvidenceDomain
+                    .machinesForVerifiedSlot(session,request.slotId)
+                    ?.singleOrNull()
+            if(independentStation!=null && independentStation!=normalizedMachine)
                 continue
+            latestSourceChanged=false
             latestStationIncompatible =
                 (unweighted && (historicalSlot.machineInstanceId != null || observedMachines.isNotEmpty())) ||
                 (historicalSlot.machineInstanceId != null && observedMachines.isEmpty()) ||
@@ -278,6 +301,8 @@ object CustomBasicHistoryProgressionDomain {
             latest=session
         }
         val prior=latest ?:return no(CustomBasicHistoryRefusal.NO_COMPARABLE_HISTORY)
+        if(latestSourceChanged)
+            return no(CustomBasicHistoryRefusal.HISTORY_SOURCE_CHANGED)
         if(latestStationIncompatible)
             return no(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE)
         val original=prior.snapshot

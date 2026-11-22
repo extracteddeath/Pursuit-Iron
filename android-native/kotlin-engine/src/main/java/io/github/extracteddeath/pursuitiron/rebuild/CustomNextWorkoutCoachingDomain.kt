@@ -327,8 +327,18 @@ object CustomNextWorkoutCoachingDomain {
                     it.part==CustomWorkoutVisitPart.MAIN &&
                     it.setType==DraftSetType.WORKING
             }
-            if(original.isEmpty() && request.repForecastPolicy.usesTargetRir())
-                return swappedStationMachines(session)
+            if(request.repForecastPolicy.usesTargetRir()) {
+                // V2/V3 may bypass a B visit only after the WHOLE relevant
+                // physically identified visit is complete. Otherwise one
+                // convenient B set can hide an unrecorded A attempt.
+                // Bodyweight/unassigned legacy contexts retain their own
+                // existing rep-only validation and frozen V1 is untouched.
+                if(targetMachine!=KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID &&
+                    session.snapshot.slots.any{it.slotId==target.slotId})
+                    return CustomVerifiedSwappedStationEvidenceDomain
+                        .machinesForVerifiedSlot(session,target.slotId) ?: emptySet()
+                if(original.isEmpty())return swappedStationMachines(session)
+            }
             return original.map {KotlinMachineAlternativesDomain.normalizeMachineId(
                 it.actual?.machineInstanceId)}.toSet()
         }

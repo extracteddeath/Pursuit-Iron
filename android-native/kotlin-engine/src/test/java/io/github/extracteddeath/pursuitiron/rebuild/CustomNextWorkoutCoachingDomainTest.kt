@@ -341,6 +341,52 @@ class CustomNextWorkoutCoachingDomainTest {
         assertNull(refusal.loadReviewCandidate)
     }
 
+    @Test fun versionedCoachingNeverSkipsPartiallyVerifiedRetainedMachineBSlot() {
+        fun on(session:CustomCoachingHistoricalSession,station:String)=session.copy(
+            evidence=session.evidence.copy(visits=session.evidence.visits.map {
+                it.copy(actual=it.actual?.copy(machineInstanceId=station))
+            }))
+        val a3=on(completed(1,3),"A")
+        val a4=on(completed(2,4),"A")
+        val b5=on(completed(3,5),"B")
+        val next=snapshot(6).copy(slots=snapshot(6).slots.map{
+            it.copy(machineInstanceId="A")
+        })
+        fun inspect(last:CustomCoachingHistoricalSession,
+            policy:CustomRepForecastPolicy)=CustomNextWorkoutCoachingDomain.review(
+            CustomNextWorkoutCoachingRequest(next,"main",listOf(a3,a4,last),
+                stock(),n(5),CoachReadiness.NORMAL,false,policy,
+                requestedMachineInstanceId="A"))
+        val facts=b5.evidence.visits
+        val missing=b5.copy(evidence=b5.evidence.copy(visits=facts.dropLast(1)))
+        val duplicated=b5.copy(evidence=b5.evidence.copy(
+            visits=listOf(facts.first(),facts.first())))
+        val changedPrescription=b5.copy(evidence=b5.evidence.copy(
+            visits=facts.mapIndexed{index,fact->
+                if(index==1)fact.copy(prescribedReps=RepBand(6,8)) else fact
+            }))
+        val skipped=b5.copy(evidence=b5.evidence.copy(
+            visits=facts.mapIndexed{index,fact->
+                if(index==1)fact.copy(outcome=KotlinJournalSetOutcome.FAILED_ATTEMPT)
+                else fact
+            }))
+        for(policy in listOf(CustomRepForecastPolicy.TARGET_RIR_V2,
+            CustomRepForecastPolicy.TARGET_RIR_TREND_V3)) {
+            val independent=inspect(b5,policy)
+            assertNotEquals(independent.toString(),
+                CustomNextWorkoutCoachingStatus.MISSED_OR_FAILED_SETS,
+                independent.status)
+            for (invalid in listOf(missing,duplicated,changedPrescription,skipped)) {
+                val refusal=inspect(invalid,policy)
+                assertEquals(refusal.toString(),
+                    CustomNextWorkoutCoachingStatus.MISSED_OR_FAILED_SETS,
+                    refusal.status)
+                assertNull(refusal.loadReviewCandidate)
+                assertTrue(refusal.nextSetSuggestions.isEmpty())
+            }
+        }
+    }
+
     @Test fun versionedCoachingRecognizesRealOtherStationSwapWithoutBorrowingItsSets() {
         fun onA(session:CustomCoachingHistoricalSession)=session.copy(
             evidence=session.evidence.copy(visits=session.evidence.visits.map{fact ->

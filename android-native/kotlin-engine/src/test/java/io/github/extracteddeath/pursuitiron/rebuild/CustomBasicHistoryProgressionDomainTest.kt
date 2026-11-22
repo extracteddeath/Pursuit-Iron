@@ -236,6 +236,56 @@ class CustomBasicHistoryProgressionDomainTest {
                 CustomBasicHistoryResult.Rejected).reason)
     }
 
+    @Test fun alternateMachineWithSameSlotRequiresEveryMatchingCompletedWorkingReceipt() {
+        val a=completed(1,week=1,machine="A")
+        val fullB=completed(2,week=2,machine="B")
+        fun onA(newer:CustomCoachingHistoricalSession)=review(
+            next=snapshot(3,machine="A"),machine="A",
+            sessions=listOf(a,newer))
+        val independent=onA(fullB) as CustomBasicHistoryResult.Reviewed
+        assertEquals("workout-1",independent.historyWorkoutId)
+        assertEquals(listOf(n(105),n(105)),independent.candidate.proposedWorkingLoads)
+
+        val observed=fullB.evidence.visits
+        val incomplete=fullB.copy(evidence=fullB.evidence.copy(
+            visits=observed.dropLast(1)))
+        val duplicate=fullB.copy(evidence=fullB.evidence.copy(
+            visits=listOf(observed.first(),observed.first())))
+        val changedRepBand=fullB.copy(evidence=fullB.evidence.copy(
+            visits=observed.mapIndexed { index,fact ->
+                if(index==0) fact.copy(prescribedReps=RepBand(5,10)) else fact
+            }))
+        val changedLoad=fullB.copy(evidence=fullB.evidence.copy(
+            visits=observed.mapIndexed { index,fact ->
+                if(index==0)fact.copy(prescribedLoad=load(95)) else fact
+            }))
+        val uncompleted=fullB.copy(evidence=fullB.evidence.copy(
+            visits=observed.mapIndexed { index,fact ->
+                if(index==1)fact.copy(outcome=KotlinJournalSetOutcome.FAILED_ATTEMPT)
+                else fact
+            }))
+        val wrongStage=fullB.copy(evidence=fullB.evidence.copy(
+            visits=observed.mapIndexed { index,fact ->
+                if(index==0)fact.copy(stage=2) else fact
+            }))
+        // A physically independent B cannot hide a changed coaching source
+        // between two otherwise comparable Machine A sessions.
+        val sourceDrift=fullB.copy(snapshot=fullB.snapshot.copy(
+            stamp=fullB.snapshot.stamp.copy(
+                athleteProfileRevision="new-profile-review")))
+        for (invalid in listOf(incomplete,duplicate,changedRepBand,
+            changedLoad,uncompleted,wrongStage)) {
+            val result=onA(invalid)
+            assertEquals(result.toString(),
+                CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+                (result as CustomBasicHistoryResult.Rejected).reason)
+        }
+        val changedSource=onA(sourceDrift)
+        assertEquals(changedSource.toString(),
+            CustomBasicHistoryRefusal.HISTORY_SOURCE_CHANGED,
+            (changedSource as CustomBasicHistoryResult.Rejected).reason)
+    }
+
     @Test fun issuedMachineWithNoActualStationNeverBecomesGenericOrOtherStationEvidence() {
         val unverified=completed(2,week=2,machine="B").let { session ->
             session.copy(evidence=session.evidence.copy(visits=

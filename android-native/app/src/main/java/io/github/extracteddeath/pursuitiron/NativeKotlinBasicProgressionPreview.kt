@@ -125,11 +125,10 @@ internal fun NativeKotlinBasicProgressionPreview(
                 candidate.proposedWorkingLoads.forEachIndexed { index, weight ->
                     val prescription = working[index].prescription
                     val original = prescription.load as DraftSetLoad.Verified
-                    val amounts = if (index in candidate.increasedOrdinals)
-                        "${original.value.toPlainString()} → ${weight.toPlainString()}"
-                    else weight.toPlainString()
-                    val suffix = if (original.basis == LoadBasis.ASSISTANCE_COUNTERWEIGHT) " counterweight" else ""
-                    val load = "$amounts ${original.unit.name.lowercase()}$suffix"
+                    val proposed = kotlinIssuedLoadLabel(original.copy(value = weight))
+                    val load = if (index in candidate.increasedOrdinals)
+                        "${original.value.stripTrailingZeros().toPlainString()} → $proposed"
+                    else proposed
                     val reps = candidate.proposedRepTargets?.getOrNull(index)?.let {
                         " · " + repLabel(prescription.exactRepTarget, it, index in candidate.changedRepOrdinals)
                     } ?: " · " + prescription.repTargetLabel()

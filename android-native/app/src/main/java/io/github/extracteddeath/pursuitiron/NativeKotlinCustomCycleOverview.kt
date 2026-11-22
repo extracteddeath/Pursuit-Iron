@@ -13,18 +13,10 @@ import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomNextCyc
 import io.github.extracteddeath.pursuitiron.rebuild.*
 
 /** Read-only base structure. Exact week overrides remain in the verified workout preview. */
-private fun authoredLoadDescription(load:DraftSetLoad):String = when(load) {
-    DraftSetLoad.ExplicitBodyweight -> "Bodyweight"
-    is DraftSetLoad.Verified ->
-        "${load.value.stripTrailingZeros().toPlainString()} ${load.unit.name.lowercase()}"
-}
-
-private fun authoredSetDescription(set:CustomAuthoredSet,number:Int):String {
+internal fun authoredSetDescription(set:CustomAuthoredSet,number:Int):String {
     val kind=set.type.name.lowercase().replaceFirstChar{it.uppercase()}
-    val reps=if(set.reps.minimum==set.reps.maximum)
-        "${set.reps.minimum}" else "${set.reps.minimum}–${set.reps.maximum}"
-    return "Set $number · $kind · ${authoredLoadDescription(set.load)} · " +
-        "$reps reps · RIR ${set.targetRir?.toString() ?: "not set"} · " +
+    return "Set $number · $kind · ${kotlinIssuedLoadLabel(set.load)} · " +
+        "${set.repTargetLabel()} · RIR ${set.targetRir?.toString() ?: "not set"} · " +
         "${set.restSeconds}s rest"
 }
 @Composable
@@ -169,7 +161,7 @@ internal fun NativeKotlinCustomCycleOverview(
                                         "${amplifier.followUpReps} follow-up reps · " +
                                         "${amplifier.followUpRestSeconds}s rest" +
                                         (amplifier.followUpLoad?.let {
-                                            " · ${authoredLoadDescription(it)}"
+                                            " · ${kotlinIssuedLoadLabel(it)}"
                                         } ?: " · same load"),
                                         style=MaterialTheme.typography.bodySmall,
                                         color=MaterialTheme.colorScheme.onSurfaceVariant)

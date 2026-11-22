@@ -13,8 +13,14 @@ assert.ok(nativeSettings.includes('":kotlin-engine"'));
 // historical JS source isolated as read-only migration/development context
 // until it can be removed from the release dependency graph.
 assert.ok(app.includes('project(":kotlin-engine")') &&
-  app.includes('project(":native-coach-store")'),
-  'The isolated Android Kotlin candidate must compile against native source');
+  app.includes('project(":native-coach-store")') &&
+  !app.includes('implementation(project(":domain-contract"))'),
+  'The beta app must compile against native Kotlin without its legacy domain contract');
+assert.ok(app.includes('verifyKotlinOnlyRuntimeClasspath') &&
+  app.includes('"debugRuntimeClasspath", "releaseRuntimeClasspath"') &&
+  app.includes('dependsOn(verifyKotlinOnlyRuntimeClasspath)') &&
+  workflow.includes('gradle :app:verifyKotlinOnlyRuntimeClasspath'),
+  'PR CI must execute both native runtime graph checks without beta release evidence');
 const appRoot='android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/';
 const mainActivity=read(appRoot+'MainActivity.kt');
 const legacyRuntime=read(appRoot+'NativeRuntimeHost.kt');

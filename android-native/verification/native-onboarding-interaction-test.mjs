@@ -254,10 +254,10 @@ assert.ok(train.includes('NativeSetValueFields(session.unit,load,reps,rir,!busy'
   controls.includes('input.length<=3 && input.all(Char::isDigit)') &&
   controls.includes('input.length<=2 && input.all(Char::isDigit)') &&
   train.includes('NativeSetEntryPolicy.accepts(load,reps,rir,set.allowFailedAttempt)') &&
-  /NativeSetEntryPolicy\.stepReps\(\s*reps\s*,\s*-1\s*,\s*allowFailedAttempt\s*\)/.test(controls) &&
-  controls.includes('NativeSetEntryPolicy.stepRir(rir,1)') &&
-  controls.includes('NativeSetEntryPolicy.stepRepsBy(') &&
-  controls.includes('NativeSetEntryPolicy.stepRirBy(') &&
+  /KotlinSetDraftStepDomain\.stepReps\(\s*reps\s*,\s*-1\s*,\s*allowFailedAttempt\s*\)/.test(controls) &&
+  controls.includes('KotlinSetDraftStepDomain.stepRir(rir,1)') &&
+  controls.includes('KotlinSetDraftStepDomain.stepRepsBy(') &&
+  controls.includes('KotlinSetDraftStepDomain.stepRirBy(') &&
   controls.includes('combinedClickable(') &&
   controls.includes('onLongClickLabel=') &&
   controls.includes('minWidth=48.dp,minHeight=48.dp') &&
@@ -896,8 +896,8 @@ assert.ok(controls.includes('val repsControl:@Composable ()->Unit') &&
   controls.includes('modifier=modifier.sizeIn(minWidth=48.dp,minHeight=48.dp)') &&
   controls.includes('combinedClickable(') &&
   controls.includes('onLongClickLabel=') &&
-  controls.includes('NativeSetEntryPolicy.stepRepsBy(') &&
-  controls.includes('NativeSetEntryPolicy.stepRirBy(') &&
+  controls.includes('KotlinSetDraftStepDomain.stepRepsBy(') &&
+  controls.includes('KotlinSetDraftStepDomain.stepRirBy(') &&
   controls.includes('if(showFieldHelp || !showLoad)') &&
   controls.includes('RIR is optional') &&
   !controls.includes('stepLoad('),

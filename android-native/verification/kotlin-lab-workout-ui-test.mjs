@@ -1048,8 +1048,8 @@ assert.ok(composer.includes('NativeSetValueFields(') &&
   sharedSetFields.includes('showFieldHelp:Boolean=true') &&
   sharedSetFields.includes('Bodyweight movement · no external load.') &&
   sharedSetFields.includes('RIR is optional; leave it blank if unreported.') &&
-  sharedSetFields.includes('NativeSetEntryPolicy.stepRepsBy(') &&
-  sharedSetFields.includes('NativeSetEntryPolicy.stepRirBy(') &&
+  sharedSetFields.includes('KotlinSetDraftStepDomain.stepRepsBy(') &&
+  sharedSetFields.includes('KotlinSetDraftStepDomain.stepRirBy(') &&
   composer.includes('showFieldHelp=false') &&
   journal.includes('showFieldHelp=false'),
   'Generated workout must use shared accessible reps/RIR steppers and omit the load field for source-verified bodyweight sets');
@@ -1207,7 +1207,7 @@ for(const source of [journal,composer]) {
 assert.ok(restBridge.includes('if(!rest.hasRemainingWork)return') &&
   restBridge.includes('NativeRestTimer(workoutId,rest.manualRestSeconds,enabled,') &&
   restBridge.includes('latestReceiptOperationId=rest.latestReceiptEventId') &&
-  restBridge.includes('NativeRestCue(it.eventId,it.seconds,it.exerciseIndex)'),
+  restBridge.includes('NativeKotlinRestCue(it.eventId,it.seconds,it.exerciseIndex)'),
   'Both journal paths share the native timer with exact receipt-bound durations and no final rest');
 for(const source of [journal,composer]) {
   assert.ok(source.includes('.widthIn(max=920.dp).align(Alignment.CenterHorizontally)') &&
@@ -1344,13 +1344,15 @@ assert.ok(betaSettings.includes('Share beta feedback') &&
   !betaSettings.includes('Intent.EXTRA_STREAM'),
   'Early beta feedback and problem reporting must be explicit, bounded and privacy-safe');
 assert.ok(betaGradle.includes('verifyEarlyBetaRuntime') &&
-  betaGradle.includes('releaseRuntimeClasspath') &&
-  betaGradle.includes('forbiddenProjectPaths') &&
-  betaGradle.includes('":engine-runtime"') &&
+  betaGradle.includes('verifyKotlinOnlyRuntimeClasspath') &&
+  betaGradle.includes('"debugRuntimeClasspath", "releaseRuntimeClasspath"') &&
+  betaGradle.includes('forbiddenProjects') &&
+  betaGradle.includes('":domain-contract", ":engine-runtime"') &&
   betaGradle.includes('forbiddenExternalModules') &&
   betaGradle.includes('forbiddenSourcePatterns') &&
-  betaGradle.includes('forbiddenComponents.isEmpty()') &&
+  betaGradle.includes('forbidden.isEmpty()') &&
   betaGradle.includes('violations.isEmpty()') &&
+  betaGradle.includes('dependsOn(verifyKotlinOnlyRuntimeClasspath)') &&
   betaGradle.includes('verification/BETA_DEVICE_ACCEPTANCE.md') &&
   betaGradle.includes('"packageRelease", "assembleRelease"') &&
   betaGradle.includes('"bundleRelease", "packageReleaseBundle"') &&

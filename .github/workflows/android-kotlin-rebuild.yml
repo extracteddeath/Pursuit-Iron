@@ -223,6 +223,9 @@ jobs:
         run: |
           node android-native/verification/kotlin-lab-stable-signing-test.mjs
           python3 android-native/verification/kotlin-lab-signing-test.py
+      - name: Prove beta debug and release runtime exclude legacy JS without an APK
+        working-directory: android-native
+        run: gradle :app:verifyKotlinOnlyRuntimeClasspath --no-daemon --stacktrace
       - name: Test headless Kotlin training decisions and weekly composer without an APK
         working-directory: android-native
         run: gradle :kotlin-engine:testDebugUnitTest --no-daemon --stacktrace

@@ -60,7 +60,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import io.github.extracteddeath.pursuitiron.domain.NativeSetEntryPolicy
+import io.github.extracteddeath.pursuitiron.rebuild.KotlinSetDraftStepDomain
 
 /**
  * Shared native presentation components. Domain/state ownership stays outside UI.
@@ -130,11 +130,11 @@ internal fun NativeSetValueFields(unit:String,load:String,reps:String,rir:String
     // bounds at each intermediate step. No guessed coach recommendations and
     // no calls to the journal from a long-press.
     fun stepReps(direction:Int,count:Int) {
-        NativeSetEntryPolicy.stepRepsBy(
+        KotlinSetDraftStepDomain.stepRepsBy(
             reps,direction,count,allowFailedAttempt)?.let(onReps)
     }
     fun stepRir(direction:Int,count:Int) {
-        NativeSetEntryPolicy.stepRirBy(rir,direction,count)?.let(onRir)
+        KotlinSetDraftStepDomain.stepRirBy(rir,direction,count)?.let(onRir)
     }
     val repsControl:@Composable ()->Unit={
         NativeSetCounterField(
@@ -145,9 +145,9 @@ internal fun NativeSetValueFields(unit:String,load:String,reps:String,rir:String
             decrement={stepReps(-1,1)},increment={stepReps(1,1)},
             longDecrement={stepReps(-1,3)},longIncrement={stepReps(1,3)},
             longStepCount=3,
-            canDecrement=NativeSetEntryPolicy.stepReps(
+            canDecrement=KotlinSetDraftStepDomain.stepReps(
                 reps,-1,allowFailedAttempt)!=null,
-            canIncrement=NativeSetEntryPolicy.stepReps(
+            canIncrement=KotlinSetDraftStepDomain.stepReps(
                 reps,1,allowFailedAttempt)!=null,
             isError=repsError
         )
@@ -161,8 +161,8 @@ internal fun NativeSetValueFields(unit:String,load:String,reps:String,rir:String
             decrement={stepRir(-1,1)},increment={stepRir(1,1)},
             longDecrement={stepRir(-1,2)},longIncrement={stepRir(1,2)},
             longStepCount=2,
-            canDecrement=NativeSetEntryPolicy.stepRir(rir,-1)!=null,
-            canIncrement=NativeSetEntryPolicy.stepRir(rir,1)!=null,
+            canDecrement=KotlinSetDraftStepDomain.stepRir(rir,-1)!=null,
+            canIncrement=KotlinSetDraftStepDomain.stepRir(rir,1)!=null,
             isError=rirError
         )
     }

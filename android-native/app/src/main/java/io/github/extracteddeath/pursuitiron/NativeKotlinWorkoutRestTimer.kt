@@ -3,7 +3,6 @@ package io.github.extracteddeath.pursuitiron
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import io.github.extracteddeath.pursuitiron.domain.NativeRestCue
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinWorkoutRestPresentation
 
 /** Shares the native elapsed-time countdown; the Kotlin projection supplies
@@ -25,6 +24,6 @@ internal fun NativeKotlinWorkoutRestTimer(
     NativeRestTimer(workoutId,rest.manualRestSeconds,enabled,
         latestReceiptOperationId=rest.latestReceiptEventId,
         autoCue=rest.automaticCue?.let {
-            NativeRestCue(it.eventId,it.seconds,it.exerciseIndex)
+            NativeKotlinRestCue(it.eventId,it.seconds,it.exerciseIndex)
         },ownerId=athleteId)
 }

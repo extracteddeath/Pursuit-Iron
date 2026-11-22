@@ -88,7 +88,9 @@ object CustomBasicProgressionDraftDomain {
                     if (target != before.exactRepTarget) advanced.add(workingIndex)
                     edits[setIndex] = before.copy(exactRepTarget = target)
                 }
-                if (advanced != candidate.advancedOrdinals) null
+                if (advanced != candidate.advancedOrdinals ||
+                    candidate.atRepCeiling && (advanced.isNotEmpty() ||
+                        working.any { it.exactRepTarget != it.reps.maximum })) null
                 else edits
             }
             is CustomBasicHistoryResult.ManualBodyweight -> original.takeIf {
@@ -160,7 +162,9 @@ object CustomBasicProgressionDraftDomain {
                 BasicProgressionDecision.MAXIMUM_LOAD_REACHED,
                 BasicProgressionDecision.AUTHORIZED_INCREMENT_TOO_SMALL ->
                     strategy != BasicProgressionStrategy.MANUAL_LOGGING && strategy != BasicProgressionStrategy.REP_TARGET_PROGRESSION
-                BasicProgressionDecision.REP_CEILING_REACHED -> strategy == BasicProgressionStrategy.REP_TARGET_PROGRESSION
+                BasicProgressionDecision.REP_CEILING_REACHED ->
+                    strategy == BasicProgressionStrategy.REP_TARGET_PROGRESSION &&
+                        working.all { it.exactRepTarget == it.reps.maximum }
                 else -> false
             }
         }

@@ -302,6 +302,57 @@ class CustomBasicHistoryProgressionDomainTest {
             (changedSource as CustomBasicHistoryResult.Rejected).reason)
     }
 
+    @Test fun physicalMachineTagNeverEarnsFreeBarbellProgressionButManualLoggingRemainsAvailable() {
+        val barbell = DraftSetLoad.Verified(
+            LoadUnit.LB, LoadBasis.BARBELL_TOTAL, n(100))
+        fun barbellCycle(method: SavedProgressionMethod): CustomTrainingCycle =
+            cycle(method).let { original ->
+                original.copy(blocks = original.blocks.map { block ->
+                    block.copy(days = block.days.map { day ->
+                        day.copy(slots = day.slots.map { slot ->
+                            slot.copy(sets = slot.sets.map { it.copy(load = barbell) })
+                        })
+                    })
+                })
+            }
+        fun barbellDay(original: CustomWorkoutDaySnapshot): CustomWorkoutDaySnapshot =
+            original.copy(slots = original.slots.map { slot ->
+                slot.copy(sets = slot.sets.map { set ->
+                    set.copy(prescription = set.prescription.copy(load = barbell))
+                })
+            })
+        fun barbellHistory(machine: String?): CustomCoachingHistoricalSession {
+            val recorded = completed(1, machine = machine)
+            return recorded.copy(
+                snapshot = barbellDay(recorded.snapshot),
+                evidence = recorded.evidence.copy(visits = recorded.evidence.visits.map {
+                    it.copy(prescribedLoad = barbell)
+                }))
+        }
+        val stock = VerifiedLoadStock.Barbell(
+            LoadUnit.LB, n(45), mapOf(n(25) to 1, n(5) to 1,
+                BigDecimal("2.5") to 1))
+        fun request(method: SavedProgressionMethod, machine: String?) =
+            CustomBasicHistoryRequest(barbellCycle(method),
+                barbellDay(snapshot(2, machine = machine)), "future-2", "main",
+                listOf(barbellHistory(machine)), machine, stock, n(5))
+
+        val mislabeled = CustomBasicHistoryProgressionDomain.review(
+            request(SavedProgressionMethod.DOUBLE, "A"))
+        assertEquals(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE,
+            (mislabeled as CustomBasicHistoryResult.Rejected).reason)
+
+        val genuine = CustomBasicHistoryProgressionDomain.review(
+            request(SavedProgressionMethod.DOUBLE, null))
+        assertEquals(listOf(n(105), n(105)),
+            (genuine as CustomBasicHistoryResult.Reviewed).candidate.proposedWorkingLoads)
+
+        val manual = CustomBasicHistoryProgressionDomain.review(
+            request(SavedProgressionMethod.MANUAL, "A").copy(completed = emptyList()))
+        assertEquals(BasicProgressionDecision.MANUAL_REPEAT,
+            (manual as CustomBasicHistoryResult.Reviewed).candidate.decision)
+    }
+
     @Test fun issuedMachineWithNoActualStationNeverBecomesGenericOrOtherStationEvidence() {
         val unverified=completed(2,week=2,machine="B").let { session ->
             session.copy(evidence=session.evidence.copy(visits=

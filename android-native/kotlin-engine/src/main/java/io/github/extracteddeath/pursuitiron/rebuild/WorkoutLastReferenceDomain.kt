@@ -195,15 +195,82 @@ object WorkoutLastReferenceDomain {
         }
     }
 
+    /**
+     * The generic Last has already rejected a changed exercise or native
+     * Swap slot. Its absence is NOT permission to erase an older, physically
+     * independent Machine A reference after a verified Machine B substitute.
+     *
+     * Conversely, that substitute must invalidate the old set on its OWN
+     * station, even though its new set keys cannot match the previous lift.
+     * An unattributed skip/failed observation cannot prove a different
+     * station, so it invalidates every station for the affected current slot.
+     * This is a historical display projection only; never progression.
+     */
+    private fun invalidateChangedCustomStation(
+        destination:MutableMap<WorkoutMachineReferenceKey,WorkoutLastSetReference>,
+        source:CustomCoachingHistoricalSession,
+        next:CustomWorkoutDaySnapshot
+    ) {
+        val previousDay=source.snapshot
+        if(previousDay.stamp.gymId!=next.stamp.gymId ||
+            previousDay.phase!=next.phase || previousDay.split!=next.split ||
+            previousDay.sessionPurpose!=next.sessionPurpose ||
+            previousDay.blockPurpose!=next.blockPurpose)return
+        for(slot in next.slots) {
+            val previous=previousDay.slots.singleOrNull{it.slotId==slot.slotId}
+            if(previous!=null && previous.exerciseId==slot.exerciseId &&
+                previous.familyId==slot.familyId &&
+                previous.variantId==slot.variantId &&
+                previous.attachmentId==slot.attachmentId &&
+                previous.role==slot.role &&
+                previous.supersetGroup==slot.supersetGroup)continue
+            // If the slot ID vanished, native Swap has replaced it with
+            // new keys. No arbitrary replacement-to-old-slot mapping exists
+            // in a finished receipt, so conservatively inspect the whole
+            // same-day main working record.
+            val visits=source.evidence.visits.filter {
+                it.part==CustomWorkoutVisitPart.MAIN &&
+                    it.setType==DraftSetType.WORKING &&
+                    (previous==null || it.slotId==previous.slotId)
+            }
+            val uncertain=visits.isEmpty() || visits.any{
+                val id=it.actual?.machineInstanceId
+                id==null || !KotlinMachineAlternativesDomain.validInstanceId(id)
+            }
+            val actualMachines=visits.mapNotNull{
+                it.actual?.machineInstanceId
+            }.toSet()
+            val currentKeys=slot.sets.map{it.setKey}.toSet()
+            destination.keys.removeAll {
+                it.key.setKey in currentKeys &&
+                    (uncertain || it.machineId in actualMachines)
+            }
+        }
+    }
+
     fun custom(
         workoutId:String,next:CustomWorkoutDaySnapshot,
         completed:List<CustomCoachingHistoricalSession>
     ):WorkoutLastReferenceResult {
         val baseline=customBase(workoutId,next,completed)
-        if(baseline !is WorkoutLastReferenceResult.Ready || baseline.sets.isEmpty())
-            return baseline
+        if(baseline !is WorkoutLastReferenceResult.Ready)return baseline
         val before=completed.singleOrNull { it.evidence.workoutId==workoutId }
             ?.completionOrder ?:Long.MAX_VALUE
+        // Preserve the old strict latest-day boundary when the gym, phase or
+        // training intent changed. Only a SAME-scope substituted movement on
+        // a different verified station can preserve an earlier machine Last.
+        val latest=completed.lastOrNull{
+            it.completionOrder<before && it.evidence.workoutId!=workoutId &&
+                it.snapshot.stamp.athleteId==next.stamp.athleteId &&
+                it.snapshot.stamp.cycleId==next.stamp.cycleId &&
+                it.snapshot.weekday==next.weekday &&
+                it.snapshot.absoluteWeek<next.absoluteWeek
+        }
+        if(latest!=null && (latest.snapshot.stamp.gymId!=next.stamp.gymId ||
+            latest.snapshot.phase!=next.phase ||
+            latest.snapshot.split!=next.split ||
+            latest.snapshot.sessionPurpose!=next.sessionPurpose ||
+            latest.snapshot.blockPurpose!=next.blockPurpose))return baseline
         val machines=linkedMapOf<WorkoutMachineReferenceKey,WorkoutLastSetReference>()
         for(session in completed) {
             if(session.completionOrder>=before ||
@@ -216,6 +283,7 @@ object WorkoutLastReferenceDomain {
             val observation=customBase(workoutId,next,listOf(session))
             if(observation !is WorkoutLastReferenceResult.Ready)
                 return WorkoutLastReferenceResult.Unavailable
+            invalidateChangedCustomStation(machines,session,next)
             appendMachineFacts(machines,observation.sets)
         }
         return ready(baseline.sets,machines)

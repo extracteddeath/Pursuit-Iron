@@ -471,6 +471,136 @@ class CustomBasicHistoryProgressionDomainTest {
         }
     }
 
+    @Test fun latestRealSubstitutionOnTheSameStationBlocksAnOlderEarnedLoad() {
+        val previousA=completed(1,week=1,machine="A")
+        fun substituted(machine:String):CustomCoachingHistoricalSession {
+            val prior=completed(2,week=2,machine=machine)
+            // Both the ISSUED slot and the independently saved observation
+            // identify a different movement. It is not merely a bad history
+            // fact or a stale label for the original press.
+            return prior.copy(
+                snapshot=prior.snapshot.copy(slots=prior.snapshot.slots.map{
+                    it.copy(exerciseId="substitute-press")
+                }),
+                evidence=prior.evidence.copy(visits=prior.evidence.visits.map{
+                    it.copy(exerciseId="substitute-press")
+                }))
+        }
+        fun nextA(newer:CustomCoachingHistoricalSession) = review(
+            next=snapshot(3,machine="A"),machine="A",
+            sessions=listOf(previousA,newer))
+        // A different lift trained later ON MACHINE A invalidates the
+        // earlier A press as an automatically earned next-session step.
+        assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+            (nextA(substituted("A")) as CustomBasicHistoryResult.Rejected).reason)
+        // A verified, distinct Machine B remains an independent thread:
+        // its substitution must not erase valid prior Machine A press work.
+        val recovered=nextA(substituted("B"))
+            as CustomBasicHistoryResult.Reviewed
+        assertEquals("workout-1",recovered.historyWorkoutId)
+        assertEquals(listOf(n(105),n(105)),recovered.candidate.proposedWorkingLoads)
+        // A new workout on an unknown station is NOT evidence it happened on B.
+        val unknown=substituted("B").let{session->
+            session.copy(evidence=session.evidence.copy(visits=
+                session.evidence.visits.map{
+                    it.copy(actual=it.actual?.copy(machineInstanceId=null))
+                }))
+        }
+        assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+            (nextA(unknown) as CustomBasicHistoryResult.Rejected).reason)
+    }
+
+    @Test fun nativeSwapWithNewSlotAndSetKeysMustNotPromoteOldMachineAProgression() {
+        val earlierA=completed(1,week=1,machine="A")
+        fun actuallySwapped(machine:String):CustomCoachingHistoricalSession {
+            val prior=completed(2,week=2,machine=machine)
+            val original=prior.snapshot.slots.single()
+            // The real journal Swap reducer forbids reusing the old slot
+            // identity AND its set keys. Model the independently finished
+            // snapshot and visit evidence after that acknowledged swap.
+            val replacementId="replacement-main"
+            val changedSets=original.sets.mapIndexed { index,set ->
+                set.copy(slotId=replacementId,
+                    setKey="cycle:w2:d0:${replacementId}:s${index+1}")
+            }
+            val replacement=original.copy(slotId=replacementId,
+                exerciseId="substitute-press",sets=changedSets)
+            val visits=prior.evidence.visits.mapIndexed { index,fact ->
+                fact.copy(slotId=replacementId,exerciseId="substitute-press",
+                    setKey=changedSets[index].setKey)
+            }
+            return prior.copy(
+                snapshot=prior.snapshot.copy(slots=listOf(replacement)),
+                evidence=prior.evidence.copy(visits=visits))
+        }
+        fun forA(newer:CustomCoachingHistoricalSession)=review(
+            next=snapshot(3,machine="A"),machine="A",
+            sessions=listOf(earlierA,newer))
+        assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+            (forA(actuallySwapped("A")) as CustomBasicHistoryResult.Rejected).reason)
+        val independent=forA(actuallySwapped("B"))
+            as CustomBasicHistoryResult.Reviewed
+        assertEquals("workout-1",independent.historyWorkoutId)
+        assertEquals(listOf(n(105),n(105)),independent.candidate.proposedWorkingLoads)
+        val ambiguous=actuallySwapped("B").let{session->
+            session.copy(evidence=session.evidence.copy(visits=
+                session.evidence.visits.map {fact->
+                    fact.copy(actual=fact.actual?.copy(machineInstanceId=null))
+                }))
+        }
+        assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+            (forA(ambiguous) as CustomBasicHistoryResult.Rejected).reason)
+    }
+
+    @Test fun finishedRealJournalSwapCannotEarnAnOlderSameStationIncrease() {
+        val earlierA=completed(1,week=1,machine="A")
+        fun finishSwap(machine:String):CustomCoachingHistoricalSession {
+            val original=snapshot(2,machine=machine)
+            var journal=CustomWorkoutJournalDomain.begin(
+                "real-swap-$machine",original,"a".repeat(64))
+            val priorSlot=original.slots.single()
+            val newId="replacement-main"
+            val replacement=priorSlot.copy(slotId=newId,
+                exerciseId="substitute-press",
+                sets=priorSlot.sets.map{set ->
+                    set.copy(slotId=newId,
+                        setKey="cycle:w2:d0:${newId}:s${set.ordinalInSlot}")
+                })
+            journal=(CustomWorkoutJournalDomain.reduce(journal,
+                CustomWorkoutJournalOperation.Swap(
+                    "swap-$machine",journal.revision,"main",replacement))
+                as CustomWorkoutJournalDecision.Proposed).draft
+            for(set in replacement.sets) {
+                journal=(CustomWorkoutJournalDomain.reduce(journal,
+                    CustomWorkoutJournalOperation.Record(
+                        "record-$machine-${set.ordinalInSlot}",journal.revision,
+                        CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN),
+                        KotlinJournalSetOutcome.COMPLETED,
+                        KotlinPerformedSet(n(100),LoadUnit.LB,10,null,machine)))
+                    as CustomWorkoutJournalDecision.Proposed).draft
+            }
+            journal=(CustomWorkoutJournalDomain.reduce(journal,
+                CustomWorkoutJournalOperation.Finish(
+                    "finish-$machine",journal.revision))
+                as CustomWorkoutJournalDecision.Proposed).draft
+            val evidence=(CustomWorkoutHistoryEvidenceDomain.project(journal)
+                as CustomHistoryEvidenceResult.Candidate).evidence
+            assertEquals(newId,journal.snapshot.slots.single().slotId)
+            assertTrue(evidence.visits.all{it.slotId==newId})
+            return CustomCoachingHistoricalSession(2,journal.snapshot,evidence)
+        }
+        fun nextA(replacement:CustomCoachingHistoricalSession)=review(
+            next=snapshot(3,machine="A"),machine="A",
+            sessions=listOf(earlierA,replacement))
+        assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+            (nextA(finishSwap("A")) as CustomBasicHistoryResult.Rejected).reason)
+        val anotherStation=nextA(finishSwap("B"))
+            as CustomBasicHistoryResult.Reviewed
+        assertEquals("workout-1",anotherStation.historyWorkoutId)
+        assertEquals(listOf(n(105),n(105)),
+            anotherStation.candidate.proposedWorkingLoads)
+    }
+
     @Test fun unloadedBodyweightUsesVerifiedExactRepsWithoutAnyLoadOrUnit() {
         fun plan(target:Int, method:SavedProgressionMethod = SavedProgressionMethod.BODYWEIGHT_REPS):CustomTrainingCycle {
             val source=cycle(method)

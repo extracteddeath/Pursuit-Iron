@@ -1344,13 +1344,15 @@ assert.ok(betaSettings.includes('Share beta feedback') &&
   !betaSettings.includes('Intent.EXTRA_STREAM'),
   'Early beta feedback and problem reporting must be explicit, bounded and privacy-safe');
 assert.ok(betaGradle.includes('verifyEarlyBetaRuntime') &&
-  betaGradle.includes('releaseRuntimeClasspath') &&
-  betaGradle.includes('forbiddenProjectPaths') &&
-  betaGradle.includes('":engine-runtime"') &&
+  betaGradle.includes('verifyKotlinOnlyRuntimeClasspath') &&
+  betaGradle.includes('"debugRuntimeClasspath", "releaseRuntimeClasspath"') &&
+  betaGradle.includes('forbiddenProjects') &&
+  betaGradle.includes('":domain-contract", ":engine-runtime"') &&
   betaGradle.includes('forbiddenExternalModules') &&
   betaGradle.includes('forbiddenSourcePatterns') &&
-  betaGradle.includes('forbiddenComponents.isEmpty()') &&
+  betaGradle.includes('forbidden.isEmpty()') &&
   betaGradle.includes('violations.isEmpty()') &&
+  betaGradle.includes('dependsOn(verifyKotlinOnlyRuntimeClasspath)') &&
   betaGradle.includes('verification/BETA_DEVICE_ACCEPTANCE.md') &&
   betaGradle.includes('"packageRelease", "assembleRelease"') &&
   betaGradle.includes('"bundleRelease", "packageReleaseBundle"') &&

@@ -219,6 +219,37 @@ class ReviewedFutureWeekProgressionDomainTest {
         assertFalse(result.mayChangeWorkoutHistory)
     }
 
+    @Test fun earnedFloorPreservesExactTargetsAcrossTheReviewedWeekEdit() {
+        val source=cycle()
+        val oldBlock=source.blocks.single()
+        val oldDay=oldBlock.days.first()
+        val oldSlot=oldDay.slots.single()
+        val mixed=oldSlot.copy(sets=listOf(set().copy(exactRepTarget=10),
+            set().copy(exactRepTarget=13)))
+        val authored=source.copy(blocks=listOf(oldBlock.copy(days=
+            listOf(oldDay.copy(slots=listOf(mixed)))+oldBlock.days.drop(1))))
+        val review=ReviewedFutureWeekProgressionDomain.propose(request(source=authored))
+        assertEquals(review.explanation,
+            ReviewedFutureWeekProgressionStatus.CANDIDATE_FOR_ATHLETE_REVIEW,review.status)
+        val revised=checkNotNull(review.candidate)
+        val sets=preview(revised,3).slots.single().sets.map { it.prescription }
+        assertEquals(listOf(11,11),sets.map { it.reps.minimum })
+        assertEquals(listOf(11,13),sets.map { it.exactRepTarget })
+        assertEquals(listOf(10,13),preview(revised,4).slots.single().sets.map {
+            it.prescription.exactRepTarget })
+    }
+
+    @Test fun sameExerciseWithChangedAttachmentCannotEarnAWeekEdit() {
+        val source=cycle()
+        val previous=completed(source,2,2)
+        val swapped=previous.copy(snapshot=previous.snapshot.copy(slots=
+            previous.snapshot.slots.map { it.copy(attachmentId="different-grip") }))
+        val review=ReviewedFutureWeekProgressionDomain.propose(request(source=source,
+            history=listOf(completed(source,1,1),swapped)))
+        assertEquals(ReviewedFutureWeekProgressionStatus.HOLD_WITHOUT_AMENDMENT,review.status)
+        assertNull(review.candidate)
+    }
+
     @Test fun anotherWeekdayCannotPromoteOldSameDayPerformance() {
         val source=cycle()
         val history=listOf(

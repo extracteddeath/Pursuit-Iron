@@ -225,7 +225,29 @@ object CustomBasicHistoryProgressionDomain {
                 return no(CustomBasicHistoryRefusal.TARGET_ALREADY_TRAINED)
             if(snap.stamp.gymId!=next.stamp.gymId)continue
             val historicalSlot=snap.slots.singleOrNull {it.slotId==request.slotId}
-                ?:continue
+            if(historicalSlot==null) {
+                // Native Swap issues a NEW slot ID and new set keys. A later
+                // same-day replacement must not vanish from the progression
+                // ledger and promote the older original slot's success.
+                // Only independently verified work performed EXCLUSIVELY on
+                // other physical machines can leave this station's history
+                // unchanged. Unknown/skipped stations fail closed.
+                val otherWork=evidence.visits.filter {
+                    it.part==CustomWorkoutVisitPart.MAIN &&
+                        it.setType==DraftSetType.WORKING
+                }
+                val definitelyOtherMachine=!unweighted &&
+                    otherWork.isNotEmpty() && otherWork.all { visit ->
+                        val machine=visit.actual?.machineInstanceId
+                        machine!=null &&
+                            KotlinMachineAlternativesDomain.validInstanceId(machine) &&
+                            machine!=normalizedMachine
+                    }
+                if(definitelyOtherMachine)continue
+                latestStationIncompatible=true
+                latest=session
+                continue
+            }
             // Do not discard a more recent substitution BEFORE inspecting
             // its actual machine. A same-station swapped lift must block an
             // older successful set from earning a weight increase. Only a

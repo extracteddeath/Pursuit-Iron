@@ -127,6 +127,25 @@ class KotlinGlobalHistoryIndexDomainTest {
         assertEquals(a.lastByExercise,b.lastByExercise)
     }
 
+    @Test fun assistedHistoryRanksLessCounterweightPerStationAndKeepsUnknownWorkInLast() {
+        fun session(i: Int, machine: String?, weights: List<Int>, reps: List<Int>) =
+            item(completed(i, actualLoads = weights, actualReps = reps, machineId = machine,
+                basis = LoadBasis.ASSISTANCE_COUNTERWEIGHT), i.toLong())
+        val records = index(snapshot(
+            session(1, "A", listOf(50, 20), listOf(10, 4)),
+            session(2, "A", listOf(20, 20), listOf(8, 6)),
+            session(3, "B", listOf(10, 0), listOf(5, 3)),
+            session(4, null, listOf(0, 0), listOf(12, 12))))
+        val key = KotlinHistoryMachineLoadKey("gym-1", "bench", "A", LoadUnit.LB, LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+        assertEquals(8, records.lowestAssistanceByMachine.getValue(key).actualReps)
+        assertEquals(n(0), records.lowestAssistanceByMachine.getValue(key.copy(machineInstanceId = "B")).actualLoad)
+        assertEquals(2, records.lowestAssistanceByMachine.size)
+        assertTrue(records.highestCompletedLoad.isEmpty())
+        assertTrue(records.highestCompletedLoadByMachine.isEmpty())
+        assertTrue(records.mostRepsAtLoad.isEmpty())
+        assertEquals("workout-4", records.lastByExercise.getValue("bench").workoutId)
+    }
+
     @Test fun sameLiftOnDifferentPhysicalMachinesHasDistinctScopedLoadRecords() {
         val a=completed(1,actualLoads=listOf(200,200),machineId="A")
         val b=completed(2,actualLoads=listOf(140,140),machineId="B")

@@ -168,11 +168,26 @@ object DoubleProgressionLevelingDomain {
             return invalid()
         val saved = previous as? WorkoutLastReferenceResult.Ready ?: return invalid()
         val requestedMachine = KotlinMachineAlternativesDomain.normalizeMachineId(machineInstanceId)
+        if (machineInstanceId != null &&
+            machineInstanceId != KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID &&
+            !KotlinMachineAlternativesDomain.validInstanceId(machineInstanceId))
+            return invalid()
         val observed = currentSets.map { (key, load) ->
-            val reference = saved.sets[key] ?: return invalid()
-            val actual = WorkoutLastDraftDomain.reviewedActual(saved,key,load)
+            // A physical A/B choice uses that station's last authenticated
+            // visit, not the generic most-recent visit on another machine.
+            // There is no fallback to an older success or to the generic
+            // exercise-level Last when a station has no evidence.
+            val reference = (if (machineInstanceId == null) saved.sets[key]
+                else saved.machineSets[WorkoutMachineReferenceKey(key,requestedMachine)])
                 ?: return invalid()
-            if (KotlinMachineAlternativesDomain.normalizeMachineId(
+            if (reference.outcome != KotlinJournalSetOutcome.COMPLETED)
+                return invalid()
+            val actual = reference.actual ?: return invalid()
+            val basis = (load as? DraftSetLoad.Verified)?.basis ?: return invalid()
+            if (reference.loadBasis != basis ||
+                !CustomWorkoutJournalDomain.actualValid(
+                    load,KotlinJournalSetOutcome.COMPLETED,actual) ||
+                KotlinMachineAlternativesDomain.normalizeMachineId(
                     actual.machineInstanceId) != requestedMachine ||
                 actual.unit != issued.first().unit || actual.load == null)
                 return invalid()

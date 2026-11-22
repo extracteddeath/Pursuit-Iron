@@ -346,9 +346,9 @@ assert.ok(runtimeStartup.includes('val loaded=try { PackagedReadOnlySchemaVerifi
 const rest=fs.readFileSync(root+'NativeRestTimer.kt','utf8');
 const restClock=fs.readFileSync(root+'NativeKotlinRestCountdownStore.kt','utf8');
 assert.ok(train.includes('NativeRestTimer(plan.session.workoutId, activeExtension ?: exercise.restSeconds,') &&
-  rest.includes('rememberSaveable(workoutId,ownerId)') &&
+  rest.includes('rememberSaveable(stateSaver=restCheckpointSaver)') &&
   rest.includes('SystemClock.elapsedRealtime()') &&
-  rest.includes('LaunchedEffect(deadline, startedElapsed, startedWall)') &&
+  rest.includes('LaunchedEffect(workoutId,ownerId,active)') &&
   rest.includes('delay(250L)') &&
   rest.includes('onLongClickLabel = "Reset rest timer"') &&
   rest.includes('onLongClick = {publish(null)}') &&
@@ -356,15 +356,14 @@ assert.ok(train.includes('NativeRestTimer(plan.session.workoutId, activeExtensio
   rest.includes('ownerId: String? = null') && 
   !rest.includes('onRecord(') && !rest.includes('journal.'),
   'Legacy preview rest remains an unscoped manual M3 control; owned Kotlin rest is presentation-only and never writes training outcomes');
-assert.ok(rest.includes('var startedElapsed by rememberSaveable(workoutId,ownerId)') &&
-  rest.includes('var startedWall by rememberSaveable(workoutId,ownerId)') &&
-  rest.includes('var activeSeconds by rememberSaveable(workoutId,ownerId)') &&
+assert.ok(rest.includes('var active by if (scopeKey != null)') &&
+  rest.includes('restStore.read(scopeKey,latestReceiptOperationId,') &&
   restClock.includes('elapsed<checkpoint.startedElapsed || wall<checkpoint.startedWall') &&
   restClock.includes('abs(wallAge-elapsedAge)<=CLOCK_TOLERANCE_MILLIS') &&
-  rest.includes('activeSeconds=checkpoint?.activeSeconds ?:0') &&
+  rest.includes('active=checkpoint') &&
   rest.includes('restStore.save(scopeKey,latestReceiptOperationId,checkpoint)') &&
-  rest.includes('var observedEvent by rememberSaveable(workoutId,ownerId)') &&
-  rest.includes('LaunchedEffect(latestReceiptOperationId,enabled)') &&
+  rest.includes('var observedEvent by remember(workoutId,ownerId)') &&
+  rest.includes('LaunchedEffect(workoutId,ownerId,latestReceiptOperationId,enabled)') &&
   rest.includes('latestReceiptOperationId!=observedEvent') &&
   rest.includes('autoCue?.operationId==latestReceiptOperationId') &&
   rest.includes('begin(autoCue.seconds)') &&

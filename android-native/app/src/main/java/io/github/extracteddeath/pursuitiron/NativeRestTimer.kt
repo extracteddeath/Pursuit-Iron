@@ -10,6 +10,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -21,14 +22,18 @@ internal data class NativeKotlinRestCue(
     val operationId:String,val seconds:Int,val exerciseIndex:Int
 )
 
+private val restCheckpointSaver = Saver<NativeRestCountdownCheckpoint?, String>(
+    save = { it?.let(NativeRestCountdownPolicy::encode) },
+    restore = NativeRestCountdownPolicy::decode
+)
+
 /**
  * A presentation-only rest countdown. The target comes from the pinned,
  * engine-issued workout; this component never writes a set, modifies a
  * prescription, or claims to persist workout history.
  *
- * Elapsed time keeps ticking while the screen is backgrounded. Saveable UI
- * state survives destination changes and normal Activity state restoration,
- * but is deliberately not a durable journal or a notification service.
+ * The scoped checkpoint is recovered against the latest workout receipt
+ * on each mount. Unscoped preview callers retain activity-local state.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -49,38 +54,22 @@ internal fun NativeRestTimer(
     val scopeKey=remember(workoutId,ownerId) {
         ownerId?.let {restStore.scopedKey(it,workoutId)}
     }
-    val recovered=remember(scopeKey,latestReceiptOperationId) {
-        scopeKey?.let {restStore.read(it,latestReceiptOperationId,
-            SystemClock.elapsedRealtime(),System.currentTimeMillis())}
+    var active by if (scopeKey != null) {
+        remember(scopeKey) {
+            mutableStateOf(restStore.read(scopeKey,latestReceiptOperationId,
+                SystemClock.elapsedRealtime(),System.currentTimeMillis()))
+        }
+    } else {
+        key(workoutId,ownerId) {
+            rememberSaveable(stateSaver=restCheckpointSaver) {
+                mutableStateOf<NativeRestCountdownCheckpoint?>(null)
+            }
+        }
     }
-    var deadline by rememberSaveable(workoutId,ownerId) {
-        mutableLongStateOf(recovered?.deadlineElapsed ?:0L)
-    }
-    var startedElapsed by rememberSaveable(workoutId,ownerId) {
-        mutableLongStateOf(recovered?.startedElapsed ?:0L)
-    }
-    var startedWall by rememberSaveable(workoutId,ownerId) {
-        mutableLongStateOf(recovered?.startedWall ?:0L)
-    }
-    var activeSeconds by rememberSaveable(workoutId,ownerId) {
-        mutableIntStateOf(recovered?.activeSeconds ?:0)
-    }
-    var now by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
-    // Initialize from the *already visible* journal receipt. Re-entering
-    // Train, rotating or recovering the app must not replay old rests.
-    var observedEvent by rememberSaveable(workoutId,ownerId) {
-        mutableStateOf(latestReceiptOperationId)
-    }
-    // A saved UI checkpoint can precede a durable write acknowledged while
-    // the app was leaving. Baseline every fresh mount against the recovered
-    // receipt, including restoration; never start that old rest on reopening.
-    // An already-running saveable deadline is preserved independently.
-    var receiptBaselineChecked by remember(workoutId) { mutableStateOf(false) }
+    var now by remember(workoutId,ownerId) { mutableLongStateOf(SystemClock.elapsedRealtime()) }
+    var observedEvent by remember(workoutId,ownerId) { mutableStateOf(latestReceiptOperationId) }
     fun publish(checkpoint:NativeRestCountdownCheckpoint?) {
-        deadline=checkpoint?.deadlineElapsed ?:0L
-        startedElapsed=checkpoint?.startedElapsed ?:0L
-        startedWall=checkpoint?.startedWall ?:0L
-        activeSeconds=checkpoint?.activeSeconds ?:0
+        active=checkpoint
         restStore.save(scopeKey,latestReceiptOperationId,checkpoint)
     }
     fun begin(seconds: Int) {
@@ -90,25 +79,14 @@ internal fun NativeRestTimer(
             seconds,elapsed,System.currentTimeMillis()))
     }
     fun adjust(seconds:Int) {
-        val checkpoint=NativeRestCountdownCheckpoint(
-            startedElapsed,startedWall,deadline,activeSeconds)
+        val checkpoint=active ?: return
         val elapsed=SystemClock.elapsedRealtime()
         now=elapsed
-        // An untrusted, stale or expired checkpoint cannot be extended.
-        // An athlete may tap the normal issued rest target to restart it.
-        if(!NativeRestCountdownPolicy.valid(
-                checkpoint,elapsed,System.currentTimeMillis())) {
-            publish(null)
-            return
-        }
         publish(NativeRestCountdownPolicy.adjust(
             checkpoint,seconds,elapsed,System.currentTimeMillis()))
     }
-    LaunchedEffect(latestReceiptOperationId,enabled) {
-        if(!receiptBaselineChecked) {
-            observedEvent=latestReceiptOperationId
-            receiptBaselineChecked=true
-        } else if(enabled && latestReceiptOperationId != null && latestReceiptOperationId!=observedEvent) {
+    LaunchedEffect(workoutId,ownerId,latestReceiptOperationId,enabled) {
+        if(enabled && latestReceiptOperationId != null && latestReceiptOperationId!=observedEvent) {
             observedEvent=latestReceiptOperationId
             // Skipped/corrected sets don't produce an auto cue. The journal
             // receipt, not a pending Log click, is what starts the countdown.
@@ -123,27 +101,24 @@ internal fun NativeRestTimer(
 
     // A saved elapsedRealtime deadline is invalid after a device reboot.
     // Compare monotonic and wall time and bound expired historical timers.
-    LaunchedEffect(deadline, startedElapsed, startedWall) {
-        if (deadline <= 0L) return@LaunchedEffect
+    LaunchedEffect(workoutId,ownerId,active) {
+        val checkpoint=active ?: return@LaunchedEffect
         while (isActive) {
             val elapsed = SystemClock.elapsedRealtime()
-            val checkpoint=NativeRestCountdownCheckpoint(
-                startedElapsed,startedWall,deadline,activeSeconds)
-            if (!NativeRestCountdownPolicy.valid(
-                    checkpoint,elapsed,System.currentTimeMillis())) {
+            if (!NativeRestCountdownPolicy.valid(checkpoint,elapsed,System.currentTimeMillis())) {
                 publish(null)
                 break
             }
             now = elapsed
-            if (elapsed >= deadline) break
+            if (elapsed >= checkpoint.deadlineElapsed) break
             delay(250L)
         }
     }
-    val checkpoint=NativeRestCountdownCheckpoint(
-        startedElapsed,startedWall,deadline,activeSeconds)
-    val remainingMaybe=NativeRestCountdownPolicy.remaining(
-        checkpoint,now,System.currentTimeMillis())
-    val valid=deadline>0L && remainingMaybe!=null
+    val remainingMaybe=active?.let {
+        NativeRestCountdownPolicy.remaining(it,now,System.currentTimeMillis())
+    }
+    val valid=remainingMaybe!=null
+    val activeSeconds=active?.activeSeconds ?: 0
     val remaining=remainingMaybe ?:0L
     val time = "%d:%02d".format(remaining / 60, remaining % 60)
     val title = when {

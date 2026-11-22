@@ -1230,8 +1230,7 @@ assert.ok(journey.includes('workoutScreens.SaveableStateProvider("custom:$custom
   journey.includes('Text("Minimize")') &&
   journey.includes('minimizedGeneratedId=null'),
   'Both workout paths must preserve exact identity, timers and drafts, and generated workouts need an explicit resume shortcut');
-assert.ok(timer.includes('var receiptBaselineChecked by remember(workoutId)') &&
-  timer.includes('if(!receiptBaselineChecked)') &&
+assert.ok(timer.includes('var observedEvent by remember(workoutId,ownerId) { mutableStateOf(latestReceiptOperationId) }') &&
   timer.includes('observedEvent=latestReceiptOperationId') &&
   timer.includes('if(autoCue.seconds==0)'),
   'Remount must baseline old saved receipts; an immediate follow-up must clear a preceding countdown');

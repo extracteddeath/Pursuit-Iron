@@ -244,7 +244,8 @@ class DoubleProgressionLevelingDomainTest {
         val machineB=priorSession(listOf("130","130","130","130"),
             sessionFor={"newer-B"},machineFor={"machine-B"})
         val stationFacts=keys.associate { key ->
-            WorkoutMachineReferenceKey(key,"machine-A") to checkNotNull(machineA.sets[key])
+            WorkoutMachineReferenceKey(key,"machine-A") to
+                checkNotNull(machineA.sets[key]).copy(completionOrder=6)
         }
         val history=WorkoutLastReferenceResult.Ready(
             sets=machineB.sets,machineSets=stationFacts)

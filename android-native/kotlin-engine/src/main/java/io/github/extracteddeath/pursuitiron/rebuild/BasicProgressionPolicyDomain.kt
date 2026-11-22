@@ -117,8 +117,7 @@ object BasicProgressionPolicyDomain {
         val loads = request.issuedWorkingLoads
         if (request.nextWorkoutId.isBlank() || !request.nextScope.valid() ||
             loads.size !in 1..32 || loads.any {
-                !KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(it) ||
-                (it.signum() == 0 && !request.nextScope.basis.permitsZeroAddedLoad)
+                !KotlinSetNumberAuthorityDomain.validPrescribedLoad(it,request.nextScope.basis)
             })
             return reject(BasicProgressionRefusal.INVALID_SOURCE_OR_LOAD)
 

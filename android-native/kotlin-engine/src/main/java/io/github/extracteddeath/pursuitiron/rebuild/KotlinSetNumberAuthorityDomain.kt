@@ -71,6 +71,10 @@ object KotlinSetNumberAuthorityDomain {
         value>=zero && value<=maxLoad &&
             value.stripTrailingZeros().scale()<=3
 
+    /** A prescribed zero means an unloaded implement only for a basis that supports it. */
+    fun validPrescribedLoad(value:BigDecimal,basis:LoadBasis):Boolean =
+        validPhysicalLoadValue(value) && (value.signum()!=0 || basis.permitsZeroAddedLoad)
+
     /** One scale-independent identity rule for TWO immutable issued targets.
      * Never use physical numeric equality as machine A/B equivalence: the
      * equipment instance is a separate exact history identity key. */

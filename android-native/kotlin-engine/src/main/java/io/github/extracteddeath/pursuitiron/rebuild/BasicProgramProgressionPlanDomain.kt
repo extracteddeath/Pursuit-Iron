@@ -174,7 +174,7 @@ object BasicProgramProgressionPlanDomain {
                 load.unit to load.basis
             }}.distinct()
             if(loaded && (unitBasis.size!=1 || values.any {
-                !KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(it)
+                !KotlinSetNumberAuthorityDomain.validPrescribedLoad(it,unitBasis.single().second)
             }))
                 return no("The working set has mixed units, load bases or invalid weights.")
             val bands=working.map{it.reps}.distinct()

@@ -1,6 +1,5 @@
 package io.github.extracteddeath.pursuitiron.rebuild
 
-import java.math.BigDecimal
 import java.util.Collections
 
 /**
@@ -180,8 +179,6 @@ data class CustomResolvedWeek(
  */
 object CustomTrainingCycleDomain {
     private val id = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
-    private val zero = BigDecimal.ZERO
-    private val max = BigDecimal("100000")
     private const val MAX_WEEKS = 104
     private const val MAX_BLOCKS = 26
     private const val MAX_SETS_PER_SLOT = 20
@@ -196,9 +193,7 @@ object CustomTrainingCycleDomain {
             if (available.bodyweightApproved) null
             else CustomCycleIssueKind.UNAVAILABLE_EXERCISE
         is DraftSetLoad.Verified -> {
-            if (load.value < zero ||
-                load.value.signum()==0 && !load.basis.permitsZeroAddedLoad || load.value > max ||
-                load.value.stripTrailingZeros().scale() > 3)
+            if (!KotlinSetNumberAuthorityDomain.validPrescribedLoad(load.value,load.basis))
                 CustomCycleIssueKind.INVALID_SET
             else if (available.stock == null)
                 CustomCycleIssueKind.NO_VERIFIED_STOCK

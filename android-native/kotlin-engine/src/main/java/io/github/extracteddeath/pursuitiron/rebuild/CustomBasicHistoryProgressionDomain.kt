@@ -226,7 +226,10 @@ object CustomBasicHistoryProgressionDomain {
             if(snap.stamp.gymId!=next.stamp.gymId)continue
             val historicalSlot=snap.slots.singleOrNull {it.slotId==request.slotId}
                 ?:continue
-            if(historicalSlot.exerciseId!=selected.exerciseId)continue
+            // Do not discard a more recent substitution BEFORE inspecting
+            // its actual machine. A same-station swapped lift must block an
+            // older successful set from earning a weight increase. Only a
+            // fully attributed DIFFERENT physical station is independent.
             val visits=evidence.visits.filter {
                 it.slotId==request.slotId &&
                 it.part==CustomWorkoutVisitPart.MAIN &&

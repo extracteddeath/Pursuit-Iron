@@ -139,8 +139,16 @@ object CustomSavedHistoryCorrectionDomain {
                         operation.performed))
                     return reject(CustomSavedCorrectionRefusal.INVALID_VALUES)
                 if (operation.outcome == KotlinJournalSetOutcome.COMPLETED &&
-                    amplifier != null && followed == null)
-                    return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
+                    amplifier != null && followed == null) {
+                    // A finished activation can legitimately have no first drop
+                    // when the authored weight would equal or exceed its actual.
+                    // A correction must still leave that drop unavailable.
+                    val suppressedDrop = original.outcome == KotlinJournalSetOutcome.COMPLETED &&
+                        AdvancedAmplifierProtocolDomain.firstDropSuppressed(
+                            amplifier, target.prescription.load, operation.performed)
+                    if (!suppressedDrop)
+                        return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
+                }
                 // To turn an originally completed main set into a skip/failure,
                 // the independent follow-up must FIRST be marked skipped.
                 if (operation.outcome != KotlinJournalSetOutcome.COMPLETED &&

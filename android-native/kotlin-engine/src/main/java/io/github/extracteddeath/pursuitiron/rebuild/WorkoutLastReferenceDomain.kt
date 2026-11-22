@@ -233,9 +233,17 @@ object WorkoutLastReferenceDomain {
                     it.setType==DraftSetType.WORKING &&
                     (previous==null || it.slotId==previous.slotId)
             }
-            val uncertain=visits.isEmpty() || visits.any{
-                val id=it.actual?.machineInstanceId
-                id==null || !KotlinMachineAlternativesDomain.validInstanceId(id)
+            val uncertain=visits.isEmpty() || visits.any { visit ->
+                val id=visit.actual?.machineInstanceId
+                val issued=visit.prescribedLoad as? DraftSetLoad.Verified
+                // A station ID on an unloaded/bodyweight set is not proof
+                // of an independently calibrated physical weight station.
+                // Reuse the journal's one fact validator, rather than
+                // treating an arbitrary historical ID string as evidence.
+                id==null || !KotlinMachineAlternativesDomain.validInstanceId(id) ||
+                    issued==null || visit.actual?.load==null ||
+                    !KotlinSetNumberAuthorityDomain.valid(
+                        issued,visit.outcome,visit.actual)
             }
             val actualMachines=visits.mapNotNull{
                 it.actual?.machineInstanceId

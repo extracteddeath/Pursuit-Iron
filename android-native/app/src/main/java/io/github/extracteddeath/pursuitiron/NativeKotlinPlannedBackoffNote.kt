@@ -7,11 +7,14 @@ import io.github.extracteddeath.pursuitiron.rebuild.KotlinWorkoutSetPresentation
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinWorkoutTarget
 
 /**
- * Read-only label for a *source-issued* final lower-load working set.
+ * Source-issued load difference only. Neither native workout snapshot
+ * currently supplies a verified scheme label for these individual sets.
+ * Never infer that any descending pyramid is a "back-off" or a fatigue
+ * recommendation from weight shape alone. The original targets are the
+ * evidence; athlete actuals and advisor proposals are separate authorities.
  *
- * The generated prescription author is the only authority for these
- * immutable targets. The display must not infer a downstep from actuals,
- * readiness, a coach suggestion, a different exercise or physical machine.
+ * Supports lower loads at any consecutively issued working ordinal, not just
+ * the last, without guessing what training adaptation the program intended.
  */
 internal object NativeKotlinPlannedBackoffNote {
     fun fromIssuedTargets(
@@ -25,64 +28,60 @@ internal object NativeKotlinPlannedBackoffNote {
         }.sortedBy{it.target.ordinal}
         if(working.size<2 ||
             working.map{it.target.ordinal}!=(0 until working.size).toList() ||
-            working.last().target.setKey!=selected.setKey)
+            working.map{it.target.setKey}.distinct().size!=working.size)
             return null
-        val before=working.dropLast(1).map{
-            it.target.load as? DraftSetLoad.Verified ?:return null
-        }
-        val last=selected.load as? DraftSetLoad.Verified ?:return null
-        val base=before.first()
-        if(before.any{
-            it.unit!=base.unit || it.basis!=base.basis ||
-                it.value.compareTo(base.value)!=0
-        } || last.unit!=base.unit || last.basis!=base.basis ||
-            last.value.signum()<0 || last.value>=base.value)
-            return null
-        val firstLoad=base.value.stripTrailingZeros().toPlainString()
-        val finalLoad=last.value.stripTrailingZeros().toPlainString()
-        return "Planned last-set back-off · set ${working.size} of ${working.size}: "+
-            "$firstLoad → $finalLoad ${last.unit.name.lowercase()}. "+
-            "Authored before this workout; not an automatic weight drop."
+        val index=working.indexOfFirst{it.target.setKey==selected.setKey}
+        if(index<1 || working[index].target!=selected)return null
+        val previous=working[index-1].target.load as? DraftSetLoad.Verified
+            ?:return null
+        val current=selected.load as? DraftSetLoad.Verified ?:return null
+        if(previous.unit!=current.unit || previous.basis!=current.basis ||
+            current.value.signum()<0 ||
+            current.value.compareTo(previous.value)>=0)return null
+        val former=previous.value.stripTrailingZeros().toPlainString()
+        val lighter=current.value.stripTrailingZeros().toPlainString()
+        return "Issued lighter working set · set ${index+1} of ${working.size}: "+
+            "$former → $lighter ${current.unit.name.lowercase()}. "+
+            "Prescribed before this workout, not lowered by fatigue coaching."
     }
 
     /**
-     * A custom athlete-authored slot is not the generated LAST_SET_BACKOFF
-     * scheme. Say only what the signed original slot actually prescribes.
-     * Never compare to another slot/exercise, a logged actual or a follow-up.
+     * Custom source-authored variations have the same display boundary:
+     * preserve set order, physical basis and existing slot identity, and
+     * never describe a specific scheme that the signed sets do not name.
      */
     fun fromCustomSlot(
         slotSets:List<CustomWorkoutSetSnapshot>,
         selected:CustomWorkoutSetSnapshot
     ):String? {
         if(selected.prescription.type!=DraftSetType.WORKING ||
-            slotSets.lastOrNull()!=selected ||
             slotSets.any{it.slotId!=selected.slotId} ||
             slotSets.map{it.setKey}.distinct().size!=slotSets.size)
             return null
-        val working=slotSets.filter{
+        val firstWorking=slotSets.indexOfFirst{
             it.prescription.type==DraftSetType.WORKING
         }
-        if(working.size<2 || working.last()!=selected ||
-            working.map{it.ordinalInSlot}!=
-                (working.first().ordinalInSlot until
-                    working.first().ordinalInSlot+working.size).toList())
+        if(firstWorking<0 || slotSets.drop(firstWorking).any{
+            it.prescription.type!=DraftSetType.WORKING
+        })return null
+        val working=slotSets.drop(firstWorking)
+        if(working.size<2 || working.map{it.ordinalInSlot}!=
+            (working.first().ordinalInSlot until
+                working.first().ordinalInSlot+working.size).toList())
             return null
-        val earlier=working.dropLast(1).map{
-            it.prescription.load as? DraftSetLoad.Verified ?:return null
-        }
-        val final=selected.prescription.load as? DraftSetLoad.Verified
-            ?:return null
-        val base=earlier.first()
-        if(earlier.any{
-            it.unit!=base.unit || it.basis!=base.basis ||
-                it.value.compareTo(base.value)!=0
-        } || final.unit!=base.unit || final.basis!=base.basis ||
-            final.value.signum()<0 || final.value>=base.value)
-            return null
-        val original=base.value.stripTrailingZeros().toPlainString()
-        val lighter=final.value.stripTrailingZeros().toPlainString()
-        return "Authored lighter final set · set ${working.size} of ${working.size}: "+
-            "$original → $lighter ${final.unit.name.lowercase()}. "+
-            "Your original target was written before logging; actual weight stays separate."
+        val index=working.indexOfFirst{it.setKey==selected.setKey}
+        if(index<1 || working[index]!=selected)return null
+        val previous=working[index-1].prescription.load
+            as? DraftSetLoad.Verified ?:return null
+        val current=selected.prescription.load
+            as? DraftSetLoad.Verified ?:return null
+        if(previous.unit!=current.unit || previous.basis!=current.basis ||
+            current.value.signum()<0 ||
+            current.value.compareTo(previous.value)>=0)return null
+        val former=previous.value.stripTrailingZeros().toPlainString()
+        val lighter=current.value.stripTrailingZeros().toPlainString()
+        return "Authored lighter working set · set ${index+1} of ${working.size}: "+
+            "$former → $lighter ${current.unit.name.lowercase()}. "+
+            "Saved before logging; the actual weight remains independent."
     }
 }

@@ -67,6 +67,78 @@ class CustomCycleTransitionDomainTest {
         assertFalse(allowed.mayApplyAutomatically)
     }
 
+    @Test fun exactRepTargetAndSavedMethodAreSeparateReviewedChanges() {
+        val original=cycle()
+        val block=original.blocks.single()
+        val day=block.days.single()
+        fun changedSlot(target:CustomExerciseSlot)=original.copy(
+            revision=4,blocks=listOf(block.copy(days=listOf(
+                day.copy(slots=listOf(target))))))
+        val exact=changedSlot(slot().copy(sets=slot().sets.map{
+            it.copy(exactRepTarget=9)
+        }))
+        val repDenied=transition(original,exact)
+        assertEquals(CustomCycleTransitionStatus.PERMISSION_REQUIRED,repDenied.status)
+        assertEquals(setOf(CustomCycleChangeKind.REPS),repDenied.blockedKinds)
+        assertTrue(repDenied.differences.any{
+            it.kind==CustomCycleChangeKind.REPS && it.explanation.contains("exact")
+        })
+        assertEquals(CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW,
+            transition(original,exact,CustomCycleCoachPermissions(
+                adaptReps=true)).status)
+
+        val method=changedSlot(slot().copy(
+            progressionMethod=SavedProgressionMethod.DYNAMIC))
+        val denied=transition(original,method)
+        assertEquals(CustomCycleTransitionStatus.PERMISSION_REQUIRED,denied.status)
+        assertEquals(setOf(CustomCycleChangeKind.PROGRESSION_METHOD),
+            denied.blockedKinds)
+        assertEquals(CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW,
+            transition(original,method,CustomCycleCoachPermissions(
+                adaptProgressionMethod=true)).status)
+        assertEquals(CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW,
+            transition(original,method,origin=CustomCycleEditOrigin.ATHLETE_EDIT).status)
+
+        val incompatible=changedSlot(slot().copy(
+            progressionMethod=SavedProgressionMethod.BODYWEIGHT_REPS))
+        assertEquals(CustomCycleTransitionStatus.INVALID_SOURCE_OR_CANDIDATE,
+            transition(original,incompatible,CustomCycleCoachPermissions(
+                adaptProgressionMethod=true)).status)
+    }
+
+    @Test fun exactRepWeekOverrideNeedsExplicitRepAndWeekPermissions() {
+        val source=cycle()
+        val before=source.blocks.single().days.single().slots.single().sets
+        val edited=source.copy(revision=4,weekOverrides=mapOf(
+            "build" to listOf(CustomWeekSlotOverride(
+                2,0,"main",before.map{it.copy(exactRepTarget=9)}))))
+        val refused=transition(source,edited)
+        assertEquals(setOf(CustomCycleChangeKind.WEEK_OVERRIDES,
+            CustomCycleChangeKind.REPS),refused.blockedKinds)
+        assertEquals(setOf(CustomCycleChangeKind.REPS),
+            transition(source,edited,CustomCycleCoachPermissions(
+                adaptWeekOverrides=true)).blockedKinds)
+        assertEquals(CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW,
+            transition(source,edited,CustomCycleCoachPermissions(
+                adaptWeekOverrides=true,adaptReps=true)).status)
+    }
+
+    @Test fun appendedBlockCannotChangeMethodUnderBlocksPermissionAlone() {
+        val original=cycle()
+        val first=original.blocks.single()
+        val extra=first.copy(blockId="next",label="Next",days=listOf(
+            first.days.single().copy(slots=listOf(
+                slot().copy(progressionMethod=SavedProgressionMethod.DOUBLE)))))
+        val proposed=original.copy(revision=4,blocks=listOf(first,extra))
+        val denied=transition(original,proposed,
+            CustomCycleCoachPermissions(adaptBlocks=true))
+        assertEquals(setOf(CustomCycleChangeKind.PROGRESSION_METHOD),
+            denied.blockedKinds)
+        assertEquals(CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW,
+            transition(original,proposed,CustomCycleCoachPermissions(
+                adaptBlocks=true,adaptProgressionMethod=true)).status)
+    }
+
     @Test fun volumeRepsRirRestLoadsAndAmplifierAreIndependentPermissions() {
         val original = cycle()
         val initialBlock = original.blocks.single()

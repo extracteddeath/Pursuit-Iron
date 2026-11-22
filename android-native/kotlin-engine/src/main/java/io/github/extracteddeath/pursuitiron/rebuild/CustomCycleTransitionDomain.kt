@@ -7,7 +7,7 @@ enum class CustomCycleEditOrigin { ATHLETE_EDIT, COACH_SUGGESTION }
 enum class CustomCycleChangeKind {
     GOAL, BLOCKS, PHASE, SPLIT, SCHEDULE, EXERCISES, REMOVE_PINNED,
     ATTACHMENTS, SUPERSETS, SET_COUNT, LOADS, REPS, RIR, REST,
-    AMPLIFIERS, CUES, WEEK_OVERRIDES, DAY_COUNT
+    AMPLIFIERS, CUES, WEEK_OVERRIDES, DAY_COUNT, PROGRESSION_METHOD
 }
 data class CustomCycleChange(
     val kind: CustomCycleChangeKind,
@@ -33,7 +33,9 @@ data class CustomCycleCoachPermissions(
     val adaptCues: Boolean = false,
     val adaptWeekOverrides: Boolean = false,
     /** Different from changing a split or moving existing training days. */
-    val adaptDayCount: Boolean = false
+    val adaptDayCount: Boolean = false,
+    /** A coach must not silently replace the athlete's saved progression. */
+    val adaptProgressionMethod: Boolean = false
 ) {
     fun permits(kind: CustomCycleChangeKind): Boolean = when(kind) {
         CustomCycleChangeKind.GOAL -> adaptGoal
@@ -54,6 +56,7 @@ data class CustomCycleCoachPermissions(
         CustomCycleChangeKind.AMPLIFIERS -> adaptAmplifiers
         CustomCycleChangeKind.CUES -> adaptCues
         CustomCycleChangeKind.WEEK_OVERRIDES -> adaptWeekOverrides
+        CustomCycleChangeKind.PROGRESSION_METHOD -> adaptProgressionMethod
     }
 }
 enum class CustomCycleTransitionStatus {
@@ -105,7 +108,10 @@ object CustomCycleTransitionDomain {
             if (!sameLoad(a.load,b.load)) emit(CustomCycleChangeKind.LOADS, path,
                 "Working load, unit or physical basis changed.")
             if (a.reps != b.reps) emit(CustomCycleChangeKind.REPS, path,
-                "Authored repetition target changed.")
+                "Authored repetition range changed.")
+            if (a.exactRepTarget != b.exactRepTarget)
+                emit(CustomCycleChangeKind.REPS, path,
+                    "The exact per-working-set rep target changed.")
             if (a.targetRir != b.targetRir) emit(CustomCycleChangeKind.RIR, path,
                 "Authored effort target changed.")
             if (a.restSeconds != b.restSeconds ||
@@ -215,6 +221,9 @@ object CustomCycleTransitionDomain {
                     if(slot.coachNote!=previous.coachNote)
                         emit(CustomCycleChangeKind.CUES,at,
                             "New block changes an athlete-authored exercise note.")
+                    if(slot.progressionMethod!=previous.progressionMethod)
+                        emit(CustomCycleChangeKind.PROGRESSION_METHOD,at,
+                            "New block changes the saved progression method.")
                     compareSets(previous.sets,slot.sets,at,::emit)
                 }
             }
@@ -299,6 +308,9 @@ object CustomCycleTransitionDomain {
                     if (slot.coachNote != proposedSlot.coachNote)
                         emit(CustomCycleChangeKind.CUES, slotPath,
                             "Athlete note changed.")
+                    if(slot.progressionMethod!=proposedSlot.progressionMethod)
+                        emit(CustomCycleChangeKind.PROGRESSION_METHOD,slotPath,
+                            "Saved progression method changed.")
                     compareSets(slot.sets, proposedSlot.sets, slotPath, ::emit)
                 }
             }
@@ -350,13 +362,20 @@ object CustomCycleTransitionDomain {
         val a = CustomTrainingCycleDomain.review(original, availableExercises)
         val b = CustomTrainingCycleDomain.review(proposed, availableExercises)
         val delta = Collections.unmodifiableList(differences(original, proposed))
+        val methodChanged=delta.any{it.kind==CustomCycleChangeKind.PROGRESSION_METHOD}
+        // A method edit must also survive the one canonical source
+        // progression-plan review. Consent cannot legalize an incompatible
+        // basic method on a loaded/assisted/periodized working set.
+        val methodReady=!methodChanged ||
+            BasicProgramProgressionPlanDomain.review(proposed) is ProgramProgressionPlan.Ready
         val blocked = if (origin == CustomCycleEditOrigin.COACH_SUGGESTION)
             delta.map { it.kind }.filterNot(permissions::permits).toSet()
         else emptySet()
         val status = when {
             original.cycleId != proposed.cycleId ||
                 original.athleteId != proposed.athleteId ||
-                a.verifiedDraft == null || b.verifiedDraft == null ->
+                a.verifiedDraft == null || b.verifiedDraft == null ||
+                !methodReady ->
                     CustomCycleTransitionStatus.INVALID_SOURCE_OR_CANDIDATE
             proposed.revision != original.revision + 1 ->
                 CustomCycleTransitionStatus.STALE_REVISION

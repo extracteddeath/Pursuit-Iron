@@ -29,6 +29,8 @@ enum class ProgramProgressionRoute {
     MANUAL
 }
 
+data class ProgramProgressionWeek(val blockId: String, val weekInBlock: Int)
+
 data class ProgramProgressionSlotKey(
     val blockId:String,
     val weekday:Int,
@@ -126,12 +128,18 @@ object BasicProgramProgressionPlanDomain {
             emptyMap(),
         /** Provisional catalog roles/patterns; never infer exercise traits from its name. */
         reviewedCatalog:Map<String,CatalogMovement> = emptyMap(),
-        experience:AthleteExperience?=null
+        experience:AthleteExperience?=null,
+        previewWeek: ProgramProgressionWeek? = null
     ):ProgramProgressionPlan {
         fun no(why:String)=ProgramProgressionPlan.Refused(why)
         if(cycle.athleteId.isBlank() || cycle.cycleId.isBlank() ||
             cycle.blocks.isEmpty())
             return no("An authenticated full cycle is required.")
+        if (previewWeek != null) {
+            val block = cycle.blocks.singleOrNull { it.blockId == previewWeek.blockId }
+            if (block == null || previewWeek.weekInBlock !in 1..block.weeks)
+                return no("Choose a scheduled week in this cycle.")
+        }
         val allKeys=cycle.blocks.flatMap {block->
             block.days.flatMap {day->
                 day.slots.map {ProgramProgressionSlotKey(
@@ -307,7 +315,9 @@ object BasicProgramProgressionPlanDomain {
                     strategy=null
                     note="A recovery block is a deliberate dose change, not earned overload."
                 }
-                authored.isNotEmpty() -> {
+                authored.isNotEmpty() && (previewWeek == null ||
+                    previewWeek.blockId != block.blockId || previewWeek.weekInBlock in authored ||
+                    saved == null || style == NativeProgressionStyle.WAVE) -> {
                     route=ProgramProgressionRoute.AUTHORED_WEEKLY_PERIODIZATION
                     strategy=null
                     note="Exact source-authored weekly sets own the changing loads and reps."

@@ -118,7 +118,8 @@ object CustomBasicHistoryProgressionDomain {
                     it in set.prescription.reps.minimum..set.prescription.reps.maximum
                 }!=true})
             return no(CustomBasicHistoryRefusal.EXACT_REP_TARGETS_UNAVAILABLE)
-        val plan=BasicProgramProgressionPlanDomain.review(cycle)
+        val plan=BasicProgramProgressionPlanDomain.review(cycle,
+            previewWeek = ProgramProgressionWeek(block.blockId, next.weekInBlock))
             as? ProgramProgressionPlan.Ready
             ?:return no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE)
         val assignment=plan.assignments.singleOrNull { it.key==

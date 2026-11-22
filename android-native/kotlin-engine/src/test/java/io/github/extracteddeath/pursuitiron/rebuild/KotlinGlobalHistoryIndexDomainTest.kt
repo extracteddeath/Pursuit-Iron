@@ -146,6 +146,19 @@ class KotlinGlobalHistoryIndexDomainTest {
         assertEquals("workout-4", records.lastByExercise.getValue("bench").workoutId)
     }
 
+    @Test fun unknownStationKeepsGeneralHistoryWithoutCreatingMachineRecords() {
+        val unknown = item(completed(1, actualLoads = listOf(220, 225)), 1)
+        val known = item(completed(2, actualLoads = listOf(160, 165), machineId = "A"), 2)
+        val result = index(snapshot(unknown, known))
+        val key = KotlinHistoryMachineLoadKey("gym-1", "bench", "A", LoadUnit.LB, LoadBasis.SMITH_TOTAL)
+        assertEquals(n(225), result.highestCompletedLoad.values.single().actualLoad)
+        assertEquals("workout-2", result.lastByExercise.getValue("bench").workoutId)
+        assertEquals(1, result.highestCompletedLoadByMachine.size)
+        assertEquals(n(165), result.highestCompletedLoadByMachine.getValue(key).actualLoad)
+        assertEquals(2, result.mostRepsAtLoadByMachine.size)
+        assertTrue(result.mostRepsAtLoadByMachine.all { it.machineInstanceId == "A" })
+    }
+
     @Test fun sameLiftOnDifferentPhysicalMachinesHasDistinctScopedLoadRecords() {
         val a=completed(1,actualLoads=listOf(200,200),machineId="A")
         val b=completed(2,actualLoads=listOf(140,140),machineId="B")

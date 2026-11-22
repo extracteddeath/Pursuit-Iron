@@ -62,7 +62,7 @@ class CustomBasicProgressionDraftDomainTest {
     @Test fun rejectsUnmarkedNumericChangesAndStaleSlotIdentity() {
         val original=listOf(set(100),set(100))
         val wrongMarker=weighted(BasicProgressionResult.Candidate(
-            BasicProgressionStrategy.DOUBLE_PROGRESSION,
+            BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,
             listOf(BigDecimal(105),BigDecimal(100)),emptySet(),
             BasicProgressionDecision.EARNED_INCREMENT,"previous"))
         assertNull(CustomBasicProgressionDraftDomain.forWeekEdit(
@@ -81,7 +81,7 @@ class CustomBasicProgressionDraftDomainTest {
     @Test fun noOpAndChangedSetCountCannotBecomeAWeekEdit() {
         val original=listOf(set(100),set(100))
         val noOp=weighted(BasicProgressionResult.Candidate(
-            BasicProgressionStrategy.DOUBLE_PROGRESSION,
+            BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,
             listOf(BigDecimal(100),BigDecimal(100)),emptySet(),
             BasicProgressionDecision.BUILD_REPS,"previous"))
         assertNull(CustomBasicProgressionDraftDomain.forWeekEdit(

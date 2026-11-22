@@ -40,6 +40,18 @@ class NativeKotlinRestCountdownPolicyTest {
             original,-30,elapsed+65_000L,wall+65_000L))
     }
 
+    @Test fun extendingNearTheLimitPreservesTheCountdownAndOriginalClockAnchor() {
+        val limit=NativeRestCountdownPolicy.MAX_SECONDS
+        val original=started(limit-10)
+        val later=elapsed+15_500L
+        val laterWall=wall+15_500L
+        val capped=requireNotNull(NativeRestCountdownPolicy.adjust(original,30,later,laterWall))
+        assertEquals(started(limit),capped)
+        assertEquals(capped,NativeRestCountdownPolicy.adjust(capped,30,later,laterWall))
+        assertEquals(started(limit-30),NativeRestCountdownPolicy.adjust(capped,-30,later,laterWall))
+        assertNull(NativeRestCountdownPolicy.adjust(capped,30,elapsed+limit*1000L,wall+limit*1000L))
+    }
+
     @Test fun clockChangesRebootsAndHistoricalRestAlwaysFailClosed() {
         val original=started()
         assertNull(NativeRestCountdownPolicy.remaining(original,

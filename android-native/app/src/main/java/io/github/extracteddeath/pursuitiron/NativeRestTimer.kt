@@ -193,7 +193,7 @@ internal fun NativeRestTimer(
                         Text("−30 s")
                     }
                     TextButton(onClick={adjust(30)},enabled=enabled &&
-                        remaining<NativeRestCountdownPolicy.MAX_SECONDS,
+                        activeSeconds<NativeRestCountdownPolicy.MAX_SECONDS,
                         modifier=Modifier.weight(1f).heightIn(min=48.dp)) {
                         Text("+30 s")
                     }

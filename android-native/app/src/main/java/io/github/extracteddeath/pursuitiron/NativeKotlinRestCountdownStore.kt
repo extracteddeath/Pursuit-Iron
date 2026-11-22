@@ -62,12 +62,12 @@ internal object NativeRestCountdownPolicy {
         if(remaining(checkpoint,elapsed,wall)==null)return null
         val remainingMillis=(checkpoint.deadlineElapsed-elapsed).coerceAtLeast(0L)
         if(remainingMillis==0L)return null
-        val next=(remainingMillis+changeSeconds*1000L)
-            .coerceIn(0L,MAX_SECONDS*1000L)
+        val elapsedSinceStart=elapsed-checkpoint.startedElapsed
+        val availableMillis=MAX_SECONDS*1000L-elapsedSinceStart
+        val next=(remainingMillis+changeSeconds*1000L).coerceIn(0L,availableMillis)
         if(next==0L)return null
         val nextDeadline=elapsed+next
-        val total=((nextDeadline-checkpoint.startedElapsed)+999L)/1000L
-        if(total !in 1..MAX_SECONDS)return null
+        val total=(elapsedSinceStart+next+999L)/1000L
         return checkpoint.copy(deadlineElapsed=nextDeadline,activeSeconds=total.toInt())
     }
 

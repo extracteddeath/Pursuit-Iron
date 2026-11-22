@@ -226,6 +226,23 @@ object ReviewedFutureWeekProgressionDomain {
             return refuse(ReviewedFutureWeekProgressionStatus.HOLD_WITHOUT_AMENDMENT,
                 coaching.explanation,coaching,sourceAudit)
 
+        // The review may select an older visit from a station-specific history.
+        // Only the immediately preceding visit can authorize this week's edit.
+        // Check each contributing exercise configuration before accepting its numbers.
+        val compared=request.coachingRequest.completed.filter {
+            it.evidence.workoutId in coaching.comparedWorkoutIds
+        }
+        val latest=compared.singleOrNull { it.evidence.workoutId==coaching.latestWorkoutId }
+        if(latest?.snapshot?.absoluteWeek!=next.absoluteWeek-1 || compared.any { visit ->
+                val old=visit.snapshot.slots.singleOrNull { it.slotId==slot.slotId }
+                visit.snapshot.stamp.gymId!=next.stamp.gymId || old==null ||
+                    old.exerciseId!=slot.exerciseId || old.familyId!=slot.familyId ||
+                    old.variantId!=slot.variantId || old.attachmentId!=slot.attachmentId
+            })
+            return refuse(ReviewedFutureWeekProgressionStatus.HOLD_WITHOUT_AMENDMENT,
+                "The completed workouts must match this gym, exercise variant and attachment, including the immediately preceding week.",
+                coaching,sourceAudit)
+
         val modified:CustomWorkoutDaySnapshot=when(kind) {
             CustomNextWorkoutCoachingStatus.BUILD_REPS -> {
                 if(!request.permissions.adaptReps)

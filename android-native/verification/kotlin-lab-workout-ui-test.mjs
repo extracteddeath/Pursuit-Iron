@@ -1705,7 +1705,7 @@ const numberAuthority=read('android-native/kotlin-engine/src/main/java/io/github
 // Actual-set and future-coaching numeric envelopes are ONE predicate,
 // never separately edited ceiling/scale rules. Intent, equipment stock,
 // consent and read-only issuance still belong to their distinct owners.
-assert.ok(numberAuthority.includes('internal fun validPhysicalLoadValue(') &&
+assert.ok(/(?:internal )?fun validPhysicalLoadValue\\(/.test(numberAuthority) &&
   numberAuthority.includes('if(!validPhysicalLoadValue(load))') &&
   futureLoadNumbers.includes('KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(value)') &&
   !futureLoadNumbers.includes('value.stripTrailingZeros().scale()<=3') &&

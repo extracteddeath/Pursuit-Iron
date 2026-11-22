@@ -341,6 +341,90 @@ class CustomNextWorkoutCoachingDomainTest {
         assertNull(refusal.loadReviewCandidate)
     }
 
+    @Test fun versionedCoachingRecognizesRealOtherStationSwapWithoutBorrowingItsSets() {
+        fun onA(session:CustomCoachingHistoricalSession)=session.copy(
+            evidence=session.evidence.copy(visits=session.evidence.visits.map{fact ->
+                fact.copy(actual=fact.actual?.copy(machineInstanceId="A"))
+            }))
+        val a3=onA(completed(1,3))
+        val a4=onA(completed(2,4))
+        fun realSwap(machine:String?,skipLast:Boolean=false):
+            CustomCoachingHistoricalSession {
+            val prior=snapshot(5)
+            var journal=CustomWorkoutJournalDomain.begin(
+                "swapped-${machine ?: "unknown"}-${if(skipLast)"skip" else "done"}",
+                prior,"a".repeat(64))
+            val current=prior.slots.single()
+            val replacementId="swapped-main"
+            val replacement=current.copy(
+                slotId=replacementId,exerciseId="alternate_press",
+                sets=current.sets.map {set ->
+                    set.copy(slotId=replacementId,
+                        setKey="cycle:w5:d0:${replacementId}:s${set.ordinalInSlot}")
+                })
+            journal=(CustomWorkoutJournalDomain.reduce(journal,
+                CustomWorkoutJournalOperation.Swap(
+                    "swap-receipt",journal.revision,current.slotId,replacement))
+                as CustomWorkoutJournalDecision.Proposed).draft
+            for(set in replacement.sets) {
+                val skipped=skipLast && set.ordinalInSlot==2
+                journal=(CustomWorkoutJournalDomain.reduce(journal,
+                    CustomWorkoutJournalOperation.Record(
+                        "record-${set.ordinalInSlot}",journal.revision,
+                        CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN),
+                        if(skipped)KotlinJournalSetOutcome.SKIPPED
+                        else KotlinJournalSetOutcome.COMPLETED,
+                        if(skipped)null else KotlinPerformedSet(
+                            n(200),LoadUnit.LB,8,2,machine)))
+                    as CustomWorkoutJournalDecision.Proposed).draft
+            }
+            journal=(CustomWorkoutJournalDomain.reduce(journal,
+                CustomWorkoutJournalOperation.Finish(
+                    "finish-receipt",journal.revision))
+                as CustomWorkoutJournalDecision.Proposed).draft
+            val evidence=(CustomWorkoutHistoryEvidenceDomain.project(journal)
+                as CustomHistoryEvidenceResult.Candidate).evidence
+            assertEquals(replacementId,journal.snapshot.slots.single().slotId)
+            return CustomCoachingHistoricalSession(3,journal.snapshot,evidence)
+        }
+        val upcoming=snapshot(6).let{day ->
+            day.copy(slots=day.slots.map{it.copy(machineInstanceId="A")})
+        }
+        fun propose(
+            latest:CustomCoachingHistoricalSession,
+            policy:CustomRepForecastPolicy
+        )=CustomNextWorkoutCoachingDomain.review(
+            CustomNextWorkoutCoachingRequest(upcoming,"main",
+                listOf(a3,a4,latest),stock(),n(5),CoachReadiness.NORMAL,
+                false,policy))
+        val distinctB=realSwap("B")
+        for(policy in listOf(CustomRepForecastPolicy.TARGET_RIR_V2,
+            CustomRepForecastPolicy.TARGET_RIR_TREND_V3)) {
+            val result=propose(distinctB,policy)
+            assertEquals(policy.toString(),
+                CustomNextWorkoutCoachingStatus.READY_FOR_LOAD_REVIEW,result.status)
+            assertEquals(listOf("workout-3-0","workout-4-0"),
+                result.comparedWorkoutIds)
+            assertEquals(n(205),result.loadReviewCandidate)
+            assertFalse(result.mayIssueWorkout)
+            // A new-slot A substitution invalidates A's older performance;
+            // its own actuals must not be credited to the old exercise.
+            val sameA=propose(realSwap("A"),policy)
+            assertEquals(CustomNextWorkoutCoachingStatus.CHANGED_DAY_OR_EXERCISE,
+                sameA.status)
+            assertNull(sameA.loadReviewCandidate)
+            for(unverified in listOf(realSwap(null),realSwap("B",skipLast=true))) {
+                val refusal=propose(unverified,policy)
+                assertEquals(CustomNextWorkoutCoachingStatus.MISSED_OR_FAILED_SETS,
+                    refusal.status)
+                assertNull(refusal.loadReviewCandidate)
+            }
+        }
+        // Frozen V1 historical reviews retain their prior behavior.
+        assertEquals(CustomNextWorkoutCoachingStatus.MISSED_OR_FAILED_SETS,
+            propose(distinctB,CustomRepForecastPolicy.LEGACY_STEP_V1).status)
+    }
+
     @Test fun twoStraightSetCeilingSessionsEarnOnlyNextPhysicallyVerifiedIncrement() {
         val result=review()
         assertEquals(CustomNextWorkoutCoachingStatus.READY_FOR_LOAD_REVIEW,

@@ -277,16 +277,16 @@ object CustomWorkoutJournalDomain {
                                 prior,target))
                             return CustomWorkoutJournalDecision.Rejected(
                                 CustomWorkoutJournalRefusal.FOLLOW_UP_NOT_AUTHORED)
-                        // Rewriting an earlier mini-set can invalidate the
-                        // existence of later stages. Do not silently erase
-                        // any recorded observations; refuse such corrections
-                        // until an explicit dependent-stage undo exists.
-                        if(oldStage!=null && nextEffective.keys.any{key->
-                            key.setKey==operation.visit.setKey &&
-                            key.part==CustomWorkoutVisitPart.FOLLOW_UP &&
-                            key.stage>operation.visit.stage
-                        })return CustomWorkoutJournalDecision.Rejected(
-                            CustomWorkoutJournalRefusal.INVALID_CORRECTION)
+                        if (oldStage != null) {
+                            val recorded = nextEffective.keys.filter {
+                                it.setKey == target.setKey && it.part == CustomWorkoutVisitPart.FOLLOW_UP
+                            }
+                            if (!CustomWorkoutExecutionDomain.preservesRecordedFollowUps(
+                                    target, operation, recorded, finished = false) { key ->
+                                    nextEffective[key]?.operation as? CustomWorkoutJournalOperation.Record
+                                }) return CustomWorkoutJournalDecision.Rejected(
+                                    CustomWorkoutJournalRefusal.INVALID_CORRECTION)
+                        }
                         // Partial-range extension cannot be performed on a
                         // different physical station or load. This is a
                         // separate factual partial count, never a full-ROM

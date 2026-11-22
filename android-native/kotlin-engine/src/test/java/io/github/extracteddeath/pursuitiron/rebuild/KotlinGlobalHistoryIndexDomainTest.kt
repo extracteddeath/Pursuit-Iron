@@ -146,6 +146,20 @@ class KotlinGlobalHistoryIndexDomainTest {
         assertEquals("workout-4", records.lastByExercise.getValue("bench").workoutId)
     }
 
+    @Test fun machineTaggedBarbellFactCannotInflateUntaggedBarbellStrengthHistory() {
+        val barbell = item(completed(1, actualLoads = listOf(185, 190),
+            basis = LoadBasis.BARBELL_TOTAL), 1)
+        val mislabeledMachine = item(completed(2, actualLoads = listOf(300, 310),
+            basis = LoadBasis.BARBELL_TOTAL, machineId = "A"), 2)
+        val result = index(snapshot(barbell, mislabeledMachine))
+        val station = KotlinHistoryMachineLoadKey("gym-1", "bench", "A",
+            LoadUnit.LB, LoadBasis.BARBELL_TOTAL)
+        assertEquals(n(190), result.highestCompletedLoad.values.single().actualLoad)
+        assertFalse(result.mostRepsAtLoad.any { it.actualLoad == n(310) })
+        assertEquals(n(310), result.highestCompletedLoadByMachine.getValue(station).actualLoad)
+        assertEquals("workout-2", result.lastByExercise.getValue("bench").workoutId)
+    }
+
     @Test fun sameLiftOnDifferentPhysicalMachinesHasDistinctScopedLoadRecords() {
         val a=completed(1,actualLoads=listOf(200,200),machineId="A")
         val b=completed(2,actualLoads=listOf(140,140),machineId="B")

@@ -236,6 +236,8 @@ internal fun NativeKotlinCustomExerciseSheet(
         else basicReference.next.slots.singleOrNull { it.slotId == existing.slotId }
             ?.takeIf { slot ->
                 slot.exerciseId == existing.exerciseId &&
+                    slot.attachmentId == existing.attachmentId &&
+                    slot.machineInstanceId == existing.machineInstanceId &&
                     slot.sets.map { it.prescription } == existing.sets
             }?.let {
                 CustomBasicProgressionDraftDomain.forWeekEdit(

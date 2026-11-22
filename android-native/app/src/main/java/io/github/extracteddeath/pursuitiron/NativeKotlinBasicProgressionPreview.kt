@@ -103,6 +103,8 @@ internal fun NativeKotlinBasicProgressionPreview(
                         else "A verified next equipment step is available for the qualifying set(s)."
                     BasicProgressionDecision.EARNED_REP_TARGET ->
                         "Completed work supports a new per-set rep target, not an automatic weight change."
+                    BasicProgressionDecision.REP_CEILING_REACHED ->
+                        "Every set reached the top of its rep range. Repeat these targets."
                     BasicProgressionDecision.MAXIMUM_LOAD_REACHED ->
                         if (assisted) "You reached the lowest assisted setting. Keep this counterweight or choose an unassisted exercise in your program."
                         else "You reached the highest verified load for the qualifying sets."

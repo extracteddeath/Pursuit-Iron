@@ -1054,8 +1054,9 @@ internal fun NativeKotlinCustomJournalScreen(
                                     WorkoutReferenceKey(set.setKey) to
                                         set.prescription.load
                                 },
-                                previous=physicalMachineLastReferences(
-                                    lastReferences,selectedMachineId),
+                                // The evaluator needs machineSets, which the display-only
+                                // Target/Last filter intentionally removes.
+                                previous=lastReferences,
                                 machineInstanceId=selectedMachineId,
                                 repBand=first.reps.takeIf{
                                     sameGoal && !requiresNewMachineChoice

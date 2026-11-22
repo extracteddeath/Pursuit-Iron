@@ -11,7 +11,8 @@ class CustomSavedHistoryCorrectionDomainTest {
 
     private fun finished(
         skippedMain: Boolean = false,
-        skippedFollow: Boolean = false
+        skippedFollow: Boolean = false,
+        activationLoad: BigDecimal = BigDecimal("20")
     ): CustomWorkoutJournalDraft {
         val authored = CustomAuthoredSet(
             DraftSetType.WORKING,
@@ -46,8 +47,8 @@ class CustomSavedHistoryCorrectionDomainTest {
             if (skippedMain) KotlinJournalSetOutcome.SKIPPED
             else KotlinJournalSetOutcome.COMPLETED,
             if (skippedMain) null
-            else KotlinPerformedSet(BigDecimal("20"), LoadUnit.LB, 13, null)))
-        if (!skippedMain) accept(CustomWorkoutJournalOperation.Record(
+            else KotlinPerformedSet(activationLoad, LoadUnit.LB, 13, null)))
+        if (!skippedMain && activationLoad > BigDecimal("15")) accept(CustomWorkoutJournalOperation.Record(
             "follow-original", 1, follow,
             if (skippedFollow) KotlinJournalSetOutcome.SKIPPED
             else KotlinJournalSetOutcome.COMPLETED,
@@ -130,6 +131,21 @@ class CustomSavedHistoryCorrectionDomainTest {
                 correction("invalid-rir", 0, main, "main-original",
                     KotlinJournalSetOutcome.COMPLETED,
                     KotlinPerformedSet(BigDecimal("20"), LoadUnit.LB, 14, 11))))
+    }
+
+    @Test fun correctingFinishedActivationKeepsItsSuppressedDropAbsent() {
+        val state = CustomSavedHistoryCorrectionDomain.begin(finished(activationLoad=BigDecimal("15")))
+        val update = correction("correct-reps", 0, main, "main-original",
+            KotlinJournalSetOutcome.COMPLETED, KotlinPerformedSet(BigDecimal("15"), LoadUnit.LB, 12, 1))
+        val saved = accept(state, update)
+        val projection = CustomSavedHistoryEvidenceDomain.projectSaved(saved)
+            as CustomSavedHistoryProjectionResult.Candidate
+        val only = projection.corrected.evidence.visits.single()
+        assertEquals(CustomWorkoutVisitPart.MAIN, only.part)
+        assertEquals(update.performed, only.actual)
+        assertEquals(CustomSavedCorrectionDecision.Rejected(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER),
+            CustomSavedHistoryCorrectionDomain.reduce(state, update.copy(
+                performed=KotlinPerformedSet(BigDecimal("20"), LoadUnit.LB, 12, 1))))
     }
 
     @Test fun cannotPromoteOriginallySkippedMainWithUnrecordedFollowup() {

@@ -211,6 +211,13 @@ object AdvancedAmplifierProtocolDomain {
             second.value.signum()>0 && second.value<first.value
     }
 
+    /** A valid authored drop can end at activation when the actual load is too low. */
+    internal fun firstDropSuppressed(
+        amp:CustomSetAmplifier, issued:DraftSetLoad, activation:KotlinPerformedSet?
+    ):Boolean = validDropSequence(issued,amp) && activation!=null &&
+        KotlinSetNumberAuthorityDomain.valid(issued,KotlinJournalSetOutcome.COMPLETED,activation) &&
+        eligiblePerformedDropTarget(amp,issued,activation,null,activation.machineInstanceId,1)==null
+
     /**
      * The one source of truth for whether a physical drop stage may be
      * offered. An issued reduction is not evidence of an actual one:

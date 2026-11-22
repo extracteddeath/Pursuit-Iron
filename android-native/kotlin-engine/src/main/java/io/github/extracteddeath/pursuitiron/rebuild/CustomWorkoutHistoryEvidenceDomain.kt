@@ -112,7 +112,8 @@ object CustomWorkoutHistoryEvidenceDomain {
                 val amp=set.prescription.amplifier ?:continue
                 val stageKeys=CustomWorkoutExecutionDomain.followUpVisits(
                     rebuilt,set)
-                if(stageKeys.isEmpty())return CustomHistoryEvidenceResult.Rejected(
+                if(stageKeys.isEmpty() && !AdvancedAmplifierProtocolDomain.firstDropSuppressed(
+                        amp,set.prescription.load,main.performed))return CustomHistoryEvidenceResult.Rejected(
                     CustomHistoryEvidenceRefusal.INCOMPLETE_FACTS)
                 for(followKey in stageKeys) {
                     val follow=rebuilt.effectiveVisits[followKey]?.operation

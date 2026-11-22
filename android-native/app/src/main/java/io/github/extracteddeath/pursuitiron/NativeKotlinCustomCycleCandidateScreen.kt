@@ -34,6 +34,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+private fun cycleLoadLabel(weight:DraftSetLoad):String = when(weight) {
+    DraftSetLoad.ExplicitBodyweight -> "Bodyweight"
+    is DraftSetLoad.Verified ->
+        "${weight.value.toPlainString()} ${weight.unit} · ${kotlinLoadBasisLabel(weight.basis)}"
+}
+
 @Composable
 private fun <T> CycleChoiceRow(
     label: String, values: List<T>, selected: T,
@@ -1177,11 +1183,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                 style=MaterialTheme.typography.bodySmall)
                         slot.sets.forEach { set ->
                             val target=set.prescription
-                            val load=when(val weight=target.load) {
-                                DraftSetLoad.ExplicitBodyweight -> "Bodyweight"
-                                is DraftSetLoad.Verified ->
-                                    "${weight.value.toPlainString()} ${weight.unit} · ${kotlinLoadBasisLabel(weight.basis)}"
-                            }
+                            val load=cycleLoadLabel(target.load)
                             Text("Set ${set.ordinalInSlot} · ${pretty(target.type)} · $load · ${target.repTargetLabel()} · RIR ${target.targetRir?.toString() ?: "not set"}",
                                 style=MaterialTheme.typography.bodyMedium)
                             Text("${target.activeSeconds}s work · ${target.restSeconds}s rest",
@@ -1292,12 +1294,13 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                                 it.slotId==reviewed.selectedSlotId
                                             }
                                         changed?.let {edit->
-                                            Text("Proposed minimum reps: "+
-                                                edit.sets.filter{
-                                                    it.type==DraftSetType.WORKING
-                                                }.joinToString(" / "){
-                                                    it.reps.minimum.toString()
-                                                },style=MaterialTheme.typography.bodyMedium)
+                                            val original=session.slots.single { it.slotId==edit.slotId }
+                                            original.sets.zip(edit.sets).forEach { (before,after) ->
+                                                if(before.prescription!=after) {
+                                                    Text("Set ${before.ordinalInSlot} · ${cycleLoadLabel(after.load)} · ${after.repTargetLabel()}",
+                                                        style=MaterialTheme.typography.bodyMedium)
+                                                }
+                                            }
                                         }
                                         Text("This is a review. Nothing changes until you separately confirm a saved draft.",
                                             style=MaterialTheme.typography.bodySmall)

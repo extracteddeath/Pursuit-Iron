@@ -38,7 +38,10 @@ assert.match(rest,/Text\("−30 s"\)/);
 assert.match(rest,/Text\("\+30 s"\)/);
 assert.match(rest,/Text\("Clear"\)/);
 assert.match(rest,/observedEvent=latestReceiptOperationId/);
-assert.match(rest,/if\(autoCue.seconds==0\)publish\(null\)/);
+assert.match(rest,/if\(confirmedCue.seconds==0\)publish\(null\)/);
+assert.match(rest,/LaunchedEffect\(workoutId,ownerId,latestReceiptOperationId,autoCue,enabled\)/);
+assert.match(rest,/NativeRestReceiptCuePolicy.newCue\(/);
+assert.match(rest,/if\(confirmedCue==null\)/);
 
 assert.match(bridge,/ownerId=athleteId/);
 assert.match(bridge,/if\(!rest.hasRemainingWork\)return/);

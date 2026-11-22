@@ -81,6 +81,22 @@ class NativeKotlinRestCountdownPolicyTest {
         assertNull(NativeRestCountdownPolicy.begin(7201,elapsed,wall))
     }
 
+    @Test fun restCueWaitsForItsExactNewReceiptWithoutReplayingOldEvents() {
+        val previous=NativeKotlinRestCue("previous",90,0)
+        val latest=NativeKotlinRestCue("latest",0,0)
+        // Receipt committed first, timer cue projected in a later frame.
+        assertNull(NativeRestReceiptCuePolicy.newCue("previous","latest",null))
+        assertNull(NativeRestReceiptCuePolicy.newCue("previous","latest",previous))
+        assertEquals(latest,NativeRestReceiptCuePolicy.newCue("previous","latest",latest))
+        // Once observed, recomposition, Activity recreation or a duplicate
+        // projection must not restart or clear the already recovered timer.
+        assertNull(NativeRestReceiptCuePolicy.newCue("latest","latest",latest))
+        assertNull(NativeRestReceiptCuePolicy.newCue("previous",null,latest))
+        // A zero-second immediate follow-up remains a real acknowledged cue.
+        assertEquals(0,NativeRestReceiptCuePolicy.newCue(
+            "previous","latest",latest)?.seconds)
+    }
+
     @Test fun progressIsBoundedToOnePresentationSession() {
         val active=started(3600)
         val almost=NativeRestCountdownPolicy.adjust(

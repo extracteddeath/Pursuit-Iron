@@ -363,10 +363,10 @@ assert.ok(rest.includes('var active by if (scopeKey != null)') &&
   rest.includes('active=checkpoint') &&
   rest.includes('restStore.save(scopeKey,latestReceiptOperationId,checkpoint)') &&
   rest.includes('var observedEvent by remember(workoutId,ownerId)') &&
-  rest.includes('LaunchedEffect(workoutId,ownerId,latestReceiptOperationId,enabled)') &&
+  rest.includes('LaunchedEffect(workoutId,ownerId,latestReceiptOperationId,autoCue,enabled)') &&
   rest.includes('latestReceiptOperationId!=observedEvent') &&
-  rest.includes('autoCue?.operationId==latestReceiptOperationId') &&
-  rest.includes('begin(autoCue.seconds)') &&
+  rest.includes('NativeRestReceiptCuePolicy.newCue(') &&
+  rest.includes('begin(confirmedCue.seconds)') &&
   train.includes('autoCue=NativeRestCuePolicy.latestAcknowledged(progress)') &&
   train.includes('latestReceiptOperationId=journal.events.lastOrNull()?.intent?.operationId'),
   'Rest countdown must use the issued duration after a new durable set receipt, not a pending save, and must not replay after recovery');
@@ -377,7 +377,7 @@ assert.ok(!rest.includes('if (prescribedSeconds <= 0) return') &&
   rest.includes('else Modifier.fillMaxWidth().heightIn(min = 64.dp)') &&
   rest.includes('if(valid && remaining>0L)') &&
   rest.includes('Text("Clear")') &&
-  rest.includes('begin(autoCue.seconds)'),
+  rest.includes('begin(confirmedCue.seconds)'),
   'An acknowledged rest survives Focus switching to an exercise with zero prescribed seconds; no inert manual-start action');
 
 assert.ok(train.includes('set.isExtension') &&

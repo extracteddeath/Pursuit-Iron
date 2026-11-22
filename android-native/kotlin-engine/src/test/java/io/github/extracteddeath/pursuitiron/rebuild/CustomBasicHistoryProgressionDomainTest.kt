@@ -129,6 +129,35 @@ class CustomBasicHistoryProgressionDomainTest {
         assertTrue(ready.candidate.increasedOrdinals.isEmpty())
     }
 
+    @Test fun manualPreviewUsesEachAuthoredSetWithoutRequiringComparableWork() {
+        val amplifier = CustomSetAmplifier(CustomAmplifierKind.MYO_REPS, 4, 20, followUpRounds=4)
+        for (bodyweight in listOf(true, false)) {
+            val sets = listOf(
+                set().copy(reps=RepBand(6, 8), exactRepTarget=7),
+                set(95, amplifier).copy(reps=RepBand(10, 15))
+            ).map { if (bodyweight) it.copy(load=DraftSetLoad.ExplicitBodyweight) else it }
+            val week = CustomWeekSlotOverride(2, 0, "main", sets)
+            val program = cycle(SavedProgressionMethod.MANUAL, mapOf("base" to listOf(week)))
+            val day = snapshot()
+            val slot = day.slots.single()
+            val next = day.copy(slots=listOf(slot.copy(sets=slot.sets.zip(sets) { row, set ->
+                row.copy(prescription=set)
+            })))
+            val result = review(next=next, program=program, sessions=emptyList())
+            if (bodyweight) {
+                assertEquals(CustomBasicHistoryResult.ManualBodyweight("main"), result)
+                assertEquals(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE,
+                    (review(next=next, program=program, machine="A") as CustomBasicHistoryResult.Rejected).reason)
+            } else {
+                val weighted = result as CustomBasicHistoryResult.Reviewed
+                assertEquals(listOf(n(100), n(95)), weighted.candidate.proposedWorkingLoads)
+                assertEquals(BasicProgressionDecision.MANUAL_REPEAT, weighted.candidate.decision)
+            }
+            assertEquals(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE,
+                (review(next=day, program=program) as CustomBasicHistoryResult.Rejected).reason)
+        }
+    }
+
     @Test fun newestFailedSameStationBlocksOlderSuccessRatherThanSkippingBack() {
         val history=listOf(completed(1),completed(2,week=2,
             reps=listOf(10,10),failed=setOf(1)))

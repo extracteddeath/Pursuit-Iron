@@ -1195,14 +1195,6 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                 }
                             }
                         }
-                        OutlinedButton(enabled=!busy && session.stamp.cycleRevision==draft.revision,
-                            onClick={
-                                weekEditFromCoach=false
-                                weekExerciseEditor=Triple(
-                                    session.absoluteWeek,session.weekday,slot.slotId)
-                            }) {
-                            Text("Compare an edit for week ${session.absoluteWeek}")
-                        }
                         if(state.reviewedCoachInputs!=null && state.progressionCoachingEnabled && !calibrationLocked) {
                             OutlinedButton(enabled=!busy && maxStep!=null &&
                                 session.stamp.cycleRevision==draft.revision,
@@ -1238,6 +1230,14 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                 result.next.stamp.cycleRevision==draft.revision &&
                                 result.next.stamp.gymCatalogSourceRevision==state.sourceRevision
                             }?.let{NativeKotlinBasicProgressionPreview(it)}
+                        }
+                        OutlinedButton(enabled=!busy && session.stamp.cycleRevision==draft.revision,
+                            onClick={
+                                weekEditFromCoach=false
+                                weekExerciseEditor=Triple(
+                                    session.absoluteWeek,session.weekday,slot.slotId)
+                            }) {
+                            Text("Compare an edit for week ${session.absoluteWeek}")
                         }
                     }
                     state.dayCoaching?.takeIf {reviewed->
@@ -1783,6 +1783,23 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         existing=base.copy(sets=initial),
                         scopeLabel="Week $absoluteWeek only · ${customWeekdays[weekday]}"+
                             if(amended!=null)" · coach proposal for review" else "",
+                        basicReference=state.basicDayProgression?.takeIf { result ->
+                            !weekEditFromCoach && basicProgressionVisible &&
+                                currentSelection is NativeCustomNextCycleSlot.Next &&
+                                currentSelection.absoluteWeek==absoluteWeek && currentSelection.weekday==weekday &&
+                                state.preparedWorkout==null && !calibrationLocked &&
+                                state.basicDayProgressionSlotId==slotId &&
+                                result.next.copy(declaredNonSetSeconds=session.declaredNonSetSeconds)==session &&
+                                result.next.stamp.gymCatalogSourceRevision==state.sourceRevision &&
+                                when(val projection=result.projection) {
+                                    is CustomBasicHistoryResult.Reviewed ->
+                                        projection.candidate.increasedOrdinals.isNotEmpty() ||
+                                            projection.candidate.changedRepOrdinals.isNotEmpty()
+                                    is CustomBasicHistoryResult.UnloadedReviewed ->
+                                        projection.candidate.advancedOrdinals.isNotEmpty()
+                                    else -> false
+                                }
+                        },
                         saveLabel="Compare full-cycle effects",
                         feedback=state.message?.takeIf {comparisonRequested && !busy},
                         onSave={_,sets,_ ->

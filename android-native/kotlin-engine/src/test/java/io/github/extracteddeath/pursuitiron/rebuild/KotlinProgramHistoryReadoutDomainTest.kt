@@ -130,6 +130,31 @@ class KotlinProgramHistoryReadoutDomainTest {
             smithReadout.workingSets.map{it.comparisonGuard}.toSet())
     }
 
+    @Test fun stationTaggedBarbellHistoryCannotBecomeComparableProgramEvidence() {
+        val barbell = DraftSetLoad.Verified(
+            LoadUnit.LB, LoadBasis.BARBELL_TOTAL, n("25"))
+        fun session(workoutId: String, station: String?): KotlinWorkoutJournalState {
+            var journal = started(workoutId, load = barbell)
+            journal = record(journal, "bench:s0", "first-$workoutId",
+                12, 1, station)
+            journal = record(journal, "bench:s1", "second-$workoutId",
+                12, 1, station)
+            return (KotlinWorkoutJournalDomain.reduce(journal,
+                KotlinJournalOperation.Finish("finish-$workoutId", journal.revision))
+                as KotlinJournalDecision.Proposed).state
+        }
+        val machine = accept(request(listOf(session("tagged", "machine-A"))))
+        assertEquals(setOf(KotlinHistoryComparisonGuard.INELIGIBLE_SESSION),
+            machine.workingSets.map { it.comparisonGuard }.toSet())
+        assertEquals(2, machine.workouts.single().completedWorkingSets)
+        assertTrue(machine.workingSets.all { it.physicalMachineId == "machine-A" })
+
+        val genuineBarbell = accept(request(listOf(session("free-bar", null))))
+        assertEquals(setOf(KotlinHistoryComparisonGuard.COMPARABLE_REVIEW_ONLY),
+            genuineBarbell.workingSets.map { it.comparisonGuard }.toSet())
+        assertTrue(genuineBarbell.workingSets.all { it.physicalMachineId == null })
+    }
+
     @Test fun calendarWeekdayAndProgramDayIndexRemainIndependentOriginalFacts() {
         var journal=started("weekday-two",day=0,calendarDay=2)
         journal=record(journal,"bench:s0","weekday-0",10,2,"press-A")

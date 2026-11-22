@@ -151,7 +151,9 @@ class NativeKotlinCustomBasicNextReview(
                     CustomBasicHistoryRequest(
                         cycle,next,nextWorkoutId,slotId,completed,
                         physical.machineInstanceId,physical.stock,
-                        maximumAuthorizedIncrement))
+                        maximumAuthorizedIncrement,
+                        reviewedCatalog = source.catalog.associateBy { it.exerciseId },
+                        experience = source.setup.reviewed?.experience))
                 NativeCustomBasicNextReadResult.Reviewed(
                     full.timeline.manifestRevision,
                     reviewed.receipt.recordRevision,next,candidate)

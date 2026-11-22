@@ -105,6 +105,22 @@ class CustomBasicHistoryProgressionDomainTest {
         assertFalse(result.mayModifyHistory)
     }
 
+    @Test fun autoUsesTheReviewedMovementToChooseIndependentSetProgression() {
+        val movement = GeneratedAdaptiveBlockFixture.generation().catalog.first { it.exerciseId == "bench" }
+            .copy(exerciseId = "press")
+        val request = CustomBasicHistoryRequest(
+            cycle(SavedProgressionMethod.AUTO), snapshot(), "future", "main",
+            listOf(completed(1, reps=listOf(10, 7))), null, stock(), n(5),
+            reviewedCatalog = mapOf("press" to movement))
+        val reviewed = CustomBasicHistoryProgressionDomain.review(request) as CustomBasicHistoryResult.Reviewed
+        assertEquals(BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION, reviewed.candidate.strategy)
+        assertEquals(listOf(n(105), n(100)), reviewed.candidate.proposedWorkingLoads)
+
+        val explicit = CustomBasicHistoryProgressionDomain.review(
+            request.copy(cycle=cycle(SavedProgressionMethod.DOUBLE))) as CustomBasicHistoryResult.Reviewed
+        assertEquals(listOf(n(100), n(100)), explicit.candidate.proposedWorkingLoads)
+    }
+
     @Test fun dynamicProgressionNeverLevelsAHeavierSetAcrossTheWholeExercise() {
         val history=completed(1,reps=listOf(10,5))
         val result=review(program=cycle(SavedProgressionMethod.DYNAMIC),
@@ -478,6 +494,9 @@ class CustomBasicHistoryProgressionDomainTest {
         val ladder = review(program=plan(8, SavedProgressionMethod.LADDER), next=next(8),
             sessions=listOf(prior(listOf(8, 7)))) as CustomBasicHistoryResult.UnloadedReviewed
         assertEquals(listOf(9, 8), ladder.candidate.proposedExactReps)
+        val automatic = review(program=plan(8, SavedProgressionMethod.AUTO), next=next(8),
+            sessions=listOf(prior(listOf(8, 7)))) as CustomBasicHistoryResult.UnloadedReviewed
+        assertEquals(ladder.candidate, automatic.candidate)
         val athletePlan=plan(8)
         val earned=review(program=athletePlan,next=next(8),
             sessions=listOf(prior(listOf(8,7))))

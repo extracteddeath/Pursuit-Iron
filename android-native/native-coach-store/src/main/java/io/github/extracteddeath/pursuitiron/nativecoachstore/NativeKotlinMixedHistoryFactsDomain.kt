@@ -241,11 +241,9 @@ object NativeKotlinMixedHistoryFactsDomain {
                             visit.exercise,checkNotNull(machineId),
                             target.unit,target.basis)
                         val earlier=lowestAssistanceByMachine[station]
-                        if(earlier==null || physical<earlier.actualLoad ||
-                            (physical.compareTo(earlier.actualLoad)==0 &&
-                                (record.reps>earlier.reps ||
-                                    (record.reps==earlier.reps &&
-                                        record.completionOrder>earlier.completionOrder))))
+                        if (earlier == null || AssistedHistoryRanking.prefers(
+                                physical, record.reps, record.completionOrder,
+                                earlier.actualLoad, earlier.reps, earlier.completionOrder))
                             lowestAssistanceByMachine[station]=record
                     }
                     continue

@@ -90,7 +90,8 @@ data class KotlinGlobalHistoryIndex(
     /** Safe station-specific ranking by the gym that issued each workout. */
     val highestCompletedLoadByMachine:
         Map<KotlinHistoryMachineLoadKey, KotlinHistoryCompletedLoadRecord> = emptyMap(),
-    val mostRepsAtLoadByMachine: List<KotlinHistoryCompletedLoadRecord> = emptyList()
+    val mostRepsAtLoadByMachine: List<KotlinHistoryCompletedLoadRecord> = emptyList(),
+    val lowestAssistanceByMachine: Map<KotlinHistoryMachineLoadKey, KotlinHistoryCompletedLoadRecord> = emptyMap()
 ) {
     val canPublishPr: Boolean get() = false
     val canIssueProgression: Boolean get() = false
@@ -109,6 +110,14 @@ enum class KotlinGlobalHistoryRefusal {
 sealed interface KotlinGlobalHistoryResult {
     data class Candidate(val index: KotlinGlobalHistoryIndex) : KotlinGlobalHistoryResult
     data class Rejected(val reason: KotlinGlobalHistoryRefusal) : KotlinGlobalHistoryResult
+}
+
+/** On the same assisted station, less counterweight means more work by the athlete. */
+object AssistedHistoryRanking {
+    fun prefers(load: BigDecimal, reps: Int, order: Long,
+        previousLoad: BigDecimal, previousReps: Int, previousOrder: Long): Boolean =
+        load < previousLoad || load.compareTo(previousLoad) == 0 &&
+            (reps > previousReps || reps == previousReps && order > previousOrder)
 }
 
 object KotlinGlobalHistoryIndexDomain {
@@ -133,7 +142,7 @@ object KotlinGlobalHistoryIndexDomain {
             val performed = fact.actual ?: return@mapNotNull null
             val load = performed.load ?: return@mapNotNull null
             if (performed.unit != target.unit || performed.reps <= 0 ||
-                load <= BigDecimal.ZERO)
+                load.signum() < 0 || load.signum() == 0 && target.basis != LoadBasis.ASSISTANCE_COUNTERWEIGHT)
                 return@mapNotNull null
             KotlinHistoryCompletedLoadRecord(
                 fact.exerciseId, target.unit, target.basis, canonical(load),
@@ -411,6 +420,7 @@ object KotlinGlobalHistoryIndexDomain {
         val heaviest = linkedMapOf<KotlinHistoryLoadKey, KotlinHistoryCompletedLoadRecord>()
         val maxRepsAtLoad = linkedMapOf<Pair<KotlinHistoryLoadKey, BigDecimal>,
             KotlinHistoryCompletedLoadRecord>()
+        val leastAssistance = linkedMapOf<KotlinHistoryMachineLoadKey, KotlinHistoryCompletedLoadRecord>()
         val heaviestByMachine=linkedMapOf<KotlinHistoryMachineLoadKey,
             KotlinHistoryCompletedLoadRecord>()
         val maxRepsAtLoadByMachine=linkedMapOf<Pair<KotlinHistoryMachineLoadKey,BigDecimal>,
@@ -425,6 +435,19 @@ object KotlinGlobalHistoryIndexDomain {
                 )
             }
             for (record in physicalRecords(history, order)) {
+                val machineKey=KotlinHistoryMachineLoadKey(
+                    record.gymId,record.exerciseId,record.machineInstanceId,
+                    record.unit,record.basis)
+                if (record.basis == LoadBasis.ASSISTANCE_COUNTERWEIGHT) {
+                    if (KotlinMachineAlternativesDomain.validInstanceId(record.machineInstanceId)) {
+                        val prior = leastAssistance[machineKey]
+                        if (prior == null || AssistedHistoryRanking.prefers(
+                                record.actualLoad, record.actualReps, order,
+                                prior.actualLoad, prior.actualReps, prior.completionOrder))
+                            leastAssistance[machineKey] = record
+                    }
+                    continue
+                }
                 val key = KotlinHistoryLoadKey(
                     record.exerciseId, record.unit, record.basis)
                 if (heaviest[key] == null ||
@@ -436,9 +459,6 @@ object KotlinGlobalHistoryIndexDomain {
                 if (maxRepsAtLoad[repsKey] == null ||
                     record.actualReps >= checkNotNull(maxRepsAtLoad[repsKey]).actualReps)
                     maxRepsAtLoad[repsKey] = record
-                val machineKey=KotlinHistoryMachineLoadKey(
-                    record.gymId,record.exerciseId,record.machineInstanceId,
-                    record.unit,record.basis)
                 if(heaviestByMachine[machineKey]==null ||
                     record.actualLoad>checkNotNull(heaviestByMachine[machineKey]).actualLoad ||
                     (record.actualLoad.compareTo(
@@ -461,7 +481,8 @@ object KotlinGlobalHistoryIndexDomain {
             Collections.unmodifiableMap(heaviest),
             Collections.unmodifiableList(maxRepsAtLoad.values.toList()),
             Collections.unmodifiableMap(heaviestByMachine),
-            Collections.unmodifiableList(maxRepsAtLoadByMachine.values.toList())
+            Collections.unmodifiableList(maxRepsAtLoadByMachine.values.toList()),
+            Collections.unmodifiableMap(leastAssistance)
         ))
     }
 }

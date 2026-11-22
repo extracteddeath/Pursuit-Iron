@@ -248,7 +248,8 @@ object NativeKotlinMixedHistoryFactsDomain {
                     }
                     continue
                 }
-                if(target.basis!=LoadBasis.BARBELL_TOTAL || machineId==null) {
+                if(!KotlinSetNumberAuthorityDomain.machineTagContradictsFreeBarbell(
+                        target.basis,machineId)) {
                     if (actual.reps == 1) {
                         val previous=bestSingle[key]
                         if(previous==null || physical>previous.actualLoad ||

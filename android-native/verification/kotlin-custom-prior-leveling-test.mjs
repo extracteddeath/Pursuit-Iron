@@ -13,7 +13,7 @@ for(const required of [
   '"Leveling · review previous workout"',
   'rememberPriorWorkoutLevelingReview(',
   'WorkoutReferenceKey(set.setKey) to',
-  'previous=physicalMachineLastReferences(',
+  'previous=lastReferences,',
   'machineInstanceId=selectedMachineId',
   'goalRir=first.targetRir?.takeIf{',
   'verifiedStock=stock',
@@ -28,6 +28,8 @@ for(const required of [
   'Custom prior-session Leveling must be a source-verified draft-only action: '+required);
 assert.ok(source.includes('CustomWorkoutVisitPart.MAIN) !in current.effectiveVisits'),
   'Only unrecorded main working visits are eligible for prefill');
+assert.ok(source.includes('val matchingLast=physicalMachineLastReferences('),
+  'Displayed Last values must still be filtered to the selected physical machine');
 assert.ok(source.includes('!requiresNewMachineChoice'),
   'An inactive or unselected physical machine cannot grant Leveling authority');
 assert.ok(!source.includes('controller.finish()'),

@@ -93,7 +93,9 @@ sealed interface BasicProgressionResult {
         val decision: BasicProgressionDecision,
         val evidenceWorkoutId: String?,
         val proposedRepTargets: List<Int>? = null,
-        val changedRepOrdinals: Set<Int> = emptySet()
+        val changedRepOrdinals: Set<Int> = emptySet(),
+        /** Independent load decisions, in working-set order, for dynamic progression. */
+        val dynamicSetDecisions: List<BasicProgressionDecision> = emptyList()
     ): BasicProgressionResult {
         val mayModifyLoggedSets: Boolean get() = false
         val mayModifyIssuedWorkout: Boolean get() = false
@@ -121,13 +123,15 @@ object BasicProgressionPolicyDomain {
 
         fun candidate(values: List<BigDecimal>, changed: Set<Int>,
             decision: BasicProgressionDecision, workoutId: String? = null,
-            repTargets: List<Int>? = null, changedReps: Set<Int> = emptySet()) =
+            repTargets: List<Int>? = null, changedReps: Set<Int> = emptySet(),
+            dynamicDecisions: List<BasicProgressionDecision> = emptyList()) =
             BasicProgressionResult.Candidate(
                 request.strategy,
                 Collections.unmodifiableList(values.toList()),
                 Collections.unmodifiableSet(changed.toSet()),decision,workoutId,
                 repTargets?.let { Collections.unmodifiableList(it.toList()) },
-                Collections.unmodifiableSet(changedReps.toSet()))
+                Collections.unmodifiableSet(changedReps.toSet()),
+                Collections.unmodifiableList(dynamicDecisions.toList()))
 
         // Basic logging deliberately neither requires a history or a gym
         // inventory, nor invokes progression or adaptive coaching.
@@ -237,9 +241,11 @@ object BasicProgressionPolicyDomain {
             BasicProgressionStrategy.MANUAL_LOGGING,
             BasicProgressionStrategy.REP_TARGET_PROGRESSION -> emptyList()
         }
+        val dynamicDecisions = if (request.strategy == BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION)
+            MutableList(loads.size) { BasicProgressionDecision.BUILD_REPS } else null
         if (eligible.isEmpty())
             return candidate(loads,emptySet(),BasicProgressionDecision.BUILD_REPS,
-                previous.workoutId)
+                previous.workoutId, dynamicDecisions = dynamicDecisions.orEmpty())
 
         // Uniform schemes are atomic: all sets change or none change.
         // Dynamic works on each stable set ordinal independently.
@@ -253,6 +259,7 @@ object BasicProgressionPolicyDomain {
                 inspected[ordinal].nextBelow
             } else inspected[ordinal].nextAbove
             if (next == null) {
+                dynamicDecisions?.set(ordinal, BasicProgressionDecision.MAXIMUM_LOAD_REACHED)
                 atMaximum = true
                 if (uniformStrategy) break
                 continue
@@ -263,12 +270,17 @@ object BasicProgressionPolicyDomain {
                 stock=stock,maximumAuthorizedIncrease=request.maximumAuthorizedIncrement,
                 source=if(assistance)KotlinFutureLoadSource.EARNED_ASSISTANCE_DECREMENT
                     else KotlinFutureLoadSource.EARNED_NEXT_INCREMENT)
-            if (verified !is KotlinFutureLoadReview.Accepted) {
+            if (verified is KotlinFutureLoadReview.Rejected) {
+                if (verified.reason != KotlinFutureLoadRefusal.EXCEEDS_AUTHORIZED_INCREMENT)
+                    return reject(BasicProgressionRefusal.STOCK_NOT_VERIFIED)
+                dynamicDecisions?.set(ordinal, BasicProgressionDecision.AUTHORIZED_INCREMENT_TOO_SMALL)
                 blockedByLimit = true
                 if (uniformStrategy) break
                 continue
             }
-            proposals[ordinal] = verified.fact.proposedLoad
+            val accepted = verified as KotlinFutureLoadReview.Accepted
+            dynamicDecisions?.set(ordinal, BasicProgressionDecision.EARNED_INCREMENT)
+            proposals[ordinal] = accepted.fact.proposedLoad
             changed.add(ordinal)
         }
         if (uniformStrategy && changed.size != facts.size)
@@ -289,6 +301,6 @@ object BasicProgressionPolicyDomain {
             ladderReset, if(ladderReset==null)emptySet()
                 else ladderReset.indices.filter{
                     ladderReset[it]!=request.issuedRepTargets!![it]
-                }.toSet())
+                }.toSet(), dynamicDecisions.orEmpty())
     }
 }

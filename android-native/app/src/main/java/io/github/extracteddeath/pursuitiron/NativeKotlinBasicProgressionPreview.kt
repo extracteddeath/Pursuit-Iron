@@ -7,6 +7,46 @@ import androidx.compose.ui.Modifier
 import io.github.extracteddeath.pursuitiron.nativecoachstore.*
 import io.github.extracteddeath.pursuitiron.rebuild.*
 
+private fun CustomBasicHistoryResult.Rejected.previewExplanation(): String {
+    when (evaluatorReason) {
+        BasicProgressionRefusal.STOCK_NOT_VERIFIED ->
+            return "Verify the available loads for this exercise in your gym settings."
+        BasicProgressionRefusal.BASELINE_DIFFERS_FROM_HISTORY ->
+            return "The logged and prescribed weights differ. A matching completed session is needed."
+        BasicProgressionRefusal.INCOMPLETE_OR_UNVERIFIED_SETS ->
+            return "A complete set of working-set results is needed for this progression."
+        BasicProgressionRefusal.REP_TARGETS_NOT_VERIFIED ->
+            return "Set an exact rep target within the approved range for every working set."
+        BasicProgressionRefusal.UNSUPPORTED_ASSISTANCE_DIRECTION ->
+            return "Check the progression method for this exercise’s counterweight setting."
+        BasicProgressionRefusal.UNSUPPORTED_STRAIGHT_SET_SCHEME ->
+            return "This progression requires the same weight across working sets."
+        BasicProgressionRefusal.HISTORY_NOT_COMPARABLE ->
+            return "A matching completed workout is needed for this exercise and training day."
+        BasicProgressionRefusal.INVALID_SOURCE_OR_LOAD ->
+            return "Check the prescribed weights and the maximum load increment."
+        null -> Unit
+    }
+    return when (reason) {
+        CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE ->
+            "This workout no longer matches the approved program. Refresh your preview."
+        CustomBasicHistoryRefusal.NO_SAVED_BASIC_METHOD ->
+            "Choose a basic progression method from the program editor first."
+        CustomBasicHistoryRefusal.AUTHORED_OR_SPECIALIST_OWNS_LOAD ->
+            "Exact authored weekly targets or a specialist progression already control this workout."
+        CustomBasicHistoryRefusal.EXACT_REP_TARGETS_UNAVAILABLE ->
+            "This method needs exact per-set rep targets, not just a rep range."
+        CustomBasicHistoryRefusal.NO_COMPARABLE_HISTORY ->
+            "No comparable finished workout has been verified for this training day and machine."
+        CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE ->
+            "The latest comparable workout does not qualify for a basic increase. Keep the current targets."
+        CustomBasicHistoryRefusal.HISTORY_SOURCE_CHANGED ->
+            "Program or gym details changed. A new comparable baseline is needed."
+        CustomBasicHistoryRefusal.INVALID_HISTORY ->
+            "Your workout history needs another verification before suggesting a progression."
+    }
+}
+
 /** Plan-only, source-verified BASIC suggestion. It does not create a
  * replacement workout or a hidden save/accept action. No guessed 1RM/RIR
  * or invented physical weights are shown. */
@@ -46,25 +86,7 @@ internal fun NativeKotlinBasicProgressionPreview(
                         style=MaterialTheme.typography.bodySmall)
             }
             is CustomBasicHistoryResult.Rejected -> {
-                val explanation=when(projection.reason) {
-                    CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE ->
-                        "This workout no longer matches the approved program. Refresh your preview."
-                    CustomBasicHistoryRefusal.NO_SAVED_BASIC_METHOD ->
-                        "Choose a basic progression method from the program editor first."
-                    CustomBasicHistoryRefusal.AUTHORED_OR_SPECIALIST_OWNS_LOAD ->
-                        "Exact authored weekly targets or a specialist progression already control this workout."
-                    CustomBasicHistoryRefusal.EXACT_REP_TARGETS_UNAVAILABLE ->
-                        "This method needs exact per-set rep targets, not just a rep range."
-                    CustomBasicHistoryRefusal.NO_COMPARABLE_HISTORY ->
-                        "No comparable finished workout has been verified for this training day and machine."
-                    CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE ->
-                        "The latest comparable workout does not qualify for a basic increase. Keep the current targets."
-                    CustomBasicHistoryRefusal.HISTORY_SOURCE_CHANGED ->
-                        "Program or gym details changed. A new comparable baseline is needed."
-                    CustomBasicHistoryRefusal.INVALID_HISTORY ->
-                        "Your workout history needs another verification before suggesting a progression."
-                }
-                Text(explanation,style=MaterialTheme.typography.bodySmall,
+                Text(projection.previewExplanation(),style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
             is CustomBasicHistoryResult.Reviewed -> {
@@ -87,7 +109,8 @@ internal fun NativeKotlinBasicProgressionPreview(
                     BasicProgressionDecision.AUTHORIZED_INCREMENT_TOO_SMALL ->
                         "The next physical step exceeds the selected increment limit."
                 }
-                Text(description,style=MaterialTheme.typography.bodySmall)
+                if (candidate.dynamicSetDecisions.isEmpty())
+                    Text(description,style=MaterialTheme.typography.bodySmall)
                 val working = workingSets(projection.slotId)
                 candidate.proposedWorkingLoads.forEachIndexed { index, weight ->
                     val prescription = working[index].prescription
@@ -101,7 +124,14 @@ internal fun NativeKotlinBasicProgressionPreview(
                         " · " + repLabel(prescription.exactRepTarget, it, index in candidate.changedRepOrdinals)
                     } ?: if (candidate.decision == BasicProgressionDecision.MANUAL_REPEAT)
                         " · " + prescription.repTargetLabel() else ""
-                    Text("Working set ${index+1} · $load$reps",
+                    val reason = when (candidate.dynamicSetDecisions.getOrNull(index)) {
+                        BasicProgressionDecision.BUILD_REPS -> " · build to ${prescription.reps.maximum} reps"
+                        BasicProgressionDecision.MAXIMUM_LOAD_REACHED -> " · highest available load"
+                        BasicProgressionDecision.AUTHORIZED_INCREMENT_TOO_SMALL -> " · next step exceeds your limit"
+                        BasicProgressionDecision.EARNED_INCREMENT -> " · ${prescription.reps.maximum}-rep ceiling met"
+                        else -> ""
+                    }
+                    Text("Working set ${index+1} · $load$reps$reason",
                         style=MaterialTheme.typography.bodyMedium)
                 }
             }

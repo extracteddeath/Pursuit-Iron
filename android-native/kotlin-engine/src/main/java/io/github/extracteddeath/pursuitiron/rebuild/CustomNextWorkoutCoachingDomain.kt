@@ -314,13 +314,49 @@ object CustomNextWorkoutCoachingDomain {
         // fall back to legacy performance for a machine-bound slot.
         val targetMachine=KotlinMachineAlternativesDomain.normalizeMachineId(
             request.requestedMachineInstanceId ?: target.machineInstanceId)
-        fun machines(session:CustomCoachingHistoricalSession):Set<String> =
-            session.evidence.visits.filter {
+        // An issued native Swap has NEW slot and set keys. V2/V3 may
+        // recognize it as a verified DIFFERENT-station visit, but must not
+        // skip an unknown station or let an unperformed/foreign set pose as
+        // authentic Machine B evidence. Frozen V1 keeps its old policy.
+        fun swappedStationMachines(session:CustomCoachingHistoricalSession):Set<String> {
+            if(session.snapshot.slots.any{it.slotId==target.slotId})return emptySet()
+            val facts=session.evidence.visits.filter {
+                it.part==CustomWorkoutVisitPart.MAIN &&
+                    it.setType==DraftSetType.WORKING
+            }
+            val authoredCount=session.snapshot.slots.sumOf { slot ->
+                slot.sets.count{it.prescription.type==DraftSetType.WORKING}
+            }
+            if(authoredCount==0 || facts.size!=authoredCount ||
+                session.snapshot.slots.any { slot ->
+                    val prescribed=slot.sets.filter{
+                        it.prescription.type==DraftSetType.WORKING
+                    }
+                    val observed=facts.filter{it.slotId==slot.slotId}
+                    !matchingReceipts(observed,prescribed) ||
+                        observed.any { fact ->
+                            val issued=fact.prescribedLoad as? DraftSetLoad.Verified
+                            val machine=fact.actual?.machineInstanceId
+                            fact.exerciseId!=slot.exerciseId ||
+                                fact.outcome!=KotlinJournalSetOutcome.COMPLETED ||
+                                issued==null || fact.actual?.load==null ||
+                                machine==null ||
+                                !KotlinMachineAlternativesDomain.validInstanceId(machine)
+                        }
+                })return emptySet()
+            return facts.mapNotNull{it.actual?.machineInstanceId}.toSet()
+        }
+        fun machines(session:CustomCoachingHistoricalSession):Set<String> {
+            val original=session.evidence.visits.filter {
                 it.slotId==target.slotId &&
                     it.part==CustomWorkoutVisitPart.MAIN &&
                     it.setType==DraftSetType.WORKING
-            }.map {KotlinMachineAlternativesDomain.normalizeMachineId(
+            }
+            if(original.isEmpty() && request.repForecastPolicy.usesTargetRir())
+                return swappedStationMachines(session)
+            return original.map {KotlinMachineAlternativesDomain.normalizeMachineId(
                 it.actual?.machineInstanceId)}.toSet()
+        }
         val appearances=dayAppearances.filter {
             machines(it)==setOf(targetMachine)
         }
@@ -384,7 +420,11 @@ object CustomNextWorkoutCoachingDomain {
                         it.setType==DraftSetType.WORKING
                 }
                 val observed=machines(session)
-                priorSets.isEmpty() || priorSets.any{it.actual==null} ||
+                val independentSwap=priorSets.isEmpty() &&
+                    session.snapshot.slots.none{it.slotId==target.slotId} &&
+                    observed.size==1 && targetMachine !in observed
+                (priorSets.isEmpty() && !independentSwap) ||
+                    priorSets.any{it.actual==null} ||
                     observed.size!=1 ||
                     (targetMachine!=KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID &&
                         KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID in observed)

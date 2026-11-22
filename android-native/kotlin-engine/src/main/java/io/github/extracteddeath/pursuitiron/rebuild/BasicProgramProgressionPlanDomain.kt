@@ -228,7 +228,8 @@ object BasicProgramProgressionPlanDomain {
             // is valid. Every working set needs a separately saved exact
             // current target. Generated/default logging remains possible
             // without one, but cannot claim this specific method is ready.
-            val needsExactTargets=saved==SavedProgressionMethod.BODYWEIGHT_REPS ||
+            val needsExactTargets=style==NativeProgressionStyle.LADDER ||
+                saved==SavedProgressionMethod.BODYWEIGHT_REPS ||
                 requested in setOf(BasicProgressionStrategy.REP_TARGET_PROGRESSION,
                     BasicProgressionStrategy.REP_LADDER_PROGRESSION)
             if(needsExactTargets && working.any {set->

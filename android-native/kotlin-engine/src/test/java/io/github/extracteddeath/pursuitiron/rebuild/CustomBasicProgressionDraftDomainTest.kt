@@ -121,4 +121,114 @@ class CustomBasicProgressionDraftDomainTest {
         assertNull(CustomBasicProgressionDraftDomain.forWeekEdit(
             "slot",original,mismatch))
     }
+
+    @Test fun markedLowerFreeWeightIsNotAProgressionEvenWhenOrdinalsMatch() {
+        val original=listOf(set(100),set(100))
+        for (strategy in listOf(
+            BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,
+            BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION,
+            BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION)) {
+            val candidate=weighted(BasicProgressionResult.Candidate(
+                strategy,listOf(BigDecimal(95),BigDecimal(95)),setOf(0,1),
+                BasicProgressionDecision.EARNED_INCREMENT,"previous"))
+            assertNull(strategy.toString(),CustomBasicProgressionDraftDomain.forWeekEdit(
+                "slot",original,candidate))
+        }
+        val zero=weighted(BasicProgressionResult.Candidate(
+            BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION,
+            listOf(BigDecimal.ZERO,BigDecimal(100)),setOf(0),
+            BasicProgressionDecision.EARNED_INCREMENT,"previous"))
+        assertNull(CustomBasicProgressionDraftDomain.forWeekEdit("slot",original,zero))
+    }
+
+    @Test fun assistedCounterweightsMustGetSmallerNotHeavier() {
+        val assisted=DraftSetLoad.Verified(
+            LoadUnit.LB,LoadBasis.ASSISTANCE_COUNTERWEIGHT,BigDecimal(70))
+        val original=listOf(set(70).copy(load=assisted),set(70).copy(load=assisted))
+        val heavier=weighted(BasicProgressionResult.Candidate(
+            BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION,
+            listOf(BigDecimal(75),BigDecimal(75)),setOf(0,1),
+            BasicProgressionDecision.EARNED_INCREMENT,"previous"))
+        assertNull(CustomBasicProgressionDraftDomain.forWeekEdit(
+            "slot",original,heavier))
+        val nonAssisted=weighted(heavier.candidate.copy(
+            proposedWorkingLoads=listOf(BigDecimal(65),BigDecimal(65))))
+        assertNull(CustomBasicProgressionDraftDomain.forWeekEdit(
+            "slot",listOf(set(70),set(70)),nonAssisted))
+    }
+
+    @Test fun uniformProgressionsCannotAdvanceOneRowAndAdviceCannotClaimAWin() {
+        val original=listOf(set(100),set(100))
+        for(strategy in listOf(
+            BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,
+            BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION)) {
+            val partial=weighted(BasicProgressionResult.Candidate(
+                strategy,listOf(BigDecimal(105),BigDecimal(100)),setOf(0),
+                BasicProgressionDecision.EARNED_INCREMENT,"previous"))
+            assertNull(CustomBasicProgressionDraftDomain.forWeekEdit(
+                "slot",original,partial))
+        }
+        val notEarned=weighted(BasicProgressionResult.Candidate(
+            BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION,
+            listOf(BigDecimal(105),BigDecimal(100)),setOf(0),
+            BasicProgressionDecision.BUILD_REPS,"previous"))
+        assertNull(CustomBasicProgressionDraftDomain.forWeekEdit(
+            "slot",original,notEarned))
+    }
+
+    @Test fun repOnlyAndBodyweightCannotSkipOrReverseAnEarnedRung() {
+        val original=listOf(set(100,8),set(100,9))
+        for (next in listOf(7,10,11)) {
+            val forged=weighted(BasicProgressionResult.Candidate(
+                BasicProgressionStrategy.REP_TARGET_PROGRESSION,
+                listOf(BigDecimal(100),BigDecimal(100)),emptySet(),
+                BasicProgressionDecision.EARNED_REP_TARGET,"previous",
+                proposedRepTargets=listOf(next,9),changedRepOrdinals=setOf(0)))
+            assertNull(CustomBasicProgressionDraftDomain.forWeekEdit(
+                "slot",original,forged))
+        }
+        val body=CustomAuthoredSet(
+            DraftSetType.WORKING,DraftSetLoad.ExplicitBodyweight,
+            RepBand(5,12),2,40,80,exactRepTarget=8)
+        for (next in listOf(7,10)) {
+            val forged=CustomBasicHistoryResult.UnloadedReviewed(
+                "previous",1,BasicUnloadedProgressionResult.Candidate(
+                    listOf(next),setOf(0),"previous"),"block",0,"slot")
+            assertNull(CustomBasicProgressionDraftDomain.forWeekEdit(
+                "slot",listOf(body),forged))
+        }
+    }
+
+    @Test fun repLadderResetsToFloorOnlyAlongsideAtomicEarnedLoad() {
+        val original=listOf(set(100,10),set(100,10))
+        val falseReset=weighted(BasicProgressionResult.Candidate(
+            BasicProgressionStrategy.REP_LADDER_PROGRESSION,
+            listOf(BigDecimal(100),BigDecimal(100)),emptySet(),
+            BasicProgressionDecision.EARNED_REP_TARGET,"previous",
+            proposedRepTargets=listOf(6,6),changedRepOrdinals=setOf(0,1)))
+        assertNull(CustomBasicProgressionDraftDomain.forWeekEdit(
+            "slot",original,falseReset))
+        val partialLoad=weighted(BasicProgressionResult.Candidate(
+            BasicProgressionStrategy.REP_LADDER_PROGRESSION,
+            listOf(BigDecimal(105),BigDecimal(100)),setOf(0),
+            BasicProgressionDecision.EARNED_INCREMENT,"previous",
+            proposedRepTargets=listOf(6,6),changedRepOrdinals=setOf(0,1)))
+        assertNull(CustomBasicProgressionDraftDomain.forWeekEdit(
+            "slot",original,partialLoad))
+        val wrongReset=weighted(partialLoad.candidate.copy(
+            proposedWorkingLoads=listOf(BigDecimal(105),BigDecimal(105)),
+            increasedOrdinals=setOf(0,1),proposedRepTargets=listOf(7,7)))
+        assertNull(CustomBasicProgressionDraftDomain.forWeekEdit(
+            "slot",original,wrongReset))
+        val ladder=listOf(set(100,10),set(100,8))
+        val actualRung=weighted(BasicProgressionResult.Candidate(
+            BasicProgressionStrategy.REP_LADDER_PROGRESSION,
+            listOf(BigDecimal(100),BigDecimal(100)),emptySet(),
+            BasicProgressionDecision.EARNED_REP_TARGET,"previous",
+            proposedRepTargets=listOf(10,9),changedRepOrdinals=setOf(1)))
+        assertEquals(listOf(10,9),checkNotNull(
+            CustomBasicProgressionDraftDomain.forWeekEdit(
+                "slot",ladder,actualRung)).map{it.exactRepTarget})
+    }
+
 }

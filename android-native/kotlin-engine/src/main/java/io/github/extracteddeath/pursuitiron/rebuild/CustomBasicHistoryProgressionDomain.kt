@@ -207,6 +207,7 @@ object CustomBasicHistoryProgressionDomain {
             return no(CustomBasicHistoryRefusal.INVALID_HISTORY)
         var latest:CustomCoachingHistoricalSession?=null
         var latestStationIncompatible=false
+        var latestSourceChanged=false
         for(session in request.completed) {
             val snap=session.snapshot
             val evidence=session.evidence
@@ -235,6 +236,7 @@ object CustomBasicHistoryProgressionDomain {
                 snap.sessionPurpose==next.sessionPurpose
             if(!sourceMatches) {
                 latestStationIncompatible=true
+                latestSourceChanged=true
                 latest=session
                 continue
             }
@@ -254,6 +256,7 @@ object CustomBasicHistoryProgressionDomain {
                     independentlyVerifiedStation!=normalizedMachine
                 if(definitelyOtherMachine)continue
                 latestStationIncompatible=true
+                latestSourceChanged=false
                 latest=session
                 continue
             }
@@ -289,6 +292,7 @@ object CustomBasicHistoryProgressionDomain {
                     ?.singleOrNull()
             if(independentStation!=null && independentStation!=normalizedMachine)
                 continue
+            latestSourceChanged=false
             latestStationIncompatible =
                 (unweighted && (historicalSlot.machineInstanceId != null || observedMachines.isNotEmpty())) ||
                 (historicalSlot.machineInstanceId != null && observedMachines.isEmpty()) ||
@@ -297,6 +301,8 @@ object CustomBasicHistoryProgressionDomain {
             latest=session
         }
         val prior=latest ?:return no(CustomBasicHistoryRefusal.NO_COMPARABLE_HISTORY)
+        if(latestSourceChanged)
+            return no(CustomBasicHistoryRefusal.HISTORY_SOURCE_CHANGED)
         if(latestStationIncompatible)
             return no(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE)
         val original=prior.snapshot

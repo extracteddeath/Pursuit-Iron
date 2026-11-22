@@ -29,18 +29,26 @@ class NativeKotlinPlannedBackoffNoteTest {
         assertNull(NativeKotlinPlannedBackoffNote.fromIssuedTargets(rows,targets[2]))
         val note=NativeKotlinPlannedBackoffNote.fromIssuedTargets(rows,targets[3])
         assertNotNull(note)
-        assertTrue(note!!.contains("Planned last-set back-off"))
+        assertTrue(note!!.contains("Issued lighter working set"))
         assertTrue(note.contains("set 4 of 4"))
         assertTrue(note.contains("215 → 195 lb"))
-        assertTrue(note.contains("not an automatic weight drop"))
+        assertTrue(note.contains("not lowered by fatigue coaching"))
     }
-    @Test fun straightAndMixedOrUnverifiedLoadsCannotBeLabeledAsBackoff() {
+    @Test fun straightAndUnverifiedLoadsAreNotMisrepresentedAsReductions() {
         val straight=(0..3).map{target(it)}
         assertNull(NativeKotlinPlannedBackoffNote.fromIssuedTargets(
             straight.map(::p),straight.last()))
         val mixed=listOf(target(0),target(1,"210"),target(2,"195"))
-        assertNull(NativeKotlinPlannedBackoffNote.fromIssuedTargets(
-            mixed.map(::p),mixed.last()))
+        val firstReduction=NativeKotlinPlannedBackoffNote.fromIssuedTargets(
+            mixed.map(::p),mixed[1])
+        assertNotNull(firstReduction)
+        assertTrue(firstReduction!!.contains("set 2 of 3"))
+        assertTrue(firstReduction.contains("215 → 210 lb"))
+        val secondReduction=NativeKotlinPlannedBackoffNote.fromIssuedTargets(
+            mixed.map(::p),mixed.last())
+        assertNotNull(secondReduction)
+        assertTrue(secondReduction!!.contains("210 → 195 lb"))
+        assertFalse(secondReduction.contains("back-off"))
         val otherBasis=listOf(target(0),target(1,"195",basis=LoadBasis.EXERCISE_OVERRIDE))
         assertNull(NativeKotlinPlannedBackoffNote.fromIssuedTargets(
             otherBasis.map(::p),otherBasis.last()))
@@ -48,6 +56,23 @@ class NativeKotlinPlannedBackoffNoteTest {
         assertNull(NativeKotlinPlannedBackoffNote.fromIssuedTargets(
             differentExercise.map(::p),differentExercise.last()))
     }
+    @Test fun actualsAndStaleTargetCopiesCannotInventPrescribedLoadDifferences() {
+        val targets=(0..2).map{target(it)}+target(3,"195")
+        val original=targets.map(::p)
+        val reference=NativeKotlinPlannedBackoffNote.fromIssuedTargets(
+            original,targets.last())
+        val changedActual=original.mapIndexed{index,row ->
+            if(index==2)row.copy(actual=KotlinPerformedSet(
+                BigDecimal("170"),LoadUnit.LB,4,null)) else row
+        }
+        assertEquals(reference,NativeKotlinPlannedBackoffNote.fromIssuedTargets(
+            changedActual,targets.last()))
+        assertNull(NativeKotlinPlannedBackoffNote.fromIssuedTargets(
+            original,targets.last().copy(
+                load=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.SMITH_TOTAL,
+                    BigDecimal("190")))))
+    }
+
     @Test fun warmupsAndShortOrAmbiguousSequencesDoNotInheritReductionLabels() {
         val warmup=target(0,"95",type=DraftSetType.WARMUP)
         val final=target(0,"195")
@@ -81,19 +106,25 @@ class NativeKotlinPlannedBackoffNoteTest {
         assertNull(NativeKotlinPlannedBackoffNote.fromCustomSlot(slot,before[0]))
         val note=NativeKotlinPlannedBackoffNote.fromCustomSlot(slot,last)
         assertNotNull(note)
-        assertTrue(note!!.contains("Authored lighter final set"))
+        assertTrue(note!!.contains("Authored lighter working set"))
         assertTrue(note.contains("set 4 of 4"))
         assertTrue(note.contains("215 → 195 lb"))
         assertEquals(BigDecimal("195"),
             (last.prescription.load as DraftSetLoad.Verified).value)
     }
-    @Test fun customLabelRejectsStraightMixedAndMismatchedPhysicalLoads() {
+    @Test fun customLabelRejectsStraightAndMismatchedPhysicalLoads() {
         val straight=(0..3).map{custom(it)}
         assertNull(NativeKotlinPlannedBackoffNote.fromCustomSlot(
             straight,straight.last()))
         val mixed=listOf(custom(0),custom(1,"210"),custom(2,"195"))
-        assertNull(NativeKotlinPlannedBackoffNote.fromCustomSlot(
-            mixed,mixed.last()))
+        val earlier=NativeKotlinPlannedBackoffNote.fromCustomSlot(
+            mixed,mixed[1])
+        assertNotNull(earlier)
+        assertTrue(earlier!!.contains("set 2 of 3"))
+        assertTrue(earlier.contains("215 → 210 lb"))
+        val later=NativeKotlinPlannedBackoffNote.fromCustomSlot(
+            mixed,mixed.last())
+        assertTrue(later!!.contains("210 → 195 lb"))
         val unlike=listOf(custom(0),custom(1,"195",
             basis=LoadBasis.EXERCISE_OVERRIDE))
         assertNull(NativeKotlinPlannedBackoffNote.fromCustomSlot(

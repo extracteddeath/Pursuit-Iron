@@ -669,13 +669,37 @@ internal fun kotlinHistoryCorrectionActual(
     val unit=previousActual?.unit ?: (issuedLoad as? DraftSetLoad.Verified)?.unit
     val load=if(enteredLoad.isBlank())null else
         runCatching{java.math.BigDecimal(enteredLoad.trim())}.getOrNull()
-    val reps=enteredReps.toIntOrNull() ?:return null
-    val rir=if(enteredRir.isBlank())null else enteredRir.toIntOrNull()
-    if((enteredLoad.isNotBlank() && load==null) ||
-        (enteredRir.isNotBlank() && rir==null) ||
-        (load!=null && unit==null))return null
-    return KotlinPerformedSet(load,if(load==null)null else unit,reps,rir,
-        machineInstanceId=previousActual?.machineInstanceId)
+    if (enteredLoad.isNotBlank() && load == null) return null
+    val completed = outcome == KotlinJournalSetOutcome.COMPLETED
+    val reps = if (completed) enteredReps.trim().toIntOrNull() ?: return null else 0
+    val rir = if (completed && enteredRir.isNotBlank())
+        enteredRir.trim().toIntOrNull() ?: return null else null
+    val actual = KotlinPerformedSet(load, if (load == null) null else unit, reps, rir,
+        machineInstanceId = previousActual?.machineInstanceId)
+    return actual.takeIf { KotlinSetNumberAuthorityDomain.valid(issuedLoad, outcome, it) }
+}
+
+@Composable
+private fun KotlinHistoryCorrectionFields(
+    outcome: KotlinJournalSetOutcome, issued: DraftSetLoad,
+    load: String, onLoad: (String) -> Unit, reps: String, onReps: (String) -> Unit,
+    rir: String, onRir: (String) -> Unit, enabled: Boolean
+) {
+    if (outcome == KotlinJournalSetOutcome.SKIPPED) return
+    if (issued is DraftSetLoad.Verified) {
+        OutlinedTextField(value = load, onValueChange = onLoad, enabled = enabled,
+            label = { Text("Actual weight (${issued.unit.name.lowercase()})") },
+            supportingText = { Text(kotlinLoadBasisLabel(issued.basis)) },
+            singleLine = true, modifier = Modifier.fillMaxWidth())
+    }
+    if (outcome == KotlinJournalSetOutcome.FAILED_ATTEMPT) {
+        Text("Failed attempt · 0 completed reps", style = MaterialTheme.typography.bodySmall)
+        return
+    }
+    OutlinedTextField(value = reps, onValueChange = onReps, enabled = enabled,
+        label = { Text("Actual reps") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+    OutlinedTextField(value = rir, onValueChange = onRir, enabled = enabled,
+        label = { Text("Actual RIR (optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
 }
 
 /** Generated/composer history uses the same committed native history
@@ -725,20 +749,8 @@ private fun NativeKotlinSavedComposerHistorySetRow(
                         .replaceFirstChar{it.uppercase()})})
             }
         }
-        if(outcome!=KotlinJournalSetOutcome.SKIPPED) {
-            val convention=fact.issuedLoad as? DraftSetLoad.Verified
-            OutlinedTextField(value=load,onValueChange={load=it},
-                label={Text(convention?.let{"Actual weight (${it.unit.name.lowercase()})"}
-                    ?: "Actual weight (blank for bodyweight)")},
-                supportingText={Text(kotlinLoadBasisLabel(convention?.basis))},
-                singleLine=true,modifier=Modifier.fillMaxWidth())
-            OutlinedTextField(value=reps,onValueChange={reps=it},
-                label={Text("Actual reps")},
-                singleLine=true,modifier=Modifier.fillMaxWidth())
-            OutlinedTextField(value=rir,onValueChange={rir=it},
-                label={Text("Actual RIR (optional)")},
-                singleLine=true,modifier=Modifier.fillMaxWidth())
-        }
+        KotlinHistoryCorrectionFields(outcome, fact.issuedLoad, load, { load = it },
+            reps, { reps = it }, rir, { rir = it }, enabled = !submitting)
         Button(enabled=!submitting,onClick={
             val performed=kotlinHistoryCorrectionActual(
                 outcome,load,reps,rir,
@@ -919,20 +931,8 @@ private fun NativeKotlinSavedCustomHistoryVisitRow(
                         .replaceFirstChar{it.uppercase()})})
             }
         }
-        if(outcome!=KotlinJournalSetOutcome.SKIPPED) {
-            val convention=fact.prescribedLoad as? DraftSetLoad.Verified
-            OutlinedTextField(value=load,onValueChange={load=it},
-                label={Text(convention?.let{"Actual weight (${it.unit.name.lowercase()})"}
-                    ?: "Actual weight (blank for bodyweight)")},
-                supportingText={Text(kotlinLoadBasisLabel(convention?.basis))},
-                singleLine=true,modifier=Modifier.fillMaxWidth())
-            OutlinedTextField(value=reps,onValueChange={reps=it},
-                label={Text("Actual reps")},
-                singleLine=true,modifier=Modifier.fillMaxWidth())
-            OutlinedTextField(value=rir,onValueChange={rir=it},
-                label={Text("Actual RIR (optional)")},
-                singleLine=true,modifier=Modifier.fillMaxWidth())
-        }
+        KotlinHistoryCorrectionFields(outcome, fact.prescribedLoad, load, { load = it },
+            reps, { reps = it }, rir, { rir = it }, enabled = !submitting)
         Button(enabled=!submitting,onClick={
             val actual=kotlinHistoryCorrectionActual(
                 outcome,load,reps,rir,

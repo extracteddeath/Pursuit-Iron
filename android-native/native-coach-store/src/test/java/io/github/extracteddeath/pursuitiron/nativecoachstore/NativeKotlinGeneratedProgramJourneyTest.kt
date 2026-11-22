@@ -1175,16 +1175,40 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(days.size,complete.customIssued)
         assertEquals(0,complete.customUnfinished)
         if(includeNewTargets) {
-            // The saved tibialis target is an EXACT current rep value,
-            // separate from its original approved lower/upper range. The
-            // first recorded workout was also corrected after Finish above.
-            val day=days.first()
-            val sourceSlot=day.slots.single {it.exerciseId=="tibialis-raise"}
+            // Choose an actual generated bodyweight movement with a
+            // non-singleton rep band. A 15-15 tibialis prescription can
+            // legitimately be at its ceiling and cannot earn another rep.
+            val day=days.first { scheduled ->
+                scheduled.slots.any {it.exerciseId=="serratus-pushup"}
+            }
+            val sourceSlot=day.slots.single {it.exerciseId=="serratus-pushup"}
             assertTrue(sourceSlot.progressionMethod in setOf(
                 SavedProgressionMethod.BODYWEIGHT_REPS,SavedProgressionMethod.LADDER))
-            val firstTargets=sourceSlot.sets.filter {
-                it.type==DraftSetType.WORKING
-            }.map { checkNotNull(it.exactRepTarget) }
+            val workingSets=sourceSlot.sets.filter {it.type==DraftSetType.WORKING}
+            assertTrue(workingSets.isNotEmpty() &&
+                workingSets.all{it.reps.minimum<it.reps.maximum})
+            val firstTargets=workingSets.map {checkNotNull(it.exactRepTarget)}
+            // Correct a finished actual on this exact weekday/slot; both
+            // the displayed next target and the editor must consume the
+            // corrected owner history, not the immutable old receipt alone.
+            val sourceWorkoutId=completed[days.indexOf(day)]
+            val beforeCorrection=(Disk().journals.open(owner,sourceWorkoutId)
+                as NativeCustomJournalResult.Durable).issued.journal
+            val firstSet=beforeCorrection.snapshot.slots.single {
+                it.slotId==sourceSlot.slotId
+            }.sets.first{it.prescription.type==DraftSetType.WORKING}
+            val visit=CustomWorkoutVisitKey(firstSet.setKey,CustomWorkoutVisitPart.MAIN)
+            val prior=(beforeCorrection.effectiveVisits.getValue(visit).operation
+                as CustomWorkoutJournalOperation.Record)
+            val oldActual=checkNotNull(prior.performed)
+            val correction=CustomSavedVisitCorrection(
+                "serratus-corrected-reps",0,visit,prior.eventId,
+                KotlinJournalSetOutcome.COMPLETED,
+                oldActual.copy(reps=oldActual.reps+1))
+            assertTrue(NativeKotlinCustomHistoryCorrectionTransaction(
+                Disk().history,Disk().journals,Disk().corrections,Disk().fence,
+                identity).correct(owner,athlete,sourceWorkoutId,correction)
+                is NativeCustomCorrectionTransactionResult.Committed)
             val ownerReview=Disk()
             val basic=NativeKotlinCustomBasicNextReview(
                 ownerReview.fence,identity,ownerReview.drafts,ownerReview.sources,
@@ -1198,7 +1222,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
             val proposal=signed.projection
             assertTrue(proposal.toString(),proposal is CustomBasicHistoryResult.UnloadedReviewed)
             val target=proposal as CustomBasicHistoryResult.UnloadedReviewed
-            assertEquals(firstId,target.historyWorkoutId)
+            assertEquals(sourceWorkoutId,target.historyWorkoutId)
             assertTrue(target.candidate.advancedOrdinals.isNotEmpty())
             assertTrue(target.candidate.proposedExactReps.indices.all { index ->
                 target.candidate.proposedExactReps[index] in
@@ -1250,6 +1274,43 @@ class NativeKotlinGeneratedProgramJourneyTest {
             assertEquals(futureBefore.slots,(Disk().preflight.inspect(owner,cycleId,
                 3,day.weekday,inputs)
                 as NativeCustomPreflightResult.ReviewedPreview).session.slots)
+            // Preserve the real weekly calendar. Finish any earlier
+            // scheduled days before issuing the changed bodyweight day.
+            for ((earlierIndex,earlier) in days.withIndex()) {
+                if(earlier.weekday>=day.weekday)break
+                val earlierId="bodyweight-week2-before-$earlierIndex"
+                assertEquals(NativeCustomNextCycleSlot.Next(2,earlier.weekday,
+                    earlier.label),Disk().next(inputs))
+                assertTrue(Disk().prepared.prepare(owner,earlierId,cycleId,
+                    2,earlier.weekday,inputs) is NativeCustomPrepareResult.Prepared)
+                var earlierJournal=(Disk().journals.issue(owner,earlierId,cycleId,
+                    2,earlier.weekday,inputs)
+                    as NativeCustomJournalResult.Durable).issued.journal
+                for ((setIndex,set) in earlierJournal.snapshot.slots.flatMap{it.sets}
+                    .withIndex()) {
+                    val prescription=set.prescription
+                    val actual=when(val load=prescription.load) {
+                        is DraftSetLoad.Verified -> KotlinPerformedSet(
+                            load.value,load.unit,prescription.reps.minimum,null)
+                        DraftSetLoad.ExplicitBodyweight -> KotlinPerformedSet(
+                            null,null,prescription.reps.minimum,null)
+                    }
+                    earlierJournal=(Disk().journals.record(owner,earlierId,
+                        CustomWorkoutJournalOperation.Record(
+                            "bodyweight-before-$earlierIndex-$setIndex",
+                            earlierJournal.revision,
+                            CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN),
+                            KotlinJournalSetOutcome.COMPLETED,actual))
+                        as NativeCustomJournalResult.Durable).issued.journal
+                }
+                assertTrue(NativeKotlinCustomHistoryTransaction(
+                    Disk().history,Disk().journals,Disk().fence,identity).complete(
+                    owner,athlete,earlierId,CustomWorkoutJournalOperation.Finish(
+                        "bodyweight-before-finish-$earlierIndex",earlierJournal.revision))
+                    is NativeCustomFinishResult.Committed)
+            }
+            assertEquals(NativeCustomNextCycleSlot.Next(2,day.weekday,day.label),
+                Disk().next(inputs))
             val nextWorkoutId="bodyweight-approved-next"
             assertTrue(Disk().prepared.prepare(owner,nextWorkoutId,cycleId,
                 2,day.weekday,inputs) is NativeCustomPrepareResult.Prepared)

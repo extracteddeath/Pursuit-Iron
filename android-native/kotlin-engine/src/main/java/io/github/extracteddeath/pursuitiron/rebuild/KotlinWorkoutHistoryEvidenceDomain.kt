@@ -138,6 +138,14 @@ object KotlinWorkoutHistoryEvidenceDomain {
                 }.distinct().size != 1 -> KotlinHistoryProgressionGate.MIXED_LOAD_BASIS
                 working.map { it.issuedReps }.distinct().size != 1 ->
                     KotlinHistoryProgressionGate.MIXED_REP_BANDS
+                // An actual physical station is not an ordinary free barbell,
+                // even if the issued loading basis was mislabeled. Preserve
+                // the corrected factual sets, but do not let a tagged machine
+                // earn a barbell progression or strength estimate.
+                working.any { set ->
+                    (set.issuedLoad as? DraftSetLoad.Verified)?.basis == LoadBasis.BARBELL_TOTAL &&
+                        set.actual?.machineInstanceId != null
+                } -> KotlinHistoryProgressionGate.UNVERIFIED_RECORDED_EVIDENCE
                 working.any { set ->
                     KotlinWorkingSetEvidenceDomain.review(
                         set.originalOrdinal,set.issuedLoad,set.issuedRir,

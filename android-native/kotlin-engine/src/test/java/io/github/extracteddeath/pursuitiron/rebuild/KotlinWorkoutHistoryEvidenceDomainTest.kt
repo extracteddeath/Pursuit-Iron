@@ -180,6 +180,37 @@ class KotlinWorkoutHistoryEvidenceDomainTest {
         assertNull(reviewed.workingSets.single().actual?.load)
     }
 
+    @Test fun machineTaggedBarbellRemainsFactualButCannotEarnFreeBarProgression() {
+        val barbell = DraftSetLoad.Verified(
+            LoadUnit.LB, LoadBasis.BARBELL_TOTAL, BigDecimal("30"))
+        fun history(machineId: String?): KotlinWorkoutHistoryEvidence {
+            var journal = start(target("first", 0, load = barbell),
+                target("second", 1, load = barbell))
+            journal = record(journal, "event-a", "first",
+                KotlinJournalSetOutcome.COMPLETED,
+                actual(12, 1).copy(machineInstanceId = machineId))
+            journal = record(journal, "event-b", "second",
+                KotlinJournalSetOutcome.COMPLETED,
+                actual(12, 1).copy(machineInstanceId = machineId))
+            return evidence(finish(journal))
+        }
+        val tagged = history("machine-A")
+        assertEquals(listOf("machine-A", "machine-A"),
+            tagged.sets.map { it.actual?.machineInstanceId })
+        val excluded = tagged.exerciseReviews.single()
+        assertEquals(KotlinHistoryProgressionGate.UNVERIFIED_RECORDED_EVIDENCE,
+            excluded.progressionGate)
+        assertEquals(2, excluded.workingSets.size)
+        assertNull(excluded.progressionReview)
+        assertNull(excluded.progressionWorkout)
+
+        val freeBar = history(null).exerciseReviews.single()
+        assertEquals(KotlinHistoryProgressionGate.COMPARABLE_FOR_REVIEW,
+            freeBar.progressionGate)
+        assertNotNull(freeBar.progressionReview)
+        assertNotNull(freeBar.progressionWorkout)
+    }
+
     @Test fun failedAttemptIsNotReportedAsMissingOrSuccessful() {
         var j = start(target("first", 0), target("second", 1))
         j = record(j, "event-a", "first", KotlinJournalSetOutcome.COMPLETED, actual(9))

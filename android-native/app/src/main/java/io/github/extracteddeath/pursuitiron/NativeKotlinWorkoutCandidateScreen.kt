@@ -796,8 +796,9 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         currentSets=workingSets.map { set->
                             WorkoutReferenceKey(set.target.setKey) to set.target.load
                         },
-                        previous=physicalMachineLastReferences(
-                            lastReferences,currentMachine),
+                        // The evaluator needs machineSets, which the display-only
+                        // Target/Last filter intentionally removes.
+                        previous=lastReferences,
                         machineInstanceId=currentMachine,
                         repBand=first.reps.takeIf{sameGoal},
                         goalRir=first.targetRir?.takeIf{sameGoal},

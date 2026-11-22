@@ -881,7 +881,8 @@ assert.ok(machineLast.includes('data class WorkoutMachineReferenceKey(') &&
   machineLast.includes('fun composerBase(') &&
   machineLast.includes('fun appendMachineFacts(') &&
   machineLast.includes('destination.keys.removeAll { it.key==key }') &&
-  machineSelector.includes('previous.machineSets.filterKeys { it.machineId==requested }'),
+  machineLast.includes('history.machineSets.filter') &&
+  machineSelector.includes('WorkoutLastReferenceDomain.physicalStation(previous,selectedMachineId)'),
   'Native A/B Last must recover each station without borrowing other stacks or bypassing unknown skips');
 
 const trendUi=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinExercisePerformanceTrend.kt');

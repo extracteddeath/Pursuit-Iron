@@ -18,7 +18,16 @@ data class CustomHistoricalVisitFact(
     val effectiveEventId: String,
     /** Distinct saved mini-set, never a new ordinary working set. */
     val stage: Int = 1
-)
+) {
+    internal fun matchesIssuedMain(slot: CustomWorkoutSlotSnapshot, set: CustomWorkoutSetSnapshot): Boolean {
+        val target = set.prescription
+        return part == CustomWorkoutVisitPart.MAIN && stage == 1 && effectiveEventId.isNotBlank() &&
+            set.slotId == slot.slotId && slotId == slot.slotId && exerciseId == slot.exerciseId &&
+            setKey == set.setKey && setType == target.type && prescribedReps == target.reps &&
+            prescribedRir == target.targetRir && amplifierKind == target.amplifier?.kind &&
+            KotlinSetNumberAuthorityDomain.sameIssuedTarget(prescribedLoad, target.load)
+    }
+}
 data class CustomWorkoutHistoricalEvidence(
     val athleteId: String,
     val workoutId: String,

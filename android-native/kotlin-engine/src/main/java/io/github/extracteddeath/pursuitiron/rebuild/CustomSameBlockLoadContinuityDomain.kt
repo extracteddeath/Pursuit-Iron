@@ -184,13 +184,7 @@ object CustomSameBlockLoadContinuityDomain {
                 return result(CustomSameBlockLoadStatus.EQUIPMENT_UNVERIFIED,
                     "Verified unit, implement and basis must match.",prior.evidence.workoutId)
             val actual=fact.actual
-            if(fact.exerciseId!=oldSlot.exerciseId ||
-                fact.prescribedLoad!=lastLoad ||
-                fact.prescribedReps!=oldSet.prescription.reps ||
-                fact.prescribedRir!=oldSet.prescription.targetRir ||
-                fact.setType!=oldSet.prescription.type ||
-                fact.part!=CustomWorkoutVisitPart.MAIN ||
-                fact.amplifierKind!=null || fact.effectiveEventId.isBlank() ||
+            if(!fact.matchesIssuedMain(oldSlot, oldSet) || fact.amplifierKind!=null ||
                 fact.outcome!=KotlinJournalSetOutcome.COMPLETED ||
                 !CustomWorkoutJournalDomain.actualValid(lastLoad,fact.outcome,actual) ||
                 actual==null || actual.reps<oldSet.prescription.reps.minimum ||

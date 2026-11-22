@@ -185,14 +185,7 @@ object CustomBlockBaselineContinuityDomain {
                 ?:return refuse(CustomBlockBaselineStatus.EQUIPMENT_UNVERIFIED,
                     "Bodyweight and assisted loads need a separate baseline policy.")
             val actual=fact.actual
-            if(fact.exerciseId!=priorSlot.exerciseId ||
-                fact.slotId!=priorSlot.slotId ||
-                fact.setType!=prescription.type ||
-                fact.part!=CustomWorkoutVisitPart.MAIN ||
-                fact.prescribedLoad!=issued ||
-                fact.prescribedReps!=prescription.reps ||
-                fact.prescribedRir!=prescription.targetRir ||
-                fact.amplifierKind!=null || fact.effectiveEventId.isBlank() ||
+            if(!fact.matchesIssuedMain(priorSlot, set) || fact.amplifierKind!=null ||
                 fact.outcome!=KotlinJournalSetOutcome.COMPLETED ||
                 !CustomWorkoutJournalDomain.actualValid(issued,fact.outcome,actual) ||
                 actual==null || actual.reps<prescription.reps.minimum ||

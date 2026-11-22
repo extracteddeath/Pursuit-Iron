@@ -330,6 +330,12 @@ class CustomSavedHistoryCorrectionDomainTest {
         val finalCorrection=CustomSavedVisitCorrection("fix-myo-3",0,stage3,
             "myo-3",KotlinJournalSetOutcome.COMPLETED,
             KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,2,2))
+        // Four reps would require a fourth mini-set, which was never recorded.
+        val reopensWorkout = finalCorrection.copy(
+            performed = KotlinPerformedSet(BigDecimal("20"), LoadUnit.LB, 4, 2))
+        assertEquals(CustomSavedCorrectionDecision.Rejected(
+            CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER),
+            CustomSavedHistoryCorrectionDomain.reduce(originals, reopensWorkout))
         val corrected=accept(originals,finalCorrection)
         val projected=CustomSavedHistoryEvidenceDomain.projectSaved(corrected)
             as CustomSavedHistoryProjectionResult.Candidate

@@ -83,10 +83,15 @@ object CustomWorkoutExecutionDomain {
     fun followUpVisits(
         journal:CustomWorkoutJournalDraft,
         set:CustomWorkoutSetSnapshot
-    ):List<CustomWorkoutVisitKey> {
-        val main=journal.effectiveVisits[CustomWorkoutVisitKey(
-            set.setKey,CustomWorkoutVisitPart.MAIN)]?.operation
-            as? CustomWorkoutJournalOperation.Record
+    ):List<CustomWorkoutVisitKey> = followUpVisits(set) { key ->
+        journal.effectiveVisits[key]?.operation as? CustomWorkoutJournalOperation.Record
+    }
+
+    internal fun followUpVisits(
+        set: CustomWorkoutSetSnapshot,
+        recordFor: (CustomWorkoutVisitKey) -> CustomWorkoutJournalOperation.Record?
+    ): List<CustomWorkoutVisitKey> {
+        val main = recordFor(CustomWorkoutVisitKey(set.setKey, CustomWorkoutVisitPart.MAIN))
         val amp=set.prescription.amplifier ?:return emptyList()
         if(main?.outcome!=KotlinJournalSetOutcome.COMPLETED)return emptyList()
         if(amp.followUpRounds !in 1..5)return emptyList()
@@ -104,10 +109,8 @@ object CustomWorkoutExecutionDomain {
                 // would increase or hold weight relative to the last
                 // performed stage; a changed target is not consent.
                 val previous=if(stage==1)null else
-                    (journal.effectiveVisits[CustomWorkoutVisitKey(
-                        set.setKey,CustomWorkoutVisitPart.FOLLOW_UP,stage-1)]
-                        ?.operation as? CustomWorkoutJournalOperation.Record)
-                        ?.performed
+                    recordFor(CustomWorkoutVisitKey(
+                        set.setKey,CustomWorkoutVisitPart.FOLLOW_UP,stage-1))?.performed
                 // The SAME source-authority governs the editable prefill
                 // and the actual permitted next stage. The second drop must
                 // follow the recorded FIRST drop, not the activation.
@@ -117,8 +120,7 @@ object CustomWorkoutExecutionDomain {
                 if(entry !is AmplifierFollowUpEntryLoad.AuthoredStage)break
             }
             visits+=key
-            val recorded=journal.effectiveVisits[key]?.operation
-                as? CustomWorkoutJournalOperation.Record ?:break
+            val recorded=recordFor(key) ?:break
             if(recorded.outcome!=KotlinJournalSetOutcome.COMPLETED)break
             if(amp.followUpRounds>1 &&
                 (amp.kind==CustomAmplifierKind.MYO_REPS ||

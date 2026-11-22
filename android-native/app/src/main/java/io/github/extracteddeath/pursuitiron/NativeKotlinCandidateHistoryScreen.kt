@@ -660,12 +660,13 @@ private fun KotlinHistoryActualRow(
  * RIR is never filled from the goal, and skipped sets never acquire fake reps.
  * The native reducers remain the final authority for valid load/outcome pairs.
  */
-private fun kotlinHistoryCorrectionActual(
+internal fun kotlinHistoryCorrectionActual(
     outcome:KotlinJournalSetOutcome,
     enteredLoad:String,enteredReps:String,enteredRir:String,
-    unit:LoadUnit?
+    previousActual:KotlinPerformedSet?, issuedLoad:DraftSetLoad
 ):KotlinPerformedSet? {
     if(outcome==KotlinJournalSetOutcome.SKIPPED)return null
+    val unit=previousActual?.unit ?: (issuedLoad as? DraftSetLoad.Verified)?.unit
     val load=if(enteredLoad.isBlank())null else
         runCatching{java.math.BigDecimal(enteredLoad.trim())}.getOrNull()
     val reps=enteredReps.toIntOrNull() ?:return null
@@ -673,7 +674,8 @@ private fun kotlinHistoryCorrectionActual(
     if((enteredLoad.isNotBlank() && load==null) ||
         (enteredRir.isNotBlank() && rir==null) ||
         (load!=null && unit==null))return null
-    return KotlinPerformedSet(load,if(load==null)null else unit,reps,rir)
+    return KotlinPerformedSet(load,if(load==null)null else unit,reps,rir,
+        machineInstanceId=previousActual?.machineInstanceId)
 }
 
 /** Generated/composer history uses the same committed native history
@@ -740,7 +742,7 @@ private fun NativeKotlinSavedComposerHistorySetRow(
         Button(enabled=!submitting,onClick={
             val performed=kotlinHistoryCorrectionActual(
                 outcome,load,reps,rir,
-                fact.actual?.unit ?: (fact.issuedLoad as? DraftSetLoad.Verified)?.unit)
+                fact.actual, fact.issuedLoad)
             val selectedOutcome=outcome
             if(selectedOutcome!=KotlinJournalSetOutcome.SKIPPED &&
                 performed==null) {
@@ -934,7 +936,7 @@ private fun NativeKotlinSavedCustomHistoryVisitRow(
         Button(enabled=!submitting,onClick={
             val actual=kotlinHistoryCorrectionActual(
                 outcome,load,reps,rir,
-                fact.actual?.unit ?: (fact.prescribedLoad as? DraftSetLoad.Verified)?.unit)
+                fact.actual, fact.prescribedLoad)
             val selectedOutcome=outcome
             if(selectedOutcome!=KotlinJournalSetOutcome.SKIPPED &&
                 actual==null) {

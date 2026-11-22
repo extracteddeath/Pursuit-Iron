@@ -127,7 +127,8 @@ internal fun PursuitUseLastCompletedSet(
 internal fun PursuitWorkoutSetReference(
     mode:WorkoutReferenceMode,
     load:DraftSetLoad,reps:RepBand,targetRir:Int?,
-    history:WorkoutLastReferenceResult?,key:WorkoutReferenceKey
+    history:WorkoutLastReferenceResult?,key:WorkoutReferenceKey,
+    exactRepTarget: Int? = null
 ) {
     val last=(history as? WorkoutLastReferenceResult.Ready)?.sets?.get(key)
     val actual=last?.actual
@@ -141,14 +142,17 @@ internal fun PursuitWorkoutSetReference(
             ?:"Bodyweight"
     } ?:"—"
     val repText=if(target) {
-        if(reps.minimum==reps.maximum)reps.minimum.toString()
+        if(exactRepTarget != null) exactRepTarget.toString()
+        else if(reps.minimum==reps.maximum)reps.minimum.toString()
         else "${reps.minimum}–${reps.maximum}"
     } else actual?.reps?.toString() ?:"—"
     val rir=if(target)targetRir?.toString() ?:"—"
         else actual?.actualRir?.toString() ?:"—"
     Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
         PursuitMetricStrip(listOf("Weight" to weight,"Reps" to repText,"RIR" to rir))
-        val caption=if(target)"Planned · ${kotlinLoadBasisLabel(verified?.basis)}"
+        val caption=if(target) "Planned · ${kotlinLoadBasisLabel(verified?.basis)}" +
+            (if (exactRepTarget != null && reps.minimum != reps.maximum)
+                " · ${reps.minimum}–${reps.maximum} rep range" else "")
         else when {
             history==null -> "Loading verified history…"
             history is WorkoutLastReferenceResult.Unavailable -> "Last is unavailable. Your set can still be logged."

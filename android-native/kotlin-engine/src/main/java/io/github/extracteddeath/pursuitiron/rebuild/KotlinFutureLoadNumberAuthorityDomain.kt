@@ -25,7 +25,8 @@ enum class KotlinFutureLoadRefusal {
     WRONG_CHANGE_DIRECTION,
     NOT_ADJACENT_VERIFIED_INCREMENT,
     EXCEEDS_AUTHORIZED_INCREMENT,
-    UNSUPPORTED_ASSISTANCE_DIRECTION
+    UNSUPPORTED_ASSISTANCE_DIRECTION,
+    NO_LOWER_ASSISTED_SETTING
 }
 
 data class KotlinFutureLoadFact(
@@ -104,6 +105,10 @@ object KotlinFutureLoadNumberAuthorityDomain {
                 // actual PREVIOUS available station setting from verified stock.
                 if(current.nextBelow==null || !same(current.nextBelow,candidateLoad))
                     return no(KotlinFutureLoadRefusal.NOT_ADJACENT_VERIFIED_INCREMENT)
+                // A zero selector ends assisted work. Switching to unassisted
+                // reps requires a separately prescribed movement and baseline.
+                if(candidateLoad.signum()==0)
+                    return no(KotlinFutureLoadRefusal.NO_LOWER_ASSISTED_SETTING)
                 if(issuedLoad.subtract(candidateLoad)>maximumAuthorizedIncrease)
                     return no(KotlinFutureLoadRefusal.EXCEEDS_AUTHORIZED_INCREMENT)
             }

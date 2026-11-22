@@ -22,6 +22,22 @@ internal data class NativeKotlinRestCue(
     val operationId:String,val seconds:Int,val exerciseIndex:Int
 )
 
+/** A journal receipt and its rest projection can reach Compose in separate
+ * recompositions. A cue must remain eligible until that exact receipt is
+ * acknowledged by the timer; neither an older cue nor a remounted prior
+ * receipt may restart an elapsed countdown. */
+internal object NativeRestReceiptCuePolicy {
+    fun newCue(
+        observedReceiptId:String?,
+        latestReceiptId:String?,
+        cue:NativeKotlinRestCue?
+    ):NativeKotlinRestCue? =
+        cue?.takeIf {
+            latestReceiptId!=null && latestReceiptId!=observedReceiptId &&
+                it.operationId==latestReceiptId
+        }
+}
+
 private val restCheckpointSaver = Saver<NativeRestCountdownCheckpoint?, String>(
     save = { it?.let(NativeRestCountdownPolicy::encode) },
     restore = NativeRestCountdownPolicy::decode
@@ -85,16 +101,21 @@ internal fun NativeRestTimer(
         publish(NativeRestCountdownPolicy.adjust(
             checkpoint,seconds,elapsed,System.currentTimeMillis()))
     }
-    LaunchedEffect(workoutId,ownerId,latestReceiptOperationId,enabled) {
-        if(enabled && latestReceiptOperationId != null && latestReceiptOperationId!=observedEvent) {
-            observedEvent=latestReceiptOperationId
-            // Skipped/corrected sets don't produce an auto cue. The journal
-            // receipt, not a pending Log click, is what starts the countdown.
-            if(autoCue?.operationId==latestReceiptOperationId) {
-                // An explicitly immediate Kotlin follow-up must not inherit
-                // a countdown still running from the preceding normal set.
-                if(autoCue.seconds==0)publish(null)
-                else begin(autoCue.seconds)
+    LaunchedEffect(workoutId,ownerId,latestReceiptOperationId,autoCue,enabled) {
+        if(enabled && latestReceiptOperationId != null &&
+            latestReceiptOperationId!=observedEvent) {
+            val confirmedCue=NativeRestReceiptCuePolicy.newCue(
+                observedEvent,latestReceiptOperationId,autoCue)
+            if(confirmedCue==null) {
+                // A skip/correction has no rest cue. Clear stale rest from
+                // the previous receipt, but leave this ID unacknowledged:
+                // a delayed matching cue may still arrive in a later frame.
+                publish(null)
+            } else {
+                observedEvent=latestReceiptOperationId
+                // Immediate amplifier stages clear the preceding countdown.
+                if(confirmedCue.seconds==0)publish(null)
+                else begin(confirmedCue.seconds)
             }
         }
     }

@@ -449,17 +449,22 @@ object KotlinGlobalHistoryIndexDomain {
                     }
                     continue
                 }
-                val key = KotlinHistoryLoadKey(
-                    record.exerciseId, record.unit, record.basis)
-                if (heaviest[key] == null ||
-                    record.actualLoad > checkNotNull(heaviest[key]).actualLoad ||
-                    (record.actualLoad.compareTo(checkNotNull(heaviest[key]).actualLoad) == 0 &&
-                        record.actualReps >= checkNotNull(heaviest[key]).actualReps))
-                    heaviest[key] = record
-                val repsKey = key to record.actualLoad
-                if (maxRepsAtLoad[repsKey] == null ||
-                    record.actualReps >= checkNotNull(maxRepsAtLoad[repsKey]).actualReps)
-                    maxRepsAtLoad[repsKey] = record
+                // A tagged machine cannot be counted as general barbell
+                // evidence, even if a stale catalog calls its basis BARBELL_TOTAL.
+                // Its factual result remains available on the verified station.
+                if (record.basis != LoadBasis.BARBELL_TOTAL || record.machineInstanceId == null) {
+                    val key = KotlinHistoryLoadKey(
+                        record.exerciseId, record.unit, record.basis)
+                    if (heaviest[key] == null ||
+                        record.actualLoad > checkNotNull(heaviest[key]).actualLoad ||
+                        (record.actualLoad.compareTo(checkNotNull(heaviest[key]).actualLoad) == 0 &&
+                            record.actualReps >= checkNotNull(heaviest[key]).actualReps))
+                        heaviest[key] = record
+                    val repsKey = key to record.actualLoad
+                    if (maxRepsAtLoad[repsKey] == null ||
+                        record.actualReps >= checkNotNull(maxRepsAtLoad[repsKey]).actualReps)
+                        maxRepsAtLoad[repsKey] = record
+                }
                 // Only a verified physical station and issued gym may own
                 // machine-specific strength history. Unknown stations remain
                 // available through general Last and factual read projections.

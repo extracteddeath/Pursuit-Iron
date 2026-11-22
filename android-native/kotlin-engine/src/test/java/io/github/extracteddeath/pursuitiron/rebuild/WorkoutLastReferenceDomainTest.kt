@@ -681,7 +681,7 @@ class WorkoutLastReferenceDomainTest {
                 }))
         }
         fun swapped(
-            machine:String?,skipped:Boolean=false,
+            machine:String?,outcome:KotlinJournalSetOutcome=KotlinJournalSetOutcome.COMPLETED,
             changedGym:Boolean=false
         ):ComposerReferenceSession {
             val issued=next.copy(workoutId="swapped-workout",
@@ -700,10 +700,13 @@ class WorkoutLastReferenceDomainTest {
             journal=(KotlinWorkoutJournalDomain.reduce(journal,
                 KotlinJournalOperation.RecordSet(
                     "record-new",journal.revision,replacement.setKey,
-                    if(skipped)KotlinJournalSetOutcome.SKIPPED
-                    else KotlinJournalSetOutcome.COMPLETED,
-                    if(skipped)null else KotlinPerformedSet(
-                        BigDecimal(135),LoadUnit.LB,6,null,machine)))
+                    outcome, when(outcome) {
+                        KotlinJournalSetOutcome.SKIPPED -> null
+                        KotlinJournalSetOutcome.FAILED_ATTEMPT ->
+                            KotlinPerformedSet(BigDecimal(135),LoadUnit.LB,0,null,machine)
+                        KotlinJournalSetOutcome.COMPLETED ->
+                            KotlinPerformedSet(BigDecimal(135),LoadUnit.LB,6,null,machine)
+                    }))
                 as KotlinJournalDecision.Proposed).state
             journal=(KotlinWorkoutJournalDomain.reduce(journal,
                 KotlinJournalOperation.Finish("finish-new",journal.revision))
@@ -730,7 +733,10 @@ class WorkoutLastReferenceDomainTest {
             as WorkoutLastReferenceResult.Ready
         assertTrue(afterA.sets.isEmpty())
         assertTrue(afterA.machineSets.isEmpty())
-        for(other in listOf(swapped(null),swapped("B",skipped=true),
+        val trimmed=swapped("B").let { it.copy(evidence=it.evidence.copy(
+            shortSessionLimitMinutes=20,shortSessionOmittedSetKeys=listOf("omitted-work"))) }
+        for(other in listOf(swapped(null),trimmed,swapped("B",KotlinJournalSetOutcome.SKIPPED),
+            swapped("B",KotlinJournalSetOutcome.FAILED_ATTEMPT),
             swapped("B",changedGym=true))) {
             val reviewed=WorkoutLastReferenceDomain.composer(
                 next,listOf(first,other)) as WorkoutLastReferenceResult.Ready

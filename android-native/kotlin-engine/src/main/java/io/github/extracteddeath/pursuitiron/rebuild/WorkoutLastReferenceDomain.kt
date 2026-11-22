@@ -313,10 +313,11 @@ object WorkoutLastReferenceDomain {
         val work=previous.evidence.sets.filter{
             it.type==DraftSetType.WORKING
         }
-        val uncertain=work.isEmpty() || work.any { fact ->
+        val uncertain=previous.evidence.prescriptionEditedForTime || work.isEmpty() || work.any { fact ->
             val issued=fact.issuedLoad as? DraftSetLoad.Verified
             val actual=fact.actual
-            actual==null || issued==null || actual.load==null ||
+            fact.outcome!=KotlinJournalSetOutcome.COMPLETED ||
+                actual==null || issued==null || actual.load==null ||
                 !KotlinMachineAlternativesDomain.validInstanceId(actual.machineInstanceId) ||
                 !KotlinSetNumberAuthorityDomain.valid(
                     fact.issuedLoad,fact.outcome,actual)

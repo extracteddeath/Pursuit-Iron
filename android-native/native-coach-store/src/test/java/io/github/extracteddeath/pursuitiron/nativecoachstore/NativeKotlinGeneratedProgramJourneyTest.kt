@@ -842,6 +842,9 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(before, beforeConsent.slots.single {
             it.slotId == selected.slotId
         }.sets.map { it.prescription })
+        val untouchedWeekThree = (Disk().preflight.inspect(owner, cycleId,
+            3, firstDay.weekday, inputs)
+            as NativeCustomPreflightResult.ReviewedPreview).session
         // Reviewing the optional progression cannot issue or change a set.
         assertFalse(review.mayIssueWorkout)
         assertFalse(review.maySaveProgram)
@@ -866,11 +869,12 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(offered, accepted.slots.single {
             it.slotId == selected.slotId
         }.sets.map { it.prescription })
-        assertEquals(before, (Disk().preflight.inspect(owner, cycleId,
+        val verifiedWeekThree = (Disk().preflight.inspect(owner, cycleId,
             3, firstDay.weekday, inputs)
-            as NativeCustomPreflightResult.ReviewedPreview).session.slots.single {
-                it.slotId == selected.slotId
-            }.sets.map { it.prescription })
+            as NativeCustomPreflightResult.ReviewedPreview).session
+        assertEquals(untouchedWeekThree.copy(
+            stamp = untouchedWeekThree.stamp.copy(
+                cycleRevision = approvedDraft.revision)), verifiedWeekThree)
         val id = "earned-basic-new-issue"
         assertTrue(Disk().prepared.prepare(owner, id, cycleId,
             2, firstDay.weekday, inputs) is NativeCustomPrepareResult.Prepared)

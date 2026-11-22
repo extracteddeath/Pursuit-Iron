@@ -112,6 +112,32 @@ class CustomBlockTransitionLoadDomainTest {
         assertFalse(positive.mayApplyProgression)
     }
 
+    @Test fun machineTagCannotSupplyAnAdjacentFreeBarbellStrengthBlockBaseline() {
+        val barbell = VerifiedLoadStock.Barbell(LoadUnit.LB,n(45),
+            mapOf(n(45) to 1,n(25) to 1,n(10) to 1,n(5) to 1,
+                BigDecimal("2.5") to 1))
+        fun asBarbell(day:CustomWorkoutDaySnapshot,station:String?)=day.copy(
+            slots=day.slots.map{slot->slot.copy(machineInstanceId=station,
+                sets=slot.sets.map{set->set.copy(prescription=
+                    set.prescription.copy(load=DraftSetLoad.Verified(
+                        LoadUnit.LB,LoadBasis.BARBELL_TOTAL,
+                        (set.prescription.load as DraftSetLoad.Verified).value)))})})
+        val oldA=asBarbell(snapshot(loads=listOf(200,205)),"machine-a")
+        val nextA=asBarbell(snapshot(true,listOf(215,215)),"machine-a")
+        val prior=performedOnMachine(completed(oldA),"machine-a")
+        val refused=review(nextA,listOf(prior),physical=barbell)
+        assertEquals(CustomBlockTransitionLoadStatus.BASELINE_UNAVAILABLE,refused.status)
+        assertEquals(CustomBlockBaselineStatus.EQUIPMENT_UNVERIFIED,
+            refused.reference.status)
+        assertNull(refused.proposedWorkout)
+
+        val untaggedPrevious=completed(asBarbell(snapshot(loads=listOf(200,205)),null))
+        val genuine=review(asBarbell(snapshot(true,listOf(215,215)),null),
+            listOf(untaggedPrevious),physical=barbell)
+        assertEquals(CustomBlockTransitionLoadStatus.READY_FOR_REVIEW,genuine.status)
+        assertEquals(listOf(n(200),n(205)),genuine.sets.map{it.proposedLoad})
+    }
+
     @Test fun changedPhaseAndRecipeUsePerSetDemonstratedLoadsWithoutAnEarnedIncrease() {
         val previous=completed(snapshot(loads=listOf(200,205)))
         val original=snapshot(true,listOf(215,215))

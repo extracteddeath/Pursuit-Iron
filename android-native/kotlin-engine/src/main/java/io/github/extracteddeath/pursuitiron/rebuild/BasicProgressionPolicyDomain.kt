@@ -271,6 +271,10 @@ object BasicProgressionPolicyDomain {
                 source=if(assistance)KotlinFutureLoadSource.EARNED_ASSISTANCE_DECREMENT
                     else KotlinFutureLoadSource.EARNED_NEXT_INCREMENT)
             if (verified is KotlinFutureLoadReview.Rejected) {
+                if (verified.reason == KotlinFutureLoadRefusal.NO_LOWER_ASSISTED_SETTING) {
+                    atMaximum = true
+                    break
+                }
                 if (verified.reason != KotlinFutureLoadRefusal.EXCEEDS_AUTHORIZED_INCREMENT)
                     return reject(BasicProgressionRefusal.STOCK_NOT_VERIFIED)
                 dynamicDecisions?.set(ordinal, BasicProgressionDecision.AUTHORIZED_INCREMENT_TOO_SMALL)

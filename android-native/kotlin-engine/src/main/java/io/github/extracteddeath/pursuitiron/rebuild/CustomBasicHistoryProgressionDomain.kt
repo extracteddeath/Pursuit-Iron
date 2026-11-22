@@ -340,9 +340,7 @@ object CustomBasicHistoryProgressionDomain {
         val byKey=observations.associateBy {it.setKey}
         val facts=expected.mapIndexed {ordinal,item ->
             val observed=byKey.getValue(item.setKey)
-            if(observed.exerciseId!=selected.exerciseId ||
-                item.prescription.load!=observed.prescribedLoad ||
-                item.prescription.reps!=observed.prescribedReps ||
+            if(!observed.matchesIssuedMain(oldSlot, item) ||
                 item.prescription.reps!=targetReps ||
                 observed.amplifierKind!=null)
                 return no(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE)

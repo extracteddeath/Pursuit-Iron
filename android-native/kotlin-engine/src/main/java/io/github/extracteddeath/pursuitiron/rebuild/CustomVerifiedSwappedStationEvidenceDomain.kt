@@ -45,14 +45,7 @@ internal object CustomVerifiedSwappedStationEvidenceDomain {
             val issued = target.load as? DraftSetLoad.Verified ?: return null
             val actual = fact.actual ?: return null
             val machine = actual.machineInstanceId ?: return null
-            if (fact.slotId != slot.slotId || fact.exerciseId != slot.exerciseId ||
-                fact.part != CustomWorkoutVisitPart.MAIN ||
-                fact.stage != 1 || fact.setType != DraftSetType.WORKING ||
-                fact.prescribedLoad != target.load ||
-                fact.prescribedReps != target.reps ||
-                fact.prescribedRir != target.targetRir ||
-                fact.amplifierKind != target.amplifier?.kind ||
-                fact.effectiveEventId.isBlank() ||
+            if (!fact.matchesIssuedMain(slot, set) ||
                 fact.outcome != KotlinJournalSetOutcome.COMPLETED ||
                 actual.load == null || actual.unit != issued.unit ||
                 !KotlinMachineAlternativesDomain.validInstanceId(machine) ||

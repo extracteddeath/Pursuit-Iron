@@ -105,6 +105,22 @@ class CustomBasicHistoryProgressionDomainTest {
         assertFalse(result.mayModifyHistory)
     }
 
+    @Test fun progressionMatchesPhysicalWeightNumericallyAndVerifiesTheIssuedReceipt() {
+        val prior = completed(1)
+        fun from(first: CustomHistoricalVisitFact) = review(sessions = listOf(prior.copy(
+            evidence = prior.evidence.copy(visits = listOf(first) + prior.evidence.visits.drop(1)))))
+        val fact = prior.evidence.visits.first()
+        val issued = fact.prescribedLoad as DraftSetLoad.Verified
+        val equivalent = fact.copy(prescribedLoad = issued.copy(value = BigDecimal("100.000")))
+        val earned = from(equivalent) as CustomBasicHistoryResult.Reviewed
+        assertEquals(listOf(n(105), n(105)), earned.candidate.proposedWorkingLoads)
+        for (invalid in listOf(equivalent.copy(stage = 2), equivalent.copy(prescribedRir = 1),
+            equivalent.copy(effectiveEventId = ""), equivalent.copy(prescribedLoad = issued.copy(unit = LoadUnit.KG)))) {
+            assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+                (from(invalid) as CustomBasicHistoryResult.Rejected).reason)
+        }
+    }
+
     @Test fun alreadyTrainedWeeksCannotReceiveBasicProgressionFromAnyStation() {
         val prior=completed(1,machine="A")
         for(week in listOf(2,3)) {

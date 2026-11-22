@@ -21,9 +21,22 @@ internal fun NativeKotlinBasicProgressionPreview(
     fun repLabel(current: Int?, proposed: Int, changed: Boolean): String =
         if (changed && current != null) "$current → $proposed reps" else "$proposed reps"
 
+    fun manualReps(set: CustomAuthoredSet): String = when {
+        set.exactRepTarget != null -> "${set.exactRepTarget} reps"
+        set.reps.minimum == set.reps.maximum -> "${set.reps.minimum} reps"
+        else -> "${set.reps.minimum}–${set.reps.maximum} reps"
+    }
+
     Column(verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
         Text("Basic progression",style=MaterialTheme.typography.titleSmall)
         when(projection) {
+            is CustomBasicHistoryResult.ManualBodyweight -> {
+                Text("Manual logging · bodyweight", style=MaterialTheme.typography.bodySmall)
+                workingSets(projection.slotId).forEachIndexed { index, set ->
+                    Text("Working set ${index + 1} · ${manualReps(set.prescription)}",
+                        style=MaterialTheme.typography.bodyMedium)
+                }
+            }
             is CustomBasicHistoryResult.UnloadedReviewed -> {
                 val working = workingSets(projection.slotId)
                 Text("Bodyweight",
@@ -92,13 +105,18 @@ internal fun NativeKotlinBasicProgressionPreview(
                     val load = "$amounts ${original.unit.name.lowercase()}$suffix"
                     val reps = candidate.proposedRepTargets?.getOrNull(index)?.let {
                         " · " + repLabel(prescription.exactRepTarget, it, index in candidate.changedRepOrdinals)
-                    }.orEmpty()
+                    } ?: if (candidate.decision == BasicProgressionDecision.MANUAL_REPEAT)
+                        " · " + manualReps(prescription) else ""
                     Text("Working set ${index+1} · $load$reps",
                         style=MaterialTheme.typography.bodyMedium)
                 }
             }
         }
-        Text("Read-only suggestion from verified workout history. Refresh after logging or editing a workout.",
+        val manual = projection is CustomBasicHistoryResult.ManualBodyweight ||
+            (projection is CustomBasicHistoryResult.Reviewed &&
+                projection.candidate.decision == BasicProgressionDecision.MANUAL_REPEAT)
+        Text(if (manual) "Targets from your saved program."
+            else "Read-only suggestion from verified workout history. Refresh after logging or editing a workout.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
     }

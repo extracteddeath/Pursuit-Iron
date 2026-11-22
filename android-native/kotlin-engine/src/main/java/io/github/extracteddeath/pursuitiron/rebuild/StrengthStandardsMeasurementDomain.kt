@@ -28,9 +28,11 @@ object StrengthStandardsMeasurementDomain {
         }
     }
 
+    val estimateRepRange = 1..10
+
     /** Epley estimate for 1–10 real reps; do not extrapolate very high reps. */
     fun epley(load:BigDecimal,reps:Int):BigDecimal? {
-        if(reps !in 1..10 || load<=BigDecimal.ZERO ||
+        if(reps !in estimateRepRange || load<=BigDecimal.ZERO ||
             load>BigDecimal("100000"))return null
         if(reps==1)return load
         return load.multiply(BigDecimal.valueOf((30+reps).toLong()))

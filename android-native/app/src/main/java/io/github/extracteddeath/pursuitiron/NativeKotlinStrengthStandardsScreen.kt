@@ -314,7 +314,7 @@ internal fun NativeKotlinStrengthStandardsScreen(
     }
     val facts=(result as? NativeKotlinMixedFactsReadResult.Review)?.facts
     val strengthClub=remember(facts) { facts?.let(NativeStrengthClubDomain::review) }
-    val completed=facts?.mostRepsAtLoad.orEmpty()
+    val completed=facts?.estimateSetsAtLoad.orEmpty()
         .filter{it.key.basis==LoadBasis.BARBELL_TOTAL}
     val displayUnit=LoadUnit.valueOf(bodyweightUnit)
     val bodyweight=runCatching{BigDecimal(bodyweightText.trim())}.getOrNull()

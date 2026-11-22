@@ -62,6 +62,8 @@ data class NativeKotlinMixedHistoryFacts(
     val lastByExercise: Map<String, NativeMixedLastExercise>,
     val highestCompletedLoad: Map<NativeMixedPhysicalLoadKey, NativeMixedCompletedLoadFact>,
     val mostRepsAtLoad: List<NativeMixedCompletedLoadFact>,
+    /** Best eligible barbell set at each load for a 1RM estimate. */
+    val estimateSetsAtLoad: List<NativeMixedCompletedLoadFact>,
     /** Separate actual single evidence; cannot be replaced by 5-rep record at same weight. */
     val bestLoggedSingleByLoad: Map<NativeMixedPhysicalLoadKey,NativeMixedCompletedLoadFact> = emptyMap(),
     /** Factual best completed weights, not certified PRs or interchangeable stacks. */
@@ -131,6 +133,7 @@ object NativeKotlinMixedHistoryFactsDomain {
         val highest = linkedMapOf<NativeMixedPhysicalLoadKey, NativeMixedCompletedLoadFact>()
         val repsAtLoad = linkedMapOf<Pair<NativeMixedPhysicalLoadKey, BigDecimal>,
             NativeMixedCompletedLoadFact>()
+        val estimateSets = linkedMapOf<Pair<NativeMixedPhysicalLoadKey, BigDecimal>, NativeMixedCompletedLoadFact>()
         val bestSingle = linkedMapOf<NativeMixedPhysicalLoadKey,NativeMixedCompletedLoadFact>()
         val highestByMachine=linkedMapOf<NativeMixedMachineLoadKey,
             NativeMixedCompletedLoadFact>()
@@ -260,6 +263,10 @@ object NativeKotlinMixedHistoryFactsDomain {
                         (physical.compareTo(old.actualLoad) == 0 && actual.reps >= old.reps))
                         highest[key] = record
                     val loadKey = key to physical
+                    if (target.basis == LoadBasis.BARBELL_TOTAL &&
+                        actual.reps in StrengthStandardsMeasurementDomain.estimateRepRange &&
+                        actual.reps >= (estimateSets[loadKey]?.reps ?: 0))
+                        estimateSets[loadKey] = record
                     if (repsAtLoad[loadKey] == null ||
                         actual.reps >= checkNotNull(repsAtLoad[loadKey]).reps)
                         repsAtLoad[loadKey] = record
@@ -297,6 +304,7 @@ object NativeKotlinMixedHistoryFactsDomain {
             Collections.unmodifiableMap(last),
             Collections.unmodifiableMap(highest),
             Collections.unmodifiableList(repsAtLoad.values.toList()),
+            Collections.unmodifiableList(estimateSets.values.toList()),
             Collections.unmodifiableMap(bestSingle),
             Collections.unmodifiableMap(highestByMachine),
             Collections.unmodifiableMap(singlesByMachine),

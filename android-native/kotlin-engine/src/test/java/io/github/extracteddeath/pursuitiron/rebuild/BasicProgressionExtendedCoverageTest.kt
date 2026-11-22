@@ -86,6 +86,25 @@ class BasicProgressionExtendedCoverageTest {
                 listOf(10,10,10),"40",assistant,assist)))
     }
 
+    @Test fun zeroSelectorIsTheEndOfAssistedProgressionForBothStockFormats() {
+        val mode = BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION
+        val basis = LoadBasis.ASSISTANCE_COUNTERWEIGHT
+        val inventories = listOf(
+            VerifiedLoadStock.Stack(LoadUnit.LB, basis, n("0"), n("5"), n("15")),
+            VerifiedLoadStock.Totals(LoadUnit.LB, basis, listOf("0.00","5","10","15").map(::n))
+        )
+        for (inventory in inventories) {
+            fun earned(load: String) = BasicProgressionPolicyDomain.review(
+                request(mode, weight=load, scope=scope.copy(basis=basis), stock=inventory)
+            ) as BasicProgressionResult.Candidate
+            assertEquals(listOf(n("5"), n("5"), n("5")), earned("10").proposedWorkingLoads)
+            val lastAssisted = earned("5")
+            assertEquals(BasicProgressionDecision.MAXIMUM_LOAD_REACHED, lastAssisted.decision)
+            assertEquals(listOf(n("5"), n("5"), n("5")), lastAssisted.proposedWorkingLoads)
+            assertTrue(lastAssisted.increasedOrdinals.isEmpty())
+        }
+    }
+
     @Test fun weightedAndUnweightedUseIdenticalEarnedOneRepRule() {
         assertEquals(listOf(9,8,10),BasicRepTargetStepDomain.advance(
             listOf(8,8,10),listOf(8,7,10),band))

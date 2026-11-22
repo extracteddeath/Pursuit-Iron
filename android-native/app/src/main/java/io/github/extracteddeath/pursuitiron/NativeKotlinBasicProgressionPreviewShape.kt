@@ -22,50 +22,12 @@ internal object NativeKotlinBasicProgressionPreviewShape {
             is CustomBasicHistoryResult.Rejected -> return true
         }
         val slot = slots.singleOrNull { it.slotId == slotId } ?: return false
-        if (slot.sets.isEmpty() ||
+        if (slot.sets.any { it.slotId != slotId || it.setKey.isBlank() } ||
             slot.sets.map { it.setKey }.distinct().size != slot.sets.size ||
             slot.sets.map { it.ordinalInSlot } != (1..slot.sets.size).toList())
             return false
-        val working = slot.sets.filter {
-            it.prescription.type == DraftSetType.WORKING
-        }
-        if (working.isEmpty()) return false
-        return when (projection) {
-            is CustomBasicHistoryResult.ManualBodyweight ->
-                working.all { it.prescription.load == DraftSetLoad.ExplicitBodyweight }
-            is CustomBasicHistoryResult.UnloadedReviewed -> {
-                val candidate = projection.candidate
-                working.all { it.prescription.load == DraftSetLoad.ExplicitBodyweight } &&
-                    candidate.proposedExactReps.size == working.size &&
-                    candidate.advancedOrdinals.all { it in working.indices } &&
-                    candidate.proposedExactReps.withIndex().all { (index, reps) ->
-                        reps in working[index].prescription.reps.minimum..
-                            working[index].prescription.reps.maximum
-                    }
-            }
-            is CustomBasicHistoryResult.Reviewed -> {
-                val candidate = projection.candidate
-                val proposedReps = candidate.proposedRepTargets
-                working.all { it.prescription.load is DraftSetLoad.Verified } &&
-                    candidate.proposedWorkingLoads.size == working.size &&
-                    working.indices.all { index ->
-                        val load = working[index].prescription.load as DraftSetLoad.Verified
-                        KotlinSetNumberAuthorityDomain.validPrescribedLoad(load.value,load.basis) &&
-                            KotlinSetNumberAuthorityDomain.validPrescribedLoad(
-                                candidate.proposedWorkingLoads[index],load.basis)
-                    } &&
-                    candidate.increasedOrdinals.all { it in working.indices } &&
-                    candidate.changedRepOrdinals.all { it in working.indices } &&
-                    (candidate.dynamicSetDecisions.isEmpty() ||
-                        candidate.dynamicSetDecisions.size == working.size) &&
-                    (proposedReps == null && candidate.changedRepOrdinals.isEmpty() ||
-                        proposedReps != null && proposedReps.size == working.size &&
-                            proposedReps.withIndex().all { (index, reps) ->
-                                reps in working[index].prescription.reps.minimum..
-                                    working[index].prescription.reps.maximum
-                            })
-            }
-            is CustomBasicHistoryResult.Rejected -> true
-        }
+        return CustomBasicProgressionDraftDomain.reviewedSets(
+            slotId, slot.sets.map { it.prescription }, projection
+        ) != null
     }
 }

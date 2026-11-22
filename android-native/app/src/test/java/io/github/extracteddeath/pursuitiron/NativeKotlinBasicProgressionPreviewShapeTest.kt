@@ -41,9 +41,17 @@ class NativeKotlinBasicProgressionPreviewShapeTest {
     @Test fun signedWorkingRowsSupportIndependentDynamicSets() {
         assertTrue(NativeKotlinBasicProgressionPreviewShape.canRender(
             listOf(slot()),reviewed()))
-        assertTrue(NativeKotlinBasicProgressionPreviewShape.canRender(
+        assertFalse(NativeKotlinBasicProgressionPreviewShape.canRender(
             listOf(slot()),reviewed(candidate().copy(
                 proposedRepTargets=listOf(9,10),changedRepOrdinals=setOf(0)))))
+    }
+
+    @Test fun staleWeightCannotBeShownAsAnUnchangedWorkingSet() {
+        val stale=candidate().copy(proposedWorkingLoads=listOf(BigDecimal("30"),BigDecimal("25")))
+        assertFalse(NativeKotlinBasicProgressionPreviewShape.canRender(listOf(slot()),reviewed(stale)))
+        val source=slot()
+        val wrongOwner=source.copy(sets=source.sets.map { it.copy(slotId="other") })
+        assertFalse(NativeKotlinBasicProgressionPreviewShape.canRender(listOf(wrongOwner),reviewed()))
     }
 
     @Test fun missingOrDuplicateSlotAndChangedSourceOrdinalRefuseBeforeComposeIndexing() {

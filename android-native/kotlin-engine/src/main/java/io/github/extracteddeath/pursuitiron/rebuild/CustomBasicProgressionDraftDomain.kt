@@ -15,6 +15,17 @@ object CustomBasicProgressionDraftDomain {
         original: List<CustomAuthoredSet>,
         projection: CustomBasicHistoryResult
     ): List<CustomAuthoredSet>? {
+        val rows = reviewedSets(slotId, original, projection) ?: return null
+        return rows.takeIf { rows != original }
+    }
+
+    /** The preview and week editor consume the same checked rows. A valid hold
+     * returns the original prescription, so only a real change creates an edit. */
+    fun reviewedSets(
+        slotId: String,
+        original: List<CustomAuthoredSet>,
+        projection: CustomBasicHistoryResult
+    ): List<CustomAuthoredSet>? {
         if (slotId.isBlank() || original.size !in 1..20) return null
         val indexes = original.indices.filter { original[it].type == DraftSetType.WORKING }
         if (indexes.isEmpty()) return null
@@ -26,7 +37,8 @@ object CustomBasicProgressionDraftDomain {
                 val candidate = projection.candidate
                 if (candidate.proposedWorkingLoads.size != working.size ||
                     candidate.proposedRepTargets?.size?.let { it != working.size } == true ||
-                    working.any { it.load !is DraftSetLoad.Verified || it.amplifier != null })
+                    working.any { it.load !is DraftSetLoad.Verified ||
+                        it.amplifier != null && candidate.strategy != BasicProgressionStrategy.MANUAL_LOGGING })
                     return null
 
                 val changedLoads = mutableSetOf<Int>()
@@ -36,7 +48,8 @@ object CustomBasicProgressionDraftDomain {
                     val before = original[setIndex]
                     val oldLoad = before.load as DraftSetLoad.Verified
                     val proposedLoad = candidate.proposedWorkingLoads[workingIndex]
-                    if (!KotlinSetNumberAuthorityDomain.validPrescribedLoad(proposedLoad,oldLoad.basis))
+                    if (!KotlinSetNumberAuthorityDomain.validPrescribedLoad(oldLoad.value,oldLoad.basis) ||
+                        !KotlinSetNumberAuthorityDomain.validPrescribedLoad(proposedLoad,oldLoad.basis))
                         return null
                     if (proposedLoad.compareTo(oldLoad.value) != 0)
                         changedLoads.add(workingIndex)
@@ -48,7 +61,7 @@ object CustomBasicProgressionDraftDomain {
                     if (proposedReps != before.exactRepTarget)
                         changedReps.add(workingIndex)
                     edits[setIndex] = before.copy(
-                        load = oldLoad.copy(value = proposedLoad),
+                        load = if (workingIndex in changedLoads) oldLoad.copy(value = proposedLoad) else oldLoad,
                         exactRepTarget = proposedReps
                     )
                 }
@@ -75,10 +88,13 @@ object CustomBasicProgressionDraftDomain {
                     if (target != before.exactRepTarget) advanced.add(workingIndex)
                     edits[setIndex] = before.copy(exactRepTarget = target)
                 }
-                if (advanced != candidate.advancedOrdinals || advanced.isEmpty()) null
+                if (advanced != candidate.advancedOrdinals) null
                 else edits
             }
-            else -> null
+            is CustomBasicHistoryResult.ManualBodyweight -> original.takeIf {
+                projection.slotId == slotId && working.all { it.load == DraftSetLoad.ExplicitBodyweight }
+            }
+            is CustomBasicHistoryResult.Rejected -> null
         }
     }
 
@@ -98,7 +114,6 @@ object CustomBasicProgressionDraftDomain {
         changedLoads: Set<Int>,
         changedReps: Set<Int>
     ): Boolean {
-        if (changedLoads.isEmpty() && changedReps.isEmpty()) return false
         val strategy = candidate.strategy
         val all = working.indices.toSet()
         val loads = working.map { it.load as DraftSetLoad.Verified }
@@ -115,8 +130,11 @@ object CustomBasicProgressionDraftDomain {
         if (candidate.dynamicSetDecisions.isNotEmpty() &&
             (strategy != BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION ||
                 candidate.dynamicSetDecisions.size != working.size ||
-                changedLoads.any {
-                    candidate.dynamicSetDecisions[it] != BasicProgressionDecision.EARNED_INCREMENT
+                candidate.dynamicSetDecisions.withIndex().any { (index, decision) ->
+                    decision !in setOf(BasicProgressionDecision.EARNED_INCREMENT,
+                        BasicProgressionDecision.BUILD_REPS, BasicProgressionDecision.MAXIMUM_LOAD_REACHED,
+                        BasicProgressionDecision.AUTHORIZED_INCREMENT_TOO_SMALL) ||
+                        (index in changedLoads) != (decision == BasicProgressionDecision.EARNED_INCREMENT)
                 })) return false
 
         // Uniform strategies cannot turn an atomic earned progression into
@@ -127,9 +145,25 @@ object CustomBasicProgressionDraftDomain {
             BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION,
             BasicProgressionStrategy.REP_LADDER_PROGRESSION,
             BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION)
-        if (uniform && loads.any { it.unit != loads.first().unit ||
-                it.basis != loads.first().basis ||
-                it.value.compareTo(loads.first().value) != 0 }) return false
+        if (loads.any { it.unit != loads.first().unit || it.basis != loads.first().basis }) return false
+        if (uniform && (loads.any { it.value.compareTo(loads.first().value) != 0 } ||
+                candidate.proposedWorkingLoads.any { it.compareTo(candidate.proposedWorkingLoads.first()) != 0 }))
+            return false
+
+        if (changedLoads.isEmpty() && changedReps.isEmpty()) {
+            val repMethod = strategy == BasicProgressionStrategy.REP_TARGET_PROGRESSION ||
+                strategy == BasicProgressionStrategy.REP_LADDER_PROGRESSION
+            if (repMethod != (candidate.proposedRepTargets != null)) return false
+            return when (candidate.decision) {
+                BasicProgressionDecision.MANUAL_REPEAT -> strategy == BasicProgressionStrategy.MANUAL_LOGGING
+                BasicProgressionDecision.BUILD_REPS -> strategy != BasicProgressionStrategy.MANUAL_LOGGING
+                BasicProgressionDecision.MAXIMUM_LOAD_REACHED,
+                BasicProgressionDecision.AUTHORIZED_INCREMENT_TOO_SMALL ->
+                    strategy != BasicProgressionStrategy.MANUAL_LOGGING && strategy != BasicProgressionStrategy.REP_TARGET_PROGRESSION
+                BasicProgressionDecision.REP_CEILING_REACHED -> strategy == BasicProgressionStrategy.REP_TARGET_PROGRESSION
+                else -> false
+            }
+        }
 
         fun oneRepAtATime(): Boolean =
             candidate.proposedRepTargets != null && working.indices.all { index ->

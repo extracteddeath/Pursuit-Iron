@@ -13,6 +13,29 @@ class CustomBasicProgressionDraftDomainTest {
     private fun weighted(candidate: BasicProgressionResult.Candidate) =
         CustomBasicHistoryResult.Reviewed("previous",1,candidate,"block",0,"slot",null)
 
+    @Test fun uniformProgressionNeverIssuesDifferentNextLoadsForIdenticalSets() {
+        val candidate=weighted(BasicProgressionResult.Candidate(
+            BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,
+            listOf(BigDecimal(105),BigDecimal(110)),setOf(0,1),
+            BasicProgressionDecision.EARNED_INCREMENT,"previous"))
+        val source=listOf(set(100),set(100))
+        assertNull(CustomBasicProgressionDraftDomain.reviewedSets("slot",source,candidate))
+        assertNull(CustomBasicProgressionDraftDomain.forWeekEdit("slot",source,candidate))
+    }
+
+    @Test fun equivalentDecimalHoldIsVisibleButCannotCreateAnEdit() {
+        val candidate=weighted(BasicProgressionResult.Candidate(
+            BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION,
+            listOf(BigDecimal("100.00")),emptySet(),BasicProgressionDecision.BUILD_REPS,
+            "previous",dynamicSetDecisions=listOf(BasicProgressionDecision.BUILD_REPS)))
+        val source=listOf(set(100))
+        assertEquals(source,CustomBasicProgressionDraftDomain.reviewedSets("slot",source,candidate))
+        assertNull(CustomBasicProgressionDraftDomain.forWeekEdit("slot",source,candidate))
+        val falseIncrease=weighted(candidate.candidate.copy(
+            dynamicSetDecisions=listOf(BasicProgressionDecision.EARNED_INCREMENT)))
+        assertNull(CustomBasicProgressionDraftDomain.reviewedSets("slot",source,falseIncrease))
+    }
+
     @Test fun aPerSetEarnedIncreasePreservesWarmupsAndEveryOtherField() {
         val warmup=set(40).copy(type=DraftSetType.WARMUP)
         val original=listOf(warmup,set(100),set(105))

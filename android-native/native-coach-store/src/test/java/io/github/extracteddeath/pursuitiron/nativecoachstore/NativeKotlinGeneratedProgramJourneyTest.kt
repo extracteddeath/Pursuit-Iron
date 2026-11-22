@@ -645,6 +645,106 @@ class NativeKotlinGeneratedProgramJourneyTest {
             correctsEventId=corrected.eventId)) is NativeCustomJournalResult.Durable)
     }
 
+    @Test fun hardSetAdviceCannotRewriteFourOrMoreWorkingSetsOrNextSession() {
+        val (cycle, inputs) = saveGenerated()
+        val day = cycle.blocks.single().days.minBy { it.weekday }
+        val workoutId = "load-stability-four-plus"
+        val disk = Disk()
+        assertTrue(disk.prepared.prepare(owner, workoutId, cycleId, 1,
+            day.weekday, inputs) is NativeCustomPrepareResult.Prepared)
+        var journal = (Disk().journals.issue(owner, workoutId, cycleId, 1,
+            day.weekday, inputs) as NativeCustomJournalResult.Durable).issued.journal
+        val issued = journal.snapshot
+        val allSets = issued.slots.flatMap { it.sets }
+        assertTrue("A real generated day must contain at least four working sets",
+            allSets.count { it.prescription.type == DraftSetType.WORKING } >= 4)
+        val selected = issued.slots.first { slot ->
+            val work = slot.sets.filter { it.prescription.type == DraftSetType.WORKING }
+            work.size >= 2 && (work.first().prescription.load as? DraftSetLoad.Verified)
+                ?.basis == LoadBasis.DUMBBELL_PER_HAND
+        }
+        val work = selected.sets.filter { it.prescription.type == DraftSetType.WORKING }
+        val hard = work.first()
+        val futureWorking = work[1]
+        val intendedLoads = allSets.associate { it.setKey to it.prescription.load }
+        var adviceChecked = false
+        for ((index, set) in allSets.withIndex()) {
+            val prescription = set.prescription
+            val isHard = set.setKey == hard.setKey
+            val reportedReps = if (isHard) prescription.reps.minimum - 1
+                else prescription.reps.minimum
+            assertTrue(reportedReps >= 0)
+            val actual = when (val load = prescription.load) {
+                is DraftSetLoad.Verified ->
+                    KotlinPerformedSet(load.value, load.unit, reportedReps,
+                        if (isHard) 0 else if (prescription.type == DraftSetType.WORKING)
+                            2 else null)
+                DraftSetLoad.ExplicitBodyweight ->
+                    KotlinPerformedSet(null, null, reportedReps,
+                        if (isHard) 0 else if (prescription.type == DraftSetType.WORKING)
+                            2 else null)
+            }
+            journal = (Disk().journals.record(owner, workoutId,
+                CustomWorkoutJournalOperation.Record(
+                    "load-proof-$index", journal.revision,
+                    CustomWorkoutVisitKey(set.setKey, CustomWorkoutVisitPart.MAIN),
+                    KotlinJournalSetOutcome.COMPLETED, actual))
+                as NativeCustomJournalResult.Durable).issued.journal
+            // A lost process/restart must not change targets, even after
+            // near-failure actuals are durably recorded.
+            val cold = (Disk().journals.open(owner, workoutId)
+                as NativeCustomJournalResult.Durable).issued.journal
+            assertEquals(issued, cold.snapshot)
+            assertEquals(intendedLoads, cold.snapshot.slots.flatMap { it.sets }
+                .associate { it.setKey to it.prescription.load })
+            assertEquals(actual, (cold.effectiveVisits.getValue(
+                CustomWorkoutVisitKey(set.setKey, CustomWorkoutVisitPart.MAIN))
+                .operation as CustomWorkoutJournalOperation.Record).performed)
+            if (isHard) {
+                val review = Disk().liveCoach.review(owner, workoutId,
+                    futureWorking.setKey, CoachReadiness.NORMAL, false, n("5"))
+                assertTrue(review.toString(), review is LiveSetCoachResult.Reviewed)
+                val suggested = review as LiveSetCoachResult.Reviewed
+                assertEquals(InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD,
+                    suggested.coaching.direction)
+                assertFalse(suggested.canModifyWorkout)
+                assertEquals(issued, (Disk().journals.open(owner, workoutId)
+                    as NativeCustomJournalResult.Durable).issued.journal.snapshot)
+                adviceChecked = true
+            }
+        }
+        assertTrue(adviceChecked)
+        assertEquals(0, journal.unresolvedVisitCount)
+        val finish = NativeKotlinCustomHistoryTransaction(
+            Disk().history, Disk().journals, Disk().fence, identity).complete(
+                owner, athlete, workoutId,
+                CustomWorkoutJournalOperation.Finish(
+                    "load-proof-finish", journal.revision))
+        assertTrue(finish.toString(), finish is NativeCustomFinishResult.Committed)
+        val finished = (Disk().journals.open(owner, workoutId)
+            as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals(issued, finished.snapshot)
+        assertEquals(allSets.size, finished.effectiveVisits.size)
+        val history = (Disk().timeline.read(owner, athlete)
+            as NativeKotlinMixedHistoryReadResult.Review).timeline
+        val logged = history.completions.single() as NativeKotlinMixedHistoryCompletion.Custom
+        assertEquals(workoutId, logged.evidence.workoutId)
+        assertEquals(allSets.size, logged.evidence.visits.count {
+            it.part == CustomWorkoutVisitPart.MAIN
+        })
+        // Logged fatigue is historical evidence, never a write to the signed
+        // cycle or a retroactive change in the next untrained day.
+        assertEquals(cycle, (Disk().drafts.read(owner, cycleId)
+            as NativeCustomDraftReadResult.Found).draft)
+        val second = cycle.blocks.single().days.sortedBy { it.weekday }[1]
+        assertEquals(NativeCustomNextCycleSlot.Next(1, second.weekday,
+            second.label), Disk().next(inputs))
+        val nextWeek = (Disk().preflight.inspect(owner, cycleId, 2,
+            day.weekday, inputs) as NativeCustomPreflightResult.ReviewedPreview).session
+        assertEquals(cycle.blocks.single().days.first { it.weekday == day.weekday }
+            .slots.map { it.exerciseId }, nextWeek.slots.map { it.exerciseId })
+    }
+
     @Test fun savedV2ProgramColdReopensWithoutBeingRegeneratedWithV3Timing() {
         val (cycle,inputs)=saveGenerated(CoachFirstProgramStartDomain.PREVIOUS_POLICY_VERSION)
         val disk=Disk()

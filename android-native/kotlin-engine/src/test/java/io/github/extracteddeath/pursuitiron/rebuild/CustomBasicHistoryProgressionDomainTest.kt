@@ -274,12 +274,16 @@ class CustomBasicHistoryProgressionDomainTest {
             stamp=fullB.snapshot.stamp.copy(
                 athleteProfileRevision="new-profile-review")))
         for (invalid in listOf(incomplete,duplicate,changedRepBand,
-            changedLoad,uncompleted,wrongStage,sourceDrift)) {
+            changedLoad,uncompleted,wrongStage)) {
             val result=onA(invalid)
             assertEquals(result.toString(),
                 CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
                 (result as CustomBasicHistoryResult.Rejected).reason)
         }
+        val changedSource=onA(sourceDrift)
+        assertEquals(changedSource.toString(),
+            CustomBasicHistoryRefusal.HISTORY_SOURCE_CHANGED,
+            (changedSource as CustomBasicHistoryResult.Rejected).reason)
     }
 
     @Test fun issuedMachineWithNoActualStationNeverBecomesGenericOrOtherStationEvidence() {

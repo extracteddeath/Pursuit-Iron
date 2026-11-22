@@ -106,6 +106,28 @@ class CustomCycleTransitionDomainTest {
                 adaptProgressionMethod=true)).status)
     }
 
+    @Test fun retainedRepMethodRequiresEveryTargetAfterAnEdit() {
+        val template = cycle()
+        val block = template.blocks.single()
+        val day = block.days.single()
+        val slot = day.slots.single().copy(progressionMethod = SavedProgressionMethod.REP_TARGETS)
+        fun withTargets(revision: Int, lastTarget: Int?) = template.copy(
+            revision = revision,
+            blocks = listOf(block.copy(days = listOf(day.copy(slots = listOf(
+                slot.copy(sets = listOf(set().copy(exactRepTarget = 8),
+                    set().copy(exactRepTarget = lastTarget)))
+            )))))
+        )
+        val original = withTargets(3, 9)
+        val permissions = CustomCycleCoachPermissions(adaptReps = true)
+        for (origin in CustomCycleEditOrigin.values()) {
+            assertEquals(CustomCycleTransitionStatus.INVALID_SOURCE_OR_CANDIDATE,
+                transition(original, withTargets(4, null), permissions, origin).status)
+            assertEquals(CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW,
+                transition(original, withTargets(4, 10), permissions, origin).status)
+        }
+    }
+
     @Test fun exactRepWeekOverrideNeedsExplicitRepAndWeekPermissions() {
         val source=cycle()
         val before=source.blocks.single().days.single().slots.single().sets

@@ -802,7 +802,8 @@ class NativeKotlinCustomHistoryTransactionTest {
         assertTrue(transactions.complete("owner-1","athlete-1",
             "workout-2",finish()) is NativeCustomFinishResult.Committed)
         assertEquals(NativeCustomCorrectionTransactionResult.Rejected(
-            NativeCustomCorrectionTransactionRefusal.CORRECTION_REJECTED),
+            NativeCustomCorrectionTransactionRefusal.CORRECTION_REJECTED,
+            CustomSavedCorrectionRefusal.REVISION_CONFLICT),
             customEdits.correct("owner-1","athlete-1",
                 "workout-2",correction(revision=8)))
         val ledger=(history.open("owner-1","athlete-1")

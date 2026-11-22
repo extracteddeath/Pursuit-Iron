@@ -98,7 +98,7 @@ internal fun NativeKotlinBasicProgressionPreview(
                 }
             }
         }
-        Text("Preview only. Refresh after logging or editing a workout.",
+        Text("Read-only suggestion from verified workout history. Refresh after logging or editing a workout.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
     }

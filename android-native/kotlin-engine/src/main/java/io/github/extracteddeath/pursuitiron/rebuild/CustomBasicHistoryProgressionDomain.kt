@@ -31,6 +31,7 @@ enum class CustomBasicHistoryRefusal {
     NO_SAVED_BASIC_METHOD,
     AUTHORED_OR_SPECIALIST_OWNS_LOAD,
     EXACT_REP_TARGETS_UNAVAILABLE,
+    TARGET_ALREADY_TRAINED,
     NO_COMPARABLE_HISTORY,
     LAST_VISIT_INCOMPATIBLE,
     HISTORY_SOURCE_CHANGED,
@@ -216,9 +217,13 @@ object CustomBasicHistoryProgressionDomain {
                 snap.shortSessionOmittedSetKeys!=evidence.shortSessionOmittedSetKeys)
                 return no(CustomBasicHistoryRefusal.INVALID_HISTORY)
             if(snap.stamp.cycleId!=cycle.cycleId ||
-                snap.stamp.gymId!=next.stamp.gymId ||
                 snap.blockId!=next.blockId || snap.weekday!=next.weekday)
                 continue
+            // Calendar ownership is independent of which gym or station
+            // supplied the performance. Only an upcoming day can advance.
+            if(snap.absoluteWeek>=next.absoluteWeek)
+                return no(CustomBasicHistoryRefusal.TARGET_ALREADY_TRAINED)
+            if(snap.stamp.gymId!=next.stamp.gymId)continue
             val historicalSlot=snap.slots.singleOrNull {it.slotId==request.slotId}
                 ?:continue
             if(historicalSlot.exerciseId!=selected.exerciseId)continue

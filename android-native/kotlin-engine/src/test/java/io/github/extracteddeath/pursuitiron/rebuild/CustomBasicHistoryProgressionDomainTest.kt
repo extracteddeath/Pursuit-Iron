@@ -105,6 +105,25 @@ class CustomBasicHistoryProgressionDomainTest {
         assertFalse(result.mayModifyHistory)
     }
 
+    @Test fun alreadyTrainedWeeksCannotReceiveBasicProgressionFromAnyStation() {
+        val prior=completed(1,machine="A")
+        for(week in listOf(2,3)) {
+            val later=completed(2,week=week,machine="B")
+            val otherGym=later.copy(snapshot=later.snapshot.copy(
+                stamp=later.snapshot.stamp.copy(gymId="away")))
+            for(session in listOf(later,otherGym)) {
+                val result=review(next=snapshot(2,machine="A"),machine="A",
+                    sessions=listOf(prior,session))
+                assertEquals(CustomBasicHistoryRefusal.TARGET_ALREADY_TRAINED,
+                    (result as CustomBasicHistoryResult.Rejected).reason)
+            }
+        }
+        val otherDay=completed(2,week=2,day=2,machine="A")
+        val result=review(next=snapshot(2,machine="A"),machine="A",
+            sessions=listOf(prior,otherDay)) as CustomBasicHistoryResult.Reviewed
+        assertEquals("workout-1",result.historyWorkoutId)
+    }
+
     @Test fun autoUsesTheReviewedMovementToChooseIndependentSetProgression() {
         val movement = GeneratedAdaptiveBlockFixture.generation().catalog.first { it.exerciseId == "bench" }
             .copy(exerciseId = "press")

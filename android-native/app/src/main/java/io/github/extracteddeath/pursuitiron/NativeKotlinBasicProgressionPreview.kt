@@ -36,6 +36,8 @@ private fun CustomBasicHistoryResult.Rejected.previewExplanation(): String {
             "Exact authored weekly targets or a specialist progression already control this workout."
         CustomBasicHistoryRefusal.EXACT_REP_TARGETS_UNAVAILABLE ->
             "This method needs exact per-set rep targets, not just a rep range."
+        CustomBasicHistoryRefusal.TARGET_ALREADY_TRAINED ->
+            "This training day has already been logged for this week or a later week. Select the next untrained week."
         CustomBasicHistoryRefusal.NO_COMPARABLE_HISTORY ->
             "No comparable finished workout has been verified for this training day and machine."
         CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE ->

@@ -1174,6 +1174,93 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(days.size,complete.customPrepared)
         assertEquals(days.size,complete.customIssued)
         assertEquals(0,complete.customUnfinished)
+        if(includeNewTargets) {
+            // The saved tibialis target is an EXACT current rep value,
+            // separate from its original approved lower/upper range. The
+            // first recorded workout was also corrected after Finish above.
+            val day=days.first()
+            val sourceSlot=day.slots.single {it.exerciseId=="tibialis-raise"}
+            assertTrue(sourceSlot.progressionMethod in setOf(
+                SavedProgressionMethod.BODYWEIGHT_REPS,SavedProgressionMethod.LADDER))
+            val firstTargets=sourceSlot.sets.filter {
+                it.type==DraftSetType.WORKING
+            }.map { checkNotNull(it.exactRepTarget) }
+            val ownerReview=Disk()
+            val basic=NativeKotlinCustomBasicNextReview(
+                ownerReview.fence,identity,ownerReview.drafts,ownerReview.sources,
+                ownerReview.preflight,ownerReview.timeline,ownerReview.journals,
+                ownerReview.machines)
+            val read=basic.reviewAuthored(owner,cycleId,inputs,2,day.weekday,
+                sourceSlot.slotId,"bodyweight-next-2",BigDecimal.ZERO)
+            assertTrue(read.toString(),
+                read is NativeCustomBasicNextReadResult.Reviewed)
+            val signed=read as NativeCustomBasicNextReadResult.Reviewed
+            val proposal=signed.projection
+            assertTrue(proposal.toString(),proposal is CustomBasicHistoryResult.UnloadedReviewed)
+            val target=proposal as CustomBasicHistoryResult.UnloadedReviewed
+            assertEquals(firstId,target.historyWorkoutId)
+            assertTrue(target.candidate.advancedOrdinals.isNotEmpty())
+            assertTrue(target.candidate.proposedExactReps.indices.all { index ->
+                target.candidate.proposedExactReps[index] in
+                    sourceSlot.sets.filter{it.type==DraftSetType.WORKING}[index].reps.let{
+                        it.minimum..it.maximum
+                    }
+            })
+            val originalWeekTwo=signed.next
+            val oldSets=originalWeekTwo.slots.single {
+                it.slotId==sourceSlot.slotId
+            }.sets.map {it.prescription}
+            assertEquals(firstTargets,oldSets.filter {
+                it.type==DraftSetType.WORKING
+            }.map {it.exactRepTarget})
+            val offered=checkNotNull(CustomBasicProgressionDraftDomain.forWeekEdit(
+                sourceSlot.slotId,oldSets,proposal))
+            assertEquals(oldSets.map{it.load},offered.map{it.load})
+            assertEquals(oldSets.map{it.reps},offered.map{it.reps})
+            assertEquals(oldSets.map{it.targetRir},offered.map{it.targetRir})
+            assertNotEquals(oldSets,offered)
+            assertFalse(signed.mayIssueWorkout)
+            assertFalse(signed.maySaveProgram)
+
+            val compared=CustomCoachWeekEditDomain.review(cycle,cycle.revision,
+                2,day.weekday,sourceSlot.slotId,offered,replayInput.setup,
+                catalog,inputs)
+            assertTrue(compared.toString(),compared is CustomCoachWeekEditResult.Reviewed)
+            val changed=(compared as CustomCoachWeekEditResult.Reviewed).review
+            assertFalse(changed.mayIssueWorkout)
+            assertEquals(cycle,(Disk().drafts.read(owner,cycleId)
+                as NativeCustomDraftReadResult.Found).draft)
+            val futureBefore=(Disk().preflight.inspect(owner,cycleId,
+                3,day.weekday,inputs) as NativeCustomPreflightResult.ReviewedPreview).session
+            assertTrue(Disk().drafts.save(owner,cycleId,cycle.revision,
+                changed.proposal.draft) is NativeCustomDraftWriteResult.Committed)
+            val oldSignoff=(Disk().consent.read(owner,cycleId,inputs)
+                as NativeCustomSignoffRead.Found)
+            assertFalse(oldSignoff.isCurrent)
+            assertFalse(Disk().preflight.inspect(owner,cycleId,2,day.weekday,inputs)
+                is NativeCustomPreflightResult.ReviewedPreview)
+            assertTrue(Disk().consent.confirm(owner,cycleId,changed.proposal.draft.revision,
+                1,oldSignoff.receipt.recordRevision,inputs,true)
+                is NativeCustomSignoffWrite.Committed)
+            val accepted=(Disk().preflight.inspect(owner,cycleId,2,day.weekday,inputs)
+                as NativeCustomPreflightResult.ReviewedPreview).session
+            assertEquals(offered,accepted.slots.single {
+                it.slotId==sourceSlot.slotId
+            }.sets.map{it.prescription})
+            assertEquals(futureBefore.slots,(Disk().preflight.inspect(owner,cycleId,
+                3,day.weekday,inputs)
+                as NativeCustomPreflightResult.ReviewedPreview).session.slots)
+            val nextWorkoutId="bodyweight-approved-next"
+            assertTrue(Disk().prepared.prepare(owner,nextWorkoutId,cycleId,
+                2,day.weekday,inputs) is NativeCustomPrepareResult.Prepared)
+            val issued=(Disk().journals.issue(owner,nextWorkoutId,cycleId,
+                2,day.weekday,inputs) as NativeCustomJournalResult.Durable).issued.journal
+            assertEquals(accepted,issued.snapshot)
+            assertEquals(accepted,(Disk().journals.open(owner,nextWorkoutId)
+                as NativeCustomJournalResult.Durable).issued.journal.snapshot)
+            assertEquals(original,(Disk().journals.open(owner,firstId)
+                as NativeCustomJournalResult.Durable).issued.journal.snapshot)
+        }
     }
 
     @Test fun basicAndCoachedReadersRejectCorruptMachineRosterWithoutFallback() {

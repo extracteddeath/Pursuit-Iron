@@ -111,7 +111,7 @@ class CustomCycleTransitionDomainTest {
         val block = template.blocks.single()
         val day = block.days.single()
         val slot = day.slots.single().copy(progressionMethod = SavedProgressionMethod.REP_TARGETS)
-        fun withTargets(revision: Int, lastTarget: Int?) = template.copy(
+        fun withTargets(revision: Long, lastTarget: Int?) = template.copy(
             revision = revision,
             blocks = listOf(block.copy(days = listOf(day.copy(slots = listOf(
                 slot.copy(sets = listOf(set().copy(exactRepTarget = 8),

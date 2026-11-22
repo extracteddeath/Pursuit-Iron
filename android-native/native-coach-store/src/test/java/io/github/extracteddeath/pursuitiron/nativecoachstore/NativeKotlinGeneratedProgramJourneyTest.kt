@@ -1236,6 +1236,30 @@ class NativeKotlinGeneratedProgramJourneyTest {
         val oldDay=(Disk().journals.open(owner,workoutId)
             as NativeCustomJournalResult.Durable).issued.journal
         assertEquals(source,oldDay.snapshot)
+        // Correct one actual load after Finish, then reopen the Plan reader from disk.
+        val correctedSet = oldDay.snapshot.slots.single { it.slotId == basicSlot.slotId }
+            .sets.first { it.prescription.type == DraftSetType.WORKING }
+        val visitKey = CustomWorkoutVisitKey(correctedSet.setKey, CustomWorkoutVisitPart.MAIN)
+        val priorRecord = oldDay.effectiveVisits.getValue(visitKey).operation as CustomWorkoutJournalOperation.Record
+        val performed = checkNotNull(priorRecord.performed)
+        val correction = CustomSavedVisitCorrection("correct-basic-load", 0, visitKey,
+            priorRecord.eventId, KotlinJournalSetOutcome.COMPLETED,
+            performed.copy(load=checkNotNull(performed.load).add(n("5"))))
+        val corrected = NativeKotlinCustomHistoryCorrectionTransaction(
+            disk.history, disk.journals, disk.corrections, disk.fence, identity)
+            .correct(owner, athlete, workoutId, correction)
+        assertTrue(corrected.toString(), corrected is NativeCustomCorrectionTransactionResult.Committed)
+        val reopenedDisk = Disk()
+        val freshReader = NativeKotlinCustomBasicNextReview(reopenedDisk.fence, identity,
+            reopenedDisk.drafts, reopenedDisk.sources, reopenedDisk.preflight, reopenedDisk.timeline,
+            reopenedDisk.journals, reopenedDisk.machines)
+        val refreshed = freshReader.reviewAuthored(owner, cycleId, inputs, 2, day.weekday,
+            basicSlot.slotId, "corrected-basic-review", n("5")) as NativeCustomBasicNextReadResult.Reviewed
+        assertEquals(BasicProgressionRefusal.BASELINE_DIFFERS_FROM_HISTORY,
+            (refreshed.projection as CustomBasicHistoryResult.Rejected).evaluatorReason)
+        assertEquals(next, refreshed.next)
+        assertEquals(cycle, (reopenedDisk.drafts.read(owner, cycleId) as NativeCustomDraftReadResult.Found).draft)
+
         val diskForEdit=Disk()
         val stored=diskForEdit.drafts.save(
             owner,cycleId,cycle.revision,revised)

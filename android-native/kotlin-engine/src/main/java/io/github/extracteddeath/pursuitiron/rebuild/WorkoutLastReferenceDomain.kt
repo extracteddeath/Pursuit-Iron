@@ -327,6 +327,40 @@ object WorkoutLastReferenceDomain {
         }
     }
 
+    /**
+     * One source-of-truth projection for BOTH workout set display and the
+     * optional "Use Last" draft helper. Machine A/B may use ONLY explicitly
+     * verified machineSets: an empty map can mean that a newer uncertain
+     * substitution invalidated older A evidence. Generic sets are not a
+     * substitute for that missing station proof.
+     *
+     * For an unconfigured legacy station ONLY, keep factual unattributed
+     * records from the generic same-day reference when no machine-specific
+     * map exists. A null machine choice never borrows A or B.
+     */
+    fun physicalStation(
+        history:WorkoutLastReferenceResult?,
+        selectedMachineId:String?
+    ):WorkoutLastReferenceResult? {
+        if(history !is WorkoutLastReferenceResult.Ready)return history
+        val requested=KotlinMachineAlternativesDomain.normalizeMachineId(
+            selectedMachineId)
+        if(selectedMachineId!=null &&
+            !KotlinMachineAlternativesDomain.validInstanceId(selectedMachineId))
+            return ready(emptyMap())
+        val facts=if(selectedMachineId==null && history.machineSets.isEmpty())
+            history.sets.filterValues {
+                it.actual?.machineInstanceId==null
+            }
+        else history.machineSets.filter { (key,value) ->
+            key.machineId==requested &&
+                (value.actual==null ||
+                    KotlinMachineAlternativesDomain.normalizeMachineId(
+                        value.actual.machineInstanceId)==requested)
+        }.mapKeys { it.key.key }
+        return ready(facts)
+    }
+
     fun composer(
         next:KotlinStagedWorkout,completed:List<ComposerReferenceSession>
     ):WorkoutLastReferenceResult {

@@ -17,6 +17,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinGymMachineAlternatives
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinMachineAlternativesDomain
+import io.github.extracteddeath.pursuitiron.rebuild.WorkoutLastReferenceDomain
 import io.github.extracteddeath.pursuitiron.rebuild.WorkoutLastReferenceResult
 import io.github.extracteddeath.pursuitiron.rebuild.WorkoutReferenceKey
 import io.github.extracteddeath.pursuitiron.rebuild.DraftSetLoad
@@ -475,15 +476,4 @@ internal fun physicalMachineLastReferences(
     previous:WorkoutLastReferenceResult?,
     selectedMachineId:String?
 ):WorkoutLastReferenceResult? =
-    if(previous is WorkoutLastReferenceResult.Ready) {
-        // Null is historical legacy only, not permission to borrow A or B.
-        val requested=KotlinMachineAlternativesDomain.normalizeMachineId(selectedMachineId)
-        val matching=if(previous.machineSets.isNotEmpty())
-            previous.machineSets.filterKeys { it.machineId==requested }
-                .mapKeys { it.key.key }
-        else previous.sets.filterValues {
-            KotlinMachineAlternativesDomain.normalizeMachineId(
-                it.actual?.machineInstanceId)==requested
-        }
-        WorkoutLastReferenceResult.Ready(matching)
-    } else previous
+    WorkoutLastReferenceDomain.physicalStation(previous,selectedMachineId)

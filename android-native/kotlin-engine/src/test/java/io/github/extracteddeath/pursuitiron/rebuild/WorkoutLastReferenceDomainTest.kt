@@ -70,6 +70,81 @@ class WorkoutLastReferenceDomainTest {
     private fun sets(result:WorkoutLastReferenceResult)=
         (result as WorkoutLastReferenceResult.Ready).sets
 
+    @Test fun explicitMachineNeverBorrowsGenericLastWithoutStationProof() {
+        val key=WorkoutReferenceKey("main-working-1")
+        val fact=WorkoutLastSetReference("old-A",1,
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("200"),LoadUnit.LB,8,2,"A"),
+            LoadBasis.MACHINE_STACK)
+        // machineSets can be intentionally empty after an unresolved newer
+        // substitute. A generic A fact alone is not station-proof for Last
+        // display, the one-tap draft fill, or a Leveling observation.
+        val ambiguous=WorkoutLastReferenceResult.Ready(mapOf(key to fact))
+        val selected=WorkoutLastReferenceDomain.physicalStation(ambiguous,"A")
+            as WorkoutLastReferenceResult.Ready
+        assertTrue(selected.sets.isEmpty())
+        assertNull(WorkoutLastDraftDomain.reviewedActual(selected,key,
+            load(200,LoadBasis.MACHINE_STACK)))
+        assertTrue((WorkoutLastReferenceDomain.physicalStation(ambiguous,null)
+            as WorkoutLastReferenceResult.Ready).sets.isEmpty())
+        assertTrue((WorkoutLastReferenceDomain.physicalStation(ambiguous,"bad machine")
+            as WorkoutLastReferenceResult.Ready).sets.isEmpty())
+        assertNull(WorkoutLastReferenceDomain.physicalStation(null,"A"))
+        assertEquals(WorkoutLastReferenceResult.Unavailable,
+            WorkoutLastReferenceDomain.physicalStation(
+                WorkoutLastReferenceResult.Unavailable,"A"))
+    }
+
+    @Test fun verifiedMachineLastKeepsOnlyItsStationAndItsAmplifierStages() {
+        val key=WorkoutReferenceKey("working-1")
+        val followUp=WorkoutReferenceKey("working-1",true,2)
+        fun observed(id:String,order:Long,mass:Int)=
+            WorkoutLastSetReference("visit-$id",order,
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(BigDecimal(mass),LoadUnit.LB,8,2,id),
+                LoadBasis.MACHINE_STACK)
+        val a=observed("A",1,200)
+        val b=observed("B",2,140)
+        val history=WorkoutLastReferenceResult.Ready(
+            mapOf(key to b),mapOf(
+                WorkoutMachineReferenceKey(key,"A") to a,
+                WorkoutMachineReferenceKey(followUp,"A") to a,
+                WorkoutMachineReferenceKey(key,"B") to b))
+        val selectedA=WorkoutLastReferenceDomain.physicalStation(history,"A")
+            as WorkoutLastReferenceResult.Ready
+        assertEquals(mapOf(key to a,followUp to a),selectedA.sets)
+        assertEquals(BigDecimal("200"),
+            WorkoutLastDraftDomain.reviewedActual(
+                selectedA,key,load(200,LoadBasis.MACHINE_STACK))?.load)
+        val selectedB=WorkoutLastReferenceDomain.physicalStation(history,"B")
+            as WorkoutLastReferenceResult.Ready
+        assertEquals(mapOf(key to b),selectedB.sets)
+        assertTrue((WorkoutLastReferenceDomain.physicalStation(history,null)
+            as WorkoutLastReferenceResult.Ready).sets.isEmpty())
+
+        // Never accept a caller's inconsistent A index over a factual B ID.
+        val misindexed=WorkoutLastReferenceResult.Ready(emptyMap(),mapOf(
+            WorkoutMachineReferenceKey(key,"A") to b))
+        assertTrue((WorkoutLastReferenceDomain.physicalStation(misindexed,"A")
+            as WorkoutLastReferenceResult.Ready).sets.isEmpty())
+    }
+
+    @Test fun unassignedLegacyLastKeepsOnlyUnassignedFacts() {
+        val key=WorkoutReferenceKey("unassigned-1")
+        val legacy=WorkoutLastSetReference("old-legacy",1,
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("135"),LoadUnit.LB,6,null,null),
+            LoadBasis.BARBELL_TOTAL)
+        val a=legacy.copy(actual=legacy.actual?.copy(machineInstanceId="A"))
+        val reference=WorkoutLastReferenceResult.Ready(
+            mapOf(key to legacy,WorkoutReferenceKey("A") to a))
+        val unassigned=WorkoutLastReferenceDomain.physicalStation(reference,null)
+            as WorkoutLastReferenceResult.Ready
+        assertEquals(mapOf(key to legacy),unassigned.sets)
+        assertTrue((WorkoutLastReferenceDomain.physicalStation(reference,"A")
+            as WorkoutLastReferenceResult.Ready).sets.isEmpty())
+    }
+
     @Test fun exactSetsUseActualsAndKeepUnreportedRirUnknown() {
         val next=custom(3)
         val references=sets(result(next))

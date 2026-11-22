@@ -14,6 +14,14 @@ assert.match(selector,/priorWorkingKeys:List<WorkoutReferenceKey>/);
 assert.match(selector,/onRequestHistory\?\.invoke\(\)/);
 assert.match(selector,/workoutStationLastCaption\(/);
 assert.match(selector,/Switching does not convert or lower another machine's load/);
+const selection=readFileSync(
+    'android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/WorkoutLastReferenceDomain.kt','utf8');
+assert.match(selector,/WorkoutLastReferenceDomain\.physicalStation\(previous,selectedMachineId\)/);
+assert.doesNotMatch(selector,/previous\.machineSets\.isNotEmpty\(\)/);
+assert.match(selection,/fun physicalStation\(/);
+assert.match(selection,/selectedMachineId==null && history\.machineSets\.isEmpty\(\)/);
+assert.match(selection,/history\.machineSets\.filter/);
+assert.match(selection,/it\.actual\?\.machineInstanceId==null/);
 assert.match(evidence,/history\.machineSets\[WorkoutMachineReferenceKey\(key,machineId\)\]/);
 assert.match(evidence,/if\(actual!=null &&\s*actual\.machineInstanceId!=machineId\)/);
 assert.doesNotMatch(evidence,/history\.sets\[|candidateWeight|proposedWeight|journalStore\.save/);

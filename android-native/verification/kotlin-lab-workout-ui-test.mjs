@@ -694,6 +694,7 @@ assert.ok(journal.includes('host.finishIssuedCustomWorkout(workoutId,') &&
 // displayed Last AND the editable one-tap "Use Last" must share the same
 // machine filter, even when no machine is selected (legacy-only).
 const machineSelector=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutMachineSelector.kt');
+const kotlinLastOwner=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/WorkoutLastReferenceDomain.kt');
 // A station choice is a data boundary, not a late effect allowed to erase
 // athlete-entered weight. Both editors use the same physical-station-aware
 // initializer and stable machine-keyed state; no values migrate from A to B.
@@ -772,8 +773,10 @@ for(const source of [journal,composer]) {
 }
 assert.ok(journal.includes('current.originalSnapshot.stamp.gymId') &&
   composer.includes('journal?.originalSnapshot?.source?.gymId') &&
-  machineSelector.includes('normalizeMachineId(selectedMachineId)') &&
-  machineSelector.includes('normalizeMachineId(\n                it.actual?.machineInstanceId)'),
+  machineSelector.includes('WorkoutLastReferenceDomain.physicalStation(previous,selectedMachineId)') &&
+  kotlinLastOwner.includes('selectedMachineId==null && history.machineSets.isEmpty()') &&
+  kotlinLastOwner.includes('history.machineSets.filter') &&
+  !machineSelector.includes('previous.sets.filterValues'),
   'Issued gym and legacy-only Last selection must remain explicit');
 const generatedCoachHost=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt');
 const liveCoachDomain=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinJournalLiveSetCoachDomain.kt');
@@ -878,7 +881,8 @@ assert.ok(machineLast.includes('data class WorkoutMachineReferenceKey(') &&
   machineLast.includes('fun composerBase(') &&
   machineLast.includes('fun appendMachineFacts(') &&
   machineLast.includes('destination.keys.removeAll { it.key==key }') &&
-  machineSelector.includes('previous.machineSets.filterKeys { it.machineId==requested }'),
+  machineLast.includes('history.machineSets.filter') &&
+  machineSelector.includes('WorkoutLastReferenceDomain.physicalStation(previous,selectedMachineId)'),
   'Native A/B Last must recover each station without borrowing other stacks or bypassing unknown skips');
 
 const trendUi=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinExercisePerformanceTrend.kt');

@@ -15,15 +15,23 @@ internal fun NativeKotlinBasicProgressionPreview(
     review:NativeCustomBasicNextReadResult.Reviewed
 ) {
     val projection=review.projection
+    fun workingSets(slotId: String) = review.next.slots.single { it.slotId == slotId }
+        .sets.filter { it.prescription.type == DraftSetType.WORKING }
+
+    fun repLabel(current: Int?, proposed: Int, changed: Boolean): String =
+        if (changed && current != null) "$current → $proposed reps" else "$proposed reps"
+
     Column(verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
         Text("Basic progression",style=MaterialTheme.typography.titleSmall)
         when(projection) {
             is CustomBasicHistoryResult.UnloadedReviewed -> {
-                Text("Unweighted bodyweight · no load suggestion",
+                val working = workingSets(projection.slotId)
+                Text("Bodyweight",
                     style=MaterialTheme.typography.bodySmall)
                 projection.candidate.proposedExactReps.forEachIndexed {index,reps ->
                     val changed=index in projection.candidate.advancedOrdinals
-                    Text("Working set ${index+1}: ${if(changed)"proposed " else ""}$reps reps",
+                    val target = working[index].prescription.exactRepTarget
+                    Text("Working set ${index+1} · ${repLabel(target, reps, changed)}",
                         style=MaterialTheme.typography.bodyMedium)
                 }
                 if(projection.candidate.atRepCeiling)
@@ -54,52 +62,43 @@ internal fun NativeKotlinBasicProgressionPreview(
             }
             is CustomBasicHistoryResult.Reviewed -> {
                 val candidate=projection.candidate
+                val assisted = candidate.strategy == BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION
                 val description=when(candidate.decision) {
                     BasicProgressionDecision.MANUAL_REPEAT ->
                         "Manual logging: keep your exact prescribed targets."
                     BasicProgressionDecision.BUILD_REPS ->
                         "Keep the current working weights and build completed reps."
                     BasicProgressionDecision.EARNED_INCREMENT ->
-                        if(candidate.strategy==BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION)
+                        if(assisted)
                             "A lower counterweight means less assistance, making this assisted movement harder."
                         else "A verified next equipment step is available for the qualifying set(s)."
                     BasicProgressionDecision.EARNED_REP_TARGET ->
                         "Completed work supports a new per-set rep target, not an automatic weight change."
                     BasicProgressionDecision.MAXIMUM_LOAD_REACHED ->
-                        "The verified equipment has no available higher step."
+                        if (assisted) "You reached the lowest verified counterweight."
+                        else "You reached the highest verified load for the qualifying sets."
                     BasicProgressionDecision.AUTHORIZED_INCREMENT_TOO_SMALL ->
                         "The next physical step exceeds the selected increment limit."
                 }
                 Text(description,style=MaterialTheme.typography.bodySmall)
-                val selected=review.next.slots.singleOrNull {
-                    it.slotId==projection.slotId
-                }
-                val working=selected?.sets?.filter{
-                    it.prescription.type==DraftSetType.WORKING
-                }.orEmpty()
-                candidate.proposedWorkingLoads.forEachIndexed {index,weight ->
-                    val original=working.getOrNull(index)?.prescription?.load
-                        as? DraftSetLoad.Verified
-                    val reps=candidate.proposedRepTargets?.getOrNull(index)
-                    val changed=index in candidate.increasedOrdinals
-                    val repChanged=index in candidate.changedRepOrdinals
-                    val unit=original?.unit?.name ?: "units"
-                    val assisted=candidate.strategy==
-                        BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION
-                    val loadLabel=if(changed)
-                        "Proposed ${weight.toPlainString()} $unit"+
-                            (if(assisted)" counterweight · less assistance" else "")
-                    else "${weight.toPlainString()} $unit"+
-                        (if(assisted)" counterweight" else "")
-                    val repLabel=if(reps!=null)
-                        " · ${if(repChanged) "proposed " else ""}$reps reps"
-                    else ""
-                    Text("Working set ${index+1}: $loadLabel$repLabel",
+                val working = workingSets(projection.slotId)
+                candidate.proposedWorkingLoads.forEachIndexed { index, weight ->
+                    val prescription = working[index].prescription
+                    val original = prescription.load as DraftSetLoad.Verified
+                    val amounts = if (index in candidate.increasedOrdinals)
+                        "${original.value.toPlainString()} → ${weight.toPlainString()}"
+                    else weight.toPlainString()
+                    val suffix = if (original.basis == LoadBasis.ASSISTANCE_COUNTERWEIGHT) " counterweight" else ""
+                    val load = "$amounts ${original.unit.name.lowercase()}$suffix"
+                    val reps = candidate.proposedRepTargets?.getOrNull(index)?.let {
+                        " · " + repLabel(prescription.exactRepTarget, it, index in candidate.changedRepOrdinals)
+                    }.orEmpty()
+                    Text("Working set ${index+1} · $load$reps",
                         style=MaterialTheme.typography.bodyMedium)
                 }
             }
         }
-        Text("Read-only suggestion from verified workout history. Refresh after any new workout or history edit. Nothing has been issued, saved or changed.",
+        Text("Read-only suggestion from verified workout history. Refresh after logging or editing a workout.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
     }

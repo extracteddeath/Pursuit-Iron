@@ -494,6 +494,78 @@ class WorkoutLastReferenceDomainTest {
         }.isFailure)
     }
 
+    @Test fun generatedRealSwapOnBPreservesIndependentAOnly() {
+        val next=composerSnapshot().let{staged ->
+            staged.copy(targets=staged.targets.map{
+                it.copy(load=load(135,LoadBasis.MACHINE_STACK))
+            })
+        }
+        val first=composerSession(1).let{prior ->
+            prior.copy(evidence=prior.evidence.copy(sets=
+                prior.evidence.sets.map {fact ->
+                    fact.copy(issuedLoad=load(135,LoadBasis.MACHINE_STACK),
+                        actual=fact.actual?.copy(machineInstanceId="A"))
+                }))
+        }
+        fun swapped(
+            machine:String?,skipped:Boolean=false,
+            changedGym:Boolean=false
+        ):ComposerReferenceSession {
+            val issued=next.copy(workoutId="swapped-workout",
+                source=if(changedGym)source.copy(gymId="away") else source)
+            var journal=KotlinWorkoutJournalDomain.begin(issued,
+                KotlinStoredWorkoutIdentity(
+                    "stored-swap","swapped-workout",issued.source,1))
+            val swapId="swap-entry"
+            val replacement=issued.targets.single().copy(
+                exerciseId="paused_bench",
+                setKey="swap:${swapId}:working:0")
+            journal=(KotlinWorkoutJournalDomain.reduce(journal,
+                KotlinJournalOperation.SwapExercise(
+                    swapId,journal.revision,"barbell_bench",listOf(replacement)))
+                as KotlinJournalDecision.Proposed).state
+            journal=(KotlinWorkoutJournalDomain.reduce(journal,
+                KotlinJournalOperation.RecordSet(
+                    "record-new",journal.revision,replacement.setKey,
+                    if(skipped)KotlinJournalSetOutcome.SKIPPED
+                    else KotlinJournalSetOutcome.COMPLETED,
+                    if(skipped)null else KotlinPerformedSet(
+                        BigDecimal(135),LoadUnit.LB,6,null,machine)))
+                as KotlinJournalDecision.Proposed).state
+            journal=(KotlinWorkoutJournalDomain.reduce(journal,
+                KotlinJournalOperation.Finish("finish-new",journal.revision))
+                as KotlinJournalDecision.Proposed).state
+            val history=(KotlinWorkoutHistoryEvidenceDomain.project(journal)
+                as KotlinHistoryProjectionResult.Candidate).evidence
+            assertEquals("paused_bench",history.sets.single().exerciseId)
+            assertEquals(replacement.setKey,history.sets.single().setKey)
+            return ComposerReferenceSession(2,0,
+                ComposerSessionPurpose.HYPERTROPHY,history)
+        }
+        val key=WorkoutReferenceKey(next.targets.single().setKey)
+        val machineA=WorkoutMachineReferenceKey(key,"A")
+        val afterB=WorkoutLastReferenceDomain.composer(
+            next,listOf(first,swapped("B")))
+            as WorkoutLastReferenceResult.Ready
+        assertTrue(afterB.sets.isEmpty())
+        assertEquals("old-1",afterB.machineSets.getValue(machineA).workoutId)
+        assertEquals(BigDecimal(130),afterB.machineSets.getValue(machineA).actual?.load)
+        assertFalse(afterB.machineSets.keys.any{it.machineId=="B"})
+
+        val afterA=WorkoutLastReferenceDomain.composer(
+            next,listOf(first,swapped("A")))
+            as WorkoutLastReferenceResult.Ready
+        assertTrue(afterA.sets.isEmpty())
+        assertTrue(afterA.machineSets.isEmpty())
+        for(other in listOf(swapped(null),swapped("B",skipped=true),
+            swapped("B",changedGym=true))) {
+            val reviewed=WorkoutLastReferenceDomain.composer(
+                next,listOf(first,other)) as WorkoutLastReferenceResult.Ready
+            assertTrue(reviewed.sets.isEmpty())
+            assertTrue(reviewed.machineSets.isEmpty())
+        }
+    }
+
     @Test fun unknownGeneratedDayCannotSupplyAReference() {
         assertTrue(sets(WorkoutLastReferenceDomain.composer(composerSnapshot(),
             listOf(composerSession(1,day=-1)))).isEmpty())

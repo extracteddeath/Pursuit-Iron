@@ -297,14 +297,62 @@ object WorkoutLastReferenceDomain {
         return ready(baseline.sets,machines)
     }
 
+    /**
+     * A generated workout SwapExercise replaces its exercise and set keys.
+     * Keep older, verified A Last when all newer physical work was on B,
+     * but invalidate stale A after an A substitution. No replacement-to-
+     * original key mapping survives the generic generated history; missing
+     * set keys therefore require examining the whole day's station facts.
+     */
+    private fun invalidateChangedComposerStation(
+        destination:MutableMap<WorkoutMachineReferenceKey,WorkoutLastSetReference>,
+        previous:ComposerReferenceSession,next:KotlinStagedWorkout
+    ) {
+        if(previous.purpose!=next.purpose ||
+            previous.evidence.source.gymId!=next.source.gymId)return
+        val missing=next.targets.filter { issued ->
+            previous.evidence.sets.none { fact ->
+                fact.exerciseId==issued.exerciseId &&
+                    fact.type==issued.type &&
+                    fact.originalOrdinal==issued.ordinal &&
+                    compatible(fact.issuedLoad,issued.load)
+            }
+        }.map{it.setKey}.toSet()
+        if(missing.isEmpty())return
+        val work=previous.evidence.sets.filter{
+            it.type==DraftSetType.WORKING
+        }
+        val uncertain=work.isEmpty() || work.any { fact ->
+            val issued=fact.issuedLoad as? DraftSetLoad.Verified
+            val actual=fact.actual
+            actual==null || issued==null || actual.load==null ||
+                !KotlinMachineAlternativesDomain.validInstanceId(actual.machineInstanceId) ||
+                !KotlinSetNumberAuthorityDomain.valid(
+                    fact.issuedLoad,fact.outcome,actual)
+        }
+        val machines=work.mapNotNull {it.actual?.machineInstanceId}.toSet()
+        destination.keys.removeAll {
+            it.key.setKey in missing && (uncertain || it.machineId in machines)
+        }
+    }
+
     fun composer(
         next:KotlinStagedWorkout,completed:List<ComposerReferenceSession>
     ):WorkoutLastReferenceResult {
         val baseline=composerBase(next,completed)
-        if(baseline !is WorkoutLastReferenceResult.Ready || baseline.sets.isEmpty())
-            return baseline
+        if(baseline !is WorkoutLastReferenceResult.Ready)return baseline
         val before=completed.singleOrNull { it.evidence.workoutId==next.workoutId }
             ?.completionOrder ?:Long.MAX_VALUE
+        // A changed gym or purpose is not a same-source station swap.
+        val latest=completed.lastOrNull{
+            it.completionOrder<before &&
+                it.evidence.workoutId!=next.workoutId &&
+                it.evidence.source.athleteId==next.source.athleteId &&
+                it.evidence.source.programId==next.source.programId &&
+                it.dayIndex==next.dayIndex && it.dayIndex>=0
+        }
+        if(latest!=null && (latest.purpose!=next.purpose ||
+            latest.evidence.source.gymId!=next.source.gymId))return baseline
         val machines=linkedMapOf<WorkoutMachineReferenceKey,WorkoutLastSetReference>()
         for(session in completed) {
             if(session.completionOrder>=before ||
@@ -316,6 +364,7 @@ object WorkoutLastReferenceDomain {
             val observation=composerBase(next,listOf(session))
             if(observation !is WorkoutLastReferenceResult.Ready)
                 return WorkoutLastReferenceResult.Unavailable
+            invalidateChangedComposerStation(machines,session,next)
             appendMachineFacts(machines,observation.sets)
         }
         return ready(baseline.sets,machines)

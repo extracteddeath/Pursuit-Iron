@@ -483,7 +483,8 @@ class WorkoutLastReferenceDomainTest {
         val replacement=original.copy(
             slotId=swappedId,exerciseId="paused_bench",
             sets=original.sets.map{set ->
-                set.copy(slotId=swappedId,setKey="swap:${set.setKey}")
+                set.copy(slotId=swappedId,
+                    setKey="cycle:w2:d0:${swappedId}:s${set.ordinalInSlot}")
             })
         journal=(CustomWorkoutJournalDomain.reduce(journal,
             CustomWorkoutJournalOperation.Swap(

@@ -224,6 +224,20 @@ object CustomBasicHistoryProgressionDomain {
             if(snap.absoluteWeek>=next.absoluteWeek)
                 return no(CustomBasicHistoryRefusal.TARGET_ALREADY_TRAINED)
             if(snap.stamp.gymId!=next.stamp.gymId)continue
+            // A verified B visit is independent of A's physical load, but
+            // not independent of the approved coaching source. An
+            // intervening changed gym inventory/profile/phase cannot be
+            // silently skipped to resurrect an older A increase.
+            val sourceMatches=snap.stamp==next.stamp &&
+                snap.phase==next.phase &&
+                snap.blockPurpose==next.blockPurpose &&
+                snap.split==next.split &&
+                snap.sessionPurpose==next.sessionPurpose
+            if(!sourceMatches) {
+                latestStationIncompatible=true
+                latest=session
+                continue
+            }
             val historicalSlot=snap.slots.singleOrNull {it.slotId==request.slotId}
             if(historicalSlot==null) {
                 // Native Swap issues a NEW slot ID and new set keys. A later
@@ -266,9 +280,14 @@ object CustomBasicHistoryProgressionDomain {
             val observedMachines=actualMachineIds.filterNotNull().toSet()
             // Skip only visits fully attributed to a different physical station.
             // Ambiguous visits stay candidates until a newer visit supersedes them.
-            if(!unweighted && observedMachines.size==1 &&
-                normalizedMachine !in observedMachines &&
-                visits.all { it.actual?.machineInstanceId!=null })
+            // A single recorded B set is not proof that a second
+            // unrecorded/failed working set was also performed on B. Use
+            // the SAME complete-receipt authority as native Swap evidence.
+            val independentStation=if(unweighted)null else
+                CustomVerifiedSwappedStationEvidenceDomain
+                    .machinesForVerifiedSlot(session,request.slotId)
+                    ?.singleOrNull()
+            if(independentStation!=null && independentStation!=normalizedMachine)
                 continue
             latestStationIncompatible =
                 (unweighted && (historicalSlot.machineInstanceId != null || observedMachines.isNotEmpty())) ||

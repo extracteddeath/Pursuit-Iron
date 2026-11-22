@@ -439,7 +439,8 @@ object KotlinGlobalHistoryIndexDomain {
                     record.gymId,record.exerciseId,record.machineInstanceId,
                     record.unit,record.basis)
                 if (record.basis == LoadBasis.ASSISTANCE_COUNTERWEIGHT) {
-                    if (KotlinMachineAlternativesDomain.validInstanceId(record.machineInstanceId)) {
+                    if (id.matches(record.gymId) &&
+                        KotlinMachineAlternativesDomain.validInstanceId(record.machineInstanceId)) {
                         val prior = leastAssistance[machineKey]
                         if (prior == null || AssistedHistoryRanking.prefers(
                                 record.actualLoad, record.actualReps, order,
@@ -459,17 +460,23 @@ object KotlinGlobalHistoryIndexDomain {
                 if (maxRepsAtLoad[repsKey] == null ||
                     record.actualReps >= checkNotNull(maxRepsAtLoad[repsKey]).actualReps)
                     maxRepsAtLoad[repsKey] = record
-                if(heaviestByMachine[machineKey]==null ||
-                    record.actualLoad>checkNotNull(heaviestByMachine[machineKey]).actualLoad ||
-                    (record.actualLoad.compareTo(
-                        checkNotNull(heaviestByMachine[machineKey]).actualLoad)==0 &&
-                        record.actualReps>=checkNotNull(heaviestByMachine[machineKey]).actualReps))
-                    heaviestByMachine[machineKey]=record
-                val machineRepsKey=machineKey to record.actualLoad
-                if(maxRepsAtLoadByMachine[machineRepsKey]==null ||
-                    record.actualReps>=checkNotNull(
-                        maxRepsAtLoadByMachine[machineRepsKey]).actualReps)
-                    maxRepsAtLoadByMachine[machineRepsKey]=record
+                // Only a verified physical station and issued gym may own
+                // machine-specific strength history. Unknown stations remain
+                // available through general Last and factual read projections.
+                if (id.matches(record.gymId) &&
+                    KotlinMachineAlternativesDomain.validInstanceId(record.machineInstanceId)) {
+                    if(heaviestByMachine[machineKey]==null ||
+                        record.actualLoad>checkNotNull(heaviestByMachine[machineKey]).actualLoad ||
+                        (record.actualLoad.compareTo(
+                            checkNotNull(heaviestByMachine[machineKey]).actualLoad)==0 &&
+                            record.actualReps>=checkNotNull(heaviestByMachine[machineKey]).actualReps))
+                        heaviestByMachine[machineKey]=record
+                    val machineRepsKey=machineKey to record.actualLoad
+                    if(maxRepsAtLoadByMachine[machineRepsKey]==null ||
+                        record.actualReps>=checkNotNull(
+                            maxRepsAtLoadByMachine[machineRepsKey]).actualReps)
+                        maxRepsAtLoadByMachine[machineRepsKey]=record
+                }
             }
         }
 

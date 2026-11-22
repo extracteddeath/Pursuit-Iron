@@ -1,7 +1,5 @@
 package io.github.extracteddeath.pursuitiron.rebuild
 
-import java.math.BigDecimal
-
 /**
  * Translates an already reviewed basic progression into optional athlete-edited
  * week prescriptions. It is NOT a progression evaluator or a save authority.

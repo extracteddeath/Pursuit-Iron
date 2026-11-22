@@ -542,6 +542,25 @@ class CustomBasicHistoryProgressionDomainTest {
             as CustomBasicHistoryResult.Reviewed
         assertEquals("workout-1",independent.historyWorkoutId)
         assertEquals(listOf(n(105),n(105)),independent.candidate.proposedWorkingLoads)
+        // A partial or malformed B replacement is not proof the missing
+        // original A slot was never used. The coaching and basic readers
+        // must consume exactly the same complete signed-set evidence rule.
+        val completeB=actuallySwapped("B")
+        val missingSet=completeB.copy(evidence=completeB.evidence.copy(
+            visits=completeB.evidence.visits.dropLast(1)))
+        val skippedSet=completeB.copy(evidence=completeB.evidence.copy(
+            visits=completeB.evidence.visits.mapIndexed{index,fact->
+                if(index==1)fact.copy(outcome=KotlinJournalSetOutcome.SKIPPED,
+                    actual=null) else fact
+            }))
+        val changedPrescription=completeB.copy(evidence=completeB.evidence.copy(
+            visits=completeB.evidence.visits.mapIndexed{index,fact->
+                if(index==0)fact.copy(prescribedReps=RepBand(5,10)) else fact
+            }))
+        for(invalid in listOf(missingSet,skippedSet,changedPrescription)) {
+            assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+                (forA(invalid) as CustomBasicHistoryResult.Rejected).reason)
+        }
         val ambiguous=actuallySwapped("B").let{session->
             session.copy(evidence=session.evidence.copy(visits=
                 session.evidence.visits.map {fact->

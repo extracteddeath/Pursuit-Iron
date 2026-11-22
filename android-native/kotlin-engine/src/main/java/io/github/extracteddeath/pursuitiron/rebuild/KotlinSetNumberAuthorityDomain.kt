@@ -75,6 +75,13 @@ object KotlinSetNumberAuthorityDomain {
     fun validPrescribedLoad(value:BigDecimal,basis:LoadBasis):Boolean =
         validPhysicalLoadValue(value) && (value.signum()!=0 || basis.permitsZeroAddedLoad)
 
+    /** Physical-machine identity and true free-barbell loading cannot describe
+     * the same working-set evidence. Keep the actual receipt, but never count
+     * that mismatched record as ordinary barbell strength or earned progression.
+     * Unknown station IDs are not guessed or repaired by this classifier. */
+    fun machineTagContradictsFreeBarbell(basis:LoadBasis,machineInstanceId:String?):Boolean =
+        basis==LoadBasis.BARBELL_TOTAL && machineInstanceId!=null
+
     /** One scale-independent identity rule for TWO immutable issued targets.
      * Never use physical numeric equality as machine A/B equivalence: the
      * equipment instance is a separate exact history identity key. */

@@ -452,7 +452,8 @@ object KotlinGlobalHistoryIndexDomain {
                 // A tagged machine cannot be counted as general barbell
                 // evidence, even if a stale catalog calls its basis BARBELL_TOTAL.
                 // Its factual result remains available on the verified station.
-                if (record.basis != LoadBasis.BARBELL_TOTAL || record.machineInstanceId == null) {
+                if (!KotlinSetNumberAuthorityDomain.machineTagContradictsFreeBarbell(
+                        record.basis, record.machineInstanceId)) {
                     val key = KotlinHistoryLoadKey(
                         record.exerciseId, record.unit, record.basis)
                     if (heaviest[key] == null ||

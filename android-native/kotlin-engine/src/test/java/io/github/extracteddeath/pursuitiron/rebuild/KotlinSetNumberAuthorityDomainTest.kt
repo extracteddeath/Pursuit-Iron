@@ -114,6 +114,20 @@ class KotlinSetNumberAuthorityDomainTest {
                 as KotlinSetEntryResult.Rejected).reason)
     }
 
+    @Test fun physicalStationBarbellContradictionHasOneCrossRouteDefinition() {
+        val authority = KotlinSetNumberAuthorityDomain
+        assertTrue(authority.machineTagContradictsFreeBarbell(
+            LoadBasis.BARBELL_TOTAL, "machine-A"))
+        assertFalse(authority.machineTagContradictsFreeBarbell(
+            LoadBasis.BARBELL_TOTAL, null))
+        assertFalse(authority.machineTagContradictsFreeBarbell(
+            LoadBasis.SMITH_TOTAL, "machine-A"))
+        assertFalse(authority.machineTagContradictsFreeBarbell(
+            LoadBasis.MACHINE_STACK, "machine-A"))
+        assertFalse(authority.machineTagContradictsFreeBarbell(
+            LoadBasis.DUMBBELL_PER_HAND, null))
+    }
+
     @Test fun sameActualLoadCannotBeConfusedWithDifferentPhysicalMachine() {
         val issued=load("200")
         val fromA=actual("200",machine="machine-A")

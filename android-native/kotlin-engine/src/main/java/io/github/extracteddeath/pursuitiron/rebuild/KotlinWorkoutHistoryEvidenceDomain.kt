@@ -143,8 +143,10 @@ object KotlinWorkoutHistoryEvidenceDomain {
                 // the corrected factual sets, but do not let a tagged machine
                 // earn a barbell progression or strength estimate.
                 working.any { set ->
-                    (set.issuedLoad as? DraftSetLoad.Verified)?.basis == LoadBasis.BARBELL_TOTAL &&
-                        set.actual?.machineInstanceId != null
+                    (set.issuedLoad as? DraftSetLoad.Verified)?.let { issued ->
+                        KotlinSetNumberAuthorityDomain.machineTagContradictsFreeBarbell(
+                            issued.basis, set.actual?.machineInstanceId)
+                    } == true
                 } -> KotlinHistoryProgressionGate.UNVERIFIED_RECORDED_EVIDENCE
                 working.any { set ->
                     KotlinWorkingSetEvidenceDomain.review(

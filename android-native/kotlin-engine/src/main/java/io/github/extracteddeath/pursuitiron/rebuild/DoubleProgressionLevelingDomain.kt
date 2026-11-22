@@ -177,8 +177,8 @@ object DoubleProgressionLevelingDomain {
             // visit, not the generic most-recent visit on another machine.
             // There is no fallback to an older success or to the generic
             // exercise-level Last when a station has no evidence.
-            val reference = if (machineInstanceId == null) saved.sets[key]
-                else saved.machineSets[WorkoutMachineReferenceKey(key,requestedMachine)]
+            val reference = (if (machineInstanceId == null) saved.sets[key]
+                else saved.machineSets[WorkoutMachineReferenceKey(key,requestedMachine)])
                 ?: return invalid()
             if (reference.outcome != KotlinJournalSetOutcome.COMPLETED)
                 return invalid()

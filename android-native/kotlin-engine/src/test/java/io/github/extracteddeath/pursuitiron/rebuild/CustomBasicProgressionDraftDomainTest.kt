@@ -65,26 +65,28 @@ class CustomBasicProgressionDraftDomainTest {
         val original=listOf(set(70).copy(load=assisted),set(70).copy(load=assisted))
         val candidate=weighted(BasicProgressionResult.Candidate(
             BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION,
-            listOf(BigDecimal(65),BigDecimal(70)),setOf(0),
+            listOf(BigDecimal(65),BigDecimal(65)),setOf(0,1),
             BasicProgressionDecision.EARNED_INCREMENT,"previous"))
         val next=checkNotNull(CustomBasicProgressionDraftDomain.forWeekEdit(
             "slot",original,candidate))
         assertEquals(BigDecimal(65),(next[0].load as DraftSetLoad.Verified).value)
-        assertEquals(original[1],next[1])
+        assertEquals(BigDecimal(65),(next[1].load as DraftSetLoad.Verified).value)
+        assertEquals(original.map { it.reps },next.map { it.reps })
     }
 
     @Test fun repLadderCanExplicitlyResetTheEarnedSetToItsFloor() {
-        val original=listOf(set(100,10),set(100,8))
+        val original=listOf(set(100,10),set(100,10))
         val candidate=weighted(BasicProgressionResult.Candidate(
             BasicProgressionStrategy.REP_LADDER_PROGRESSION,
-            listOf(BigDecimal(105),BigDecimal(100)),setOf(0),
+            listOf(BigDecimal(105),BigDecimal(105)),setOf(0,1),
             BasicProgressionDecision.EARNED_INCREMENT,"previous",
-            proposedRepTargets=listOf(6,8),changedRepOrdinals=setOf(0)))
+            proposedRepTargets=listOf(6,6),changedRepOrdinals=setOf(0,1)))
         val next=checkNotNull(CustomBasicProgressionDraftDomain.forWeekEdit(
             "slot",original,candidate))
         assertEquals(pounds(105),next[0].load)
         assertEquals(6,next[0].exactRepTarget)
-        assertEquals(original[1],next[1])
+        assertEquals(pounds(105),next[1].load)
+        assertEquals(6,next[1].exactRepTarget)
     }
 
     @Test fun rejectsUnmarkedNumericChangesAndStaleSlotIdentity() {

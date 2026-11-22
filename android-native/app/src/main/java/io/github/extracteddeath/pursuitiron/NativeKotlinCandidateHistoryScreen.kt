@@ -785,7 +785,11 @@ private fun NativeKotlinSavedComposerHistorySetRow(
                     submitting=false
                     if(result is NativeSavedCorrectionFileResult.Durable){
                         editing=false;error=null;onChanged()
-                    } else error="Correction was not saved. The history or prior set may have changed. Refresh and retry."
+                    } else error = when ((result as? NativeSavedCorrectionFileResult.Rejected)?.correctionReason) {
+                        KotlinSavedCorrectionRefusal.INVALID_VALUES -> "Check the weight, reps and RIR for this result."
+                        KotlinSavedCorrectionRefusal.TOO_MANY_CORRECTIONS -> "This workout has reached its saved edit limit."
+                        else -> "Refresh History and reopen this set before trying again."
+                    }
                 }
             }
         },modifier=Modifier.fillMaxWidth()){
@@ -977,7 +981,13 @@ private fun NativeKotlinSavedCustomHistoryVisitRow(
                     if(result is NativeCustomCorrectionTransactionResult.Committed) {
                         editing=false;error=null;onChanged()
                     } else {
-                        error="Correction was not saved. History or the prior set changed. Refresh the verified history and retry."
+                        error = when ((result as? NativeCustomCorrectionTransactionResult.Rejected)?.correctionReason) {
+                            CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER ->
+                                "This edit conflicts with the recorded amplifier sequence. Check the activation and each follow-up set."
+                            CustomSavedCorrectionRefusal.INVALID_VALUES -> "Check the weight, reps and RIR for this result."
+                            CustomSavedCorrectionRefusal.TOO_MANY_CORRECTIONS -> "This workout has reached its saved edit limit."
+                            else -> "Refresh History and reopen this set before trying again."
+                        }
                     }
                 }
             }

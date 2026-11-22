@@ -22,7 +22,10 @@ sealed interface NativeCustomCorrectionTransactionResult {
         val evidence: CustomSavedCorrectedHistory,
         val replayed: Boolean
     ) : NativeCustomCorrectionTransactionResult
-    data class Rejected(val reason: NativeCustomCorrectionTransactionRefusal) :
+    data class Rejected(
+        val reason: NativeCustomCorrectionTransactionRefusal,
+        val correctionReason: CustomSavedCorrectionRefusal? = null
+    ) :
         NativeCustomCorrectionTransactionResult
 }
 
@@ -176,8 +179,10 @@ class NativeKotlinCustomHistoryCorrectionTransaction(
 
             val decision = CustomSavedHistoryCorrectionDomain.reduce(
                 state, operation)
-            if (decision !is CustomSavedCorrectionDecision.Proposed ||
-                decision.replayed)
+            if (decision is CustomSavedCorrectionDecision.Rejected)
+                return@fenced NativeCustomCorrectionTransactionResult.Rejected(
+                    NativeCustomCorrectionTransactionRefusal.CORRECTION_REJECTED, decision.reason)
+            if (decision !is CustomSavedCorrectionDecision.Proposed || decision.replayed)
                 return@fenced rejected(
                     NativeCustomCorrectionTransactionRefusal.CORRECTION_REJECTED)
             val intent = NativeHistoryWriteIntent.CustomCorrect(

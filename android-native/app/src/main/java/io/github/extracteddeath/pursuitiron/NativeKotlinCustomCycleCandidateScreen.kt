@@ -1127,14 +1127,21 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         it.key.blockId==session.blockId &&
                             it.key.weekday==session.weekday &&
                             it.savedMethod!=null &&
-                            it.route in setOf(ProgramProgressionRoute.BASIC_WEIGHTED,
-                                ProgramProgressionRoute.MANUAL)
-                    }?.map{it.key.slotId}?.toSet().orEmpty()
+                            (it.route in setOf(ProgramProgressionRoute.BASIC_WEIGHTED,
+                                ProgramProgressionRoute.MANUAL) ||
+                                (it.route == ProgramProgressionRoute.BASIC_BODYWEIGHT_REPS &&
+                                    it.savedMethod in setOf(SavedProgressionMethod.BODYWEIGHT_REPS,
+                                        SavedProgressionMethod.LADDER)))
+                    }?.associateBy { it.key.slotId }.orEmpty()
+                    val loadStepSlots = basicSlots.filterValues { assignment ->
+                        assignment.route == ProgramProgressionRoute.BASIC_WEIGHTED &&
+                            assignment.basicStrategy != BasicProgressionStrategy.REP_TARGET_PROGRESSION
+                    }.keys
                     if(state.reviewedCoachInputs!=null &&
-                        (state.progressionCoachingEnabled || basicSlots.isNotEmpty()) &&
+                        (state.progressionCoachingEnabled || loadStepSlots.isNotEmpty()) &&
                         !calibrationLocked) {
                         OutlinedTextField(value=coachMaxStep,enabled=!busy,
-                            onValueChange={coachMaxStep=it;dayCoachingVisible=false},
+                            onValueChange={coachMaxStep=it;dayCoachingVisible=false;basicProgressionVisible=false},
                             label={Text("Maximum load increase · gym units")},
                             keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
                             isError=maxStep==null,singleLine=true,
@@ -1210,15 +1217,16 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                             !session.prescriptionEditedForTime &&
                             session.shortSessionLimitMinutes==null &&
                             state.preparedWorkout==null) {
+                            val basicStep = if (slot.slotId in loadStepSlots) maxStep else BigDecimal.ZERO
                             OutlinedButton(
-                                enabled=!busy && maxStep!=null &&
+                                enabled=!busy && basicStep!=null &&
                                     session.stamp.cycleRevision==draft.revision,
                                 modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
                                 onClick={
                                     basicProgressionVisible=true
                                     controller.reviewAuthoredDayBasicProgression(
                                         session.absoluteWeek,session.weekday,slot.slotId,
-                                        checkNotNull(maxStep))
+                                        checkNotNull(basicStep))
                                 }
                             ) {Text("Preview basic progression")}
                             state.basicDayProgression?.takeIf{result->

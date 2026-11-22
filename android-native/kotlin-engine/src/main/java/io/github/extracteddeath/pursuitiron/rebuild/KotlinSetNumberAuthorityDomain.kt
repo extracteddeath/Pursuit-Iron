@@ -63,9 +63,11 @@ object KotlinSetNumberAuthorityDomain {
     /** ONE physical weight value envelope for reported sets and reviewed
      * future load candidates. The different journal/coach policies still
      * own their own evidence and consent; this only checks numeric format.
+     * Also exposed to read-only native previews for source/candidate shape
+     * screening; the UI must not duplicate this numeric envelope.
      * A submitted load of zero remains an allowed factual observation,
      * whereas a future positive increment must separately exceed zero. */
-    internal fun validPhysicalLoadValue(value:BigDecimal):Boolean =
+    fun validPhysicalLoadValue(value:BigDecimal):Boolean =
         value>=zero && value<=maxLoad &&
             value.stripTrailingZeros().scale()<=3
 

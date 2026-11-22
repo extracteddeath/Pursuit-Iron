@@ -59,6 +59,34 @@ class CustomBasicProgressionDraftDomainTest {
         assertEquals(original.map { it.load },next.map { it.load })
     }
 
+    @Test fun assistedProgressionCopiesTheLowerCounterweightNotAHeavierLoad() {
+        val assisted = DraftSetLoad.Verified(
+            LoadUnit.LB,LoadBasis.ASSISTANCE_COUNTERWEIGHT,BigDecimal(70))
+        val original=listOf(set(70).copy(load=assisted),set(70).copy(load=assisted))
+        val candidate=weighted(BasicProgressionResult.Candidate(
+            BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION,
+            listOf(BigDecimal(65),BigDecimal(70)),setOf(0),
+            BasicProgressionDecision.EARNED_INCREMENT,"previous"))
+        val next=checkNotNull(CustomBasicProgressionDraftDomain.forWeekEdit(
+            "slot",original,candidate))
+        assertEquals(BigDecimal(65),(next[0].load as DraftSetLoad.Verified).value)
+        assertEquals(original[1],next[1])
+    }
+
+    @Test fun repLadderCanExplicitlyResetTheEarnedSetToItsFloor() {
+        val original=listOf(set(100,10),set(100,8))
+        val candidate=weighted(BasicProgressionResult.Candidate(
+            BasicProgressionStrategy.REP_LADDER_PROGRESSION,
+            listOf(BigDecimal(105),BigDecimal(100)),setOf(0),
+            BasicProgressionDecision.EARNED_INCREMENT,"previous",
+            proposedRepTargets=listOf(6,8),changedRepOrdinals=setOf(0)))
+        val next=checkNotNull(CustomBasicProgressionDraftDomain.forWeekEdit(
+            "slot",original,candidate))
+        assertEquals(pounds(105),next[0].load)
+        assertEquals(6,next[0].exactRepTarget)
+        assertEquals(original[1],next[1])
+    }
+
     @Test fun rejectsUnmarkedNumericChangesAndStaleSlotIdentity() {
         val original=listOf(set(100),set(100))
         val wrongMarker=weighted(BasicProgressionResult.Candidate(

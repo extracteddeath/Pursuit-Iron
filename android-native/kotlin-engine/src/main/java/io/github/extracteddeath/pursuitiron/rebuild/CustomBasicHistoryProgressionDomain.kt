@@ -168,6 +168,13 @@ object CustomBasicHistoryProgressionDomain {
             return no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE)
         val unit=loads.firstOrNull()?.unit
         val basis=loads.firstOrNull()?.basis
+        // A bound physical Machine A/B is not a free barbell, regardless of
+        // an old BARBELL_TOTAL label. Manual logging can retain its exact
+        // source targets; coached progression cannot earn an increase from
+        // a mislabeled physical station or convert it into barbell strength.
+        if(!manual && basis==LoadBasis.BARBELL_TOTAL &&
+            (selected.machineInstanceId!=null || request.selectedMachineInstanceId!=null))
+            return no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE)
         val exactReps=if(unweighted || strategy in setOf(
                 BasicProgressionStrategy.REP_TARGET_PROGRESSION,
                 BasicProgressionStrategy.REP_LADDER_PROGRESSION)) {

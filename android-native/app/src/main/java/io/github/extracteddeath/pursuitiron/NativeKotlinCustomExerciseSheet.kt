@@ -146,16 +146,22 @@ private fun parsedSets(
 @Composable
 private fun AuthorNumberField(
     value: String, title: String, onChange: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    allowDecimal: Boolean = false,
+    error: String? = null
 ) {
     OutlinedTextField(
         value = value, onValueChange = { candidate ->
             if (candidate.length <= 12 &&
-                candidate.all { it.isDigit() || it == '.' })
+                candidate.all { it.isDigit() || (allowDecimal && it == '.') } &&
+                candidate.count { it == '.' } <= 1)
                 onChange(candidate)
         },
         label = { Text(title) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        keyboardOptions = KeyboardOptions(keyboardType =
+            if (allowDecimal) KeyboardType.Decimal else KeyboardType.Number),
+        isError = error != null,
+        supportingText = error?.let { message -> { Text(message) } },
         singleLine = true,
         modifier = modifier
     )
@@ -502,7 +508,7 @@ internal fun NativeKotlinCustomExerciseSheet(
                 if (option?.bodyweight == false) {
                     AuthorNumberField(fields.weight, "Load · ${option.loadUnit}",
                         { update(fields.copy(weight = it)) },
-                        Modifier.fillMaxWidth())
+                        Modifier.fillMaxWidth(), allowDecimal = true)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AuthorNumberField(fields.minimum, "Minimum reps",
@@ -513,15 +519,19 @@ internal fun NativeKotlinCustomExerciseSheet(
                         Modifier.weight(1f))
                 }
                 if(fields.type==DraftSetType.WORKING) {
-                    AuthorNumberField(fields.exactRepTarget,
-                        "Exact current rep target (optional)",
-                        { update(fields.copy(exactRepTarget=it)) },
-                        Modifier.fillMaxWidth())
-                    Text("Rep target and ladder methods require a current target "+
-                        "for each working set inside its rep range. A range alone "+
-                        "does not authorize progression.",
-                        style=MaterialTheme.typography.bodySmall,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    val minimum = fields.minimum.toIntOrNull()
+                    val maximum = fields.maximum.toIntOrNull()
+                    val target = fields.exactRepTarget.toIntOrNull()
+                    val error = when {
+                        fields.exactRepTarget.isBlank() -> null
+                        target == null -> "Enter a whole number of reps."
+                        minimum != null && maximum != null && minimum <= maximum &&
+                            target !in minimum..maximum -> "Choose $minimum–$maximum reps."
+                        else -> null
+                    }
+                    AuthorNumberField(fields.exactRepTarget, "Exact rep target",
+                        { update(fields.copy(exactRepTarget = it)) },
+                        Modifier.fillMaxWidth(), error = error)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AuthorNumberField(fields.rir, "Target RIR (optional)",
@@ -687,12 +697,12 @@ internal fun NativeKotlinCustomExerciseSheet(
                             AuthorNumberField(fields.extraLoad,
                                 "Drop 1 · verified lower load",
                                 {update(fields.copy(extraLoad=it))},
-                                Modifier.fillMaxWidth())
+                                Modifier.fillMaxWidth(), allowDecimal = true)
                             if(fields.extraRounds=="2")
                                 AuthorNumberField(fields.secondDropLoad,
                                     "Drop 2 · verified load below drop 1",
                                     {update(fields.copy(secondDropLoad=it))},
-                                    Modifier.fillMaxWidth())
+                                    Modifier.fillMaxWidth(), allowDecimal = true)
                         }
                     }
                 }

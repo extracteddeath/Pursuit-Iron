@@ -104,7 +104,7 @@ internal fun NativeKotlinBasicProgressionPreview(
                     BasicProgressionDecision.EARNED_REP_TARGET ->
                         "Completed work supports a new per-set rep target, not an automatic weight change."
                     BasicProgressionDecision.MAXIMUM_LOAD_REACHED ->
-                        if (assisted) "You reached the lowest verified counterweight."
+                        if (assisted) "You reached the lowest assisted setting. Keep this counterweight or choose an unassisted exercise in your program."
                         else "You reached the highest verified load for the qualifying sets."
                     BasicProgressionDecision.AUTHORIZED_INCREMENT_TOO_SMALL ->
                         "The next physical step exceeds the selected increment limit."
@@ -122,8 +122,7 @@ internal fun NativeKotlinBasicProgressionPreview(
                     val load = "$amounts ${original.unit.name.lowercase()}$suffix"
                     val reps = candidate.proposedRepTargets?.getOrNull(index)?.let {
                         " · " + repLabel(prescription.exactRepTarget, it, index in candidate.changedRepOrdinals)
-                    } ?: if (candidate.decision == BasicProgressionDecision.MANUAL_REPEAT)
-                        " · " + prescription.repTargetLabel() else ""
+                    } ?: " · " + prescription.repTargetLabel()
                     val reason = when (candidate.dynamicSetDecisions.getOrNull(index)) {
                         BasicProgressionDecision.BUILD_REPS -> " · build to ${prescription.reps.maximum} reps"
                         BasicProgressionDecision.MAXIMUM_LOAD_REACHED -> " · highest available load"

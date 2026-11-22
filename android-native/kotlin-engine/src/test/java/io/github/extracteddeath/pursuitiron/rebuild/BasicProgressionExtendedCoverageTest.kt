@@ -86,6 +86,25 @@ class BasicProgressionExtendedCoverageTest {
                 listOf(10,10,10),"40",assistant,assist)))
     }
 
+    @Test fun zeroSelectorIsTheEndOfAssistedProgressionForBothStockFormats() {
+        val mode = BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION
+        val basis = LoadBasis.ASSISTANCE_COUNTERWEIGHT
+        val inventories = listOf(
+            VerifiedLoadStock.Stack(LoadUnit.LB, basis, n("0"), n("5"), n("15")),
+            VerifiedLoadStock.Totals(LoadUnit.LB, basis, listOf("0.00","5","10","15").map(::n))
+        )
+        for (inventory in inventories) {
+            fun earned(load: String) = BasicProgressionPolicyDomain.review(
+                request(mode, weight=load, scope=scope.copy(basis=basis), stock=inventory)
+            ) as BasicProgressionResult.Candidate
+            assertEquals(listOf(n("5"), n("5"), n("5")), earned("10").proposedWorkingLoads)
+            val lastAssisted = earned("5")
+            assertEquals(BasicProgressionDecision.MAXIMUM_LOAD_REACHED, lastAssisted.decision)
+            assertEquals(listOf(n("5"), n("5"), n("5")), lastAssisted.proposedWorkingLoads)
+            assertTrue(lastAssisted.increasedOrdinals.isEmpty())
+        }
+    }
+
     @Test fun weightedAndUnweightedUseIdenticalEarnedOneRepRule() {
         assertEquals(listOf(9,8,10),BasicRepTargetStepDomain.advance(
             listOf(8,8,10),listOf(8,7,10),band))
@@ -161,6 +180,28 @@ class BasicProgressionExtendedCoverageTest {
             stockLimit.decision)
         assertEquals(listOf(n("120"),n("120"),n("120")),
             stockLimit.proposedWorkingLoads)
+        assertEquals(all.issuedRepTargets, stockLimit.proposedRepTargets)
+        val limited = BasicProgressionPolicyDomain.review(all.copy(maximumAuthorizedIncrement=n("2.5")))
+            as BasicProgressionResult.Candidate
+        assertEquals(BasicProgressionDecision.AUTHORIZED_INCREMENT_TOO_SMALL, limited.decision)
+        assertEquals(all.issuedRepTargets, limited.proposedRepTargets)
+        assertTrue(limited.changedRepOrdinals.isEmpty())
+    }
+
+    @Test fun repOnlyCeilingRequiresCompletedRepsAndNoRemainingTargetStep() {
+        val base = request(BasicProgressionStrategy.REP_TARGET_PROGRESSION)
+        fun result(reps: List<Int>, targets: List<Int>) =
+            BasicProgressionPolicyDomain.review(request(base.strategy, reps=reps).copy(
+                verifiedStock=null, maximumAuthorizedIncrement=BigDecimal.ZERO,
+                issuedRepTargets=targets)) as BasicProgressionResult.Candidate
+        val capped = result(listOf(10, 10, 11), listOf(10, 10, 10))
+        assertEquals(BasicProgressionDecision.REP_CEILING_REACHED, capped.decision)
+        assertTrue(capped.increasedOrdinals.isEmpty())
+        assertEquals(listOf(10, 10, 10), capped.proposedRepTargets)
+        assertEquals(BasicProgressionDecision.BUILD_REPS,
+            result(listOf(10, 9, 10), listOf(10, 10, 10)).decision)
+        assertEquals(BasicProgressionDecision.EARNED_REP_TARGET,
+            result(listOf(10, 10, 10), listOf(8, 10, 10)).decision)
     }
 
     @Test fun repOnlyAndManualDoNotRequireAWeightIncrement() {

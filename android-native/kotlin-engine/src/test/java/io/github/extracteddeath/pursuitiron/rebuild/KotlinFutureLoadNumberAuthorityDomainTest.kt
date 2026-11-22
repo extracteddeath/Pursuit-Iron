@@ -82,6 +82,13 @@ class KotlinFutureLoadNumberAuthorityDomainTest {
                 basis=LoadBasis.ASSISTANCE_COUNTERWEIGHT))
     }
 
+    @Test fun verifiedZeroSelectorCannotBecomeAnEarnedAssistedLoad() {
+        val stock = assisted.copy(minimum=n("0"))
+        assertEquals(KotlinFutureLoadReview.Rejected(KotlinFutureLoadRefusal.NO_LOWER_ASSISTED_SETTING),
+            review(from="5", to="0.00", source=KotlinFutureLoadSource.EARNED_ASSISTANCE_DECREMENT,
+                stock=stock, basis=LoadBasis.ASSISTANCE_COUNTERWEIGHT))
+    }
+
     @Test fun noUnverifiedUnitBasisTargetLoadOrRoundedCandidateCanAdvance() {
         assertEquals(KotlinFutureLoadReview.Rejected(
             KotlinFutureLoadRefusal.UNVERIFIED_UNIT_OR_BASIS),review(stock=null))

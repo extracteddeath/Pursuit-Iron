@@ -3,6 +3,7 @@ package io.github.extracteddeath.pursuitiron
 import io.github.extracteddeath.pursuitiron.rebuild.CustomWorkoutSetSnapshot
 import io.github.extracteddeath.pursuitiron.rebuild.DraftSetLoad
 import io.github.extracteddeath.pursuitiron.rebuild.DraftSetType
+import io.github.extracteddeath.pursuitiron.rebuild.LoadBasis
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinWorkoutSetPresentation
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinWorkoutTarget
 
@@ -17,6 +18,46 @@ import io.github.extracteddeath.pursuitiron.rebuild.KotlinWorkoutTarget
  * the last, without guessing what training adaptation the program intended.
  */
 internal object NativeKotlinPlannedBackoffNote {
+    /**
+     * This is a source-issued DIFFERENCE, never a coach-created reduction.
+     * A smaller assistance counterweight is harder, unlike a lighter
+     * barbell/dumbbell/stack. One formatter serves both journal types.
+     */
+    private fun issuedDifference(
+        previous:DraftSetLoad.Verified,current:DraftSetLoad.Verified,
+        workingIndex:Int,workingCount:Int,custom:Boolean
+    ):String? {
+        if(previous.unit!=current.unit || previous.basis!=current.basis ||
+            current.value.signum()<0 ||
+            current.value.compareTo(previous.value)==0)return null
+        val from=previous.value.stripTrailingZeros().toPlainString()
+        val to=current.value.stripTrailingZeros().toPlainString()
+        val physical="${current.unit.name.lowercase()} · ${kotlinLoadBasisLabel(current.basis)}"
+        val assisted=current.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT
+        val moreAssistance=assisted && current.value>previous.value
+        // Only assistance counterweights reverse the ordinary numeric
+        // meaning of an authored lighter working load.
+        if(!assisted && current.value>previous.value)return null
+        val title=when {
+            assisted && moreAssistance && custom -> "Authored higher-assistance working set"
+            assisted && moreAssistance -> "Issued higher-assistance working set"
+            assisted && custom -> "Authored lower-assistance working set"
+            assisted -> "Issued lower-assistance working set"
+            custom -> "Authored lighter working set"
+            else -> "Issued lighter working set"
+        }
+        val explanation=when {
+            moreAssistance -> "More counterweight means an easier assisted movement. "+
+                "This planned reduction in difficulty was prescribed before logging, "+
+                "not applied by fatigue coaching."
+            assisted -> "Less counterweight means a harder movement, NOT a fatigue backoff. "+
+                "This setting was prescribed before workout logging."
+            custom -> "Saved before logging; the actual weight remains independent."
+            else -> "Prescribed before this workout, not lowered by fatigue coaching."
+        }
+        return "$title · set ${workingIndex+1} of $workingCount: "+
+            "$from → $to $physical. $explanation"
+    }
     fun fromIssuedTargets(
         all:List<KotlinWorkoutSetPresentation>,
         selected:KotlinWorkoutTarget
@@ -35,14 +76,7 @@ internal object NativeKotlinPlannedBackoffNote {
         val previous=working[index-1].target.load as? DraftSetLoad.Verified
             ?:return null
         val current=selected.load as? DraftSetLoad.Verified ?:return null
-        if(previous.unit!=current.unit || previous.basis!=current.basis ||
-            current.value.signum()<0 ||
-            current.value.compareTo(previous.value)>=0)return null
-        val former=previous.value.stripTrailingZeros().toPlainString()
-        val lighter=current.value.stripTrailingZeros().toPlainString()
-        return "Issued lighter working set · set ${index+1} of ${working.size}: "+
-            "$former → $lighter ${current.unit.name.lowercase()}. "+
-            "Prescribed before this workout, not lowered by fatigue coaching."
+        return issuedDifference(previous,current,index,working.size,custom=false)
     }
 
     /**
@@ -75,13 +109,6 @@ internal object NativeKotlinPlannedBackoffNote {
             as? DraftSetLoad.Verified ?:return null
         val current=selected.prescription.load
             as? DraftSetLoad.Verified ?:return null
-        if(previous.unit!=current.unit || previous.basis!=current.basis ||
-            current.value.signum()<0 ||
-            current.value.compareTo(previous.value)>=0)return null
-        val former=previous.value.stripTrailingZeros().toPlainString()
-        val lighter=current.value.stripTrailingZeros().toPlainString()
-        return "Authored lighter working set · set ${index+1} of ${working.size}: "+
-            "$former → $lighter ${current.unit.name.lowercase()}. "+
-            "Saved before logging; the actual weight remains independent."
+        return issuedDifference(previous,current,index,working.size,custom=true)
     }
 }

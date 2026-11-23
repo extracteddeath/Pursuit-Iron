@@ -149,4 +149,85 @@ class NativeKotlinPlannedBackoffNoteTest {
         assertNull(NativeKotlinPlannedBackoffNote.fromCustomSlot(
             listOf(main,final,warmup),final))
     }
+
+    @Test fun decreasingAssistedCounterweightMeansHarderNotLighterInGeneratedWorkout() {
+        val first=target(0,"70",basis=LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+        val harder=target(1,"65",basis=LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+        val note=NativeKotlinPlannedBackoffNote.fromIssuedTargets(
+            listOf(first,harder).map(::p),harder)
+        assertTrue(note.orEmpty().contains("Issued lower-assistance working set"))
+        assertTrue(note.orEmpty().contains(
+            "70 → 65 lb · assistance counterweight (more = easier)"))
+        assertTrue(note.orEmpty().contains("Less counterweight means a harder movement"))
+        assertTrue(note.orEmpty().contains("NOT a fatigue backoff"))
+        assertFalse(note.orEmpty().contains("Issued lighter working set"))
+        assertNull(NativeKotlinPlannedBackoffNote.fromIssuedTargets(
+            listOf(harder,first).map(::p),first))
+        assertEquals(BigDecimal("65"),
+            (harder.load as DraftSetLoad.Verified).value)
+    }
+
+    @Test fun assistedDirectionIsEquallyAccurateInCustomIssuedSetNotes() {
+        val first=custom(0,"70",basis=LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+        val harder=custom(1,"65",basis=LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+        val note=NativeKotlinPlannedBackoffNote.fromCustomSlot(
+            listOf(first,harder),harder)
+        assertTrue(note.orEmpty().contains("Authored lower-assistance working set"))
+        assertTrue(note.orEmpty().contains("70 → 65 lb · assistance counterweight"))
+        assertTrue(note.orEmpty().contains("harder movement"))
+        assertFalse(note.orEmpty().contains("Authored lighter working set"))
+        assertNull(NativeKotlinPlannedBackoffNote.fromCustomSlot(
+            listOf(harder,first),first))
+        assertEquals(BigDecimal("65"),
+            (harder.prescription.load as DraftSetLoad.Verified).value)
+    }
+
+    @Test fun genuineLighterLoadsStillDisclosePerHandAndTotalSmithConventions() {
+        val d0=target(0,"25",basis=LoadBasis.DUMBBELL_PER_HAND)
+        val d1=target(1,"20",basis=LoadBasis.DUMBBELL_PER_HAND)
+        val generated=NativeKotlinPlannedBackoffNote.fromIssuedTargets(
+            listOf(d0,d1).map(::p),d1)
+        assertTrue(generated.orEmpty().contains(
+            "25 → 20 lb · per hand"))
+        assertTrue(generated.orEmpty().contains("Issued lighter working set"))
+        assertFalse(generated.orEmpty().contains("lower-assistance"))
+        val c0=custom(0,"215")
+        val c1=custom(1,"195")
+        val custom=NativeKotlinPlannedBackoffNote.fromCustomSlot(
+            listOf(c0,c1),c1)
+        assertTrue(custom.orEmpty().contains(
+            "215 → 195 lb · total Smith weight"))
+        assertFalse(custom.orEmpty().contains("lower-assistance"))
+    }
+
+    @Test fun increasingAssistedCounterweightIsAPlannedEasierWorkingSet() {
+        val before=target(0,"65",basis=LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+        val easier=target(1,"70",basis=LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+        val generated=NativeKotlinPlannedBackoffNote.fromIssuedTargets(
+            listOf(before,easier).map(::p),easier)
+        assertTrue(generated.orEmpty().contains(
+            "Issued higher-assistance working set"))
+        assertTrue(generated.orEmpty().contains(
+            "65 → 70 lb · assistance counterweight (more = easier)"))
+        assertTrue(generated.orEmpty().contains(
+            "More counterweight means an easier assisted movement"))
+        assertTrue(generated.orEmpty().contains(
+            "planned reduction in difficulty"))
+        assertFalse(generated.orEmpty().contains("Issued lighter working set"))
+
+        val prior=custom(0,"65",basis=LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+        val after=custom(1,"70",basis=LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+        val customNote=NativeKotlinPlannedBackoffNote.fromCustomSlot(
+            listOf(prior,after),after)
+        assertTrue(customNote.orEmpty().contains(
+            "Authored higher-assistance working set"))
+        assertTrue(customNote.orEmpty().contains(
+            "More counterweight means an easier assisted movement"))
+        assertFalse(customNote.orEmpty().contains(
+            "Authored lighter working set"))
+        assertEquals(BigDecimal("70"),
+            (after.prescription.load as DraftSetLoad.Verified).value)
+        assertEquals(BigDecimal("65"),
+            (before.load as DraftSetLoad.Verified).value)
+    }
 }

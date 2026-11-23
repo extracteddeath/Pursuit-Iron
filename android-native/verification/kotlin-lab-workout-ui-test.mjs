@@ -542,8 +542,8 @@ assert.ok(journal.includes('activationPerformed=main?.performed') &&
 assert.ok(journal.includes('val draftIdentity=NativePendingWorkoutDraftIdentity.make(') &&
   journal.includes('set.setKey,visitDraftIdentity,machineInstanceId,target,expectedReps,') &&
   journal.includes('":activation:"+(activationReceiptRevision?.toString() ?: "none")') &&
-  localDrafts.includes('val load=rememberSaveable(identity.value,receiptRevision)') &&
-  localDrafts.includes('val reps=rememberSaveable(identity.value,receiptRevision)') &&
+  localDrafts.includes('val load=rememberSaveable(identity.value,receiptRevision,committed)') &&
+  localDrafts.includes('val reps=rememberSaveable(identity.value,receiptRevision,committed)') &&
   localDrafts.includes('if(committed)store.discard(identity)'),
   'Uncommitted edit fields must survive configuration and cold reopen while remaining machine- and receipt-scoped');
 assert.match(journal,/onRecord\(KotlinJournalSetOutcome.COMPLETED,\s*actual\)/,

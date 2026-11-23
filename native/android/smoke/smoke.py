@@ -382,14 +382,14 @@ time.sleep(4)
 shot("today-with-program")
 time.sleep(3)
 shot("today")
-# The design's Today: week strip, the coach's game plan and this week's days
+# The design's Today: week strip and the coach's game plan (the week's days live in Plan)
 # (a rest day shows recovery instead — the run's date decides which, so only a training day must have it)
 if not find(r"Recover today", timeout=2) and not find(r"Today's game plan", timeout=3) and not scroll_to(r"Today's game plan", tries=4):
     FAILS.append("no game plan on Today")
 else:
     shot("today-game-plan")
-if not scroll_to(r"^\|This week$", tries=4):
-    FAILS.append("no This week list on Today")
+if find(r"^\|This week$", timeout=1):
+    FAILS.append("Today repeats Plan's This week list")
 scroll_up_to(r"Start workout|^\|?Train .+ now", tries=8)
 # The design's check-in sits on Today (training days); readiness is applied when the workout opens
 # It sits under the session, folded to one row until opened
@@ -1202,10 +1202,16 @@ if seek(r"^\|Comfort & accessibility$"):
     back()
 else:
     FAILS.append("no Comfort & accessibility row")
-if seek(r"^\|1RM calculator$"):
-    shot("e1rm-calc")
+# One 1RM calculator: Settings opens the engine-backed one in Calculators.
+if seek(r"Calculators"):
+    tap(r"Calculators", required=False)
+    if not find(r"One-rep max", timeout=4):
+        FAILS.append("Calculators row does not open the 1RM calculator")
+    else:
+        shot("e1rm-calc")
+    back()
 else:
-    FAILS.append("no e1RM calculator in settings")
+    FAILS.append("no Calculators row in settings")
 # 7b. Settings parity: training preferences, data management, help
 tap(r"^\|You$|^You\|")
 for _ in range(14):

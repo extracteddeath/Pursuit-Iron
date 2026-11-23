@@ -87,6 +87,7 @@ fun YouScreen(vm: AppViewModel) {
     var historyId by remember { mutableStateOf<String?>(null) }
     var gymsOpen by remember { mutableStateOf(false) }
     var toolsOpen by remember { mutableStateOf(false) }
+    var toolsTab by remember { mutableStateOf("plates") }
     var customizeOpen by remember { mutableStateOf(false) }
     var shareCardOpen by remember { mutableStateOf(false) }
     var meOpen by remember { mutableStateOf(false) }
@@ -122,7 +123,8 @@ fun YouScreen(vm: AppViewModel) {
             "body" -> { item { Rise { BodyBwCard(vm) }}; item { Rise { BodyMeasureCard(vm) }}; item(span = full) { Rise { ProgressPhotosCard(vm) }} }
             else -> {
                 // The design's Settings: the backup reminder, the everyday controls as one list, every other page a row away,
-                // the banned list and the e1RM calculator.
+                // the banned list, and a row to the calculators. Settings used to carry its own e1RM card with a private
+                // Epley copy beside Tools' engine-backed 1RM; the one calculator is now Tools, a row away.
                 vm.home?.o("backup")?.takeIf { System.currentTimeMillis() - vm.prefs.backupNudgeHiddenAt > 7 * 86_400_000L }?.let { b -> item(span = full) { Rise { BackupBanner(vm, b) }} }
                 item { Rise { SettingsGroup(vm) { gymsOpen = true } }}
                 item { Rise { SettingsRows(vm) { k -> when (k) {
@@ -131,14 +133,25 @@ fun YouScreen(vm: AppViewModel) {
                     else -> settingsSheet = k
                 } } }}
                 item { Rise { BannedSection(vm) }}
-                item { Rise { E1rmCalcCard(vm) }}
+                item { Rise {
+                    PiCard(radius = 28.dp, padding = 16.dp, onClick = { toolsTab = "orm"; toolsOpen = true }) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(PiIcons.Calc, null, tint = MaterialTheme.colorScheme.primary)
+                            Column(Modifier.weight(1f)) {
+                                Text("Calculators", style = MaterialTheme.typography.titleSmall)
+                                Text("Estimated 1RM and plate loading", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Icon(PiIcons.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }}
             }
         }
     }
     historyId?.let { id -> HistorySheet(vm, id) { historyId = null } }
     if (standardsOpen) StrengthStandardsSheet(vm) { standardsOpen = false }
     if (gymsOpen) GymsSheet(vm) { gymsOpen = false }
-    if (toolsOpen) ToolsSheet(vm) { toolsOpen = false }
+    if (toolsOpen) ToolsSheet(vm, initialTab = toolsTab) { toolsOpen = false; toolsTab = "plates" }
     if (customizeOpen) ProfileCustomizeSheet(vm) { customizeOpen = false }
     if (shareCardOpen) ShareCardSheet(vm) { shareCardOpen = false }
     if (meOpen) MeSheet(vm, onClose = { meOpen = false }) { meOpen = false; standardsOpen = true }

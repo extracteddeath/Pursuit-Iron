@@ -427,7 +427,11 @@ export function sessionReview({ programId, dayId, weekIndex } = {}) {
     let r = null; try { r = buildSessionReview(p, day, wk, u, history(), perf()); } catch { r = null; }
     if (!r) return null;
     const restScale = Number(S.store.restScale) || 1;
-    const ranked = [...r.exercises].sort((a, b) => { const sc = (x) => (x.opportunity ? 8 : 0) + (x.change.undone ? 4 : 0) + (x.protocol.type !== 'straight' ? 2 : 0) + (x.change ? 1 : 0); return sc(b) - sc(a); }); // the card shows three, Show all reveals the rest
+    /* A plain lift's protocol type is null (techniqueProtocolFromCell), not 'straight', and `x.change` is always an
+       object: the old test marked every lift a technique and every lift changed, so the ranking and the sparkle icon
+       said nothing. Only a named technique is a technique; only a changed or held load is a change. */
+    const hasTech = (x) => !!x.protocol?.type && x.protocol.type !== 'straight';
+    const ranked = [...r.exercises].sort((a, b) => { const sc = (x) => (x.opportunity ? 8 : 0) + (x.change.undone ? 4 : 0) + (hasTech(x) ? 2 : 0) + (x.change.changed ? 1 : 0); return sc(b) - sc(a); }); // the card shows three, Show all reveals the rest
     // The engine's reasons are written for the web's detail view ("This exposure will establish a reference…"); Today's
     // card says the same thing the way a coach would.
     const plainWhy = (x) => {
@@ -447,6 +451,7 @@ export function sessionReview({ programId, dayId, weekIndex } = {}) {
         let c = null; try { c = E.computeCell(p, day, x.id, x.slot, wk); } catch { c = null; }
         return c ? pctCell(p, day, ex, x.slot, wk, c) : null;
     };
+    const noLoad = (x) => (x.effective || []).every((t) => t?.weight === '' || t?.weight == null);
     const gamePlan = ranked.map((x) => {
         const pc = pctNoMax(x);
         const pctTail = pc ? ` Set its max to run the plan's ${pc.sets} × ${pc.range}${pc.load ? ' at ' + pc.load : ''}.` : '';
@@ -456,12 +461,12 @@ export function sessionReview({ programId, dayId, weekIndex } = {}) {
         // What kind of note it is, so the card can mark it the way the design does (a PR chance, a technique, a first
         // estimate, load going up, load coming down for a reset, or targets the program sets).
         const estimate = (x.proposed || []).some((t) => t?.target?.estimate);
-        const kind = pr ? 'pr' : x.protocol.type !== 'straight' ? 'technique' : estimate ? 'estimate'
+        const kind = pr ? 'pr' : hasTech(x) ? 'technique' : estimate || noLoad(x) ? 'estimate'
             : x.category === 'Progression' ? 'up' : x.category === 'Load adjustment' ? 'down' : x.category === 'Programmed targets' ? 'plan' : 'trend';
-        return { id: x.id, slot: x.slot, name: x.name, kind, title: pr ? `PR chance · ${x.name}` : x.name,
+        return { id: x.id, slot: x.slot, name: x.name, kind, action: !!pc, title: pr ? `PR chance · ${x.name}` : x.name,
             // With no load to show yet the reason already says to choose one; leading with "Choose load × 8" repeated it.
             dose: targetsText(x.effective, u), guidance: ((x.effective || []).every((t) => t?.weight === '' || t?.weight == null) ? (tech || why) : `${targetsText(x.effective, u)} · ${tech || why}`) + pctTail };
-    });
+    }).filter((g) => g.kind !== 'trend' || g.action); // Today's outline lists every lift; the game plan carries only what to act on.
     const changes = r.changes.map((x) => {
         const prev = x.change.previous, prop = x.proposed;
         const uniform = prop.length === prev.length && prop.every((t) => t.weight === prop[0]?.weight && t.reps === prop[0]?.reps) && prev.every((t) => t.weight === prev[0]?.weight && t.reps === prev[0]?.reps);

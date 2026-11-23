@@ -29,18 +29,27 @@ internal object NativeKotlinPlannedBackoffNote {
     ):String? {
         if(previous.unit!=current.unit || previous.basis!=current.basis ||
             current.value.signum()<0 ||
-            current.value.compareTo(previous.value)>=0)return null
+            current.value.compareTo(previous.value)==0)return null
         val from=previous.value.stripTrailingZeros().toPlainString()
         val to=current.value.stripTrailingZeros().toPlainString()
         val physical="${current.unit.name.lowercase()} · ${kotlinLoadBasisLabel(current.basis)}"
         val assisted=current.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT
+        val moreAssistance=assisted && current.value>previous.value
+        // Only assistance counterweights reverse the ordinary numeric
+        // meaning of an authored lighter working load.
+        if(!assisted && current.value>previous.value)return null
         val title=when {
+            assisted && moreAssistance && custom -> "Authored higher-assistance working set"
+            assisted && moreAssistance -> "Issued higher-assistance working set"
             assisted && custom -> "Authored lower-assistance working set"
             assisted -> "Issued lower-assistance working set"
             custom -> "Authored lighter working set"
             else -> "Issued lighter working set"
         }
         val explanation=when {
+            moreAssistance -> "More counterweight means an easier assisted movement. "+
+                "This planned reduction in difficulty was prescribed before logging, "+
+                "not applied by fatigue coaching."
             assisted -> "Less counterweight means a harder movement, NOT a fatigue backoff. "+
                 "This setting was prescribed before workout logging."
             custom -> "Saved before logging; the actual weight remains independent."

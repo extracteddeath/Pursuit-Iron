@@ -155,4 +155,33 @@ class EquipmentLoadDomainTest {
         assertEquals(LoadInspection.Unavailable(LoadUnavailableReason.INVALID_STOCK),
             EquipmentLoadDomain.inspect(stack.copy(maximum=n("100")), n("0"), stack.unit))
     }
+
+
+    @Test fun equipmentStockAndSetReceiptShareExactlyOnePhysicalNumberEnvelope() {
+        val stock=VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.MACHINE_STACK,
+            listOf(n("0"),n("10"),n("100000")))
+        val valid=listOf("0","0.0000","0.001","12.1000",
+            "99999.999","100000.0000","1E+3")
+        val invalid=listOf("-0.001","0.0001","12.1001",
+            "99999.9991","100000.001","100001","1E-4")
+        for(raw in valid) {
+            val value=n(raw)
+            assertTrue(KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(value))
+            assertTrue("Equipment must use the same envelope: $raw",
+                EquipmentLoadDomain.inspect(stock,value,LoadUnit.LB)
+                    is LoadInspection.Confirmed)
+        }
+        for(raw in invalid) {
+            val value=n(raw)
+            assertFalse(KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(value))
+            assertEquals("Invalid equipment input: $raw",
+                LoadInspection.Unavailable(LoadUnavailableReason.INVALID_INPUT),
+                EquipmentLoadDomain.inspect(stock,value,LoadUnit.LB))
+        }
+        assertEquals(LoadInspection.Unavailable(LoadUnavailableReason.INVALID_STOCK),
+            EquipmentLoadDomain.inspect(
+                VerifiedLoadStock.Stack(LoadUnit.LB,LoadBasis.MACHINE_STACK,
+                    n("10"),n("0.0001"),n("20")),
+                n("10"),LoadUnit.LB))
+    }
 }

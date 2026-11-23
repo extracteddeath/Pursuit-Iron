@@ -204,10 +204,16 @@ object AdvancedAmplifierProtocolDomain {
         val before=main as? DraftSetLoad.Verified ?:return false
         val first=amp.followUpLoad as? DraftSetLoad.Verified ?:return false
         if(before.unit!=first.unit || before.basis!=first.basis ||
+            !KotlinSetNumberAuthorityDomain.validPrescribedLoad(
+                before.value,before.basis) ||
+            !KotlinSetNumberAuthorityDomain.validPrescribedLoad(
+                first.value,first.basis) ||
             first.value.signum()<=0 || first.value>=before.value)return false
         if(amp.followUpRounds==1)return amp.secondDropLoad==null
         val second=amp.secondDropLoad as? DraftSetLoad.Verified ?:return false
         return first.unit==second.unit && first.basis==second.basis &&
+            KotlinSetNumberAuthorityDomain.validPrescribedLoad(
+                second.value,second.basis) &&
             second.value.signum()>0 && second.value<first.value
     }
 
@@ -244,8 +250,11 @@ object AdvancedAmplifierProtocolDomain {
             ?:return null
         val firstTarget=dropStageLoad(amp,1)
             as? DraftSetLoad.Verified ?:return null
-        if(activation.reps<=0 || activation.unit!=target.unit ||
-            activation.load==null ||
+        if(!KotlinSetNumberAuthorityDomain.valid(
+                issuedActivation,KotlinJournalSetOutcome.COMPLETED,activation) ||
+            (stage==2 && !KotlinSetNumberAuthorityDomain.valid(
+                firstTarget,KotlinJournalSetOutcome.COMPLETED,previous)) ||
+            activation.unit!=target.unit || activation.load==null ||
             activation.load.compareTo(firstTarget.value)<=0 ||
             activation.machineInstanceId!=selectedMachineId ||
             previous.reps<=0 || previous.unit!=target.unit ||
@@ -278,7 +287,8 @@ object AdvancedAmplifierProtocolDomain {
             else precedingDropPerformed
         val prior=previous?.load ?:return false
         val observed=completed?.load ?:return false
-        return completed.reps>0 &&
+        return KotlinSetNumberAuthorityDomain.valid(
+                target,KotlinJournalSetOutcome.COMPLETED,completed) &&
             completed.unit==target.unit &&
             completed.machineInstanceId==
                 performedActivation?.machineInstanceId &&
@@ -340,17 +350,9 @@ object AdvancedAmplifierProtocolDomain {
         val actual=performedActivation
             ?:return AmplifierFollowUpEntryLoad.ActivationUnavailable
         if(actual.machineInstanceId!=selectedMachineId ||
-            actual.reps<=0)
+            !KotlinSetNumberAuthorityDomain.valid(
+                issuedActivation,KotlinJournalSetOutcome.COMPLETED,actual))
             return AmplifierFollowUpEntryLoad.ActivationUnavailable
-        when(issuedActivation) {
-            DraftSetLoad.ExplicitBodyweight ->
-                if(actual.load!=null || actual.unit!=null)
-                    return AmplifierFollowUpEntryLoad.ActivationUnavailable
-            is DraftSetLoad.Verified ->
-                if(actual.load==null || actual.unit!=issuedActivation.unit ||
-                    actual.load.signum()<0)
-                    return AmplifierFollowUpEntryLoad.ActivationUnavailable
-        }
         return AmplifierFollowUpEntryLoad.RecordedActivation(actual)
     }
 

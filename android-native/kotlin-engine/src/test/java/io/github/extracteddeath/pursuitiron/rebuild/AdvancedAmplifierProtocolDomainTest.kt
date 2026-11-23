@@ -471,4 +471,67 @@ class AdvancedAmplifierProtocolDomainTest {
             AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
                 amp,load("100"),activation,"machine-a",2,first))
     }
+
+
+    @Test fun sameLoadAmplifiersReuseCompletedSetAuthorityInsteadOfLooseNumericChecks() {
+        fun n(value:String)=java.math.BigDecimal(value)
+        val issued=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.SMITH_TOTAL,n("100"))
+        val amp=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,20,followUpRounds=3)
+        val actual=KotlinPerformedSet(n("95"),LoadUnit.LB,12,2,"machine-a")
+        val expected=AmplifierFollowUpEntryLoad.ActivationUnavailable
+        assertEquals(AmplifierFollowUpEntryLoad.RecordedActivation(actual),
+            AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                amp,issued,actual,"machine-a",1))
+        val malformed=listOf(
+            actual.copy(load=n("-1")),
+            actual.copy(load=n("95.0001")),
+            actual.copy(load=n("100000.001")),
+            actual.copy(reps=101),
+            actual.copy(actualRir=11),
+            actual.copy(actualRir=-1),
+            actual.copy(unit=LoadUnit.KG),
+            actual.copy(load=null))
+        for(observation in malformed) {
+            assertFalse(KotlinSetNumberAuthorityDomain.valid(
+                issued,KotlinJournalSetOutcome.COMPLETED,observation))
+            assertEquals("Unverified activation must not seed a mini-set: $observation",
+                expected,AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                    amp,issued,observation,"machine-a",1))
+        }
+        assertEquals(expected,AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+            amp,issued,actual,"machine-b",1))
+        val bodyweight=KotlinPerformedSet(null,null,10,2)
+        assertEquals(AmplifierFollowUpEntryLoad.RecordedActivation(bodyweight),
+            AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                amp,DraftSetLoad.ExplicitBodyweight,bodyweight,null,2))
+        assertEquals(expected,AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+            amp,DraftSetLoad.ExplicitBodyweight,bodyweight.copy(reps=101),null,2))
+    }
+
+    @Test fun dropStagesRejectInvalidActualsAndMalformedAuthoredWeightPrecision() {
+        fun n(value:String)=java.math.BigDecimal(value)
+        fun load(value:String)=DraftSetLoad.Verified(
+            LoadUnit.LB,LoadBasis.MACHINE_STACK,n(value))
+        val issued=load("120")
+        val amp=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+            followUpLoad=load("95"),followUpRounds=2,secondDropLoad=load("75"))
+        val activation=KotlinPerformedSet(n("115"),LoadUnit.LB,12,2,"machine-a")
+        val first=KotlinPerformedSet(n("95"),LoadUnit.LB,8,2,"machine-a")
+        val second=KotlinPerformedSet(n("80"),LoadUnit.LB,8,2,"machine-a")
+        fun valid(stage:Int,initial:KotlinPerformedSet?,
+            previous:KotlinPerformedSet?,done:KotlinPerformedSet?)=
+            AdvancedAmplifierProtocolDomain.validPerformedDropStage(
+                amp,issued,initial,previous,done,stage)
+        assertTrue(valid(1,activation,null,first))
+        assertTrue(valid(2,activation,first,second))
+        assertFalse(valid(1,activation.copy(actualRir=11),null,first))
+        assertFalse(valid(2,activation,first.copy(actualRir=11),second))
+        assertFalse(valid(2,activation,first,second.copy(load=n("80.0001"))))
+        assertFalse(valid(2,activation,first,second.copy(reps=101)))
+        assertFalse(valid(2,activation,first,second.copy(actualRir=-1)))
+        assertFalse(AdvancedAmplifierProtocolDomain.validDropSequence(
+            issued,amp.copy(secondDropLoad=load("75.0001"))))
+        assertFalse(AdvancedAmplifierProtocolDomain.validDropSequence(
+            issued,amp.copy(followUpLoad=load("95.0001"))))
+    }
 }

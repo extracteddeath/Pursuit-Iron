@@ -1,5 +1,7 @@
 # Training-number authority: one Kotlin engine, one auditable chain
 
+The [source-traced weight decision tree and authority inventory](WEIGHT_DECISION_AUTHORITY_MAP.md) maps every major source-to-actual-to-future route, the decision precedence and the current cross-route audit findings.
+
 Status: architecture/acceptance contract, **not** a claim that all paths are
 implemented or that native has web parity. The native replacement must never
 package or call the web/JavaScript engine as a hidden second decision system.

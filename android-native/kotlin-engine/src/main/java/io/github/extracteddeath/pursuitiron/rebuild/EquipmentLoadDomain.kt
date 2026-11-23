@@ -116,7 +116,6 @@ sealed interface LoadInspection {
 object EquipmentLoadDomain {
     private val zero = BigDecimal.ZERO
     private val two = BigDecimal("2")
-    private val maxLoad = BigDecimal("100000")
     private const val MAX_DISTINCT_PLATES = 12
     private const val MAX_PAIRS_PER_SIZE = 24
     private const val MAX_ATTAINABLE_TOTALS = 100_000
@@ -127,13 +126,13 @@ object EquipmentLoadDomain {
     private fun normalized(value: BigDecimal): BigDecimal =
         BigDecimal(value.stripTrailingZeros().toPlainString())
 
+    // Physical numeric bounds belong to the one set-number authority.
+    // Stock feasibility, exact neighbors and implement mechanics stay here.
     private fun validLoad(value: BigDecimal): Boolean =
-        value >= zero && value <= maxLoad &&
-            value.stripTrailingZeros().scale() <= 3
+        KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(value)
 
     private fun validStep(value: BigDecimal): Boolean =
-        value > zero && value <= maxLoad &&
-            value.stripTrailingZeros().scale() <= 3
+        value > zero && validLoad(value)
 
     /** Explicitly no unit inference and no unknown-stock fallback. */
     fun inspect(

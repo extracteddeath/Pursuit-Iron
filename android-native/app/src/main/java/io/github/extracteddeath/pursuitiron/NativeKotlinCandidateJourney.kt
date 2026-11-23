@@ -75,6 +75,33 @@ internal fun kotlinIdleColdLanding(
  * interrupted History outranks Train, which outranks a saved program, which
  * outranks already-completed History. Nothing here issues or replays a workout.
  */
+/** A failed verification is not evidence of an empty workout ledger.
+ * Show the existing read-only History retry/recovery screen, rather than
+ * silently dropping an existing athlete back into first-time setup.
+ *
+ * NOT_ENROLLED is a legitimate new-athlete state; identity/scope failures
+ * must not grant History navigation. A pending transaction still has FIRST
+ * priority so no other inventory can mask an interrupted Finish.
+ */
+internal fun kotlinHistoryReadNeedsRecovery(
+    read:NativeKotlinMixedHistoryReadResult?
+):Boolean = when(read) {
+    null -> true // storage exception; never interpreted as an empty ledger
+    is NativeKotlinMixedHistoryReadResult.Review -> false
+    is NativeKotlinMixedHistoryReadResult.Rejected -> when(read.reason) {
+        NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION,
+        NativeKotlinMixedHistoryRefusal.INVALID_MANIFEST,
+        NativeKotlinMixedHistoryRefusal.UNVERIFIED_COMPOSER,
+        NativeKotlinMixedHistoryRefusal.UNVERIFIED_CUSTOM,
+        NativeKotlinMixedHistoryRefusal.UNVERIFIED_MEASURED,
+        NativeKotlinMixedHistoryRefusal.MANIFEST_CHANGED,
+        NativeKotlinMixedHistoryRefusal.STORAGE_UNAVAILABLE -> true
+        NativeKotlinMixedHistoryRefusal.INVALID_SCOPE,
+        NativeKotlinMixedHistoryRefusal.NOT_AUTHORIZED,
+        NativeKotlinMixedHistoryRefusal.NOT_ENROLLED -> false
+    }
+}
+
 internal class KotlinColdLaunchProbes(
     val pendingHistory:()->Boolean,
     val unfinishedCustom:()->Boolean,
@@ -82,7 +109,8 @@ internal class KotlinColdLaunchProbes(
     val unfinishedMeasured:()->Boolean,
     val confirmedMeasured:()->Boolean,
     val ownedCustomProgram:()->Boolean,
-    val completedVerifiedHistory:()->Boolean
+    val completedVerifiedHistory:()->Boolean,
+    val historyReadNeedsRecovery:()->Boolean
 )
 
 internal fun kotlinColdLaunchDestination(
@@ -93,9 +121,14 @@ internal fun kotlinColdLaunchDestination(
     if(probes.unfinishedGenerated())return KotlinCandidateDestination.TRAIN
     if(probes.unfinishedMeasured())return KotlinCandidateDestination.TRAIN
     if(probes.confirmedMeasured())return KotlinCandidateDestination.TRAIN
-    return kotlinIdleColdLanding(
+    val verifiedIdle=kotlinIdleColdLanding(
         hasOwnedCustomCycle=probes.ownedCustomProgram(),
         hasVerifiedCompletedHistory=probes.completedVerifiedHistory)
+    if(verifiedIdle!=KotlinCandidateDestination.ONBOARD)return verifiedIdle
+    // Only after every stronger, verified owner inventory was checked.
+    // History handles verification failures with Refresh / recovery actions.
+    return if(probes.historyReadNeedsRecovery())
+        KotlinCandidateDestination.HISTORY else KotlinCandidateDestination.ONBOARD
 }
 
 private val primaryDestinations=listOf(
@@ -255,6 +288,9 @@ internal fun NativeKotlinCandidateJourney(
                     completedVerifiedHistory={
                         (readHistory as? NativeKotlinMixedHistoryReadResult.Review)
                             ?.timeline?.completions?.isNotEmpty()==true
+                    },
+                    historyReadNeedsRecovery={
+                        kotlinHistoryReadNeedsRecovery(readHistory)
                     }
                 ))
             }

@@ -2,6 +2,9 @@ package io.github.extracteddeath.pursuitiron
 
 import org.junit.Assert.*
 import org.junit.Test
+import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeKotlinMixedHistoryReadResult
+import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeKotlinMixedHistoryRefusal
+import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeKotlinMixedHistoryTimeline
 
 class NativeKotlinNavigationStateTest {
     private val primary=listOf(KotlinCandidateDestination.PROGRAM,
@@ -32,11 +35,12 @@ class NativeKotlinNavigationStateTest {
 
     @Test fun coldLaunchPrioritiesShortCircuitEveryLaterOwnerStore() {
         val stages=listOf("pending","custom","generated","measured",
-            "confirmed","program","completed")
+            "confirmed","program","completed","history-read-error")
         val destinations=listOf(KotlinCandidateDestination.HISTORY,
             KotlinCandidateDestination.TRAIN,KotlinCandidateDestination.TRAIN,
             KotlinCandidateDestination.TRAIN,KotlinCandidateDestination.TRAIN,
-            KotlinCandidateDestination.PROGRAM,KotlinCandidateDestination.HISTORY)
+            KotlinCandidateDestination.PROGRAM,KotlinCandidateDestination.HISTORY,
+            KotlinCandidateDestination.HISTORY)
         for(index in stages.indices) {
             val calls=mutableListOf<String>()
             fun available(name:String):Boolean {
@@ -50,7 +54,8 @@ class NativeKotlinNavigationStateTest {
                 unfinishedMeasured={available("measured")},
                 confirmedMeasured={available("confirmed")},
                 ownedCustomProgram={available("program")},
-                completedVerifiedHistory={available("completed")}))
+                completedVerifiedHistory={available("completed")},
+                historyReadNeedsRecovery={available("history-read-error")}))
             assertEquals(stages[index],destinations[index],destination)
             assertEquals(stages.take(index+1),calls)
         }
@@ -62,9 +67,70 @@ class NativeKotlinNavigationStateTest {
             unfinishedMeasured={calls.add("measured");false},
             confirmedMeasured={calls.add("confirmed");false},
             ownedCustomProgram={calls.add("program");false},
-            completedVerifiedHistory={calls.add("completed");false}))
+            completedVerifiedHistory={calls.add("completed");false},
+            historyReadNeedsRecovery={calls.add("history-read-error");false}))
         assertEquals(KotlinCandidateDestination.ONBOARD,empty)
         assertEquals(stages,calls)
+    }
+
+    @Test fun unreadableHistoryIsNeverMistakenForFirstTimeOnboarding() {
+        assertTrue(kotlinHistoryReadNeedsRecovery(null))
+        for (failure in listOf(
+            NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION,
+            NativeKotlinMixedHistoryRefusal.INVALID_MANIFEST,
+            NativeKotlinMixedHistoryRefusal.UNVERIFIED_COMPOSER,
+            NativeKotlinMixedHistoryRefusal.UNVERIFIED_CUSTOM,
+            NativeKotlinMixedHistoryRefusal.UNVERIFIED_MEASURED,
+            NativeKotlinMixedHistoryRefusal.MANIFEST_CHANGED,
+            NativeKotlinMixedHistoryRefusal.STORAGE_UNAVAILABLE
+        )) {
+            assertTrue(failure.toString(),kotlinHistoryReadNeedsRecovery(
+                NativeKotlinMixedHistoryReadResult.Rejected(failure)))
+        }
+        assertFalse(kotlinHistoryReadNeedsRecovery(
+            NativeKotlinMixedHistoryReadResult.Review(
+                NativeKotlinMixedHistoryTimeline("athlete",1,emptyList()))))
+    }
+
+    @Test fun legitimateFirstLaunchAndUnverifiedIdentityDoNotGrantHistory() {
+        for (failure in listOf(
+            NativeKotlinMixedHistoryRefusal.NOT_ENROLLED,
+            NativeKotlinMixedHistoryRefusal.NOT_AUTHORIZED,
+            NativeKotlinMixedHistoryRefusal.INVALID_SCOPE
+        )) {
+            val read=NativeKotlinMixedHistoryReadResult.Rejected(failure)
+            assertFalse(failure.toString(),kotlinHistoryReadNeedsRecovery(read))
+            assertEquals(KotlinCandidateDestination.ONBOARD,
+                kotlinColdLaunchDestination(KotlinColdLaunchProbes(
+                    pendingHistory={false},unfinishedCustom={false},
+                    unfinishedGenerated={false},unfinishedMeasured={false},
+                    confirmedMeasured={false},ownedCustomProgram={false},
+                    completedVerifiedHistory={false},
+                    historyReadNeedsRecovery={kotlinHistoryReadNeedsRecovery(read)})))
+        }
+    }
+
+    @Test fun unreadableHistoryYieldsToAuthenticUnfinishedWorkoutOrProgram() {
+        for ((which,expected) in listOf(
+            "custom" to KotlinCandidateDestination.TRAIN,
+            "generated" to KotlinCandidateDestination.TRAIN,
+            "measured" to KotlinCandidateDestination.TRAIN,
+            "confirmed" to KotlinCandidateDestination.TRAIN,
+            "program" to KotlinCandidateDestination.PROGRAM
+        )) {
+            var recoveredHistoryProbed=false
+            val destination=kotlinColdLaunchDestination(KotlinColdLaunchProbes(
+                pendingHistory={false},
+                unfinishedCustom={which=="custom"},
+                unfinishedGenerated={which=="generated"},
+                unfinishedMeasured={which=="measured"},
+                confirmedMeasured={which=="confirmed"},
+                ownedCustomProgram={which=="program"},
+                completedVerifiedHistory={false},
+                historyReadNeedsRecovery={recoveredHistoryProbed=true;true}))
+            assertEquals(which,expected,destination)
+            assertFalse(which,recoveredHistoryProbed)
+        }
     }
 
     @Test fun primaryTabsHaveNoSyntheticBackDestination() {

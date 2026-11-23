@@ -33,6 +33,17 @@ assert.ok(journey.includes('if(probes.unfinishedMeasured())return KotlinCandidat
 assert.ok(!landing.includes('host.issueMeasuredWorkout(') &&
   !landing.includes('host.confirmMeasuredWorkoutConsent('),
   'Cold launch must not issue or confirm a measured workout without a tap');
+assert.ok(journey.includes('internal fun kotlinHistoryReadNeedsRecovery(') &&
+  journey.includes('NativeKotlinMixedHistoryRefusal.NOT_ENROLLED -> false') &&
+  journey.includes('NativeKotlinMixedHistoryRefusal.NOT_AUTHORIZED,') &&
+  journey.includes('NativeKotlinMixedHistoryRefusal.INVALID_MANIFEST,') &&
+  journey.includes('NativeKotlinMixedHistoryRefusal.STORAGE_UNAVAILABLE -> true') &&
+  journey.includes('historyReadNeedsRecovery={') &&
+  landing.includes('kotlinHistoryReadNeedsRecovery(readHistory)') &&
+  journey.includes('if(verifiedIdle!=KotlinCandidateDestination.ONBOARD)return verifiedIdle') &&
+  journey.includes('if(probes.historyReadNeedsRecovery())'),
+  'Unreadable History should offer recovery only after stronger verified cold-launch destinations, never masquerade as empty onboarding');
+
 // A missing measured parent is not necessarily an available new ID.
 // Native storage must EXPLICITLY return NOT_ISSUED, and the source loader
 // must terminate on failure with a retry instead of spinning forever.
@@ -129,7 +140,9 @@ assert.ok(coldHistory.includes('val readHistory=runCatching {') &&
   coldPriority.includes('if(probes.unfinishedGenerated())return KotlinCandidateDestination.TRAIN') &&
   coldPriority.includes('if(probes.unfinishedMeasured())return KotlinCandidateDestination.TRAIN') &&
   coldPriority.includes('if(probes.confirmedMeasured())return KotlinCandidateDestination.TRAIN') &&
-  coldPriority.includes('return kotlinIdleColdLanding(') &&
+  coldPriority.includes('val verifiedIdle=kotlinIdleColdLanding(') &&
+  coldPriority.includes('if(verifiedIdle!=KotlinCandidateDestination.ONBOARD)return verifiedIdle') &&
+  coldPriority.includes('if(probes.historyReadNeedsRecovery())') &&
   coldPriority.includes('hasVerifiedCompletedHistory=probes.completedVerifiedHistory)'),
   'Owner-verified cold-start probes must have deterministic recovery-before-resume priority');
 // Incomplete, failed, or wrong-owner History cannot be used to infer

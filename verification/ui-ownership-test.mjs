@@ -828,7 +828,6 @@ assert.ok(b1012Home.includes('className: "pi-t-strong wpb-s956-flex-1') &&
 assert.equal((app.split("function SettingsView(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,20,"SettingsView shared owner regression");
 assert.equal((app.split("function ProgressDetail(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,10,"ProgressDetail shared owner regression");
 assert.equal((app.split("function StrengthSnapshotCard(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,9,"StrengthSnapshotCard shared owner regression");
-assert.equal((app.split("function OneRepMaxCalc(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,9,"OneRepMaxCalc shared owner regression");
 assert.equal((app.split("function CompareView(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,24,"CompareView shared owner regression");
 assert.equal((app.split("function ExerciseCharts(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,5,"ExerciseCharts shared owner regression");
 assert.equal((app.split("function ThousandClubCard(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,5,"ThousandClubCard shared owner regression");
@@ -866,7 +865,7 @@ assert.ok(primitives.includes('export function UiCard('), 'Standard cards must u
 assert.ok(!settingsView.includes('style: { background: C.card, borderRadius: 16, overflow: "hidden"'), 'No unnamed legacy row cards remain');
 
 // M270: shared shell roles cannot silently regain per-screen typography or aliases.
-const navigation = app.slice(app.indexOf('function TabBar('), app.indexOf('function OneRepMaxCalc('));
+const navigation = app.slice(app.indexOf('function TabBar('), app.indexOf('// In-app diagnostics:'));
 const notice = app.slice(app.indexOf('function UiNotice('), app.indexOf('function TabBar('));
 assert.ok(!navigation.includes('style:') && !navigation.includes('compactLabels'), 'Navigation has one class-owned full-name layout');
 assert.ok(!notice.includes('style:') && notice.includes('role: "status"'), 'Notices share class-owned accessible presentation');

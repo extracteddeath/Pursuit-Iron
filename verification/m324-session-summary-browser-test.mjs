@@ -124,7 +124,8 @@ try {
         await page.click('[data-tab="progress"]');await page.waitForSelector('[data-progress-glance]');
         const totals=await page.$$eval('[data-progress-glance] .wpb-progress-glance-item',nodes=>Object.fromEntries(nodes.map(n=>
             [n.querySelector('.wpb-progress-glance-label').textContent,Number(n.querySelector('.wpb-progress-glance-value').textContent)])));
-        assert.equal(totals.Sessions,3);assert.equal(totals.Sets,homeSets,'muscle credits must not inflate the completed-set tile');
+        // B1029: Home owns the 7-day counts; Progress opens on the lifetime record.
+        assert.equal(totals.Workouts,3,'Progress counts every logged workout');assert.equal(homeSets,3,'muscle credits must not inflate the completed-set tile');
         await page.click('[data-tab="plan"]');await page.waitForSelector('.wpb-plan-up-next');
         assert.match(await page.$eval('.wpb-plan-up-next',n=>n.textContent),/Lower Body/);
         assert.match(await page.$eval('.wpb-plan-up-next',n=>n.textContent),/Week 2/);

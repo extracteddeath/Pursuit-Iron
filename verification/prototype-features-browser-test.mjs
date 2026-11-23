@@ -53,7 +53,7 @@ try {
     await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
     await page.evaluateOnNewDocument(s => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('wpb:v1', JSON.stringify(s)); } }, state);
     await page.goto('http://127.0.0.1:' + server.address().port + '/', { waitUntil: 'networkidle0' });
-    await page.waitForSelector('.wpb-home .wpb-action-tile');
+    await page.waitForSelector('.wpb-home .wpb-home-hero');
     return { ctx, page, errors };
   };
 
@@ -142,7 +142,9 @@ try {
   // 4. Share code: the program's sheet mints a PI2 code that Settings imports as an editable copy.
   {
     const { ctx, page, errors } = await open(393);
-    await page.evaluate(() => document.querySelector('.wpb-home-programs [aria-label="Open Upper Lower"]').click());
+    await page.click('[data-tab="plan"]');
+    await page.waitForSelector('.wpb-plan-programs [aria-label="Open Upper Lower"]');
+    await page.evaluate(() => document.querySelector('.wpb-plan-programs [aria-label="Open Upper Lower"]').click());
     await page.waitForSelector('[aria-label="Share program"]');
     await page.evaluate(() => document.querySelector('[aria-label="Share program"]').click());
     await page.waitForFunction(() => /^PI2-/.test(document.querySelector('#program-share-code')?.value || ''));

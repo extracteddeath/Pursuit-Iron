@@ -49,7 +49,8 @@ try{
     {...baseline,theme,saved:populated?[program]:[],pinnedId:populated?program.id:null,
      history:populated?[recentSession]:[]});
   await page.goto('http://127.0.0.1:'+server.address().port+'/',{waitUntil:'networkidle0'});
-  await page.waitForSelector('.wpb-home .wpb-action-tile');
+  // B1029: with a program, Home is today only; creation and the program list live in Plan.
+  await page.waitForSelector(populated?'.wpb-home .wpb-home-hero':'.wpb-home .wpb-action-tile');
   // Text-only enlargement does not dispatch window.resize. Natural content
   // flow must remain complete without a clipped or stale measured height.
   for(const enlarged of [true,false]){
@@ -177,6 +178,11 @@ try{
    await page.screenshot({path:path.join(root,'verification/m269-game-plan-phone.png')});
    assert.ok(await page.$('.wpb-home-game-plan') || await page.$('.wpb-home-health'),
     'Supporting Home sections remain reachable without cloning the hero');
+   assert.equal(await page.$('[data-view-frame="home"] .wpb-home-programs, [data-view-frame="home"] .wpb-action-grid'),null,
+    'Home is today: the program list and creation routes are not repeated there');
+   await page.click('[data-tab="plan"]');
+   await page.waitForSelector('.wpb-plan-programs .wpb-home-programs');
+   assert.ok(await page.$('.wpb-plan-programs .wpb-action-grid .wpb-home-templates'),'Plan owns program creation routes');
   }
   assert.deepEqual(errors,[], 'No Home route/runtime errors '+width+' '+theme);
   await ctx.close();

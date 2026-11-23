@@ -21,7 +21,7 @@ async function verifyManualTargets(browser){
                     cycles:[],history:[],perf:{},drafts:{[p.id]:{...p,description:'Earlier pending edit'}},tombs:{},unit:'lb',unitChosen:true,theme,seenIntro:999,seenWhatsNew:999,
                     installDismissedAt:Date.now(),lastBackup:Date.now()}));},{p,theme});
             await page.goto('http://127.0.0.1:8776/index.html',{waitUntil:'networkidle0'});
-            await page.click('.hp-open');await page.waitForSelector('.wpb-program');
+            await page.click('[data-tab="plan"]');await page.waitForSelector('.hp-open');await page.click('.hp-open');await page.waitForSelector('.wpb-program');
             const setField='.wpb-program input[aria-label^="Sets"]',repField='.wpb-program input[aria-label^="Reps"]';
             const form='.wpb-manual-targets',apply=form+' [aria-label^="Apply targets"]',cancel=form+' [aria-label^="Cancel targets"]';
             const snapshot=()=>page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('wpb:v1'));return {saved:s.saved,drafts:s.drafts,history:s.history,cycles:s.cycles};});
@@ -86,7 +86,7 @@ async function verifyManualTargets(browser){
             const committed=await snapshot();assert.deepEqual(committed.saved[0].overrides['upper:0'].sets,[3,4,5,6]);
             assert.deepEqual(committed.saved[0].overrides['upper:1'],before.saved[0].overrides['upper:1']);
             assert.deepEqual(committed.history,before.history);assert.deepEqual(committed.cycles,before.cycles);
-            await page.reload({waitUntil:'networkidle0'});await page.locator('.hp-open').click();
+            await page.reload({waitUntil:'networkidle0'});await page.locator('[data-tab="plan"]').click();await page.locator('.hp-open').click();
             await page.locator('.wpb-program-week-chip:nth-child(3)').click();
             await page.waitForFunction(selector=>document.querySelector(selector)?.value==='5',{},setField);
             assert.equal(await page.$eval(repField,n=>n.value),'8-12');
@@ -110,7 +110,7 @@ async function verifyManualTargets(browser){
         await page.locator('.wpb-home-hero .wpb-primary-action').click();
         assert.equal(await page.$('.wpb-workout'),null);assert.equal(await page.evaluate(()=>localStorage.getItem('wpb:live')),null);
         assert.match(await page.$eval('.wpb',n=>n.innerText),/Review the rep target/);
-        await page.locator('.hp-open').click();
+        await page.locator('[data-tab="plan"]').click();await page.locator('.hp-open').click();
         assert.equal(await page.$eval('.wpb-program input[aria-label^="Reps"]',n=>n.value),'10-20oops');
         await page.locator('.wpb-day-start').click();
         assert.equal(await page.$('.wpb-workout'),null);assert.equal(await page.evaluate(()=>localStorage.getItem('wpb:live')),null);
@@ -157,7 +157,7 @@ try {
         theme:'rosewater',seenIntro:999,seenWhatsNew:999,installDismissedAt:Date.now(),lastBackup:Date.now()}));localStorage.setItem('m370-settings-seeded','1');}},authored);
     await settingsPage.goto('http://127.0.0.1:8776/index.html',{waitUntil:'networkidle0'});
     const store=()=>settingsPage.evaluate(()=>{const s=JSON.parse(localStorage.getItem('wpb:v1'));return {saved:s.saved,history:s.history,drafts:s.drafts,cycles:s.cycles};});
-    const original=await store();await settingsPage.locator('.hp-open').click();await settingsPage.locator('[aria-label="Program settings"]').click();
+    const original=await store();await settingsPage.locator('[data-tab="plan"]').click();await settingsPage.locator('.hp-open').click();await settingsPage.locator('[aria-label="Program settings"]').click();
     await settingsPage.waitForSelector('[data-testid="program-settings-sheet"]');
     const clickSetting=async label=>{
         const handle=await settingsPage.evaluateHandle(label=>[...document.querySelectorAll('[data-testid="program-settings-sheet"] button')].find(n=>n.textContent.trim()===label||n.textContent.trim().startsWith(label)),label);

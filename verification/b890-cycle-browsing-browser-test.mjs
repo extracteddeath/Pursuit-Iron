@@ -186,11 +186,14 @@ try{
    }
   }
   await page.click('[data-plan-pane="schedule"]');
+  // B1029: cycles are managed with programs in Plan.
   await page.click('.wpb-tabbar [aria-label="Home"]');await page.waitForSelector('.wpb-home');
-  await page.click('[aria-label="Open cycle SekuFit Cycle"]');await page.waitForSelector('.wpb-cycle-detail');
+  assert.equal(await page.$('[aria-label="Open cycle SekuFit Cycle"]'),null,'Home does not list cycles');
+  await page.click('[data-tab="plan"]');await page.waitForSelector('.wpb-plan-programs [aria-label="Open cycle SekuFit Cycle"]');
+  await page.click('.wpb-plan-programs [aria-label="Open cycle SekuFit Cycle"]');await page.waitForSelector('.wpb-cycle-detail');
   await verifyCycleText(page,'.wpb-cycle-detail',width);
   // Browse through the actual all-cycles route and return through its title action.
-  await page.click('.wpb-cycle-detail .wpb-cycle-header [aria-label="Back"]');await page.waitForSelector('.wpb-home');
+  await page.click('.wpb-cycle-detail .wpb-cycle-header [aria-label="Back"]');await page.waitForSelector('.wpb-plan-programs .wpb-home-cycles');
   await page.click('.wpb-home-cycles');
   await page.waitForSelector('.wpb-cycles .wpb-cycle-list-summary');
   assert.match(await page.$eval('.wpb-cycle-list-summary',n=>n.textContent),
@@ -434,6 +437,7 @@ try{
   }},{...store,saved:live.blocks,cycles:[liveCycle],pinnedId:live.blocks[0].id,history:firstHistory});
   await page.goto('http://127.0.0.1:8790/index.html',{waitUntil:'networkidle0'});
   const complete=async(final=false)=>{
+   await page.waitForSelector('.wpb-tabbar [data-tab="plan"]');await page.click('[data-tab="plan"]');
    await page.waitForSelector('[aria-label="Open cycle Lifecycle browser"]',{visible:true});
    const openerBefore=await page.$eval('[aria-label="Open cycle Lifecycle browser"]',el=>({
      html:el.outerHTML.slice(0,450),visible:!!el.getClientRects().length,

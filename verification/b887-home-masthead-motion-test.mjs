@@ -4,7 +4,7 @@ const app=fs.readFileSync('modules/App.js','utf8');
 const css=fs.readFileSync('app.css','utf8');
 const home=app.slice(app.indexOf('function Home('),app.indexOf('function Home(')+40000);
 assert.ok(home.startsWith('function Home('),'Home component must remain available');
-assert.ok(home.includes('className: "wpb-home-content", children: [_jsxs("div", { className: "wpb-home-context"'),
+assert.ok(home.includes('className: "wpb-home-content", children: [showToday && _jsxs("div", { className: "wpb-home-context"'),
   'Home context belongs to the scrolling content under a fixed app bar');
 assert.ok(!home.includes('head.style.height') && !home.includes('data.homeCompact') && !home.includes('dataset.homeCompact'),
   'Home has no late scroll-driven height writes or duplicate compact state');

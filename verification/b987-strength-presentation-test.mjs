@@ -9,9 +9,9 @@ const styleStart=css.indexOf('/* B987 —');
 const baseCss=css.slice(styleStart,css.indexOf('@media(prefers-reduced-motion:reduce)',styleStart));
 assert.ok(styleStart>0&&baseCss.length>2000,'B987 base CSS must be present');
 const progress=app.slice(app.indexOf('function ProgressDetail('),app.indexOf('function RecoveryTrendCard('));
-const calc=app.slice(app.indexOf('function OneRepMaxCalc('),app.indexOf('// In-app diagnostics:'));
-assert.ok(progress.length>3500&&calc.length>2000,'Both strength panels must remain present');
-for(const name of ['rm-card','rm-field-label','rm-input','rm-summary','rm-plate','rm-load','rm-explainer',
+// B1029: the Settings 1RM calculator duplicated Calculators → Estimated 1RM and was removed.
+assert.ok(progress.length>3500 && !app.includes('function OneRepMaxCalc('),'Strength detail remains; the duplicate Settings 1RM calculator is gone');
+for(const name of [
  'strength-detail','strength-detail-stat','strength-detail-plateau','strength-detail-level',
  'strength-detail-meter','strength-detail-chip','strength-detail-session-pr']){
  assert.ok(app.includes('wpb-'+name),'React must use the '+name+' style owner');
@@ -19,13 +19,6 @@ for(const name of ['rm-card','rm-field-label','rm-input','rm-summary','rm-plate'
 }
 assert.ok(!css.slice(css.indexOf('/* B987 —')).includes('!important'),
  'New CSS must use normal cascade, not priority overrides');
-assert.equal((calc.match(/style: \{/g)||[]).length,1,
- 'Only the measured plate-height presentation remains inline; kickers now use shared CSS');
-assert.ok(calc.includes('style: { height: 22 + (p / maxP) * 32 }'),'Plate height must still scale by plate value');
-assert.ok(calc.includes('font')===true&&calc.includes('round(rmAt(orm, n))'),
- 'All 1RM and rep target calculations remain owned by the calculator');
-assert.ok(css.includes('.wpb-rm-input{')&&css.includes('font-size:16px'),
- 'Mobile 1RM inputs must not trigger focus zoom');
 assert.ok(progress.includes('wpb-strength-detail-meter--on')&&
  progress.includes('x.e1rm === s.best ? "mono wpb-strength-detail-chip'),
  'Strength-level and best-set conditional states retain their live semantics');

@@ -109,7 +109,8 @@ try{
             return nodes.find(node=>!node.ignored)?.name?.value;
           }finally{await client.detach();}
         };
-        for(const label of ['Bodyweight (lb)','Estimated 1RM weight (lb)','Estimated 1RM reps'])
+        // B1029: Settings' duplicate 1RM calculator is gone; Calculators owns Estimated 1RM.
+        for(const label of ['Bodyweight (lb)'])
           assert.equal(await fieldName('.wpb-settings input[aria-label="'+label+'"]'),label,
             'Settings exposes the actual field purpose to assistive technology');
         const action=async (scope,label)=>{
@@ -501,7 +502,7 @@ try{
         assert.equal(await page.$eval('.wpb-library-search input',el=>el.value),'bench',
           'Escape preserves the filtered Library list');
         await page.click('.wpb-library-header button[aria-label="Back"]');
-        await page.waitForSelector('.wpb-home-new-program');
+        await page.click('[data-tab="plan"]');await page.waitForSelector('.wpb-plan-programs .wpb-home-new-program');
         await page.$eval('.wpb-home-new-program',el=>el.scrollIntoView({block:'center'}));
         await page.click('.wpb-home-new-program');
         await page.waitForSelector('.wpb-wizard-step button');

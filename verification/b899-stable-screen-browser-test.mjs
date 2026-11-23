@@ -39,7 +39,7 @@ try{
    }
   }
   if(empty){await page.click('[data-tab="plan"]');await click('Create a program');}
-  else await click('New program');
+  else{await page.click('[data-tab="plan"]');await click('New program');}
   await page.waitForSelector('.wpb-wizard-step');
   if(cycle)await click('Training cycle');
   await click('Continue');await page.waitForFunction(()=>document.querySelector('.wpb-wizard-step')?.dataset.stepKey!=='mode');

@@ -88,7 +88,7 @@ try {
             assert.match(await matrixPage.$eval('.wpb-plan-view',n=>n.textContent),/Week 4 volume/,'Tab navigation restores the browsed volume week');
             await matrixPage.locator('[data-tab="home"]').click();
         }
-        await matrixPage.locator('.hp-open').click();await matrixPage.locator('button[title="Program details"]').click();
+        await matrixPage.locator('[data-tab="plan"]').click();await matrixPage.locator('.hp-open').click();await matrixPage.locator('button[title="Program details"]').click();
         await matrixPage.evaluate(()=>(()=>{const b=[...document.querySelectorAll('[data-infocard]>button')].find(b=>b.textContent.includes('Lift progression'));if(b.getAttribute('aria-expanded')!=='true')b.click();})());
         await matrixPage.waitForSelector('[data-progression-row]');
         const volumeSummary=await matrixPage.evaluate(()=>[...document.querySelectorAll('[data-infocard]>button')].find(n=>n.textContent.includes('Weekly volume')).textContent);

@@ -53,7 +53,7 @@ try{
    assert.ok(Math.abs(item.header.h-top.header.h)<=1,'Home app-bar geometry stays fixed during scroll');
    assert.equal(item.brandText,'Pursuit Iron',`full app identity on ${width} ${theme} scroll ${item.scroll}`);
    assert.equal(item.shortExists,false,'no Iron-only substitute in DOM');
-   assert.equal(item.buttons.length,3,'all three actions persist');
+   assert.equal(item.buttons.length,2,'both tools persist (B1029: history lives in the Progress tab)');
    assert.ok(item.buttons.every(b=>b.w>=48&&b.h>=48),'48px touch targets preserved');
    assert.ok(item.brand.right+3<=item.tools.x&&!item.overflow,`no overlap or horizontal overflow: ${JSON.stringify(item)}`);
    assert.ok(Math.abs(item.tools.x-top.tools.x)<2.5,`tool position does not jump from ${top.tools.x}px: ${JSON.stringify(item)}`);
@@ -79,8 +79,10 @@ try{
   // A real pointer action scrolls the saved program into view. Deferred header
   // collapse used to move it between the pointer's geometry read and click,
   // so the same action landed on the card footer instead of opening the program.
+  // B1029: saved programs are listed in Plan; Home is today.
+  await page.click('[data-tab="plan"]');await page.waitForSelector('.wpb-plan-programs .hp-open');
   const pointerHandoff=await page.evaluate(async()=>{
-   const button=document.querySelector('.hp-open');button.scrollIntoView({block:'center'});
+   const button=document.querySelector('.wpb-plan-programs .hp-open');button.scrollIntoView({block:'center'});
    const point=()=>{const r=button.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};};
    const before=point();await new Promise(r=>requestAnimationFrame(r));const first=point();
    await new Promise(r=>requestAnimationFrame(r));return {before,first,following:point()};

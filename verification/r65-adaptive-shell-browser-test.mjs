@@ -545,6 +545,7 @@ try{
         await page.waitForSelector('[data-view-frame="home"]');
         // R71: exercise the real Home→Wizard path. The right-hand overview
         // reads the ONE active form; resizing never remounts or copies the draft.
+        await page.click('[data-tab="plan"]');await page.waitForSelector('.wpb-plan-programs .wpb-home-new-program');
         await page.$eval('.wpb-home-new-program',el=>el.scrollIntoView({block:'center'}));
         await page.click('.wpb-home-new-program');
         await page.waitForSelector('.wpb-wizard .wpb-wizard-step');
@@ -611,7 +612,8 @@ try{
         if(creationMode==='Training cycle')
           await page.click('.wpb-wizard-header button[aria-label="Back"]');
         await page.click('.wpb-wizard-header button[aria-label="Back"]');
-        await page.waitForSelector('[data-view-frame="home"]');
+        // B1029: the Wizard was opened from Plan's program list, so Back returns there.
+        await page.waitForSelector('[data-view-frame="plan"]');
         // R84: diagnose (do not retry or conceal) any missed primary-nav tap
         // after a rail-to-compact viewport switch. Report actual pointer hit,
         // navigation state, overlays and click delivery before blaming timing.

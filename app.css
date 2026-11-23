@@ -1041,7 +1041,7 @@ display:block!important;
 .wpb-exercise-cue-number{flex-shrink:0;font-weight:700;color:var(--wpb-theme-accent-ink)}
 .wpb-exercise-tempo{display:flex;align-items:center;flex-wrap:wrap;gap:var(--pi-space-2);margin-top:var(--pi-space-2);padding:var(--pi-space-2) var(--pi-space-3);border-radius:var(--pi-shape-action);background:var(--pi-color-control)}
 .wpb-exercise-tempo-label{flex-shrink:0;font-size:var(--pi-type-label);font-weight:700;text-transform:uppercase;color:var(--wpb-theme-accent-ink)}
-.wpb-exercise-tempo-copy,.wpb-rm-summary-hint{font-size:var(--pi-type-support);line-height:1.5;color:var(--pi-color-on-muted)}
+.wpb-exercise-tempo-copy{font-size:var(--pi-type-support);line-height:1.5;color:var(--pi-color-on-muted)}
 .wpb-exercise-demo{display:flex;align-items:center;gap:var(--pi-space-3);min-height:48px;margin-top:var(--pi-space-2);padding:var(--pi-space-3);border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-action);background:var(--pi-color-card);color:var(--pi-color-on-control);text-decoration:none}
 .wpb-exercise-demo-icon{display:grid;place-items:center;flex-shrink:0;width:var(--pi-space-10);height:var(--pi-space-10);border-radius:var(--pi-shape-action);background:var(--pi-color-control)}
 .wpb-exercise-demo-copy{flex:1;min-width:0}
@@ -9245,7 +9245,6 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-b965-layout-32,#root .wpb-b965-layout-32{min-width:0;flex:1 1 auto;min-height:0;overflow-y:auto;padding:14px 18px 18px}
 #root .wpb .wpb-b965-layout-33,#root .wpb-b965-layout-33{position:relative;width:100%;margin-top:8px;padding:12px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
 #root .wpb .wpb-b965-layout-34,#root .wpb-b965-layout-34{overflow-y:auto;padding:4px 18px calc(env(safe-area-inset-bottom) + 24px)}
-#root .wpb .wpb-b965-layout-35,#root .wpb-b965-layout-35{display:flex;align-items:center;gap:2px;height:56px}
 #root .wpb .wpb-b965-layout-36,#root .wpb-b965-layout-36{position:relative;width:52px;height:52px}
 #root .wpb .wpb-b965-layout-37,#root .wpb-b965-layout-37{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
 #root .wpb .wpb-b965-layout-38,#root .wpb-b965-layout-38{font-size:24px;letter-spacing:-.4px;margin:0 0 10px}
@@ -9777,21 +9776,6 @@ background:var(--pi-color-card)!important;
 
 /* B987 — Strength detail and 1RM calculator: one CSS owner for fixed layout.
    Only data-dependent meter fills, plate height and 1RM values stay dynamic. */
-#root .wpb .wpb-rm-card{background:var(--wpb-theme-card);border-radius:16px;padding:16px}
-#root .wpb .wpb-rm-field-label{font-size:11px;font-weight:600;color:var(--wpb-theme-muted);margin-bottom:4px}
-#root .wpb .wpb-rm-input{width:100%;min-width:0;min-height:48px;padding:11px 12px;border-radius:12px;border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-card-high);color:var(--wpb-theme-text);font-size:16px;font-weight:600}
-#root .wpb .wpb-rm-input:focus-visible{outline:2px solid var(--wpb-theme-accent);outline-offset:2px}
-#root .wpb .wpb-rm-summary{text-align:center;padding:10px 0 14px;border-bottom:1px solid var(--wpb-theme-border-soft);margin-bottom:12px}
-#root .wpb .wpb-rm-summary-label{font-size:11px;color:var(--wpb-theme-muted);font-weight:600}
-#root .wpb .wpb-rm-summary-value{font-size:28px;font-weight:700;color:var(--wpb-theme-accent-ink);line-height:1.1}
-#root .wpb .wpb-rm-summary-unit{font-size:16px;color:var(--wpb-theme-muted);font-weight:500}
-#root .wpb .wpb-rm-bar{width:18px;height:4px;background:var(--wpb-theme-muted);border-radius:2px;flex-shrink:0}
-#root .wpb .wpb-rm-plate{width:13px;background:var(--wpb-theme-accent);border-radius:8px;display:flex;align-items:center;justify-content:center}
-#root .wpb .wpb-rm-plate-label{font-size:11px;font-weight:600;color:var(--wpb-theme-accent-text);transform:rotate(-90deg);white-space:nowrap}
-#root .wpb .wpb-rm-plate-total{font-size:14px;font-weight:600;color:var(--wpb-theme-muted);margin-left:6px}
-#root .wpb .wpb-rm-muted{color:var(--wpb-theme-muted)}
-#root .wpb .wpb-rm-load{font-weight:600;color:var(--wpb-theme-text)}
-#root .wpb .wpb-rm-explainer{font-size:11px;color:var(--wpb-theme-faint);margin-top:12px;line-height:1.5}
 #root .wpb .wpb-strength-detail{position:absolute;inset:0;background:var(--wpb-theme-bg);z-index:70;display:flex;flex-direction:column;animation:fadeIn .2s both}
 #root .wpb .wpb-strength-detail-head{padding:16px 16px 12px;border-bottom:1px solid var(--wpb-theme-border-soft);display:flex;align-items:center;gap:8px}
 #root .wpb .wpb-strength-detail-back{background:none;border:none;color:var(--wpb-theme-text);cursor:pointer;padding:4px}
@@ -10256,3 +10240,9 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-split-choices.wpb-segmented>.wpb-ui-choice:first-child{border-radius:20px 6px 6px 20px}
 #root .wpb .wpb-split-choices.wpb-segmented>.wpb-ui-choice:last-child{border-radius:6px 20px 20px 6px}
 #root .wpb .wpb-split-choices.wpb-segmented>.wpb-ui-choice[aria-pressed=true]{border-radius:20px;background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent)}
+#root .wpb .wpb-plan-programs{margin-top:var(--pi-space-6)}
+@media (min-width:1060px) and (min-height:700px){#root[data-pi-motion="expressive"] .wpb .wpb-plan-view>.wpb-plan-programs{grid-column:1 / -1}}
+#root .wpb .wpb-home-embedded{display:block;isolation:isolate}
+#root .wpb .wpb-home-embedded .wpb-home-content{display:block;padding:0}
+#root .wpb .wpb-home-hero-alt{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px}
+#root .wpb .wpb-home-hero-alt>.wpb-ui-action{flex:0 1 auto;width:auto}

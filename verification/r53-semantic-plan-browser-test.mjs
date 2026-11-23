@@ -135,17 +135,21 @@ async function verifyFoundationStates(browser){
         const start=await controlStyle(page,'.wpb-home .wpb-ui-action[data-action="primary"]');
         // Deferred actions are intentionally below the first viewport; bring
         // each into the live scroll viewport before checking pointer hits.
-        await page.$eval('.wpb-home-new-program',el=>el.scrollIntoView({block:'center'}));
-        const create=await controlStyle(page,'.wpb-home-new-program');
         await page.$eval('.wpb-home-freestyle',el=>el.scrollIntoView({block:'center'}));
         const freestyle=await controlStyle(page,'.wpb-home-freestyle');
+        // B1029: program creation lives with the program list in Plan.
+        assert.equal(await page.$('[data-view-frame="home"] .wpb-home-new-program'),null,'Home is today only');
+        await page.click('[data-tab="plan"]');await page.waitForSelector('.wpb-plan-programs .wpb-home-new-program');
+        await page.$eval('.wpb-plan-programs .wpb-home-new-program',el=>el.scrollIntoView({block:'center'}));
+        const create=await controlStyle(page,'.wpb-plan-programs .wpb-home-new-program');
+        await page.click('[data-tab="home"]');await page.waitForSelector('.wpb-home-hero');
         if(state==='scored'){
           const pulse=await page.evaluate(()=>{
             const metrics=document.querySelector('.wpb-metric-strip');
             const programList=document.querySelector('.wpb-home-programs');
             return {exists:!!metrics,labels:metrics?.textContent||'',
-              ahead:!!metrics&&!!programList&&!!(metrics.compareDocumentPosition(programList)&
-                Node.DOCUMENT_POSITION_FOLLOWING)};
+              ahead:!!metrics&&(!programList||!!(metrics.compareDocumentPosition(programList)&
+                Node.DOCUMENT_POSITION_FOLLOWING))};
           });
           assert.ok(pulse.exists&&pulse.ahead&&pulse.labels.includes('Last 7 days')&&
             pulse.labels.includes('Streak')&&!pulse.labels.includes('Total'),
@@ -195,8 +199,8 @@ async function verifyTaskHierarchy(browser){
         const dock=el('.wpb-home-compose-bar');
         return {summaryFirst:before('.wpb-home-session-summary','.wpb-home-hero>.wpb-primary-action'),
           startFirst:before('.wpb-home-hero>.wpb-primary-action','.wpb-home-session-preview'),
-          programsFirst:before('.wpb-home-programs','.wpb-action-grid'),
-          dockPresent:!!dock,createDeferred:before('.wpb-home-programs','.wpb-home-new-program'),
+          programsFirst:!el('[data-view-frame="home"] .wpb-home-programs'),
+          dockPresent:!!dock,createDeferred:!el('[data-view-frame="home"] .wpb-home-new-program'),
           startHeight:start.height};
       });
       assert.ok(homeOrder.summaryFirst&&homeOrder.startFirst&&homeOrder.programsFirst&&
@@ -706,7 +710,7 @@ try{
           'Scrolled context leaves a stable compact app bar without reserved blank space: '+JSON.stringify({expanded,compact}));
         assert.notEqual(compact.long,'none','Full Pursuit Iron identity remains in DOM while its context collapses');
         assert.equal(compact.short,null,'Home no longer substitutes the incorrect Iron-only label');
-        assert.ok(compact.buttons.length===3&&compact.buttons.every(b=>b.w>=48&&b.h>=48),
+        assert.ok(compact.buttons.length===2&&compact.buttons.every(b=>b.w>=48&&b.h>=48),
           'All Home tools remain accessible 48px touch targets: '+JSON.stringify(compact));
         assert.ok(compact.brand.right+8<=compact.tools.x&&!compact.overflow,
           'Collapsed Home title/tools never overlap: '+JSON.stringify(compact));
@@ -736,7 +740,7 @@ try{
       const card=document.querySelector('.wpb-settings .wpb-settings-card');
       return card&&getComputedStyle(card).backgroundColor;
     }), 'Settings and Plan use the SAME neutral card role: '+JSON.stringify(surfaces.plan));
-    await page.click('[data-tab="home"]');
+    await page.click('[data-tab="plan"]');
     await page.waitForSelector('.hp-open');
     await page.click('.hp-open');
     await page.waitForSelector('.wpb-program .wpb-week-rail');

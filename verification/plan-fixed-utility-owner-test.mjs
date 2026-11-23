@@ -8,7 +8,7 @@ const start=app.indexOf('function PlanView(');
 const end=app.indexOf('\nfunction ',start+1);
 const plan=app.slice(start,end);
 assert.ok(start>0 && end>start,'Plan has one screen owner');
-assert.equal((plan.match(/style:\s*\{/g)||[]).length,20,'Plan utility adoption and owner retirement must not regress');
+assert.equal((plan.match(/style:\s*\{/g)||[]).length,18,'Plan utility adoption and owner retirement must not regress');
 assert.ok(plan.includes('className: "mono pi-t-muted wpb-s956-fontsize-14 wpb-s956-margintop-2"'),
   'Week set/time metadata must use the shared muted text utilities');
 assert.ok(plan.includes('className: "wpb-plan-glance", children:'),
@@ -31,10 +31,8 @@ assert.ok(plan.includes('role: "group"') &&
 assert.ok(plan.includes('className: "wpb-type-value", children: ph.label')&&
  plan.includes('className: "wpb-s956-display-flex wpb-s956-justifycontent-space-between wpb-s956-marginbottom-4 wpb-type-support-muted"'),
  'Plan uses the existing typography and layout owners, not new CSS');
-assert.ok(plan.includes('role: "progressbar"')&&
- plan.includes('"aria-label": "Program completion"')&&
- plan.includes('"aria-valuenow": Math.max(0, Math.min(100, plan.percentDone))')&&
- plan.includes('width: `${Math.max(0, Math.min(100, plan.percentDone))}%`'),
- 'Progressbar remains data-driven and accessible');
+// B1029: completion renders through the shared wavy LinearProgressIndicator, which owns role/aria.
+assert.ok(plan.includes('_jsx(UiWavyProgress, { label: "Program completion", value: Math.max(0, Math.min(100, plan.percentDone)), max: 100 })'),
+ 'Progressbar remains data-driven and accessible through the shared owner');
 assert.ok((css.match(/!important/g)||[]).length <= uiStyleBudget.cssPriorityDeclarations,'No priority overrides added');
 console.log('PASS Plan utilities: two more static objects removed, live progress announced accessibly.');

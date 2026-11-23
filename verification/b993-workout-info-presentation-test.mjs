@@ -14,10 +14,10 @@ for(const name of names){
  assert.ok(css.includes('.'+role+'{')||css.includes('.'+role+',')||css.includes('.'+role+')'),'No CSS role '+role);
 }
 for(const [names,shared] of [
-  [['metric-value','record-value'],'font-size:15px;color:var(--wpb-theme-accent-ink);overflow-wrap:anywhere'],
-  [['why-copy','cue-copy'],'font-size:13px;color:var(--wpb-theme-text);overflow-wrap:anywhere'],
+  [['metric-value','record-value'],'font-size:16px;color:var(--wpb-theme-accent-ink);overflow-wrap:anywhere'],
+  [['why-copy','cue-copy'],'font-size:14px;color:var(--wpb-theme-text);overflow-wrap:anywhere'],
   [['metric-label','rest-caption'],'font-size:11px;color:var(--wpb-theme-muted)'],
-  [['secondary-copy','tempo-copy','demo-copy','set-helper'],'font-size:13px;color:var(--wpb-theme-muted)']
+  [['secondary-copy','tempo-copy','demo-copy','set-helper'],'font-size:14px;color:var(--wpb-theme-muted)']
 ]){
   const rule='#root .wpb :is('+names.map(name=>'.wpb-exinfo-'+name).join(',')+'){'+shared+'}';
   assert.ok(css.includes(rule),'One scoped typography owner required for '+names.join(','));
@@ -41,7 +41,7 @@ assert.ok(css.includes('max-height:min(90dvh,calc(var(--visual-h'),'Sheet must a
 // 90dvh visual-viewport owner, including compact-landscape and detent modes.
 assert.equal((app.match(/:not\(:is\(\.wpb-program-share-panel,\.wpb-exercise-options-sheet,\.wpb-exinfo-sheet\)\)\{max-height:/g)||[]).length,4,
  'Generic sheet caps exclude Info in phone, tablet and both detent selectors');
-assert.ok(app.includes(':not(.wpb-exinfo-sheet){max-height:calc(var(--visual-h'),
+assert.ok(app.includes(':not(.wpb-exinfo-sheet){max-height:min(calc(var(--visual-h'),
  'Compact landscape also leaves Info viewport sizing to its scoped CSS owner');
 assert.ok((app.match(/style: \{/g)||[]).length<=1101,'Fixed Workout info CSS must not return to inline style');
 assert.ok((css.match(/!important/g)||[]).length<=2060,'No priority overrides added');

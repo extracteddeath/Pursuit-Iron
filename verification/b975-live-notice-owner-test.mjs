@@ -23,7 +23,7 @@ assert.ok(!surface.includes('!important'), 'New shell styles cannot add CSS prio
 assert.ok(surface.includes('[data-discard-armed="true"]'), 'Discard confirmation paints only when armed');
 assert.ok(surface.includes('[data-has-tabs="true"]'), 'Dock clears the bottom navigation');
 assert.ok(surface.includes('min-height:48px'), 'Update and confirmation must keep accessible targets');
-assert.ok(surface.includes('min-height:44px'), 'Resume and Discard must keep accessible targets');
+assert.ok(surface.includes('min-height:48px'), 'Resume and Discard must keep accessible targets');
 assert.ok(surface.includes('forced-colors:active'), 'Accessible contrast mode remains supported');
 assert.ok(surface.includes('prefers-reduced-motion:reduce'), 'Reduced-motion status is supported');
 assert.ok(app.includes('"data-discard-armed": discardArmed ? "true" : "false"'));

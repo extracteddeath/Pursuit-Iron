@@ -53,7 +53,7 @@ assert.ok(css.includes('.wpb-progression-result-count{') &&
     'responsive CSS retains Review flex sizing and the shared sheet scroll owner');
 assert.ok(css.includes('.wpb-program-schedule-sheet{box-sizing:border-box;width:100%;max-height:min(86dvh,calc(var(--visual-h,'),
     'Weekly Schedule retains independent keyboard-safe viewport geometry');
-assert.ok(css.includes('max-height:min(var(--pi-ui-sheet-max-vh,86dvh),calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - var(--pi-ui-sheet-top-gap,24px)))'),'Reference and Progression panels retain keyboard-safe viewport bounds');
+assert.ok(css.includes('max-height:min(var(--pi-ui-sheet-max-vh,86dvh),calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - var(--pi-ui-sheet-top-gap,24px)),100%)'),'Reference and Progression panels retain keyboard-safe viewport bounds');
 for (const surface of ['wpb-program-reference-panel','wpb-progression-choice-panel']) {
     assert.ok(css.includes(`.${surface}{`) && progression.includes('wpb-ui-sheet-panel '+surface),
         'Reference/Progression keep distinct paint and shared responsive geometry: '+surface);

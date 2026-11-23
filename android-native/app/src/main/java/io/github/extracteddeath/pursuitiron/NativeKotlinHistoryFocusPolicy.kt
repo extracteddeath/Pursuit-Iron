@@ -28,4 +28,23 @@ internal object NativeKotlinHistoryFocusPolicy {
         currentAthleteId:String?):String =
         query.takeIf { !selectedAthleteId.isNullOrBlank() &&
             selectedAthleteId==currentAthleteId } ?: ""
+
+    /**
+     * No machine selection means the COMPLETE corrected History is visible.
+     * An explicit station filter is a browser preference only: it must refer
+     * to one unique station in this athlete's freshly verified exercise visits.
+     * Do not silently fall back to the latest machine, a different athlete's
+     * station, or an old station absent after correction.
+     */
+    fun admitStation(
+        showAll:Boolean,selectedAthleteId:String?,currentAthleteId:String?,
+        selectedGymId:String,selectedMachineId:String,
+        verifiedStations:Collection<Pair<String,String>>
+    ):Pair<String,String>? {
+        if(showAll || selectedAthleteId.isNullOrBlank() ||
+            selectedAthleteId!=currentAthleteId ||
+            selectedGymId.isBlank() || selectedMachineId.isBlank())return null
+        val chosen=selectedGymId to selectedMachineId
+        return chosen.takeIf { verifiedStations.count{it==chosen}==1 }
+    }
 }

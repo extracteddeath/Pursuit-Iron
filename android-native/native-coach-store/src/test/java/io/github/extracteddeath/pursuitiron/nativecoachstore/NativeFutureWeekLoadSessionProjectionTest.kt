@@ -254,4 +254,30 @@ class NativeFutureWeekLoadSessionProjectionTest {
             store().readCurrent("owner-1","cycle-1","block-2",
                 args,9,1,"bench"))
     }
+
+
+    @Test fun twoOwnerReviewsMustAgreeOnExactPhysicalProofBeforeHandoff() {
+        val fact=(run() as NativeFutureWeekLoadProjection.Ready).numberFact
+        fun matches(other:KotlinFutureLoadFact=fact,
+            observed:BigDecimal?=n("200"),
+            previously:BigDecimal=n("200"),
+            next:BigDecimal=n("205"))=
+            NativeAcceptedFutureWeekNumberProof.matches(
+                fact,other,observed,previously,next)
+        assertTrue(matches())
+        assertTrue(matches(observed=n("200.000"),previously=n("200.0"),
+            next=n("205.000")))
+        assertFalse(matches(observed=null))
+        assertFalse(matches(observed=n("195")))
+        assertFalse(matches(previously=n("195")))
+        assertFalse(matches(next=n("210")))
+        assertFalse(matches(fact.copy(authorizedIncrease=n("10"))))
+        assertFalse(matches(fact.copy(physicalProof=
+            fact.physicalProof.copy(nextHigher=n("210")))))
+        assertFalse(matches(fact.copy(physicalProof=
+            fact.physicalProof.copy(absoluteChange=n("10")))))
+        assertFalse(matches(fact.copy(
+            source=KotlinFutureLoadSource.RETURN_TO_DEMONSTRATED_LOAD)))
+        assertFalse(matches(fact.copy(proposedLoad=n("210"))))
+    }
 }

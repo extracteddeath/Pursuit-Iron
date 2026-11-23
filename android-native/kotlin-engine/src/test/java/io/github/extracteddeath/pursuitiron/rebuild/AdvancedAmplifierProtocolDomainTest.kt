@@ -479,6 +479,47 @@ class AdvancedAmplifierProtocolDomainTest {
     }
 
 
+    @Test fun failedDropAttemptMustStillHavePhysicalLowerWeightAndExactMachine() {
+        fun n(v:String)=java.math.BigDecimal(v)
+        fun weight(v:String)=DraftSetLoad.Verified(
+            LoadUnit.LB,LoadBasis.MACHINE_STACK,n(v))
+        val amp=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,
+            8,10,followUpLoad=weight("75"),followUpRounds=2,
+            secondDropLoad=weight("55"))
+        val main=KotlinPerformedSet(n("95"),LoadUnit.LB,12,1,"machine-A")
+        val first=KotlinPerformedSet(n("75.00"),LoadUnit.LB,8,1,"machine-A")
+        val attempted=KotlinPerformedSet(n("60"),LoadUnit.LB,0,null,"machine-A")
+        fun accepts(stage:Int,preceding:KotlinPerformedSet?,
+            candidate:KotlinPerformedSet?,outcome:KotlinJournalSetOutcome)=
+            AdvancedAmplifierProtocolDomain.validDropStageObservation(
+                amp,weight("100"),main,preceding,candidate,stage,outcome)
+        assertTrue(accepts(1,null,attempted,KotlinJournalSetOutcome.FAILED_ATTEMPT))
+        assertTrue(accepts(2,first,attempted,KotlinJournalSetOutcome.FAILED_ATTEMPT))
+        // An actual failure never earns future stages and does not require
+        // completed reps, but its attempted weight is a physical observation.
+        for(bad in listOf(
+            attempted.copy(load=n("95")),attempted.copy(load=n("100")),
+            attempted.copy(load=n("0")),attempted.copy(load=n("-1")),
+            attempted.copy(machineInstanceId="machine-B"),
+            attempted.copy(unit=LoadUnit.KG),
+            attempted.copy(load=n("60.0001")),
+            attempted.copy(reps=1),
+            attempted.copy(actualRir=2))) {
+            assertFalse(bad.toString(),accepts(1,null,bad,
+                KotlinJournalSetOutcome.FAILED_ATTEMPT))
+        }
+        assertFalse(accepts(2,null,attempted,KotlinJournalSetOutcome.FAILED_ATTEMPT))
+        assertFalse(accepts(2,first.copy(load=n("70")),attempted,
+            KotlinJournalSetOutcome.FAILED_ATTEMPT))
+        assertFalse(accepts(2,first,attempted.copy(load=n("75")),
+            KotlinJournalSetOutcome.FAILED_ATTEMPT))
+        assertFalse(accepts(2,first,attempted,KotlinJournalSetOutcome.SKIPPED))
+        assertFalse(accepts(2,first,attempted,KotlinJournalSetOutcome.COMPLETED))
+        // Decimal scale is formatting, not a physical load change.
+        assertTrue(accepts(2,first,attempted.copy(load=n("60.000")),
+            KotlinJournalSetOutcome.FAILED_ATTEMPT))
+    }
+
     @Test fun sameLoadAmplifiersReuseCompletedSetAuthorityInsteadOfLooseNumericChecks() {
         fun n(value:String)=java.math.BigDecimal(value)
         val issued=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.SMITH_TOTAL,n("100"))

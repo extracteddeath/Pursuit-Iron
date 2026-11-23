@@ -195,12 +195,27 @@ internal fun NativeKotlinCandidateJourney(
                         if(measured || approvedMeasured)
                             KotlinCandidateDestination.TRAIN
                         else {
-                            val programs=runCatching {
-                                host.listOwnedCustomCycleDrafts()
-                            }.getOrNull() as? NativeCustomDraftListResult.Ready
-                            if(programs?.drafts?.isNotEmpty()==true)
-                                KotlinCandidateDestination.PROGRAM
-                            else KotlinCandidateDestination.ONBOARD
+                            // A crash between persisting a Finish receipt and
+                            // finalizing the shared History manifest leaves no
+                            // unfinished workout to resume. Do not abandon
+                            // this athlete in Setup or an unrelated Plan.
+                            // History exposes an explicit owner-checked
+                            // recovery action; landing itself is read-only.
+                            val pendingHistory=(runCatching {
+                                host.reviewVerifiedKotlinHistory()
+                            }.getOrNull() as?
+                                NativeKotlinMixedHistoryReadResult.Rejected)
+                                ?.reason==NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION
+                            if(pendingHistory)
+                                KotlinCandidateDestination.HISTORY
+                            else {
+                                val programs=runCatching {
+                                    host.listOwnedCustomCycleDrafts()
+                                }.getOrNull() as? NativeCustomDraftListResult.Ready
+                                if(programs?.drafts?.isNotEmpty()==true)
+                                    KotlinCandidateDestination.PROGRAM
+                                else KotlinCandidateDestination.ONBOARD
+                            }
                         }
                     }
                 }

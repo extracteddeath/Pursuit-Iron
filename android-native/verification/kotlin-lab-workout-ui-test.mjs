@@ -550,10 +550,11 @@ assert.match(journal,/onRecord\(KotlinJournalSetOutcome.COMPLETED,\s*actual\)/,
   'Actual set writing must require an explicit Complete action');
 assert.ok(journal.includes('KotlinWorkoutEntryDomain.parse(target,actualLoad,actualReps,actualRir)') &&
   journal.includes('val actual=(entry as? KotlinSetEntryResult.Accepted)?.performed') &&
-  journal.includes('Button(enabled=!locked && actual!=null && !sameLoadInvalidCompletion,') &&
+  journal.includes('!sameLoadInvalidCompletion && !invalidDropCompletion,') &&
   journal.includes('AdvancedAmplifierProtocolDomain.validSameLoadFollowUp(') &&
-  journal.includes('!sameLoadInvalidFailure'),
-  'Custom actuals must use the shared bounded Kotlin parser and block same-load amplifier mismatches');
+  journal.includes('AdvancedAmplifierProtocolDomain.validDropStageObservation(') &&
+  journal.includes('!sameLoadInvalidFailure && !invalidDropFailure,'),
+  'Custom actuals must use the bounded Kotlin parser and block all invalid completed/failed amplifier loads');
 assert.ok(journal.includes('pendingExceptionalOutcome=KotlinJournalSetOutcome.SKIPPED') &&
   journal.includes('pendingExceptionalOutcome=KotlinJournalSetOutcome.FAILED_ATTEMPT') &&
   journal.includes('if(pending!=null && !locked) AlertDialog(') &&

@@ -1,5 +1,7 @@
 package io.github.extracteddeath.pursuitiron
 
+import io.github.extracteddeath.pursuitiron.rebuild.InWorkoutDirection
+import io.github.extracteddeath.pursuitiron.rebuild.InWorkoutReviewResult
 import io.github.extracteddeath.pursuitiron.rebuild.LoadBasis
 import io.github.extracteddeath.pursuitiron.rebuild.DraftSetLoad
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinPerformedSet
@@ -52,4 +54,25 @@ internal fun kotlinActualLoadLabel(
         ?.takeIf{it.unit==actual.unit}?.basis
     return "${value.stripTrailingZeros().toPlainString()} $unit"+
         (basis?.let{" · ${kotlinLoadBasisLabel(it)}"} ?: "")
+}
+
+/**
+ * Render only the engine's already-reviewed candidate. This formatter does
+ * not inspect equipment, round, recalculate a coaching step or mutate a
+ * workout. An old suggestion attached to a different issued target is hidden.
+ * Both generated and custom live journals use this exact presentation.
+ */
+internal fun kotlinOptionalLiveSetAdviceLabel(
+    advice:InWorkoutReviewResult,issuedLoad:DraftSetLoad
+):String? {
+    val issued=issuedLoad as? DraftSetLoad.Verified ?:return null
+    val suggested=advice.weightForHumanReview ?:return null
+    if(advice.direction!=InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD ||
+        advice.issuedTargetUnchanged.compareTo(issued.value)!=0)
+        return null
+    val offered="${suggested.stripTrailingZeros().toPlainString()} " +
+        "${issued.unit.name.lowercase()} · ${kotlinLoadBasisLabel(issued.basis)}"
+    return "Optional review only: $offered. Issued target " +
+        "${kotlinIssuedLoadLabel(issued)} remains unchanged. " +
+        "A different actual must be entered and confirmed in the set editor."
 }

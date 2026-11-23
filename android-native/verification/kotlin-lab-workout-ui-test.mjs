@@ -528,7 +528,7 @@ assert.ok(!header.includes('onClick=onSkip,enabled=enabled,modifier=Modifier.fil
 
 const localDrafts=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinPendingWorkoutDrafts.kt');
 assert.ok(journal.includes('saved?.performed?.actualRir?.toString().orEmpty()') &&
-  localDrafts.includes('val rir=rememberSaveable(identity.value,receiptRevision)') &&
+  localDrafts.includes('val rir=rememberSaveable(identity.value,receiptRevision,committed)') &&
   localDrafts.includes('if(committed)null else store.read(identity)'),
   'Unknown actual RIR must stay blank and a committed receipt must override any restored UI draft');
 assert.ok(journal.includes('activationPerformed=main?.performed') &&

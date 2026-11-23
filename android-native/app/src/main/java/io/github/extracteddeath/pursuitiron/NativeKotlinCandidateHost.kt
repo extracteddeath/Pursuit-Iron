@@ -1214,6 +1214,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
         expectedOwner:NativeKotlinOwnerIdentity
     ):NativeHistoryEnrollmentResult {
         val owner=localAthlete.signedInIdentity()
+            ?:return NativeHistoryEnrollmentResult.Rejected(
+                NativeHistoryEnrollmentRefusal.NOT_AUTHORIZED)
         if(!NativeKotlinHistoryEnrollmentConsentPolicy.matches(
                 expectedOwner,owner))
             return NativeHistoryEnrollmentResult.Rejected(

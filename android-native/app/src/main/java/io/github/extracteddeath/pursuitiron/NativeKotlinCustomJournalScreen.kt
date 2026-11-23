@@ -1164,10 +1164,17 @@ internal fun NativeKotlinCustomJournalScreen(
                                 if(config?.machines?.isNotEmpty()==true)
                                     LiveMachineCoachScope.Physical(selectedMachineId)
                                 else LiveMachineCoachScope.ExerciseOnly
+                            val hasUnsubmittedCurrentEdit=
+                                observed==null && mainKey==nextVisit &&
+                                NativeKotlinLiveAdviceDraftPolicy.hasUnsubmittedChange(
+                                    set.prescription.load,set.prescription.reps,
+                                    mainMachineId,
+                                    currentEditors[levelEditorKey(
+                                        set.setKey,mainMachineId)])
                             val advice=liveCoach?.takeIf {
                                 // Hide prior advice immediately after an
                                 // injury restriction, before a fresh review.
-                                !movementRestricted &&
+                                !movementRestricted && !hasUnsubmittedCurrentEdit &&
                                 !busy && !finished && machineChoices.ready &&
                                     !machineChoices.busy && mainKey==nextVisit &&
                                     it.workoutId==workoutId && it.setKey==set.setKey &&
@@ -1175,6 +1182,11 @@ internal fun NativeKotlinCustomJournalScreen(
                                     // Reject an old A review immediately when
                                     // the durable selector changes to B.
                                     it.machineScope==expectedCoachMachineScope
+                            }
+                            if(hasUnsubmittedCurrentEdit && !finished) {
+                                Text("Unsaved set edits preserved · live advice uses recorded sets, not this draft.",
+                                    style=MaterialTheme.typography.labelSmall,
+                                    color=MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             if(advice!=null) {
                                 Text("Coach · next set",

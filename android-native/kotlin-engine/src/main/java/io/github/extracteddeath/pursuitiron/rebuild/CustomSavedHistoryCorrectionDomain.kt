@@ -160,7 +160,7 @@ object CustomSavedHistoryCorrectionDomain {
                 // skipped/failed main may still be corrected independently.
                 if (operation.outcome==KotlinJournalSetOutcome.COMPLETED &&
                     savedFollowKeys.any {
-                        current(state,it)?.outcome==KotlinJournalSetOutcome.COMPLETED
+                        current(state,it)?.outcome!=KotlinJournalSetOutcome.SKIPPED
                     } && !CustomWorkoutExecutionDomain.sameActualLoadAndStation(
                         main.performed,operation.performed))
                     return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)

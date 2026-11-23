@@ -49,22 +49,34 @@ internal object NativePendingWorkoutDraftIdentity {
 /** Versioned, bounded, untrusted UI text codec; safe on JVM and Android. */
 internal object NativePendingWorkoutDraftCodec {
     private const val MAX_FIELD=64
+    private const val MAX_RECORD=512
+
+    /** A malformed surrogate or UTF-8 byte sequence must never be silently
+     * replaced while restoring the exact text an athlete had typed. */
+    private fun utf8RoundTrips(value:String):Boolean =
+        String(value.toByteArray(Charsets.UTF_8),Charsets.UTF_8)==value
+
     fun encode(draft:NativePendingWorkoutDraft):String? {
         val parts=listOf(draft.load,draft.reps,draft.rir)
-        if(parts.any{it.length>MAX_FIELD})return null
-        return "v1:"+parts.joinToString(":"){
+        if(parts.any{it.length>MAX_FIELD || !utf8RoundTrips(it)})return null
+        val encoded="v1:"+parts.joinToString(":"){
             Base64.getEncoder().encodeToString(it.toByteArray(Charsets.UTF_8))
         }
+        // Save must never report success for a record decode will reject.
+        return encoded.takeIf{it.length<=MAX_RECORD}
     }
     fun decode(raw:String?):NativePendingWorkoutDraft? {
-        if(raw==null || raw.length>512)return null
+        if(raw==null || raw.length>MAX_RECORD)return null
         val parts=raw.split(':')
         if(parts.size!=4 || parts.first()!="v1")return null
         val decoded=parts.drop(1).map {field->
             runCatching {
                 val bytes=Base64.getDecoder().decode(field)
                 if(Base64.getEncoder().encodeToString(bytes)!=field)return null
-                String(bytes,Charsets.UTF_8).takeIf{it.length<=MAX_FIELD}
+                String(bytes,Charsets.UTF_8).takeIf{
+                    it.length<=MAX_FIELD &&
+                        it.toByteArray(Charsets.UTF_8).contentEquals(bytes)
+                }
             }.getOrNull() ?:return null
         }
         return NativePendingWorkoutDraft(decoded[0],decoded[1],decoded[2])
@@ -155,16 +167,18 @@ internal fun rememberNativePendingWorkoutDraftEditor(
     val recovered=remember(identity.value,receiptRevision,committed) {
         if(committed)null else store.read(identity)
     }
-    val load=rememberSaveable(identity.value,receiptRevision) {
+    // A newly committed receipt outranks previously typed, unsubmitted
+    // fields immediately, even if a caller's revision token has not changed.
+    val load=rememberSaveable(identity.value,receiptRevision,committed) {
         mutableStateOf(recovered?.load ?: baseline.load)
     }
-    val reps=rememberSaveable(identity.value,receiptRevision) {
+    val reps=rememberSaveable(identity.value,receiptRevision,committed) {
         mutableStateOf(recovered?.reps ?: baseline.reps)
     }
-    val rir=rememberSaveable(identity.value,receiptRevision) {
+    val rir=rememberSaveable(identity.value,receiptRevision,committed) {
         mutableStateOf(recovered?.rir ?: baseline.rir)
     }
-    val recoveredLabel=rememberSaveable(identity.value,receiptRevision) {
+    val recoveredLabel=rememberSaveable(identity.value,receiptRevision,committed) {
         mutableStateOf(recovered!=null)
     }
     LaunchedEffect(identity.value,committed,receiptRevision) {

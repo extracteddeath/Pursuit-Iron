@@ -1730,4 +1730,43 @@ class CustomNextWorkoutCoachingDomainTest {
                 stock(),n(5)))
     }
 
+
+    @Test fun earnedRepReviewCannotTransferFromMachineAToMachineB() {
+        fun stationDay(day:CustomWorkoutDaySnapshot,id:String?)=
+            day.copy(slots=day.slots.map {it.copy(machineInstanceId=id)})
+        fun performedOnA(session:CustomCoachingHistoricalSession)=
+            session.copy(snapshot=stationDay(session.snapshot,"A"),
+                evidence=session.evidence.copy(visits=session.evidence.visits.map{
+                    it.copy(actual=it.actual?.copy(machineInstanceId="A"))
+                }))
+        val nextA=stationDay(snapshot(5),"A")
+        val reviewed=CustomNextWorkoutCoachingDomain.review(
+            CustomNextWorkoutCoachingRequest(nextA,"main",
+                listOf(performedOnA(completed(1,3)),
+                    performedOnA(completed(2,4,
+                        reps=listOf(5,6),rirs=listOf(5,4)))),
+                stock(),n(5),CoachReadiness.NORMAL,false,
+                CustomRepForecastPolicy.TARGET_RIR_V2,
+                requestedMachineInstanceId="A"))
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,reviewed.status)
+        assertEquals("A",reviewed.physicalMachineInstanceId)
+        assertEquals(listOf(8,8),
+            reviewed.nextSetSuggestions.map{it.proposedNextReps})
+        assertTrue(CustomNextRepAmendmentDomain.propose(
+            nextA,"main",reviewed) is CustomNextRepAmendmentResult.Proposed)
+        for(unrelated in listOf(
+            stationDay(nextA,"B"),stationDay(nextA,null))) {
+            assertEquals(CustomNextRepAmendmentResult.Rejected(
+                CustomNextRepAmendmentRefusal.DIFFERENT_PHYSICAL_MACHINE),
+                CustomNextRepAmendmentDomain.propose(
+                    unrelated,"main",reviewed))
+            assertEquals(RepBand(5,8),
+                unrelated.slots.single().sets.first().prescription.reps)
+        }
+        assertEquals(CustomNextRepAmendmentResult.Rejected(
+            CustomNextRepAmendmentRefusal.DIFFERENT_PHYSICAL_MACHINE),
+            CustomNextRepAmendmentDomain.propose(
+                nextA,"main",reviewed.copy(physicalMachineInstanceId=null)))
+    }
+
 }

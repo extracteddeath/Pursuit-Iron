@@ -232,10 +232,15 @@ assert.match(journal,/":previous-drop:"/);
 // saved correction and stage availability. No duplicated physical load
 // inequalities in the journal or historical correction reducers.
 assert.match(restPauseProtocol,/private fun eligiblePerformedDropTarget\(/);
+assert.match(restPauseProtocol,/fun validDropStageObservation\(/);
 assert.match(restPauseProtocol,/fun validPerformedDropStage\(/);
 assert.match(restPauseExecution,/AdvancedAmplifierProtocolDomain\.resolveFollowUpEntryLoad\(/);
-assert.match(restPauseJournal,/AdvancedAmplifierProtocolDomain\.validPerformedDropStage\(/);
-assert.match(savedDropCorrection,/AdvancedAmplifierProtocolDomain\.validPerformedDropStage\(/);
+assert.match(restPauseJournal,/AdvancedAmplifierProtocolDomain\.validDropStageObservation\(/);
+assert.match(savedDropCorrection,/AdvancedAmplifierProtocolDomain\.validDropStageObservation\(/);
+// Both finished and failed drop observations must be physically lower,
+// rather than trusting an authored reduction from the earlier snapshot.
+assert.match(restPauseJournal,/operation\.outcome!=KotlinJournalSetOutcome\.SKIPPED/);
+assert.match(savedDropCorrection,/operation\.outcome!=KotlinJournalSetOutcome\.SKIPPED/);
 assert.doesNotMatch(restPauseJournal,/performedLoad\.compareTo\(previousLoad\)/);
 assert.doesNotMatch(savedDropCorrection,/actualLoad\.compareTo\(previousLoad\)/);
 assert.match(restPauseJournal,/followUpLoadForStage\(/);

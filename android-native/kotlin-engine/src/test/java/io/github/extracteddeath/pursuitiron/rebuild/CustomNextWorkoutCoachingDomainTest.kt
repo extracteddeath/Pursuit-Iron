@@ -1618,4 +1618,47 @@ class CustomNextWorkoutCoachingDomainTest {
             "main",reviewed,stock,n(10)) is CustomNextLoadAmendmentResult.Rejected)
     }
 
+
+    @Test fun physicalMachineBarbellLabelCannotEarnCustomNextCoaching() {
+        fun asFreeBarbell(day:CustomWorkoutDaySnapshot,machine:String?)=
+            day.copy(slots=day.slots.map {slot->
+                slot.copy(machineInstanceId=machine,sets=slot.sets.map {set->
+                    val issued=set.prescription.load as DraftSetLoad.Verified
+                    set.copy(prescription=set.prescription.copy(load=
+                        DraftSetLoad.Verified(issued.unit,LoadBasis.BARBELL_TOTAL,issued.value)))
+                })
+            })
+        fun asFreeBarbell(entry:CustomCoachingHistoricalSession,machine:String?)=
+            entry.copy(snapshot=asFreeBarbell(entry.snapshot,machine),
+                evidence=entry.evidence.copy(visits=entry.evidence.visits.map {fact->
+                    val issued=fact.prescribedLoad as DraftSetLoad.Verified
+                    fact.copy(prescribedLoad=DraftSetLoad.Verified(
+                        issued.unit,LoadBasis.BARBELL_TOTAL,issued.value),
+                        actual=fact.actual?.copy(machineInstanceId=machine))
+                }))
+        val physicalBar=VerifiedLoadStock.Barbell(LoadUnit.LB,n(45),
+            mapOf(n(45) to 1,n(25) to 1,n(5) to 1,
+                BigDecimal("2.5") to 2))
+        fun coach(machine:String?,policy:CustomRepForecastPolicy)=
+            CustomNextWorkoutCoachingDomain.review(
+                CustomNextWorkoutCoachingRequest(asFreeBarbell(snapshot(5),machine),
+                    "main",listOf(asFreeBarbell(completed(1,3),machine),
+                        asFreeBarbell(completed(2,4),machine)),
+                    physicalBar,n(5),CoachReadiness.NORMAL,false,policy,
+                    requestedMachineInstanceId=machine))
+        for(policy in CustomRepForecastPolicy.entries) {
+            val station=coach("A",policy)
+            assertEquals(policy.name,CustomNextWorkoutCoachingStatus.CHANGED_PRESCRIPTION,
+                station.status)
+            assertNull(station.loadReviewCandidate)
+            assertTrue(station.nextSetSuggestions.isEmpty())
+            assertFalse(station.mayIssueWorkout)
+            assertFalse(station.mayEditProgram)
+        }
+        val genuine=coach(null,CustomRepForecastPolicy.LEGACY_STEP_V1)
+        assertEquals(CustomNextWorkoutCoachingStatus.READY_FOR_LOAD_REVIEW,
+            genuine.status)
+        assertEquals(n(205),genuine.loadReviewCandidate)
+    }
+
 }

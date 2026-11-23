@@ -1209,11 +1209,17 @@ internal class NativeKotlinCandidateHost(context:Context) {
      * the same revision fence BEFORE an empty manifest may be created.
      */
     fun enrollSeparateKotlinHistory(
-        explicitlyConfirmed:Boolean
+        explicitlyConfirmed:Boolean,
+        /** The exact identity the athlete reviewed before opening consent. */
+        expectedOwner:NativeKotlinOwnerIdentity
     ):NativeHistoryEnrollmentResult {
         val owner=localAthlete.signedInIdentity()
-            ?:return NativeHistoryEnrollmentResult.Rejected(
+        if(!NativeKotlinHistoryEnrollmentConsentPolicy.matches(
+                expectedOwner,owner))
+            return NativeHistoryEnrollmentResult.Rejected(
                 NativeHistoryEnrollmentRefusal.NOT_AUTHORIZED)
+        // The coordinator authenticates this same expected owner again
+        // under the owner's revision lock before any manifest is created.
         return nativeHistoryEnrollment.enrollSeparateLocalHistory(
             owner.ownerKey,owner.athleteId,explicitlyConfirmed,
             authenticateOwner={o,a->

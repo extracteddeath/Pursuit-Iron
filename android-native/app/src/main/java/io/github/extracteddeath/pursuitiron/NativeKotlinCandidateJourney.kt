@@ -121,12 +121,14 @@ internal fun kotlinColdLaunchDestination(
     if(probes.unfinishedGenerated())return KotlinCandidateDestination.TRAIN
     if(probes.unfinishedMeasured())return KotlinCandidateDestination.TRAIN
     if(probes.confirmedMeasured())return KotlinCandidateDestination.TRAIN
-    if(probes.ownedCustomProgram())return KotlinCandidateDestination.PROGRAM
-    if(probes.completedVerifiedHistory())return KotlinCandidateDestination.HISTORY
+    val verifiedIdle=kotlinIdleColdLanding(
+        hasOwnedCustomCycle=probes.ownedCustomProgram(),
+        hasVerifiedCompletedHistory=probes.completedVerifiedHistory)
+    if(verifiedIdle!=KotlinCandidateDestination.ONBOARD)return verifiedIdle
     // Only after every stronger, verified owner inventory was checked.
     // History handles verification failures with Refresh / recovery actions.
-    if(probes.historyReadNeedsRecovery())return KotlinCandidateDestination.HISTORY
-    return KotlinCandidateDestination.ONBOARD
+    return if(probes.historyReadNeedsRecovery())
+        KotlinCandidateDestination.HISTORY else KotlinCandidateDestination.ONBOARD
 }
 
 private val primaryDestinations=listOf(

@@ -82,6 +82,7 @@ export const contractGroups = Object.freeze({
         'b1016-strength-notes-machine-history-test.mjs',
         'repo-hygiene-test.mjs',
         'home-entry-hierarchy-test.mjs',
+        'prototype-features-test.mjs',
         'home-utility-owner-test.mjs',
         'home-template-owner-test.mjs',
         'plan-fixed-utility-owner-test.mjs',
@@ -242,6 +243,7 @@ export const browserShards = Object.freeze({
     'integration': Object.freeze([
         'b1012-exercise-variant-browse-browser-test.mjs',
         'home-entry-hierarchy-browser-test.mjs',
+        'prototype-features-browser-test.mjs',
         'b911-chart-favorites-polish-browser-test.mjs',
         'b907-profile-polish-browser-test.mjs',
         'b905-prototype-transfer-browser-test.mjs',

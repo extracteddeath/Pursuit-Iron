@@ -1,5 +1,5 @@
 /* Pursuit Iron 4.0 — M234 production release. */
-const CACHE="pursuit-iron-production-v4-0-0-m234-candidate-selection-b1025-r798b474873530f77";
+const CACHE="pursuit-iron-production-v4-0-0-m234-candidate-selection-b1026-reea540dd92f6ae8e";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./app.css",
@@ -24,6 +24,7 @@ const SHELL=[
   "./modules/gym-load-fields.js",
   "./modules/gym-machine-variants.js",
   "./modules/history-editor.js",
+  "./modules/home-week.js",
   "./modules/injury-tools.js",
   "./modules/legacy-research-data.js",
   "./modules/loading-calculator.js",
@@ -105,7 +106,9 @@ const SHELL=[
   "./modules/next-engine/workout-history-adapter.js",
   "./modules/next-engine/workout-replay.js",
   "./modules/next-engine/workout-runtime.js",
+  "./modules/pain-check.js",
   "./modules/plan-session-surfaces.js",
+  "./modules/program-code.js",
   "./modules/program-duration.js",
   "./modules/program-exercise-options.js",
   "./modules/program-last-performance.js",
@@ -121,6 +124,7 @@ const SHELL=[
   "./modules/program-training-maxes.js",
   "./modules/program-volume-surfaces.js",
   "./modules/release-notes.js",
+  "./modules/routine-picker.js",
   "./modules/session-choice-dialog.js",
   "./modules/session-plan.js",
   "./modules/session-tools.js",

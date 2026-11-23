@@ -49,6 +49,8 @@ const coaching = home.indexOf('!sessionActive && upNext && _jsx(SessionGamePlan'
 const programs = home.indexOf('className: "wpb-home-programs"');
 assert.ok(hero > 0 && week > hero && coaching > week && programs > coaching,
   'Home hierarchy is session → This week → Game Plan → programs');
+const strip = home.indexOf('_jsx(HomeWeekStrip');
+assert.ok(strip > 0 && strip < hero, 'The week strip leads Home, above the session card');
 assert.equal((home.match(/_jsx\(WeeklyRecapCard/g) || []).length, 1,
   'There is one weekly progress card regardless of insight rank');
 assert.ok(!home.includes('trainingPulse') && !home.includes('"Last 7 days"') && !home.includes('["Streak"'),

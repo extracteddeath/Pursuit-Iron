@@ -13,7 +13,7 @@ const body=css.split(rule)[1]?.split('}')[0]||'';
 assert.equal(body,'padding-block:var(--pi-space-4) var(--pi-space-3)',
  'Feature CSS may own only vertical rhythm; shared card owns fill, corners and border');
 assert.ok(css.includes('.wpb .wpb-ui-card{'),'Shared card surface must exist');
-assert.ok(gallery.includes('onClick: () => { const r = onImport(e.code);'),'Import action remains separate from read-only card');
+assert.ok(gallery.includes('onClick: () => { Promise.resolve(onImport(e.code)).then(r =>'),'Import action remains separate from read-only card');
 assert.ok(gallery.includes('disabled: res && res.ok'),'Do not allow import twice');
 assert.ok(css.length<=uiStyleBudget.cssCharacters,'Consolidated card must remain within the current measured shared-foundation CSS budget');
 assert.ok((css.match(/!important/g)||[]).length <= uiStyleBudget.cssPriorityDeclarations,'No new priority overrides');

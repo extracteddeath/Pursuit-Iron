@@ -295,7 +295,8 @@ try{
                 box:{x:box.x,right:box.right,y:box.y,bottom:box.bottom},
                 hit:button.contains(document.elementFromPoint(box.x+box.width/2,box.y+box.height/2))};
             });
-            const next=document.querySelector('.wpb-plan-up-next'),overview=document.querySelector('.wpb-plan-overview');
+            // B1030: no Up next card; the overview is the only supporting card, beside the pane switcher.
+            const next=document.querySelector('.wpb-plan-context'),overview=document.querySelector('.wpb-plan-overview');
             const plan=next&&overview?{
               nextBottom:next.getBoundingClientRect().bottom,overviewTop:overview.getBoundingClientRect().top,
               nextHeight:next.getBoundingClientRect().height,nextCss:getComputedStyle(next).height,
@@ -363,7 +364,7 @@ try{
           }
           if(route==='plan'&&width>=1060&&height>=700){
             assert.ok(enlarged.plan.nextBottom<=enlarged.plan.overviewTop+1,
-              'Enlarged Plan supporting cards stay in separate rows: '+JSON.stringify(enlarged.plan));
+              'Enlarged Plan supporting card starts below the program heading: '+JSON.stringify(enlarged.plan));
           }
           if(route==='settings'){
             const experience=await surface('.wpb-experience-segmented');

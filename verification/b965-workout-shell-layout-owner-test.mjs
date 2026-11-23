@@ -6,7 +6,8 @@ const css=fs.readFileSync('app.css','utf8');
 const owners=[...css.matchAll(/#root \.wpb \.(wpb-b965-layout-\d{2}),#root \.\1\{([^}]+)\}/g)];
 // B1028: layout-09 (picker list scroller) retired by UiSheet's body.
 // B1029: layout-35 belonged to the removed Settings 1RM calculator.
-assert.equal(owners.length,43,'B965 must have 43 exact CSS layout owners');
+// B1030: layout-04 was the Plan phase-archive icon tile, removed with the archive.
+assert.equal(owners.length,42,'B965 must have 42 exact CSS layout owners');
 for(const [,name,body] of owners){
  assert.ok(!body.includes('!important'),'Static CSS migration must not add priority owners');
  assert.ok(uiModules.includes(name),'Every retired layout must have a JSX class owner');

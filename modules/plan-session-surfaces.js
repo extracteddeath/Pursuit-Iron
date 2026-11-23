@@ -48,15 +48,20 @@ export function HomeSessionOutline({ review, expanded, onToggle }) {
                     _jsx("strong", { children: `${row.cell.sets}×${row.cell.range || row.cell.reps}` })] }, row.id + ':' + row.slot)) }) })
     ] });
 }
+// A plain lift's protocol type is null (techniqueProtocolFromCell), not 'straight': only a named
+// technique is a technique, or every lift reads as one.
+const hasTechnique = row => !!row.protocol?.type && row.protocol.type !== 'straight';
 // Like the prototype, this is a small set of actionable coaching highlights,
 // not every working set and the full engine explanation repeated on Home.
 export function SessionGamePlan({ review, restScale = 1, home = false }) {
     if (!review?.exercises.length) return null;
-    const ranked = [...review.exercises].sort((a, b) => {
-        const score = row => (row.opportunity ? 8 : 0) + (row.change.undone ? 4 : 0)
-            + (row.protocol.type !== 'straight' ? 2 : 0) + (row.change.changed ? 1 : 0);
-        return score(b) - score(a);
-    }).slice(0, 3);
+    const score = row => (row.opportunity ? 8 : 0) + (row.change.undone ? 4 : 0)
+        + (hasTechnique(row) ? 2 : 0) + (row.loadToCheck ? 2 : 0) + (row.change.changed ? 1 : 0);
+    // On Home the hero's outline already lists every lift, so the game plan carries only lifts
+    // with something to act on (a PR chance, a technique, a load to check, a changed or held load) — or nothing.
+    const ranked = [...review.exercises].filter(row => !home || score(row) > 0)
+        .sort((a, b) => score(b) - score(a)).slice(0, 3);
+    if (!ranked.length) return null;
     return _jsxs(UiCard, { as: "section", className: "wpb-session-game-plan" + (home ? " wpb-home-game-plan" : ""), tone: "featured",
         "aria-label": "Today's game plan", children: [
         _jsxs("h2", { className: "wpb-game-plan-heading", children: [_jsx(TrendingUp, { size: 19 }),
@@ -83,7 +88,7 @@ export function SessionGamePlan({ review, restScale = 1, home = false }) {
             return _jsxs("div", { className: "wpb-game-plan-exercise", "data-game-plan-exercise": row.id,
                 ...(pr ? { "data-pr-exercise": row.id } : {}), children: [
                 _jsx("span", { className: "wpb-game-plan-highlight-icon", "aria-hidden": true,
-                    children: _jsx(pr ? Trophy : row.protocol.type !== 'straight' ? Zap : TrendingUp, { size: 16 }) }),
+                    children: _jsx(pr ? Trophy : hasTechnique(row) ? Zap : TrendingUp, { size: 16 }) }),
                 _jsxs("details", { className: "wpb-game-plan-highlight-copy", children: [
                     _jsxs("summary", { children: [
                         _jsx("strong", { children: pr ? `PR chance · ${row.name}` : row.name }),

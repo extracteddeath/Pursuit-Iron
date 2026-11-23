@@ -176,7 +176,8 @@ try{
   await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.querySelector('.wpb-cycle-block-preview'));
   await page.$$eval('.wpb-plan-block-nav button',ns=>ns[2].click());await page.waitForFunction(()=>document.querySelector('.wpb-plan-title')?.textContent.includes('Peak'));
   await page.$$eval('.wpb-plan-block-nav button',ns=>ns[0].click());await page.waitForFunction(()=>!document.querySelector('.wpb-plan-preview-notice'));
-  assert.ok(await page.$('.wpb-plan-up-next'));
+  // B1030: the current block's selected week marks the next session (Plan no longer repeats Home's Up next).
+  assert.ok(await page.$('.wpb-plan-selected-week .wpb-plan-session-link[data-next="true"]'));
   for(const pane of ['volume','progression','blueprint']){
    await page.click(`[data-plan-pane="${pane}"]`);
    for(const index of [1,2,0]){

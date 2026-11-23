@@ -85,8 +85,9 @@ async function verifyFoundationStates(browser){
         assert.doesNotMatch(profile,/Add bodyweight to unlock/);
         assert.equal(await page.$('button[aria-label="Add bodyweight"]'),null);
       }else{
-        await page.waitForSelector('.wpb-profile-strength');
-        assert.equal(await page.$('.wpb-profile-setup'),null,'Scored history keeps its existing Strength card');
+        // B1030: the score lives on the card; the full strength record is one row away in Progress.
+        await page.waitForSelector('.wpb-profile-strength-link');
+        assert.equal(await page.$('.wpb-profile-setup'),null,'Scored history links to its Strength record');
       }
       if(state==='missing-lifts'){
         // Exercise the Settings theme control itself, then reopen Plan and warm reload.
@@ -256,10 +257,11 @@ async function verifyTaskHierarchy(browser){
       await page.click('[data-tab="plan"]');await page.waitForSelector('.wpb-plan-session-link');
       const planOrder=await page.evaluate(()=>{
         const el=s=>document.querySelector(s),before=(a,b)=>!!(el(a).compareDocumentPosition(el(b))&Node.DOCUMENT_POSITION_FOLLOWING);
-        return {nextFirst:before('.wpb-plan-up-next','.wpb-plan-panes'),
+        // B1030: no Up next card (Home owns today) and no archive of other weeks (the rail selects).
+        return {nextFirst:!el('.wpb-plan-up-next')&&!!el('.wpb-plan-selected-week [data-next="true"]'),
           pickerFirst:before('.wpb-plan-week-picker','.wpb-plan-overview'),
           selectedAfterPicker:before('.wpb-plan-week-picker','.wpb-plan-selected-week'),
-          selectedBeforeTimeline:before('.wpb-plan-selected-week','.wpb-plan-phase-group'),
+          selectedBeforeTimeline:!el('.wpb-plan-phase-group'),
           selectedCount:document.querySelectorAll('.wpb-plan-selected-week .wpb-plan-week-card').length,
           uniqueWeekCount:new Set([...document.querySelectorAll('[data-plan-week]')].map(x=>x.dataset.planWeek)).size,
           sessionsFirst:before('.wpb-plan-session-list','.wpb-plan-overview'),
@@ -362,7 +364,7 @@ async function verifyTaskHierarchy(browser){
       await page.click('[data-plan-pane="schedule"]');
       assert.equal(await page.$eval('[data-plan-pane="schedule"]',b=>b.getAttribute('aria-pressed')),'true');
       assert.ok(planOrder.nextFirst&&planOrder.pickerFirst&&planOrder.sessionsFirst&&
-        planOrder.selectedAfterPicker&&planOrder.selectedBeforeTimeline&&planOrder.selectedCount===1&&planOrder.uniqueWeekCount===4,
+        planOrder.selectedAfterPicker&&planOrder.selectedBeforeTimeline&&planOrder.selectedCount===1&&planOrder.uniqueWeekCount===1,
         'Plan puts next session, location and sessions before aggregate metrics: '+JSON.stringify(planOrder));
       assert.ok(planOrder.rows.length===2&&planOrder.rows.every(r=>r.height>=48&&r.radius===0&&r.gap===0),
         'Connected rows retain individual full targets');
@@ -546,13 +548,16 @@ try{
             weekCard:css('.wpb-plan-week-card'),
             weekImage:el('.wpb-plan-week-card')&&getComputedStyle(el('.wpb-plan-week-card')).backgroundImage,
             nested:css('.wpb-plan-session-link'),weekCount:all.length,
+            chipCount:document.querySelectorAll('.wpb-plan-week-chip').length,
+            currentChips:document.querySelectorAll('.wpb-plan-week-chip[data-week-status="now"]').length,
             currentCount:all.filter(x=>x.dataset.currentWeek==='true').length,
             chip:chip?.textContent.trim()||null,
             chipSelected:chip?.getAttribute('aria-pressed')==='true'
           };
         }));
-        assert.ok(basic.weekCount>=2&&basic.currentCount===1&&basic.weekImage==='none',
-          'Plan has real semantic week cards with exactly one current week: '+JSON.stringify(basic));
+        // B1030: the rail lists every week once; only the selected week renders as a card.
+        assert.ok(basic.chipCount>=2&&basic.weekCount===1&&basic.currentCount===1&&basic.currentChips===1&&basic.weekImage==='none',
+          'Plan has one week selector and exactly one current week: '+JSON.stringify(basic));
         assert.ok(basic.nested&&basic.chipSelected,'Plan nested row and active week are accessible: '+JSON.stringify(basic));
       }
       // R57: the other four destinations have distinct content structures,
@@ -586,7 +591,7 @@ try{
             out.titleSize=parseFloat(getComputedStyle(el('.wpb-profile-title')).fontSize);
             out.edit=box('.wpb-profile-edit');
             out.shareCard=box('.wpb-profile-share-card');
-            out.layoutActions=box('.wpb-profile-toolbar');
+            out.layoutActions=box('.wpb-profile-strength-link');
             out.hero=box('.wpb-profile-hero');
             out.stats=[...document.querySelectorAll('.wpb-profile-stat')].map(b=>b.getBoundingClientRect().width);
           }
@@ -618,8 +623,9 @@ try{
             &&density.shareCard.top-density.head.bottom<=16
             &&density.layoutActions.top>=density.shareCard.bottom
             &&density.hero.top>=density.identity.bottom&&density.hero.bottom<=density.shareCard.bottom
-            &&density.stats.length===3&&density.stats.every(w=>w>=68),
-            'Share card integrates identity and XP before customizable sections, with compact gaps and no overlaps: '+JSON.stringify(density));
+            &&density.layoutActions.height>=48&&density.stats.length===0,
+            // B1030: lifetime totals live in Progress; the strength row follows the card.
+            'Share card integrates identity and XP before the strength row, with compact gaps and no overlaps: '+JSON.stringify(density));
         }
         basic.density=density;
         if(tab==='plan'||tab==='profile'||tab==='settings'){
@@ -700,6 +706,10 @@ try{
             overflow:home.scrollWidth>home.clientWidth+1,
             scrollTop:sc.scrollTop};
         });
+        // B1029/B1030: Home now carries only today, so it nearly fits a tall phone. Measure the
+        // collapsing masthead on a shorter phone where today's content genuinely scrolls.
+        await page.setViewport({width:393,height:600,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+        await page.$eval('.wpb-home .wpb-page-scroll',sc=>{sc.scrollTop=0;});
         const expanded=await measure();
         assert.ok(expanded.maxScroll>180,'Seeded Home can actually scroll: '+JSON.stringify(expanded));
         assert.notEqual(expanded.long,'none','Full brand shown before scrolling');

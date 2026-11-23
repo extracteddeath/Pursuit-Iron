@@ -126,9 +126,9 @@ try {
             [n.querySelector('.wpb-progress-glance-label').textContent,Number(n.querySelector('.wpb-progress-glance-value').textContent)])));
         // B1029: Home owns the 7-day counts; Progress opens on the lifetime record.
         assert.equal(totals.Workouts,3,'Progress counts every logged workout');assert.equal(homeSets,3,'muscle credits must not inflate the completed-set tile');
-        await page.click('[data-tab="plan"]');await page.waitForSelector('.wpb-plan-up-next');
-        assert.match(await page.$eval('.wpb-plan-up-next',n=>n.textContent),/Lower Body/);
-        assert.match(await page.$eval('.wpb-plan-up-next',n=>n.textContent),/Week 2/);
+        // B1030: Plan names the next session inside its selected week instead of repeating Home's Up next.
+        await page.click('[data-tab="plan"]');await page.waitForSelector('.wpb-plan-selected-week [data-next="true"]');
+        assert.equal(await page.$eval('[data-plan-week-picker] [aria-pressed="true"]',n=>n.getAttribute('aria-label')),'Week 2');
         const next=await page.$eval('[data-plan-week="2"] .wpb-plan-session-link[data-next="true"]',n=>n.textContent);
         assert.match(next,/Lower Body/);
         if(enlarged)await page.evaluate(()=>{
@@ -145,7 +145,7 @@ try {
         if(width<600)assert.ok(Math.abs(layout.titleWidth-layout.width)<=1&&layout.buttonTop>=layout.titleBottom+6,
             'long program name uses full width before its action: '+JSON.stringify(layout));
         await page.screenshot({path:`verification/m332-plan-${width}-phone.png`});
-        await page.click('.wpb-plan-up-next');await page.waitForSelector('[data-nextex]');
+        await page.click('.wpb-plan-selected-week [data-next="true"]');await page.waitForSelector('[data-nextex]');
         const preview=await page.$eval('.wpb-next-workout-view',n=>n.textContent);
         assert.match(preview,/Lower Body/);assert.match(preview,/Back Squat/);assert.doesNotMatch(preview,/Barbell Bench Press/);
         assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history),before);

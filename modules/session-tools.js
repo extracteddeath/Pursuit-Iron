@@ -223,7 +223,9 @@ export function buildSessionReview(program, day, weekIndex, unit, history = [], 
         const category = change.category;
         return [{ id, name: ex.name, slot, cell, range, suggestion, proposed, effective, reason, proposedReason,
             style: resolveStyle(program, ex, slot === day.primaryIndex, weekIndex, perf, history, day.id),
-            protocol: techniqueProtocolFromCell(cell), change, category, opportunity }];
+            protocol: techniqueProtocolFromCell(cell), change, category, opportunity,
+            // A starting estimate or a lift with no reference load asks the lifter to check or choose.
+            loadToCheck: !!estimatedTarget || !effective.some(set => Number(set.weight) > 0) }];
     });
     return { programId: program.id, dayId: day.id, weekIndex, unit, sessionLengthPlan: day.sessionLengthPlan || null, exercises,
         changes: exercises.filter(row => row.change.changed),

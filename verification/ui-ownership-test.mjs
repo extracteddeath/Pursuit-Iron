@@ -839,7 +839,8 @@ assert.equal((app.split("function ChangelogSheet(")[1].split(String.fromCharCode
 // B958 cross-screen shared presentation ownership: 80 literal JSX objects retired.
 // B1028: AddSheet moved chips, rows and actions onto UiChoice/UiListItem/UiAction (10 → 9 utilities).
 const b958Names=["PlanView","NextWorkoutView","Home","SettingsView","ProgressDetail","CompareView","MilestonesCard","StrengthComparisonCard","RecoveryTrendCard","MuscleRecoveryCard","ProfileMiniForm","ConvertProgramToCycleSheet","VolumeCard","AddSheet","SwapSheet"];
-const b958Counts=[11,6,2,2,1,1,4,8,7,3,4,5,3,9,13];
+// B1030: PlanView dropped the phase archive and Up next card (11 → 9 utilities).
+const b958Counts=[9,6,2,2,1,1,4,8,7,3,4,5,3,9,13];
 for(let i=0;i<b958Names.length;i++){
   const name=b958Names[i],start=app.indexOf("function "+name+"(");
   const end=app.indexOf(String.fromCharCode(10)+"function ",start+1);
@@ -855,10 +856,8 @@ console.log('PASS UI ownership: important ' + report.important + '/' + MAX_IMPOR
 const settingsRow = app.slice(app.indexOf('const SettingsRow ='), app.indexOf('// Browser persistence'));
 assert.ok(!settingsRow.includes('style:'), 'Settings row has no inline presentation');
 assert.ok(app.includes('className: "wpb-settings-title", children:'), 'Settings title has a CSS owner');
-const club = app.slice(app.indexOf('function ProfileStrengthClub('), app.indexOf('/* B892: Presentation-only'));
-assert.equal((club.match(/style: \{/g) || []).length, 1, 'Club keeps only its calculated progress width inline');
-assert.ok(club.includes('style: { width: `${snap.thousandPct}%` }'), 'Club progress derives from the canonical snapshot');
-assert.equal((club.match(/variant: "tonal"/g) || []).length, 2, 'Club share and measure controls reuse UiAction');
+// B1030: Profile no longer repeats the 1,000 lb club; Progress → Strength owns it.
+assert.ok(!app.includes('function ProfileStrengthClub('), 'Profile does not duplicate the Strength Club');
 const settingsView = app.slice(app.indexOf('function SettingsView('), app.indexOf('/* ============================== CYCLES VIEW'));
 assert.equal((settingsView.match(/className: "wpb-settings-card"/g) || []).length, 8, 'All eight Settings row groups use UiCard');
 assert.ok(primitives.includes('export function UiCard('), 'Standard cards must use one semantic owner');
@@ -904,8 +903,8 @@ assert.ok(css.includes('.wpb-profile-card-metrics{display:grid;grid-template-col
     'Share-card metric groups keep shared spacing instead of one-off margins');
 assert.ok(css.includes('.wpb-profile-card-metrics>div{min-width:0;padding:var(--pi-space-2) var(--pi-space-1);'),
     'Share-card metric rows keep the shared internal rhythm');
-assert.ok(css.includes('.wpb-profile-strength-grid>.wpb-profile-strength-cell{'),
-    'Strength comparison cells still share one explicit active row layout');
+// B1030: the Profile strength grid moved out with the section (Progress → Strength owns it).
+assert.ok(!css.includes('.wpb-profile-strength-grid'), 'No orphaned Profile strength grid owner');
 assert.ok(!css.includes('.wpb-profile .wpb-profile-strength-grid{\n  gap:6px!important;'),
     'The superseded Profile strength gap must not regain priority');
 assert.ok(!css.includes('.wpb-profile .wpb-profile-strength-cell{\n  padding:9px 5px!important;'),
@@ -1053,7 +1052,8 @@ const sparkline=presentationFunction('Sparkline');
 assert.equal((sparkline.match(/style:\s*\{/g)||[]).length,1,'Only data-derived empty-chart height remains inline');
 assert.ok(/style:\s*\{\s*height\s*\}/.test(sparkline),'Shared Sparkline retains only calculated height');
 assert.equal((profilePresentation.match(/const sectionContent =/g)||[]).length,1,'Build the section element map once per Profile render');
-assert.ok(profilePresentation.includes('sectionContent[id]'),'Ordering selects existing section elements');
+// B1030: Profile is the card, a link to the strength record, and achievements — no reorderable stack.
+assert.ok(profilePresentation.includes('sectionContent.achievements')&&!profilePresentation.includes('sectionContent[id]'),'Profile renders its fixed identity sections');
 for(const role of ['faint: C.faint','"border-soft": C.borderSoft'])
     assert.equal((app.split(role).length-1),1,'Publish the live Profile palette role exactly once: '+role);
 

@@ -726,7 +726,8 @@ try {
                 const tonal = await tonalSurfaceReport({
                     featured:'.wpb-plan-glance-tile[data-featured="true"]',
                     secondary:'.wpb-plan-glance-tile:not([data-featured="true"])',
-                    next:'.wpb-plan-up-next'
+                    // B1030: Plan no longer repeats Home's Up next; the selected week card marks the next session.
+                    next:'.wpb-plan-selected-week .wpb-plan-week-card'
                 });
                 const {featured,secondary,next}=tonal.output;
                 assert.ok(featured && secondary && next,
@@ -807,36 +808,25 @@ try {
                     JSON.stringify(r41));
             }
             if (tab === 'profile') {
+                // B1030: Profile is the identity card, one strength row and achievements; grouped
+                // lifetime metrics and the strength grid live in Progress.
                 const r39 = await page.evaluate(() => {
-                    const stats=document.querySelector('.wpb-profile-stat-grid');
-                    const strength=document.querySelector('.wpb-profile-strength-grid');
-                    const cells=[...document.querySelectorAll('.wpb-profile-strength-grid>.wpb-profile-strength-cell')];
+                    const card=document.querySelector('.wpb-profile-share-card');
+                    const link=document.querySelector('.wpb-profile-strength-link');
                     const sections=[...document.querySelectorAll('.wpb-profile-section')];
-                    const groupStyle=stats&&getComputedStyle(stats);
-                    const statsBox=stats?.getBoundingClientRect();
-                    const strengthBox=strength?.getBoundingClientRect();
-                    return {count:stats?.children.length||0,
-                        columns:groupStyle?.gridTemplateColumns||'',
-                        statsWidth:statsBox?.width||0,
-                        statsOverflow:!!stats&&stats.scrollWidth>stats.clientWidth+1,
-                        groupGap:groupStyle?.gap,
-                        groupBackground:groupStyle?.backgroundColor,
-                        strengthCount:cells.length,
-                        singletonWidth:cells.length===1?cells[0].getBoundingClientRect().width:null,
-                        strengthWidth:strengthBox?.width||0,
-                        singletonMinHeight:cells.length===1?cells[0].getBoundingClientRect().height:null,
+                    const box=el=>el?.getBoundingClientRect();
+                    return {duplicates:document.querySelectorAll('.wpb-profile-stat-grid,.wpb-profile-strength-grid').length,
+                        cardWidth:box(card)?.width||0,linkWidth:box(link)?.width||0,linkHeight:box(link)?.height||0,
+                        overflow:!!card&&card.scrollWidth>card.clientWidth+1,
                         sections:sections.slice(0,3).map(el=>({
                             padding:parseFloat(getComputedStyle(el).paddingLeft),
                             overflows:el.scrollWidth>el.clientWidth+1
                         }))};
                 });
-                assert.ok(r39.count===3&&r39.statsWidth>0&&!r39.statsOverflow &&
-                    r39.groupGap==='0px'&&r39.groupBackground!=='rgba(0, 0, 0, 0)' &&
-                    (r39.strengthCount!==1 || (
-                        r39.singletonWidth>=r39.strengthWidth-2 &&
-                        r39.singletonMinHeight>=70))&&
+                assert.ok(r39.duplicates===0&&r39.cardWidth>0&&!r39.overflow&&
+                    Math.abs(r39.linkWidth-r39.cardWidth)<=2&&r39.linkHeight>=56&&
                     r39.sections.every(x=>x.padding>=14&&!x.overflows),
-                    'R39 Profile grouped metrics and single lift use phone space cleanly: '+JSON.stringify(r39));
+                    'R39 Profile identity surfaces use phone space cleanly: '+JSON.stringify(r39));
             }
             if (tab === 'progress') {
                 const r39 = await page.evaluate(() => {
@@ -866,8 +856,9 @@ try {
             }
             if (tab === 'profile') {
                 const tonal = await tonalSurfaceReport({
-                    featured:'.wpb-profile-strength-cell:first-child',
-                    secondary:'.wpb-profile-strength-cell:nth-child(2)',
+                    // B1030: the share card's metric tiles are Profile's strength summary.
+                    featured:'.wpb-profile-card-metrics>div:first-child',
+                    secondary:'.wpb-profile-strength-link',
                     identity:'.wpb-profile-share-card'
                 });
                 const {featured,secondary,identity}=tonal.output;
@@ -1010,13 +1001,12 @@ try {
                     JSON.stringify(r48Progress));
             }
             if (tab === 'plan') {
-                const nextTitle = await page.$eval('.wpb-plan-up-next>div:first-child>div:nth-child(2)', el => {
+                // B1030: the next session is named inside the selected week, where it must wrap, not truncate.
+                const nextTitle = await page.$eval('.wpb-plan-selected-week .wpb-plan-session-link[data-next="true"]', el => {
                     const cs=getComputedStyle(el);
-                    return {whiteSpace:cs.whiteSpace,overflow:cs.overflow,
-                        textOverflow:cs.textOverflow,wrap:cs.overflowWrap};
+                    return {whiteSpace:cs.whiteSpace,overflow:el.scrollWidth>el.clientWidth+1};
                 });
-                assert.ok(nextTitle.whiteSpace==='normal' && nextTitle.overflow!=='hidden' &&
-                    nextTitle.textOverflow!=='ellipsis',
+                assert.ok(nextTitle.whiteSpace!=='nowrap' && !nextTitle.overflow,
                     'R18 Plan next-session name should wrap instead of truncating: '+JSON.stringify(nextTitle));
             }
             if (tab === 'plan') {
@@ -1046,7 +1036,7 @@ try {
                     const el=selector=>root.querySelector(selector);
                     const first=el('.wpb-plan-glance-tile[data-featured="true"]');
                     const second=el('.wpb-plan-glance-tile:not([data-featured="true"])');
-                    const next=el('.wpb-plan-up-next');
+                    const next=el('.wpb-plan-selected-week .wpb-plan-week-card');
                     const choices=el('.wpb-plan-panes');
                     const buttons=[...(choices?.querySelectorAll('button')||[])];
                     const cs=x=>x?getComputedStyle(x):null;
@@ -1200,7 +1190,7 @@ try {
             if (tab === 'profile') {
                 const profileType = await page.$eval('.wpb-profile', el => {
                     const title = getComputedStyle(el.querySelector('.wpb-profile-title'));
-                    const stat = el.querySelector('.wpb-profile-strength-cell');
+                    const stat = el.querySelector('.wpb-profile-card-metrics>div:first-child');
                     return { title: parseFloat(title.fontSize),
                         radius: stat ? parseFloat(getComputedStyle(stat).borderTopLeftRadius) : null };
                 });
@@ -1213,9 +1203,9 @@ try {
                     const header=el.querySelector('.wpb-profile-head');
                     const identity=el.querySelector('.wpb-profile-card-caption');
                     const edit=el.querySelector('.wpb-profile-edit');
-                    const stats=[...el.querySelectorAll('.wpb-profile-stat')].map(rect);
-                    const grid=el.querySelector('.wpb-profile-strength-grid');
-                    const cells=grid ? [...grid.querySelectorAll('.wpb-profile-strength-cell')].map(rect) : [];
+                    const stats=[...el.querySelectorAll('.wpb-profile-card-metrics>div')].map(rect);
+                    const grid=el.querySelector('.wpb-profile-card-metrics');
+                    const cells=[];
                     const identityPaint=identity ? getComputedStyle(identity) : null;
                     return {
                         title:parseFloat(getComputedStyle(el.querySelector('.wpb-profile-title')).fontSize),
@@ -1235,9 +1225,10 @@ try {
                     profileR17.identityBackground==='rgba(0, 0, 0, 0)' &&
                     profileR17.editHeight>=44 && !profileR17.overflow,
                     'R17 Profile is compact, readable and editable: '+JSON.stringify(profileR17));
-                assert.ok(profileR17.stats.length===3 &&
-                    profileR17.stats.every(s=>Math.abs(s.y-profileR17.stats[0].y)<=1 && s.width>=60),
-                    'R17 three lifetime summary stats share a stable row: '+JSON.stringify(profileR17));
+                // Two columns share a row; a narrow card (container query) stacks them full-width.
+                assert.ok(profileR17.stats.length>=2 && profileR17.stats.every(s=>s.width>=60) &&
+                    (profileR17.columns===1 || Math.abs(profileR17.stats[1].y-profileR17.stats[0].y)<=1),
+                    'R17 share-card metrics share a stable row or stack cleanly: '+JSON.stringify(profileR17));
                 if (profileR17.cells.length>=2) {
                     assert.equal(profileR17.columns,2,
                         'R17 strength metrics use a balanced two-column grid');

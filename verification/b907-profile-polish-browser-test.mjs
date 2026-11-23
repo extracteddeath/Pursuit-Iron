@@ -21,21 +21,12 @@ try{
   await page.evaluateOnNewDocument(s=>localStorage.setItem('wpb:v1',JSON.stringify(s)),state);
   await page.goto('http://127.0.0.1:'+server.address().port+'/index.html',{waitUntil:'networkidle0'});
   await page.waitForSelector('[data-tab="profile"]');await page.click('[data-tab="profile"]');
-  await page.waitForSelector('.wpb-profile-toolbar button');
-  // Cohesion 20: the real club card keeps distinct read-only totals and native keyboard controls.
-  const club='.wpb-profile-club';
-  await page.waitForSelector(club);
+  await page.waitForSelector('.wpb-profile-strength-link');
   const historyBefore=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history);
-  const total=await page.$eval(club+' .wpb-profile-club-value',e=>e.textContent);
-  const estimated=await page.$(club+' .wpb-profile-club-mode button:nth-child(2)');
-  await estimated.focus();await page.keyboard.press('Enter');
-  assert.equal(await estimated.evaluate(e=>e.getAttribute('aria-pressed')),'true','keyboard selects estimated measure');
-  assert.notEqual(await page.$eval(club+' .wpb-profile-club-value',e=>e.textContent),total,'estimated total differs from actual lifted weight');
-  assert.match(await page.$eval(club+' .wpb-profile-club-caption',e=>e.textContent),/estimated 1RM/);
-  const lifted=await page.$(club+' .wpb-profile-club-mode button:first-child');
-  await lifted.focus();await page.keyboard.press('Space');
-  assert.equal(await lifted.evaluate(e=>e.getAttribute('aria-pressed')),'true','keyboard restores Lifted');
-  assert.equal(await page.$eval(club+' .wpb-profile-club-value',e=>e.textContent),total);
+  // B1030: Profile is identity. The score, standards and the 1,000 lb club live once, in Progress;
+  // Profile carries a single row there instead of second copies.
+  assert.equal(await page.$('.wpb-profile-club, .wpb-profile-stat-grid, .wpb-profile-strength-grid, .wpb-profile-toolbar'),null,
+    'Profile does not repeat the Progress record');
   for(const enlarged of [false,true]){
     await page.evaluate(large=>large?document.documentElement.style.fontSize='200%':document.documentElement.style.removeProperty('font-size'),enlarged);
     if(width===393&&!enlarged){
@@ -60,8 +51,8 @@ try{
       path:root+'/verification/m290-level-'+theme+'-'+width+'x'+height+'-'+(enlarged?'enlarged':'normal')+'-phone.png'});
     // M291: headings, badges and detail sheets share the existing modal/focus
     // owner; browsing never edits history or the earned/locked state.
-    const headingRoles=await page.$$eval('#profile-strength-title,#profile-achievements-title',nodes=>nodes.map(n=>({role:n.getAttribute('role'),level:n.getAttribute('aria-level')})));
-    assert.ok(headingRoles.length===2&&headingRoles.every(h=>h.role==='heading'&&h.level==='2'),'Profile sections expose a coherent heading outline');
+    const headingRoles=await page.$$eval('#profile-achievements-title',nodes=>nodes.map(n=>({role:n.getAttribute('role'),level:n.getAttribute('aria-level')})));
+    assert.ok(headingRoles.length===1&&headingRoles.every(h=>h.role==='heading'&&h.level==='2'),'Profile sections expose a coherent heading outline');
     const toggle=await page.$('.wpb-profile-achievement-toggle');
     const toggleTarget=await toggle.evaluate(el=>{
       const r=el.getBoundingClientRect();
@@ -101,82 +92,23 @@ try{
     }
     await toggle.focus();await page.keyboard.press('Enter');
     await page.waitForFunction(()=>!document.querySelector('.wpb-profile-achievement-board'));
-    // M288: lifetime totals retain one grouped surface at phone, tablet,
-    // short landscape and rail sizes, including actual 200% root text.
-    const summary=await page.$eval('.wpb-profile-stat-grid',e=>{
-      const box=e.getBoundingClientRect();
-      return {count:e.children.length,columns:getComputedStyle(e).gridTemplateColumns.split(' ').length,
-        overflow:e.scrollWidth>e.clientWidth+1,
-        cells:[...e.children].map(c=>{
-          const r=c.getBoundingClientRect(),walker=document.createTreeWalker(c,NodeFilter.SHOW_TEXT),text=[];
-          while(walker.nextNode()){
-            if(!walker.currentNode.textContent.trim())continue;
-            const range=document.createRange();range.selectNodeContents(walker.currentNode);text.push(...range.getClientRects());
-          }
-          return {contained:r.left>=box.left-1&&r.right<=box.right+1,
-            textFits:text.every(t=>t.left>=r.left-1&&t.right<=r.right+1&&t.top>=r.top-1&&t.bottom<=r.bottom+1)};
-        })};
+    const link=await page.$eval('.wpb-profile-strength-link',e=>{
+      // Supporting text may clamp at 200% (Compose ListItem: two lines); the headline must stay whole.
+      const r=e.getBoundingClientRect(),walker=document.createTreeWalker(e.querySelector('.wpb-ui-list-headline'),NodeFilter.SHOW_TEXT),text=[];
+      while(walker.nextNode()){if(!walker.currentNode.textContent.trim())continue;const range=document.createRange();range.selectNodeContents(walker.currentNode);text.push(...range.getClientRects());}
+      return {width:r.width,height:r.height,left:r.left,right:r.right,overflow:e.scrollWidth>e.clientWidth+1,
+        textFits:text.every(t=>t.left>=r.left-1&&t.right<=r.right+1&&t.top>=r.top-1&&t.bottom<=r.bottom+1)};
     });
-    assert.ok(summary.count===3&&[1,3].includes(summary.columns)&&!summary.overflow&&
-      summary.cells.every(c=>c.contained&&c.textFits),
-      'Lifetime summary values/labels remain complete '+JSON.stringify({width,height,theme,enlarged,summary}));
-    if([320,393,1280].includes(width))await (await page.$('.wpb-profile-stat-grid')).screenshot({
-      path:root+'/verification/m288-summary-'+theme+'-'+width+'x'+height+'-'+(enlarged?'enlarged':'normal')+'-phone.png'});
-    // M289: the featured score shares label/value edges with every other row,
-    // including enlarged text; the share action retains its native 48px target.
-    const strength=await page.$eval('.wpb-profile-strength',section=>{
-      const box=section.getBoundingClientRect();
-      const rows=[...section.querySelectorAll('.wpb-profile-strength-cell')].map(cell=>{
-        const r=cell.getBoundingClientRect(),label=cell.querySelector('.wpb-profile-strength-label'),value=cell.querySelector('.mono');
-        const l=label.getBoundingClientRect(),v=value.getBoundingClientRect();
-        const range=document.createRange();range.selectNodeContents(label);
-        return {left:l.left,right:v.right,contained:r.left>=box.left-1&&r.right<=box.right+1,
-          textFits:[...range.getClientRects()].every(t=>t.left>=r.left-1&&t.right<=r.right+1&&t.top>=r.top-1&&t.bottom<=r.bottom+1)};
-      });
-      const share=section.querySelector('button[aria-label="Share Strength Score"]').getBoundingClientRect();
-      return {rows,share:{width:share.width,height:share.height},overflow:section.scrollWidth>section.clientWidth+1};
-    });
-    assert.ok(strength.rows.length>=2&&!strength.overflow&&
-      strength.rows.every(r=>r.contained&&r.textFits&&Math.abs(r.left-strength.rows[0].left)<1&&Math.abs(r.right-strength.rows[0].right)<1)&&
-      strength.share.width>=48&&strength.share.height>=48,
-      'Strength rows and share control stay aligned and complete '+JSON.stringify({width,height,theme,enlarged,strength}));
-    if([320,393,1280].includes(width))await (await page.$('.wpb-profile-strength')).screenshot({
-      path:root+'/verification/m289-strength-'+theme+'-'+width+'x'+height+'-'+(enlarged?'enlarged':'normal')+'-phone.png'});
-    const card=await page.$eval(club,e=>{
-      const box=e.getBoundingClientRect();
-      const controls=[...e.querySelectorAll('button')].map(b=>{
-        const r=b.getBoundingClientRect(),range=document.createRange();range.selectNodeContents(b);
-        return {width:r.width,height:r.height,fits:[...range.getClientRects()].every(t=>t.left>=r.left-1&&t.right<=r.right+1&&t.top>=r.top-1&&t.bottom<=r.bottom+1)};
-      });
-      return {overflow:e.scrollWidth>e.clientWidth+1,controls,
-        values:[...e.querySelectorAll('.wpb-profile-club-lift')].every(l=>{const r=l.getBoundingClientRect();return r.left>=box.left-1&&r.right<=box.right+1})};
-    });
-    assert.ok(!card.overflow&&card.values&&card.controls.every(b=>b.width>=47.5&&b.height>=47.5&&b.fits),
-      'club has complete labels, 48px controls and readable values '+JSON.stringify({width,theme,enlarged,card}));
-    if(width===320)await (await page.$(club)).screenshot({path:root+'/verification/c20-club-'+theme+'-'+(enlarged?'enlarged':'normal')+'-phone.png'});
+    assert.ok(link.height>=48&&link.left>=-1&&link.right<=width+1&&!link.overflow&&link.textFits,
+      'Strength row is a complete 48px target '+JSON.stringify({width,height,theme,enlarged,link}));
   }
   await page.evaluate(()=>document.documentElement.style.removeProperty('font-size'));
-  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history),historyBefore,'club browsing never changes training history');
+  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history),historyBefore,'Profile browsing never changes training history');
+  await page.click('.wpb-profile-strength-link');
+  await page.waitForFunction(()=>document.querySelector('.wpb-premium-tabs [aria-selected="true"]')?.textContent==='Strength');
+  await page.click('[data-tab="profile"]');await page.waitForSelector('.wpb-profile-strength-link');
 
-  await page.$eval('.wpb-profile-toolbar button',b=>b.click());
-  await page.waitForSelector('.wpb-profile-customize-row');
-
-  const hierarchy=await page.evaluate(()=>{
-    const rect=s=>document.querySelector(s)?.getBoundingClientRect().toJSON();
-    const strength=document.querySelector('.wpb-profile-strength-grid');
-    return {toolbarOrder:getComputedStyle(document.querySelector('.wpb-profile-toolbar')).order,
-      toolbar:rect('.wpb-profile-toolbar'),previousSectionBottom:document.querySelector('.wpb-profile-toolbar')?.previousElementSibling?.getBoundingClientRect().bottom??null,summary:rect('.wpb-profile-stat-grid'),
-      gridColumns:strength?getComputedStyle(strength).gridTemplateColumns.split(' ').length:null,
-      strengthRows:strength?[...strength.children].map(c=>c.getBoundingClientRect().height):[],
-      overflow:document.documentElement.scrollWidth>innerWidth+1};
-  });
-  assert.equal(hierarchy.toolbarOrder,'0','secondary actions retain DOM and keyboard reading order');
-  if(hierarchy.previousSectionBottom!=null)assert.ok(hierarchy.toolbar.top>=hierarchy.previousSectionBottom-1,'section arrangement follows the card/editor without overlapping');
-  if(hierarchy.gridColumns!=null){
-    assert.equal(hierarchy.gridColumns,1,'no four-card strength grid');
-    assert.ok(hierarchy.strengthRows.every(h=>h>=42&&h<=100),'compact strength rows');
-  }
-  assert.equal(hierarchy.overflow,false,'compact Profile has no horizontal overflow');
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'compact Profile has no horizontal overflow');
   await page.$eval('.wpb-profile-card-actions button', b=>b.click());
   await page.waitForSelector('.wpb-profile-card-editor');
   // The read-only metrics explanation is a real disclosure, not a tiny caption.
@@ -190,29 +122,21 @@ try{
   assert.equal(await page.$eval('.wpb-profile-card-details',el=>el.open),true,
     'Metrics explanation opens without changing card selections');
   await page.$eval('.wpb-profile-card-details>summary',el=>el.click());
-  const rowEdges=await page.$$eval('.wpb-profile-strength-cell',cells=>cells.map(c=>({label:c.querySelector('.wpb-profile-strength-label').getBoundingClientRect().left,value:c.querySelector('.mono').getBoundingClientRect().right})));
-  assert.ok(rowEdges.length>=2,'populated fixture shows strength comparisons');
-  assert.ok(rowEdges.every(r=>Math.abs(r.label-rowEdges[0].label)<1&&Math.abs(r.value-rowEdges[0].value)<1),'highlighted Push and other scores align');
   const geometry=await page.evaluate(()=>{
-   const panel=document.querySelector('[aria-label="Customize Profile sections"]');
-   const selectors=['.wpb-profile-edit','.wpb-profile-customize-header>button','.wpb-profile-customize-row button','.wpb-profile-share-toggles button','.wpb-profile-reset'];
+   const selectors=['.wpb-profile-edit','.wpb-profile-card-editor .wpb-profile-customize-header>button','.wpb-profile-share-toggles button','.wpb-profile-strength-link'];
    const rect=e=>{const r=e.getBoundingClientRect();return {w:r.width,h:r.height,left:r.left,right:r.right}};
-   return {overflow:document.documentElement.scrollWidth>innerWidth+1,rows:[...panel.querySelectorAll('.wpb-profile-customize-row')].map(rect),targets:selectors.flatMap(s=>[...document.querySelectorAll(s)]).filter(e=>!e.disabled).map(e=>({selector:e.getAttribute('aria-label')||e.textContent.trim(),...rect(e)})),
-    cols:getComputedStyle(panel.querySelector('.wpb-profile-customize-row')).gridTemplateColumns.split(' ').length,
-    moveDisabled:panel.querySelector('.wpb-profile-customize-row button').disabled};
+   return {overflow:document.documentElement.scrollWidth>innerWidth+1,targets:selectors.flatMap(s=>[...document.querySelectorAll(s)]).filter(e=>!e.disabled).map(rect)};
   });
   assert.equal(geometry.overflow,false,`no horizontal page overflow at ${width} ${theme}`);
-  assert.equal(geometry.moveDisabled,true,'first up button disabled');
-  assert.ok(geometry.targets.every(r=>r.w>=47.5&&r.h>=47.5),`48px enabled actions at ${width} ${theme}: ${JSON.stringify(geometry.targets)}`);
+  assert.ok(geometry.targets.length>4&&geometry.targets.every(r=>r.w>=47.5&&r.h>=47.5),`48px enabled actions at ${width} ${theme}: ${JSON.stringify(geometry.targets)}`);
   assert.ok(geometry.targets.every(r=>r.left>=-1&&r.right<=width+1),`no offscreen actions at ${width} ${theme}`);
-  if(width===320)assert.equal(geometry.cols,3,'320px profile controls wrap beneath full-width row title');
   await page.evaluate(()=>document.documentElement.style.fontSize='200%');
   const enlarged=await page.$$eval('.wpb-profile .wpb-ui-action[data-action="tonal"]',buttons=>buttons.filter(b=>!b.disabled).map(b=>{
     const box=b.getBoundingClientRect(),walker=document.createTreeWalker(b,NodeFilter.SHOW_TEXT),rects=[];
     while(walker.nextNode()){const node=walker.currentNode;if(!node.textContent.trim())continue;const range=document.createRange();range.selectNodeContents(node);rects.push(...range.getClientRects());}
     return {label:b.textContent.trim(),fits:rects.every(r=>r.left>=box.left-1&&r.right<=box.right+1)};
   }));
-  assert.ok(enlarged.length>10&&enlarged.every(b=>b.fits),'200% shared editor labels fit: '+JSON.stringify(enlarged));
+  assert.ok(enlarged.length>6&&enlarged.every(b=>b.fits),'200% shared editor labels fit: '+JSON.stringify(enlarged));
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'200% editors do not cause horizontal overflow');
   await page.evaluate(()=>document.documentElement.style.removeProperty('font-size'));
   await page.type('.wpb-profile-card-field input','Alex Rivera');
@@ -233,26 +157,13 @@ try{
   assert.ok(output.text.includes('Alex Rivera'));
   for(const label of selected)assert.ok(output.text.includes(label.toUpperCase()),'export matches preview metric '+label);
   await page.$eval('[aria-label="Close share card editor"]',b=>b.click());
-  await page.$eval('[aria-label="Close Profile customization"]',b=>b.click());
   await page.$eval('.wpb-profile',e=>e.scrollTop=0);
   if(width===393)await page.screenshot({path:root+'/verification/b915-profile-'+theme+'-phone.png'});
-  await page.$eval('.wpb-profile-toolbar button',b=>b.click());
-  await page.$eval('[aria-label="Move Lifetime summary down"]' ,b=>b.click());
-  await page.waitForFunction(()=>document.querySelector('.wpb-profile-customize-row>span')?.textContent==='Level and XP');
-  await page.$eval('[aria-label="Hide Level and XP"]',b=>b.click());
   const storage=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:profile-layout-v1')));
   assert.equal(storage.cardName,'Alex Rivera');assert.deepEqual(storage.favorites,['bb-bench']);
-  assert.ok(storage.order.indexOf('strength')<storage.order.indexOf('summary'));assert.ok(storage.hidden.includes('level'));
-  await page.reload({waitUntil:'networkidle0'});await page.click('[data-tab="profile"]');await page.waitForSelector('.wpb-profile-toolbar button');
-  await page.$eval('.wpb-profile-toolbar button',b=>b.click());await page.waitForSelector('.wpb-profile-customize-row');
-  assert.equal(await page.$eval('.wpb-profile-customize-row>span',e=>e.textContent),'Level and XP');
-  await page.$eval('[aria-label="Show Level and XP"]',b=>b.click());
-  const after=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:profile-layout-v1')));
-  assert.equal(after.hidden.includes('level'),false);assert.equal(after.cardName,'Alex Rivera');
-  assert.match(await page.$eval('.wpb-profile-share-card',e=>e.innerText),/Alex Rivera[\s\S]*Barbell Bench Press/i);
-  await page.$eval('.wpb-profile-reset',b=>b.click());
-  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:profile-layout-v1')).cardName),'Alex Rivera','resetting layout keeps the share card');
+  await page.reload({waitUntil:'networkidle0'});await page.click('[data-tab="profile"]');await page.waitForSelector('.wpb-profile-strength-link');
+  assert.match(await page.$eval('.wpb-profile-share-card',e=>e.innerText),/Alex Rivera[\s\S]*Barbell Bench Press/i,'share card identity persists');
   assert.deepEqual(errors,[],'no runtime errors');await context.close();
  }
- console.log('PASS B907 browser: Profile touch geometry, phone/tablet layout, reordering and visibility persistence, two themes, share-card identity/favorites, matched PNG content, aligned strength rows.');
+ console.log('PASS B907 browser: Profile identity card, one 48px link to the Progress strength record, phone/tablet layout at 200% text, two themes, share-card identity/favorites persistence and matched PNG content.');
 } finally { if(browser)await browser.close();await new Promise(r=>server.close(r)); }

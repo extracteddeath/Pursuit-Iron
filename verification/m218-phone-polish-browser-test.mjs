@@ -135,8 +135,9 @@ try {
     await page.screenshot({ path: path.join(root, 'verification/m218-settings-phone.png') });
 
     await page.click('[data-tab="plan"]'); await page.waitForSelector('.wpb-plan-view');
-    assert.match(await page.$eval('.wpb-plan-glance', n => n.textContent), /1 \/ 10/);
-    assert.ok(await page.$eval('.wpb-plan-up-next', n => n.getBoundingClientRect().bottom < innerHeight * .6), 'Up Next is visible near the top');
+    // B1030: the overview states the block length; the selected week (with its NEXT session) leads the schedule.
+    assert.match(await page.$eval('.wpb-plan-glance', n => n.textContent), /10 wk/);
+    assert.ok(await page.$eval('.wpb-plan-selected-week', n => n.getBoundingClientRect().top < innerHeight * .6), 'The selected week is visible near the top');
     await page.screenshot({ path: path.join(root, 'verification/m218-plan-phone.png') });
     for (const width of [320, 390]) {
         await resize(width);

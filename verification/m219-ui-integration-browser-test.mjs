@@ -77,10 +77,11 @@ try {
             // stage deliberately audits, rather than overriding, native data.
             const nestedContrast = await page.evaluate(tab => {
                 const selectors = {
-                    home:['.wpb-home .wpb-home-hero','.wpb-home .wpb-action-tile'],
-                    plan:['.wpb-plan-up-next','.wpb-plan-glance-tile'],
+                    // B1029/B1030: action tiles live in Plan's program list; Plan's next session is in the selected week.
+                    home:['.wpb-home .wpb-home-hero','.wpb-home .wpb-home-week'],
+                    plan:['.wpb-plan-selected-week','.wpb-plan-glance-tile','.wpb-plan-programs .wpb-action-tile'],
                     progress:['.wpb-progress-glance-item','.wpb-progress .wpb-history-filter-help'],
-                    profile:['.wpb-profile-stat','.wpb-profile-strength-cell'],
+                    profile:['.wpb-profile-share-card','.wpb-profile-strength-link'],
                     settings:['.wpb-settings-card','.wpb-settings-row']
                 }[tab] || [];
                 const ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true});

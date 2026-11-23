@@ -555,7 +555,8 @@ async function verifyNextSessionFlow(browser,theme,width){
     await page.waitForFunction(()=>document.querySelector('.wpb-plan-week-chip[aria-pressed="true"]')?.getAttribute('aria-label')==='Week 2');
     const next=await page.evaluate(()=>({
       selected:document.querySelector('.wpb-plan-week-chip[aria-pressed="true"]').getAttribute('aria-label'),
-      action:document.querySelector('.wpb-plan-up-next').textContent,
+      // B1030: the next action is the NEXT session inside the selected week (Home owns Up next).
+      action:'Week '+document.querySelector('.wpb-plan-selected-week [data-plan-week]').dataset.planWeek+' '+document.querySelector('.wpb-plan-selected-week [data-next="true"]').textContent,
       scroll:document.querySelector('.wpb-plan-view').scrollTop,
       records:JSON.parse(localStorage.getItem('wpb:v1')).history.length
     }));

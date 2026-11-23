@@ -90,7 +90,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='1028';
+const __APP_VERSION__='4.0.0'; const __BUILD__='1029';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -6612,7 +6612,7 @@ function PlanView({ programs = null, program, plan, blockNavigation = null, read
         return () => cancelAnimationFrame(frame);
     }, [openWeek, pane, program?.id]);
     const pickWeek = week => {
-        const next = pane === "volume" ? week : openWeek === week ? null : week;
+        const next = week;
         pickedWeek.current = pane === "schedule" ? next : null;
         setOpenWeek(next);
     };
@@ -6624,7 +6624,9 @@ function PlanView({ programs = null, program, plan, blockNavigation = null, read
         past: null, todo: null
     };
     const fmtMin = (m) => (m >= 60 ? `${Math.floor(m / 60)}h${String(m % 60).padStart(2, "0")}m` : `${m}m`);
-    const upNext = pane === "schedule" && plan.upNext && (_jsxs(UiAction, { onClick: () => onOpenDay && onOpenDay(plan.upNext.dayId, plan.upNext.week), className: "pressable wpb-plan-up-next", style: { width: "100%", display: "flex", alignItems: "center", gap: 12, background: C.accentDim, border: `1px solid ${C.accent}33`, borderRadius: 12, padding: "12px 14px", marginBottom: 14, cursor: "pointer", textAlign: "left", color: C.text }, children: [_jsxs("div", { className: "wpb-s956-flex-1 wpb-s956-minwidth-0", children: [_jsx("div", { style: { fontSize: 11, fontWeight: 700, letterSpacing: .7, color: C.accentInk }, children: "UP NEXT" }), _jsx("div", { className: "wpb-s956-fontsize-16 wpb-s956-fontweight-700 wpb-s956-margintop-2 wpb-s956-overflow-hidden wpb-s956-textoverflow-ellipsis wpb-s956-whitespace-nowrap", children: plan.upNext.label }), _jsxs("div", { className: "mono pi-t-faint-mt2", children: ["Week ", plan.upNext.week, " \u00B7 ", plan.upNext.sets, " sets \u00B7 ", plan.upNext.minutes, " min"] })] }), _jsx("span", { style: { fontSize: 14, fontWeight: 700, color: C.accentInk, flexShrink: 0 }, children: "Open" }), _jsx(ChevronRight, { size: 16, color: C.accentInk, className: "wpb-icon-no-shrink" })] }));
+    const phaseOf = w => plan.phases.find(ph => ph.key === w.phaseKey) || null;
+    // A week chip says what is DIFFERENT about the week; identical set/time totals said nothing.
+    const chipCaption = w => w.status === "now" ? `This week \u00B7 ${w.done}/${w.total}` : w.total && w.done >= w.total ? "Done" : w.isDeload ? "Deload" : (phaseOf(w)?.label || `${w.sets} sets`);
     const tile = (label, value, accent) => _jsx(UiMetric, {
         className: "wpb-plan-glance-tile", "data-featured": accent ? "true" : undefined,
         labelFirst: true, label, value,
@@ -6633,10 +6635,10 @@ function PlanView({ programs = null, program, plan, blockNavigation = null, read
     const featuredWeek = plan.weeks.find(w => w.week === (openWeek || plan.currentWeek)) || plan.weeks[0];
     // One week-card renderer serves both the featured selection and chronological archive.
     const renderWeekCard = w => {
-                                    const isOpen = openWeek === w.week;
+                                    const isOpen = true;
                                     const badge = BADGE[w.status];
                                     const pct = w.total ? Math.round((w.done / w.total) * 100) : 0;
-                                    return (_jsxs("div", { className: "wpb-plan-week-card wpb-b965-layout-02" + (w.week === featuredWeek?.week ? " wpb-plan-featured-week" : ""), "data-plan-week": w.week, "data-current-week": w.week === plan.currentWeek ? "true" : "false", children: [_jsxs(UiAction, { variant: "text", onClick: () => setOpenWeek(isOpen ? null : w.week), "aria-expanded": isOpen, className: "pressable", style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", background: "none", border: "none", cursor: "pointer", textAlign: "left", color: C.text }, children: [_jsxs("div", { className: "mono", style: { width: 40, height: 40, flexShrink: 0, borderRadius: 999, border: `2px solid ${w.done >= w.total && w.total ? C.accent : C.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: pct > 0 ? C.accentInk : C.faint }, children: [w.done, "/", w.total] }), _jsxs("div", { className: "wpb-s956-flex-1 wpb-s956-minwidth-0", children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-6", children: [_jsxs("span", { className: "wpb-s956-fontsize-16 wpb-s956-fontweight-700", children: ["Week ", w.week] }), badge && _jsx("span", { style: { fontSize: 11, fontWeight: 700, letterSpacing: .4, color: catInk(badge.color), background: badge.bg, padding: "2px 7px", borderRadius: 8 }, children: badge.label }), w.isDeload && _jsx("span", { style: { fontSize: 11, fontWeight: 700, letterSpacing: .4, color: C.muted, background: C.bg2, padding: "2px 7px", borderRadius: 8 }, children: "DELOAD" })] }), _jsxs("div", { className: "mono pi-t-muted wpb-s956-fontsize-14 wpb-s956-margintop-2", children: [w.sets, " sets \u00B7 ", fmtMin(w.minutes)] })] }), _jsx(ChevronDown, { size: 17, color: C.muted, style: { flexShrink: 0, transition: "transform .18s", transform: isOpen ? "rotate(180deg)" : "none" } })] }), isOpen && (_jsx("div", { className: "wpb-plan-session-list wpb-b964-layout-01", role: "group", "aria-label": `Week ${w.week} sessions`, children: w.days.map((d, di) => {
+                                    return (_jsxs("div", { className: "wpb-plan-week-card wpb-b965-layout-02" + (w.week === featuredWeek?.week ? " wpb-plan-featured-week" : ""), "data-plan-week": w.week, "data-current-week": w.week === plan.currentWeek ? "true" : "false", children: [_jsxs("div", { className: "wpb-plan-week-head", style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", textAlign: "left", color: C.text }, children: [_jsxs("div", { className: "mono", style: { width: 40, height: 40, flexShrink: 0, borderRadius: 999, border: `2px solid ${w.done >= w.total && w.total ? C.accent : C.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: pct > 0 ? C.accentInk : C.faint }, children: [w.done, "/", w.total] }), _jsxs("div", { className: "wpb-s956-flex-1 wpb-s956-minwidth-0", children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-6", children: [_jsxs("span", { className: "wpb-s956-fontsize-16 wpb-s956-fontweight-700", children: ["Week ", w.week] }), badge && _jsx("span", { style: { fontSize: 11, fontWeight: 700, letterSpacing: .4, color: catInk(badge.color), background: badge.bg, padding: "2px 7px", borderRadius: 8 }, children: badge.label }), w.isDeload && _jsx("span", { style: { fontSize: 11, fontWeight: 700, letterSpacing: .4, color: C.muted, background: C.bg2, padding: "2px 7px", borderRadius: 8 }, children: "DELOAD" })] }), _jsxs("div", { className: "mono pi-t-muted wpb-s956-fontsize-14 wpb-s956-margintop-2", children: [phaseOf(w)?.label ? `${phaseOf(w).label} \u00B7 ` : "", w.sets, " sets \u00B7 ", fmtMin(w.minutes)] })] })] }), isOpen && (_jsx("div", { className: "wpb-plan-session-list wpb-b964-layout-01", role: "group", "aria-label": `Week ${w.week} sessions`, children: w.days.map((d, di) => {
                                                     const isNext = !!plan.upNext && plan.upNext.week === w.week && plan.upNext.dayId === d.dayId;
                                                     return (_jsxs(UiAction, { variant: "row", onClick: () => onOpenDay && onOpenDay(d.dayId, w.week), className: "pressable wpb-plan-session-link", "data-next": isNext ? "true" : "false", "aria-label": `${d.label}, week ${w.week}${d.done ? ", done" : ""}`, style: { width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", marginTop: 4, cursor: "pointer", color: C.text, textAlign: "left" }, children: [_jsx("span", { className: "wpb-b965-layout-03", children: d.done ? _jsx(Check, { size: 14, color: C.accentInk }) : _jsx("span", { style: { width: 12, height: 12, borderRadius: 999, border: `2px solid ${C.faint}` } }) }), _jsxs("span", { className: "wpb-s956-flex-1 wpb-s956-minwidth-0", children: [_jsxs("span", { className: "wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-6", children: [_jsx("span", { className: "wpb-plan-session-name", style: { minWidth: 0, fontSize: 16, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textDecoration: d.done ? "line-through" : "none" }, "aria-label": d.label, children: displayDayName(d.label, program) }), isNext && _jsx("span", { style: { fontSize: 11, fontWeight: 700, letterSpacing: .3, color: C.accentInk, flexShrink: 0 }, children: "NEXT" })] }), d.lead && (_jsxs("span", { className: "mono pi-t-caption-muted wpb-s956-display-block wpb-s956-margintop-2 wpb-s956-overflow-hidden wpb-s956-textoverflow-ellipsis wpb-s956-whitespace-nowrap", children: [d.lead, d.exCount > 1 ? ` +${d.exCount - 1}` : ""] })), d.focus && d.focus.length > 0 && (_jsx("span", { className: "mono pi-t-caption-muted wpb-s956-display-block wpb-s956-margintop-2 wpb-s956-overflow-hidden wpb-s956-textoverflow-ellipsis wpb-s956-whitespace-nowrap", children: d.focus.map(k => PART_LABEL[k] || SUBMUSCLE_LABEL[k] || k).join(" · ") }))] }), _jsxs("span", { className: "mono pi-t-caption-muted wpb-s956-flexshrink-0 wpb-s956-textalign-right", children: [d.sets, " sets", _jsx("br", {}), d.minutes, "m"] }), _jsx(ChevronRight, { size: 15, color: C.muted, className: "wpb-icon-no-shrink" })] }, di));
                                                 }) }))] }, w.week));
@@ -6644,13 +6646,13 @@ function PlanView({ programs = null, program, plan, blockNavigation = null, read
     return (_jsxs("div", { className: "wpb-page-shell wpb-plan", children: [
         _jsx(UiRootHeader, { title: "Plan" }),
         _jsxs("div", { ref: scrollRoot, className: "wpb-scroll wpb-plan-view", children: [
-            _jsxs("div", { className: "wpb-plan-context", children: [_jsxs("div", { className: "wpb-plan-context-heading", children: [_jsx("h2", { className: "wpb-plan-title", children: program.name }), _jsxs(UiAction, { onClick: () => onOpenProgram(openWeek || plan.currentWeek), className: "wpb-plan-open-program", "aria-label": readOnly ? "View full block exercises" : "Open full program", children: [readOnly ? "View block exercises" : "Open full program", _jsx(ChevronRight, { size: 16, "aria-hidden": true })] })] }), blockNavigation, readOnly && _jsx("p", { className: "wpb-plan-preview-notice", children: "Viewing a block preview. Your current training block is unchanged." })] }), upNext, _jsx("div", { className: "wpb-plan-panes", children: [["schedule", "Schedule", Calendar], ["volume", "Volume", BarChart3], ["progression", "Progression", TrendingUp], ["blueprint", "Blueprint", Layers]].map(([id, label, Icon]) => {
+            _jsxs("div", { className: "wpb-plan-context", children: [_jsxs("div", { className: "wpb-plan-context-heading", children: [_jsx("h2", { className: "wpb-plan-title", children: program.name }), _jsxs(UiAction, { onClick: () => onOpenProgram(openWeek || plan.currentWeek), className: "wpb-plan-open-program", "aria-label": readOnly ? "View full block exercises" : "Open full program", children: [readOnly ? "View block exercises" : "Open full program", _jsx(ChevronRight, { size: 16, "aria-hidden": true })] })] }), blockNavigation, readOnly && _jsx("p", { className: "wpb-plan-preview-notice", children: "Viewing a block preview. Your current training block is unchanged." })] }), _jsx("div", { className: "wpb-plan-panes", children: [["schedule", "Schedule", Calendar], ["volume", "Volume", BarChart3], ["progression", "Progression", TrendingUp], ["blueprint", "Blueprint", Layers]].map(([id, label, Icon]) => {
                     const on = pane === id;
                     return (_jsxs(UiChoice, { selected: on, kind: "tab", onClick: () => setPane(id), "aria-label": label, "data-plan-pane": id, className: "wpb-plan-pane-tab", children: [_jsx(Icon, { size: 15 }), _jsx("span", { className: "wpb-plan-pane-label", children: label })] }, id));
                 }) }), (pane === "schedule" || pane === "volume") && plan.totalWeeks > 1 && (_jsx("div", { className: "wpb-hscroll wpb-choice-rail wpb-plan-week-picker", "data-plan-week-picker": true, children: plan.weeks.map(w => {
-                    const on = pane === "volume" ? featuredWeek?.week === w.week : openWeek === w.week;
+                    const on = featuredWeek?.week === w.week;
                     return (_jsx(UiChoice, { selected: on, kind: "summary", onClick: () => pickWeek(w.week), className: "wpb-plan-week-chip", "aria-label": `Week ${w.week}`,
-                        label: `Week ${w.week}`, caption: `${w.sets} sets · ${fmtMin(w.minutes)}` }, w.week));
+                        "data-week-status": w.status, label: `Week ${w.week}`, caption: chipCaption(w) }, w.week));
                 }) })), pane === "schedule" && (() => {
                 const wi = weekIntent(program, openWeek || plan.currentWeek);
                 if (!wi)
@@ -6662,18 +6664,10 @@ function PlanView({ programs = null, program, plan, blockNavigation = null, read
                         if (!bp)
                             return null;
                         return (_jsx(InfoCard, { icon: Layers, title: `Block plan · ${weeksOf(program)} weeks`, subtitle: bp.name, open: blockOpen, onToggle: () => setBlockOpen(v => !v), children: _jsxs("div", { children: [bp.phases.map((ph, i) => (_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-gap-12 wpb-s956-margintop-12", children: [_jsx("div", { className: "wpb-b964-layout-02", children: _jsx("div", { className: "mono", style: { fontSize: 11, fontWeight: 700, color: ph.label === "Deload" ? C.warn : C.accentInk }, children: ph.w }) }), _jsxs("div", { className: "wpb-s956-flex-1 wpb-s956-minwidth-0", children: [_jsx("div", { style: { fontSize: 14, fontWeight: 700, color: ph.label === "Deload" ? C.warn : C.text }, children: ph.label }), _jsx("div", { className: "wpb-type-body-muted wpb-s956-margintop-2", children: ph.detail })] })] }, i))), _jsx("div", { className: "wpb-quiet-note", children: bp.src })] }) }));
-                    })()] })), pane !== "schedule" ? null : (_jsxs(_Fragment, { children: [plan.phases.map((ph, pi) => {
-                        const rows = plan.weeks.filter(w => w.phaseKey === ph.key && w.week !== featuredWeek?.week);
-                        if (!rows.length)
-                            return null;
-                        const t = phaseTone(ph.label, pi, C.accent);
-                        const Icon = t.icon;
-                        return (_jsxs("div", { className: "wpb-plan-phase-group", children: [_jsxs("div", { className: "wpb-plan-phase-header", style: { display: "flex", alignItems: "center", gap: 10, background: "none", borderBottom: `1px solid ${C.borderSoft}`,
-                                        padding: "10px 0", margin: "10px 0 8px", opacity: 1 }, children: [_jsx("div", { className: "wpb-b965-layout-04", children: _jsx(Icon, { size: 17, color: catInk(t.hue) }) }), _jsxs("div", { className: "wpb-s956-flex-1 wpb-s956-minwidth-0", children: [_jsx("div", { className: "wpb-type-value", children: ph.label }), _jsxs("div", { className: "mono pi-t-caption-mt2", children: [ph.current ? "Current · " : "", "Week ", ph.weekFrom, "\u2013", ph.weekTo, ph.goal ? ` · ${GOALS[ph.goal]?.label || ph.goal}` : "", ph.done ? " · done" : ""] })] }), _jsxs("div", { className: "mono", style: { fontSize: 14, fontWeight: 700, color: catInk(t.hue), flexShrink: 0, textAlign: "right" }, children: [rows.reduce((n, w) => n + w.sets, 0), _jsx("span", { className: "wpb-type-caption-faint", children: " sets" })] })] }), rows.map(renderWeekCard)] }, ph.key));
-                    })] })), _jsxs(UiSection, { className: "wpb-plan-overview", "aria-label": "Program overview", children: [_jsx("h2", { children: "Program overview" }), (() => {
+                    })()] })), _jsxs(UiSection, { className: "wpb-plan-overview", "aria-label": "Program overview", children: [_jsx("h2", { children: "Program overview" }), (() => {
                 const pw = plan.weeks.find(w => w.week === plan.currentWeek) || plan.weeks.at(-1);
                 const days = program.days.length;
-                return (_jsxs(_Fragment, { children: [_jsxs("div", { className: "wpb-plan-glance", children: [tile(readOnly ? "Viewing week" : "Current week", `${plan.currentWeek} / ${plan.totalWeeks}`, true), tile("Sessions", `${days}/wk`), tile("Week sets", `${pw.sets}`)] }), _jsxs("div", { className: "wpb-plan-completion wpb-layout-bottom12", children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-justifycontent-space-between wpb-s956-marginbottom-4 wpb-type-support-muted", children: [_jsxs("span", { children: [plan.sessionsDone, " of ", plan.sessionsTotal, " sessions completed"] }), _jsxs("span", { className: "mono", style: { color: C.accentInk, fontWeight: 700 }, children: [plan.percentDone, "%"] })] }), _jsx(UiWavyProgress, { label: "Program completion", value: Math.max(0, Math.min(100, plan.percentDone)), max: 100 })] })] }));
+                return (_jsxs(_Fragment, { children: [_jsxs("div", { className: "wpb-plan-glance", children: [tile(readOnly ? "Viewing week" : "Length", readOnly ? `${plan.currentWeek} / ${plan.totalWeeks}` : `${plan.totalWeeks} wk`, true), tile("Sessions", `${days}/wk`), tile("Week sets", `${pw.sets}`)] }), _jsxs("div", { className: "wpb-plan-completion wpb-layout-bottom12", children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-justifycontent-space-between wpb-s956-marginbottom-4 wpb-type-support-muted", children: [_jsxs("span", { children: [plan.sessionsDone, " of ", plan.sessionsTotal, " sessions completed"] }), _jsxs("span", { className: "mono", style: { color: C.accentInk, fontWeight: 700 }, children: [plan.percentDone, "%"] })] }), _jsx(UiWavyProgress, { label: "Program completion", value: Math.max(0, Math.min(100, plan.percentDone)), max: 100 })] })] }));
             })()] }), programs && _jsx(UiSection, { className: "wpb-plan-programs", "aria-label": "Programs", children: programs })] })] }));
 }
 function NextWorkoutView({ program, day: sourceDay, weekIndex, unit = "kg", perf = {}, onPlanChoice, planChoiceBusy = false, restScale = 1, history = [], loadMode = "rir", pace = null, cycleInfo = null, freshness = null, alt = null, onStart, onStartAlt, onOpenProgram, onBack }) {
@@ -16987,36 +16981,8 @@ function AchievementDetailSheet({ m, onClose }) {
         })
     });
 }
-function ProfileStrengthClub({ history, unit }) {
-    const trends = useMemo(() => exerciseTrends(history), [history]);
-    const [mode, setMode] = useState("lifted");
-    const snap = strengthClubSnapshot(trends, unit, mode);
-    if (!snap.hasAny)
-        return null;
-    const fmt = (v) => unit === "lb" ? Math.round(v).toLocaleString() : (Math.round(v * 2) / 2).toLocaleString();
-    const missing = snap.rows.filter(r => !r.has).map(r => r.label);
-    const actualEarned = mode === "lifted" && snap.inThousand;
-    const projectedEarned = mode === "e1rm" && snap.inThousand;
-    const earned = actualEarned || projectedEarned;
-    const clubName = snap.current?.name || "1,000 lb Club";
-    const title = actualEarned ? clubName : projectedEarned ? `Projected ${clubName}` : "Road to 1,000 lb Club";
-    const thousandRemaining = fmt(snap.thousandRemaining);
-    const nextClubCopy = snap.maxedOut ? "Every club tier cleared"
-        : (earned && snap.next?.lb > (snap.current?.lb || 0) ? `${fmt(snap.remaining)} ${unit} to ${snap.next.name}` : null);
-    return (_jsxs("section", { className: `wpb-ui-card wpb-profile-section wpb-profile-club${actualEarned ? " is-earned" : projectedEarned ? " is-projected" : ""}`, "aria-labelledby": "profile-club-title", children: [_jsxs("div", { className: "wpb-profile-club-head", children: [_jsxs("div", { className: "wpb-profile-club-copy", children: [_jsxs("div", { id: "profile-club-title", className: "wpb-profile-club-title", children: [_jsx(Trophy, { size: 15, color: actualEarned ? C.warn : C.accentInk }), " ", title] }), _jsx("div", { className: "wpb-profile-club-caption", children: mode === "lifted" ? "Heaviest logged squat + bench + deadlift" : "Best-set estimated 1RM · projected total" })] }), _jsxs("div", { className: "wpb-ui-row wpb-profile-club-actions", children: [actualEarned && _jsx("span", { className: "wpb-profile-club-status", children: "MEMBER" }), projectedEarned && _jsx("span", { className: "wpb-profile-club-status", children: "PROJECTED" }), earned && _jsxs(UiAction, { onClick: () => shareStrengthClub(snap, C), variant: "tonal", className: "wpb-profile-club-share", "aria-label": `Share ${title}`, children: [_jsx(Share2, { size: 14 }), _jsx("span", { children: "Share" })] })] })] }), _jsxs("div", { className: "wpb-profile-club-total", children: [_jsx("span", { className: "mono wpb-profile-club-value", children: fmt(snap.total) }), _jsxs("span", { className: "wpb-profile-club-unit", children: [unit, " total"] })] }), _jsx("div", { className: "wpb-profile-club-grid", "aria-label": `${mode === "lifted" ? "Lifted" : "Estimated one rep max"} club lifts`, children: snap.rows.map(r => (_jsxs("div", { className: "wpb-profile-club-lift", "data-has-value": r.has, children: [_jsx("div", { className: "mono wpb-profile-club-lift-value", children: r.has ? fmt(r.val) : "—" }), _jsx("div", { className: "wpb-profile-club-lift-label", children: r.label })] }, r.id))) }), _jsxs("div", { className: "wpb-profile-club-foot", children: [_jsx("div", { className: "wpb-profile-club-guidance", children: missing.length ? `Log ${missing.join(" & ")} to complete the three-lift total.`
-                            : actualEarned ? (nextClubCopy || "Traditional 1,000 lb Club total earned with lifted weight.")
-                                : projectedEarned ? "Projection cleared 1,000 lb. Switch to Lifted for traditional club status."
-                                    : `${thousandRemaining} ${unit} to the 1,000 lb Club.` }), _jsx("div", { className: "wpb-profile-club-mode", role: "group", "aria-label": "Strength club measure", children: [{ k: "lifted", label: "Lifted" }, { k: "e1rm", label: "Est. 1RM" }].map(o => (_jsx(UiAction, { onClick: () => setMode(o.k), "aria-pressed": mode === o.k, variant: "tonal", children: o.label }, o.k))) })] }), !earned && snap.allLogged && _jsx("div", { role: "progressbar", "aria-label": "Progress to 1,000 lb Club", "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": Math.round(snap.thousandPct), className: "wpb-profile-club-progress", children: _jsx("div", { style: { width: `${snap.thousandPct}%` } }) })] }));
-}
 
 /* B892: Presentation-only Profile preferences. No history or training prescription mutation. */
-const PROFILE_LAYOUT_CHOICES = Object.freeze([
-    { id: "level", label: "Level and XP" },
-    { id: "summary", label: "Lifetime summary" },
-    { id: "strength", label: "Strength Score" },
-    { id: "club", label: "Thousand Pound Club" },
-    { id: "achievements", label: "Achievements" }
-]);
 const PROFILE_SHARE_CHOICES = Object.freeze([
     { id: "level", label: "Level" },
     { id: "strength", label: "Strength Score" },
@@ -17028,49 +16994,18 @@ const PROFILE_SHARE_CHOICES = Object.freeze([
 ]);
 const PROFILE_PREFERENCE_KEY = "wpb:profile-layout-v1";
 function normalizeProfilePrefs(raw) {
-    const available = PROFILE_LAYOUT_CHOICES.map(x => x.id);
+    // B1030: Profile sections are fixed (card, strength link, achievements); a stored order or
+    // hidden list from the old arrangeable Profile is read and dropped.
     const shareAvailable = PROFILE_SHARE_CHOICES.map(x => x.id);
-    const order = [...new Set(Array.isArray(raw?.order) ? raw.order.filter(x => available.includes(x)) : [])];
-    for (const id of available) if (!order.includes(id)) order.push(id);
-    let hidden = [...new Set(Array.isArray(raw?.hidden) ? raw.hidden.filter(x => available.includes(x)) : [])];
-    if (hidden.length >= available.length) hidden = hidden.filter(id => id !== available[0]);
     let share = [...new Set(Array.isArray(raw?.share) ? raw.share.filter(x => shareAvailable.includes(x)) : ["strength", "streak"])];
     if (!share.length) share = [shareAvailable[0]];
     const cardName = typeof raw?.cardName === "string" ? raw.cardName.slice(0, 60) : "";
     const favorites = [...new Set(Array.isArray(raw?.favorites) ? raw.favorites.filter(x => typeof x === "string" && x.length <= 100) : [])].slice(0, 3);
-    return { order, hidden, share, cardName, favorites };
+    return { share, cardName, favorites };
 }
 function readProfilePrefs() {
     try { return normalizeProfilePrefs(JSON.parse(localStorage.getItem(PROFILE_PREFERENCE_KEY) || "null")); }
     catch { return normalizeProfilePrefs(null); }
-}
-function ProfileCustomization({ prefs, onChange, onClose }) {
-    const move = (id, dir) => {
-        const order = prefs.order.slice(), a = order.indexOf(id), b = a + dir;
-        if (a < 0 || b < 0 || b >= order.length) return;
-        [order[a], order[b]] = [order[b], order[a]];
-        onChange({ ...prefs, order });
-    };
-    const toggleVisible = id => {
-        const visible = !prefs.hidden.includes(id);
-        if (visible && prefs.hidden.length >= PROFILE_LAYOUT_CHOICES.length - 1) return;
-        onChange({ ...prefs, hidden: visible ? [...prefs.hidden, id] : prefs.hidden.filter(x => x !== id) });
-    };
-    return (_jsxs("section", { className: "wpb-profile-customize", "aria-label": "Customize Profile sections", children: [
-        _jsxs("div", { className: "wpb-profile-customize-header", children: [_jsxs("div", { children: [_jsx("strong", { children: "Customize Profile" }), _jsx("p", { children: "Reorder or hide the sections below your share card." })] }), _jsx(UiAction, { variant: "tonal", type: "button", "data-icon-only": true, "aria-label": "Close Profile customization", onClick: onClose, children: _jsx(X, { size: 18 }) })] }),
-        _jsx("div", { className: "wpb-profile-customize-label", children: "Profile sections" }),
-        _jsx("div", { className: "wpb-profile-customize-list", children: prefs.order.map((id, index) => {
-            const choice = PROFILE_LAYOUT_CHOICES.find(x => x.id === id);
-            const visible = !prefs.hidden.includes(id);
-            return (_jsxs("div", { className: "wpb-profile-customize-row", children: [
-                _jsx("span", { children: choice?.label || id }),
-                _jsx(UiAction, { variant: "tonal", type: "button", disabled: id === "level" || index === 0, "data-icon-only": true, "aria-label": `Move ${choice?.label} up`, onClick: () => move(id, -1), children: _jsx(ChevronUp, { size: 17 }) }),
-                _jsx(UiAction, { variant: "tonal", type: "button", disabled: id === "level" || index === prefs.order.length - 1, "data-icon-only": true, "aria-label": `Move ${choice?.label} down`, onClick: () => move(id, 1), children: _jsx(ChevronDown, { size: 17 }) }),
-                _jsx(UiAction, { variant: "tonal", type: "button", className: "wpb-profile-visibility", "aria-pressed": visible, disabled: visible && prefs.hidden.length === PROFILE_LAYOUT_CHOICES.length - 1, "aria-label": `${visible ? "Hide" : "Show"} ${choice?.label}`, onClick: () => toggleVisible(id), children: visible ? "Shown" : "Hidden" })
-            ] }, id));
-        }) }),
-        _jsx(UiAction, { variant: "tonal", type: "button", className: "wpb-profile-reset", onClick: () => onChange({ ...prefs, order: normalizeProfilePrefs(null).order, hidden: [] }), children: "Reset section layout" })
-    ] }));
 }
 // One content model supplies both the on-screen card and its exported image.
 function profileCardRows({ history, unit, score, level, milestones, prefs }) {
@@ -17186,14 +17121,9 @@ function ProfileView({ history, bodyweight, sex, age, unit, onSettings, onStreng
         () => (bw > 0 ? strengthScore(history, bw, unit, sex, age) : null),
         [history, bw, unit, sex, age]
     );
-    const trendData = useMemo(
-        () => (bw > 0 ? strengthScoreHistory(history, bw, unit, sex, age) : null),
-        [history, bw, unit, sex, age]
-    );
     const [detail, setDetail] = useState(null);
     const [showAchievements, setShowAchievements] = useState(false);
     const [profilePrefs, setProfilePrefs] = useState(readProfilePrefs);
-    const [showProfileCustomize, setShowProfileCustomize] = useState(false);
     const [showShareCustomize, setShowShareCustomize] = useState(false);
     const saveProfilePrefs = (next) => {
         const safe = normalizeProfilePrefs(next);
@@ -17212,16 +17142,6 @@ function ProfileView({ history, bodyweight, sex, age, unit, onSettings, onStreng
               ? `${Math.round(v / 1000)}k`
               : String(Math.round(v));
     const next = ms.filter((m) => !m.done).sort((a, b) => b.progress - a.progress || a.target - b.target)[0];
-    const totalWorkouts = ms.find((m) => m.id === "first")?.value || 0;
-    const totalVol = ms.find((m) => m.id === "vol1")?.value || 0;
-    // The card already shows the streak; the summary strip shows lifetime time under the bar instead.
-    const totalHours = Math.round(history.reduce((sum, h) => sum + (Number(h.durationMin) > 0 ? Number(h.durationMin) : 0), 0) / 6) / 10;
-    const fmtVol = (v) =>
-        v >= 1000000
-            ? `${(v / 1000000).toFixed(1)}M`
-            : v >= 1000
-              ? `${Math.round(v / 1000)}k`
-              : Math.round(v);
     const groups = [];
     ms.forEach((m) => {
         const g = groups.find((x) => x.cat === m.cat);
@@ -17274,176 +17194,6 @@ function ProfileView({ history, bodyweight, sex, age, unit, onSettings, onStreng
                 ]
             })
         }),
-        summary: _jsx("div", {
-            className: "wpb-profile-stat-grid",
-            "aria-label": "Lifetime training summary",
-            children: [
-                ["Workouts", totalWorkouts, null],
-                ["Time trained", totalHours >= 100 ? Math.round(totalHours) : totalHours, "h"],
-                ["Volume", fmtVol(totalVol), unit]
-            ].map(([label, val, sub]) =>
-                _jsx(UiMetric, {
-                    className: "wpb-profile-stat",
-                    label, labelClassName: "wpb-profile-stat-label",
-                    valueClassName: "mono wpb-profile-stat-value",
-                    valueProps: { "data-has-unit": !!sub },
-                    value: _jsxs(_Fragment, { children: [
-                        _jsx("span", { className: "wpb-profile-stat-number", children: val }),
-                        sub ? _jsx("span", { className: "wpb-profile-stat-unit", children: sub }) : null
-                    ] })
-                }, label)
-            )
-        }),
-        strength: sscore
-            ? _jsxs("section", {
-                  className: "wpb-profile-section wpb-profile-strength",
-                  "aria-labelledby": "profile-strength-title",
-                  children: [
-                      _jsxs("div", {
-                          className: "wpb-profile-section-head",
-                          children: [
-                              _jsxs("div", {
-                                  children: [
-                                      _jsxs("div", {
-                                          className: "wpb-profile-section-title",
-                                          id: "profile-strength-title",
-                                          role: "heading",
-                                          "aria-level": 2,
-                                          children: [
-                                              _jsx(Activity, { size: 15, color: C.accentInk }),
-                                              " Strength"
-                                          ]
-                                      }),
-                                      _jsxs("div", {
-                                          className: "wpb-profile-score-overview",
-                                          children: [
-                                              _jsx("span", {
-                                                  className: "mono wpb-profile-score-total",
-                                                  children: sscore.overall
-                                              }),
-                                              _jsxs("span", {
-                                                  className: "wpb-profile-support",
-                                                  children: [
-                                                      sscore.level,
-                                                      " \u00B7 ",
-                                                      sscore.liftCount,
-                                                      " lift",
-                                                      sscore.liftCount === 1 ? "" : "s"
-                                                  ]
-                                              })
-                                          ]
-                                      })
-                                  ]
-                              }),
-                              _jsxs("div", {
-                                  className: "wpb-profile-section-tools",
-                                  children: [
-                                      sscore.estimated &&
-                                          _jsx("span", {
-                                              className: "wpb-profile-estimate-status",
-                                              children: "Estimated"
-                                          }),
-                                      _jsx("button", {
-                                          "aria-label": "Share Strength Score",
-                                          onClick: () => shareStrengthScore(sscore, C),
-                                          title: "Share Strength Score",
-                                          className: "pressable hit wpb-profile-share-score",
-                                          children: _jsx(Share2, { size: 15 })
-                                      })
-                                  ]
-                              })
-                          ]
-                      }),
-                      _jsx("div", {
-                          className: "wpb-profile-strength-grid",
-                          children: sscore.subs.map((s) =>
-                              _jsxs(
-                                  "div",
-                                  {
-                                      className: "wpb-profile-strength-cell",
-                                      children: [
-                                          _jsx("div", { className: "mono", children: s.score }),
-                                          _jsx("div", {
-                                              className: "wpb-profile-strength-label",
-                                              children: s.label
-                                          })
-                                      ]
-                                  },
-                                  s.key
-                              )
-                          )
-                      }),
-                      sscore.nextMilestone &&
-                          _jsxs("div", {
-                              className: "wpb-profile-next-strength",
-                              children: [
-                                  _jsx(Target, {
-                                      className: "wpb-profile-milestone-icon",
-                                      size: 14,
-                                      color: C.accentInk
-                                  }),
-                                  _jsxs("div", {
-                                      children: [
-                                          _jsx("span", {
-                                              className: "wpb-profile-milestone-name",
-                                              children: sscore.nextMilestone.name
-                                          }),
-                                          " to ",
-                                          _jsxs("span", {
-                                              className: "mono wpb-profile-milestone-target",
-                                              children: [
-                                                  sscore.nextMilestone.target,
-                                                  " ",
-                                                  sscore.nextMilestone.unit
-                                              ]
-                                          }),
-                                          " for ",
-                                          sscore.nextMilestone.level,
-                                          _jsxs("span", {
-                                              className: "wpb-profile-faint",
-                                              children: [" \u00B7 now ", sscore.nextMilestone.current]
-                                          })
-                                      ]
-                                  })
-                              ]
-                          }),
-                      _jsx(StrengthScoreTrend, { data: trendData })
-                  ]
-              })
-            : _jsxs("section", {
-                  className: "wpb-profile-section wpb-profile-setup",
-                  "aria-labelledby": "profile-strength-title",
-                  children: [
-                      _jsxs("div", {
-                          className: "wpb-profile-section-title wpb-profile-setup-title",
-                          id: "profile-strength-title",
-                          role: "heading",
-                          "aria-level": 2,
-                          children: [_jsx(Activity, { size: 15, color: C.accentInk }), " Strength"]
-                      }),
-                      _jsxs("div", {
-                          className: "wpb-profile-setup-row",
-                          children: [
-                              _jsx("div", {
-                                  className: "wpb-profile-setup-copy",
-                                  children:
-                                      bw > 0
-                                          ? "Log a weighted set for a supported lift, such as bench press or squat, to see your Strength Score."
-                                          : "Add bodyweight to unlock standards and Strength Score."
-                              }),
-                              !(bw > 0) &&
-                                  onSettings &&
-                                  _jsx(UiAction, {
-                                      onClick: onSettings,
-                                      "aria-label": "Add bodyweight",
-                                      className: "wpb-primary-action wpb-profile-setup-action",
-                                      children: "Add"
-                                  })
-                          ]
-                      })
-                  ]
-              }),
-        club: _jsx(ProfileStrengthClub, { history: history, unit: unit }),
         achievements: _jsxs("section", {
             className: "wpb-profile-section wpb-profile-achievements",
             "aria-labelledby": "profile-achievements-title",
@@ -17649,7 +17399,7 @@ function ProfileView({ history, bodyweight, sex, age, unit, onSettings, onStreng
                                 prefs: profilePrefs,
                                 rows: cardRows,
                                 identity: [bodyLabel, ageLabel].filter(Boolean).join(" · "),
-                                levelContent: !profilePrefs.hidden.includes("level") ? sectionContent.level : null,
+                                levelContent: sectionContent.level,
                                 expanded: showShareCustomize,
                                 onEdit: () => setShowShareCustomize((x) => !x),
                                 onShare: () =>
@@ -17669,24 +17419,29 @@ function ProfileView({ history, bodyweight, sex, age, unit, onSettings, onStreng
                                     onChange: saveProfilePrefs,
                                     onClose: () => setShowShareCustomize(false)
                                 }),
-                            _jsx("div", {
-                                className: "wpb-profile-toolbar",
-                                children: [_jsxs(UiAction, {
-                                    variant: "tonal",
-                                    "aria-expanded": showProfileCustomize,
-                                    onClick: () => setShowProfileCustomize((x) => !x),
-                                    children: [_jsx(Pencil, { size: 15 }), "Arrange profile"]
-                                }), onStrength && _jsxs(UiAction, { variant: "tonal", onClick: onStrength, "aria-label": "Strength standards", children: [_jsx(Award, { size: 15 }), "Standards"] })]
-                            }),
-                            showProfileCustomize &&
-                                _jsx(ProfileCustomization, {
-                                    prefs: profilePrefs,
-                                    onChange: saveProfilePrefs,
-                                    onClose: () => setShowProfileCustomize(false)
+                            // B1030: Profile is identity. Score, standards, the 1,000 lb club and lifetime
+                            // totals are the record, and live once, in Progress.
+                            // Until bodyweight is set the score cannot exist, so the row is the setup step.
+                            !(bw > 0) && onSettings
+                                ? _jsx(UiListItem, {
+                                    className: "wpb-profile-strength-link wpb-profile-setup",
+                                    onClick: onSettings,
+                                    "aria-label": "Add bodyweight",
+                                    leading: _jsx(Award, { size: 18, "aria-hidden": true }),
+                                    headline: "Strength Score",
+                                    supporting: "Add bodyweight to unlock",
+                                    trailing: _jsx(ChevronRight, { size: 18, "aria-hidden": true })
+                                })
+                                : onStrength && _jsx(UiListItem, {
+                                    className: "wpb-profile-strength-link",
+                                    onClick: onStrength,
+                                    "aria-label": "Strength standards",
+                                    leading: _jsx(Award, { size: 18, "aria-hidden": true }),
+                                    headline: "Strength standards",
+                                    supporting: sscore ? "Score history and the 1,000 lb club" : "Log a weighted set for a supported lift",
+                                    trailing: _jsx(ChevronRight, { size: 18, "aria-hidden": true })
                                 }),
-                            ...profilePrefs.order
-                                .filter((id) => id !== "level" && !profilePrefs.hidden.includes(id))
-                                .map((id) => _jsxs(_Fragment, { children: [sectionContent[id]] }, id))
+                            sectionContent.achievements
                         ]
                     }),
                     _jsx(AchievementDetailSheet, { m: detail, onClose: () => setDetail(null) })

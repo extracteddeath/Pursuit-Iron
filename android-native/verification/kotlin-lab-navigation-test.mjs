@@ -135,7 +135,7 @@ assert.ok(recovery.includes('historyStore.open(signed.ownerKey,signed.athleteId)
 assert.ok(history.includes('Recover pending History') &&
   history.includes('host.recoverPendingNativeHistory()') &&
   history.includes('NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION') &&
-  history.includes('refreshed is NativeKotlinMixedHistoryReadResult.Review') &&
+  history.includes('is NativeKotlinMixedHistoryReadResult.Review ->') &&
   !history.includes('Recover pending measured Finish'),
   'History must expose a safe owner-verified recovery route for all native pending kinds');
 

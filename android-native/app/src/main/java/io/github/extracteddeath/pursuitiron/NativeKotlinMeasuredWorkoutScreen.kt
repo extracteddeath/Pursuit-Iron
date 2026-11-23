@@ -539,15 +539,40 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
             val current=checkNotNull(stored)
             val journal=current.journal
             if(journal.finishedByEventId!=null) {
-                Text("This workout is already committed to History.")
-                Button(onClick={onViewHistory(workoutId)}) {
-                    Text("View completed workout")
+                Text("A Finish receipt is saved. The shared History ledger "+
+                    "must verify this exact workout before it is called completed.",
+                    style=MaterialTheme.typography.bodyMedium)
+                Button(enabled=!busy,onClick={
+                    val requestedId=workoutId
+                    val requestedFinish=journal.finishedByEventId
+                    busy=true;message=null
+                    scope.launch {
+                        try {
+                            val verified=withContext(Dispatchers.IO) {
+                                host.verifyFinishedMeasuredWorkoutInHistory(
+                                    requestedId)
+                            }
+                            // Late IO or an owner/workout switch can never
+                            // hand a different recorded workout to History.
+                            if(workoutId==requestedId &&
+                                stored?.journal?.finishedByEventId==requestedFinish) {
+                                if(verified)onViewHistory(requestedId)
+                                else message="The saved Finish could not yet be "+
+                                    "verified in History. Keep the session saved "+
+                                    "and retry; no new completion was claimed."
+                            }
+                        } catch(cancelled:CancellationException) {
+                            throw cancelled
+                        } catch(_:Exception) {
+                            if(workoutId==requestedId)
+                                message="History verification is unavailable. "+
+                                    "The saved Finish has not been confirmed."
+                        } finally {busy=false}
+                    }
+                }) {Text("Verify Finish and view History")}
+                OutlinedButton(enabled=!busy,onClick=onClose) {
+                    Text("Return to Train")
                 }
-                OutlinedButton(onClick={
-                    workoutId="measured-"+UUID.randomUUID().toString()
-                        .replace("-","")
-                    stored=null;review=null;message=null
-                }) {Text("Create another measured workout")}
             } else {
                 val focus=reviewedFocus
                 if(focus==null) {

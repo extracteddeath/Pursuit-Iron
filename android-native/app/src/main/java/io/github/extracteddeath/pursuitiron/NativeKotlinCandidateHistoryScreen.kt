@@ -37,8 +37,14 @@ internal fun NativeKotlinCandidateHistoryScreen(
     // athlete's verified timeline while cold-start revalidation runs.
     var busy by remember(host){mutableStateOf(false)}
     var result by remember(host){mutableStateOf<NativeKotlinMixedHistoryReadResult?>(null)}
-    var showSeparateHistoryConsent by remember{mutableStateOf(false)}
-    var understandsSeparateHistory by remember{mutableStateOf(false)}
+    // Separate-History consent belongs to the exact signed local owner that
+    // reviewed NOT_ENROLLED. It is intentionally not saveable across process
+    // death or a new authenticated host.
+    var showSeparateHistoryConsent by remember(host){mutableStateOf(false)}
+    var understandsSeparateHistory by remember(host){mutableStateOf(false)}
+    var consentedHistoryOwner by remember(host){
+        mutableStateOf<NativeKotlinOwnerIdentity?>(null)
+    }
     var enrollmentMessage by remember{mutableStateOf<String?>(null)}
     var finishRecoveryNotice by remember{mutableStateOf<String?>(null)}
     val context=LocalContext.current
@@ -632,7 +638,37 @@ internal fun NativeKotlinCandidateHistoryScreen(
                             modifier=Modifier.fillMaxWidth(),
                             onClick={
                                 understandsSeparateHistory=false
-                                showSeparateHistoryConsent=true
+                                consentedHistoryOwner=null
+                                showSeparateHistoryConsent=false
+                                busy=true
+                                scope.launch {
+                                    // Fresh owner and fresh NOT_ENROLLED must
+                                    // agree on both sides of the disk read.
+                                    // The UI cannot infer consent from an old
+                                    // rejected result or a different athlete.
+                                    val owner=withContext(Dispatchers.IO) {
+                                        val before=runCatching {
+                                            host.currentHistoryExportOwner()
+                                        }.getOrNull()
+                                        val current=runCatching {
+                                            host.reviewVerifiedKotlinHistory()
+                                        }.getOrNull()
+                                        val after=runCatching {
+                                            host.currentHistoryExportOwner()
+                                        }.getOrNull()
+                                        NativeKotlinHistoryEnrollmentConsentPolicy.capture(
+                                            before,current,after)
+                                    }
+                                    busy=false
+                                    if(owner!=null &&
+                                        (result as? NativeKotlinMixedHistoryReadResult.Rejected)
+                                            ?.reason==NativeKotlinMixedHistoryRefusal.NOT_ENROLLED) {
+                                        consentedHistoryOwner=owner
+                                        showSeparateHistoryConsent=true
+                                    } else {
+                                        enrollmentMessage="Athlete identity or History changed. Refresh History before choosing a new separate native history."
+                                    }
+                                }
                             }) {Text("Review separate-history choice")}
                     }
                 }
@@ -649,7 +685,11 @@ internal fun NativeKotlinCandidateHistoryScreen(
     }
     if(showSeparateHistoryConsent)AlertDialog(
         onDismissRequest={
-            if(!busy)showSeparateHistoryConsent=false
+            if(!busy) {
+                showSeparateHistoryConsent=false
+                understandsSeparateHistory=false
+                consentedHistoryOwner=null
+            }
         },
         title={Text("Start a separate Kotlin training history?")},
         text={
@@ -667,15 +707,21 @@ internal fun NativeKotlinCandidateHistoryScreen(
         },
         confirmButton={
             Button(
-                enabled=understandsSeparateHistory&&!busy,
+                enabled=understandsSeparateHistory&&consentedHistoryOwner!=null&&!busy,
                 onClick={
+                    val approvedOwner=consentedHistoryOwner
                     showSeparateHistoryConsent=false
+                    understandsSeparateHistory=false
+                    consentedHistoryOwner=null
                     busy=true
                     enrollmentMessage=null
                     scope.launch {
                         val enrollment=withContext(Dispatchers.IO) {
                             runCatching {
-                                host.enrollSeparateKotlinHistory(true)
+                                if(approvedOwner==null)
+                                    NativeHistoryEnrollmentResult.Rejected(
+                                        NativeHistoryEnrollmentRefusal.NOT_AUTHORIZED)
+                                else host.enrollSeparateKotlinHistory(true,approvedOwner)
                             }.getOrNull()
                         }
                         busy=false
@@ -696,7 +742,11 @@ internal fun NativeKotlinCandidateHistoryScreen(
         dismissButton={
             TextButton(
                 enabled=!busy,
-                onClick={showSeparateHistoryConsent=false}
+                onClick={
+                    showSeparateHistoryConsent=false
+                    understandsSeparateHistory=false
+                    consentedHistoryOwner=null
+                }
             ) {Text("Keep existing history unchanged")}
         }
     )

@@ -102,18 +102,21 @@ const history=read('android-native/app/src/main/java/io/github/extracteddeath/pu
 // resumable unfinished workout. Cold process restart must surface the REAL
 // pending ledger to the athlete; it must not invent a session or silently
 // replay a Finish before an explicit History recovery tap.
-const coldHistory=landing.slice(landing.indexOf('val measured='),
+const coldHistory=landing.slice(landing.indexOf('val initial=withContext(Dispatchers.IO)'),
   landing.indexOf('landingChecked=true'));
 assert.ok(coldHistory.includes('host.reviewVerifiedKotlinHistory()') &&
   coldHistory.includes('NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION') &&
-  coldHistory.includes('if(pendingHistory)') &&
-  coldHistory.includes('KotlinCandidateDestination.HISTORY') &&
-  coldHistory.indexOf('if(measured || approvedMeasured)')<
-    coldHistory.indexOf('if(pendingHistory)') &&
+  coldHistory.includes('if(pendingHistory) KotlinCandidateDestination.HISTORY') &&
+  coldHistory.indexOf('if(pendingHistory)')<
+    coldHistory.indexOf('host.reviewResumableCustomWorkouts()') &&
+  coldHistory.indexOf('if(pendingHistory)')<
+    coldHistory.indexOf('currentUnfinishedGeneratedWorkoutId(host)') &&
+  coldHistory.indexOf('if(pendingHistory)')<
+    coldHistory.indexOf('host.reviewUnfinishedMeasuredWorkouts()') &&
   coldHistory.indexOf('if(pendingHistory)')<
     coldHistory.indexOf('host.listOwnedCustomCycleDrafts()') &&
   !coldHistory.includes('host.recoverPendingNativeHistory()'),
-  'Pending native Finish must be reachable on launch after resume priority, with no implicit recovery');
+  'Pending canonical History must take priority over every Train resume route, without automatic recovery');
 const recoveryHost=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt');
 const recovery=recoveryHost.slice(recoveryHost.indexOf('fun recoverPendingNativeHistory():'),
   recoveryHost.indexOf('fun reviewVerifiedKotlinHistory():'));

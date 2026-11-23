@@ -12,6 +12,7 @@ const debug=read('android-native/app/src/debug/AndroidManifest.xml');
 const release=read('android-native/app/src/release/AndroidManifest.xml');
 const build=read('android-native/app/build.gradle.kts');
 const journey=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateJourney.kt');
+const historyFocus=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinHistoryFocusPolicy.kt');
 // Never send an athlete with an actually saved unfinished or confirmed
 // measured session back to onboarding on process death. Landing is a
 // read-only UI decision, not a consent or issuance action.
@@ -300,7 +301,16 @@ assert.ok(history.includes('var exerciseSearch by rememberSaveable') &&
   history.includes('nativeHistorySessionsInSelection(visibleSessions,dateSelection,historyZone)') &&
   history.includes('nativeHistoryMonths(displayedSessions,historyZone)') &&
   history.includes('items(section.sessions') &&
-  history.includes('onClick={historyExerciseId=exercise}') &&
+  history.includes('historyExerciseAthleteId=read.timeline.athleteId') &&
+  history.includes('NativeKotlinHistoryFocusPolicy.admitExercise(') &&
+  history.includes('admittedHistoryExerciseId?.let') &&
+  history.includes('searchableMovements.filterNot {it in measuredOnlyExercises}.toSet()') &&
+  history.includes('var result by remember(host)') &&
+  history.includes('var busy by remember(host)') &&
+  historyFocus.includes('selectedAthleteId==currentAthleteId') &&
+  historyFocus.includes('exerciseId in verifiedRepExerciseIds') &&
+  historyFocus.includes('selectedAthleteId.isNullOrBlank()') &&
+  !history.includes('historyExerciseId?.let { exerciseId ->') &&
   history.includes('Text("Search exercises")') &&
   history.includes('No matching saved exercises.'),
   'History needs a saved, correction-aware searchable exercise drilldown');

@@ -18,7 +18,9 @@ sealed interface WorkoutMachineLastPreview {
         val unit:LoadUnit?,
         val reps:Int,
         val actualRir:Int?,
-        val completionOrder:Long
+        val completionOrder:Long,
+        /** Exact reviewed issued physical convention, if it was recorded. */
+        val loadBasis:LoadBasis?=null
     ):WorkoutMachineLastPreview
     data class NotCompleted(
         val outcome:KotlinJournalSetOutcome,
@@ -64,7 +66,7 @@ object WorkoutMachineLastPreviewDomain {
                     WorkoutMachineLastPreview.Unavailable
                 else WorkoutMachineLastPreview.Completed(
                     actual.load,actual.unit,actual.reps,
-                    actual.actualRir,latest.completionOrder)
+                    actual.actualRir,latest.completionOrder,latest.loadBasis)
             KotlinJournalSetOutcome.SKIPPED,
             KotlinJournalSetOutcome.FAILED_ATTEMPT ->
                 WorkoutMachineLastPreview.NotCompleted(

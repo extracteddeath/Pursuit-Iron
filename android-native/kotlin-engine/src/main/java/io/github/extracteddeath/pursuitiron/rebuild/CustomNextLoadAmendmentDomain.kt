@@ -67,6 +67,13 @@ object CustomNextLoadAmendmentDomain {
             reviewed.nextSetSuggestions.any{it.changed})
             return no(CustomNextLoadAmendmentRefusal.NON_STRAIGHT_SETS)
         val current=verified.first()
+        // A downstream load proposal must independently honor the same
+        // machine-versus-free-barbell authority as the coaching review.
+        // A stale or caller-provided positive preview is not authorization
+        // to turn a tagged physical station into a free-barbell increase.
+        if(KotlinSetNumberAuthorityDomain.machineTagContradictsFreeBarbell(
+                current.basis,slot.machineInstanceId))
+            return no(CustomNextLoadAmendmentRefusal.UNVERIFIED_EQUIPMENT)
         if(!same(current.value,reviewed.observedStraightSetLoad))
             return no(CustomNextLoadAmendmentRefusal.DIFFERENT_PLANNED_LOAD)
         val candidate=checkNotNull(reviewed.loadReviewCandidate)

@@ -1661,4 +1661,30 @@ class CustomNextWorkoutCoachingDomainTest {
         assertEquals(n(205),genuine.loadReviewCandidate)
     }
 
+
+    @Test fun loadAmendmentCannotReinterpretStationAsFreeBarbellEvenWithPositiveReview() {
+        val favorable=review()
+        assertEquals(CustomNextWorkoutCoachingStatus.READY_FOR_LOAD_REVIEW,
+            favorable.status)
+        assertEquals(n(205),favorable.loadReviewCandidate)
+        val original=snapshot(5)
+        val inconsistent=original.copy(slots=original.slots.map {slot->
+            slot.copy(machineInstanceId="machine-A",sets=slot.sets.map {set->
+                val old=set.prescription.load as DraftSetLoad.Verified
+                set.copy(prescription=set.prescription.copy(load=
+                    DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.BARBELL_TOTAL,
+                        old.value)))
+            })
+        })
+        val verifiedBarbell=VerifiedLoadStock.Barbell(LoadUnit.LB,n(45),
+            mapOf(n(45) to 1,n(25) to 1,n(5) to 1,
+                BigDecimal("2.5") to 2))
+        assertEquals(CustomNextLoadAmendmentResult.Rejected(
+            CustomNextLoadAmendmentRefusal.UNVERIFIED_EQUIPMENT),
+            CustomNextLoadAmendmentDomain.propose(
+                inconsistent,"main",favorable,verifiedBarbell,n(5)))
+        assertEquals(n(200),(inconsistent.slots.single().sets.first()
+            .prescription.load as DraftSetLoad.Verified).value)
+    }
+
 }

@@ -1659,7 +1659,11 @@ assert.ok(
   plannedLoadNote.includes('working.map{it.target.setKey}.distinct().size!=working.size') &&
   plannedLoadNote.includes('working[index].target!=selected') &&
   plannedLoadNote.includes('previous.unit!=current.unit || previous.basis!=current.basis') &&
-  plannedLoadNote.includes('current.value.compareTo(previous.value)>=0') &&
+  plannedLoadNote.includes('current.value.compareTo(previous.value)==0') &&
+  plannedLoadNote.includes('if(!assisted && current.value>previous.value)return null') &&
+  plannedLoadNote.includes('val moreAssistance=assisted && current.value>previous.value') &&
+  plannedLoadNote.includes('Issued lower-assistance working set') &&
+  plannedLoadNote.includes('Issued higher-assistance working set') &&
   plannedLoadNote.includes('Issued lighter working set') &&
   plannedLoadNote.includes('not lowered by fatigue coaching') &&
   !plannedLoadNote.includes('Planned last-set back-off') &&
@@ -1667,7 +1671,9 @@ assert.ok(
   generatedFocus.includes('plannedBackoffNote?.let { note ->') &&
   plannedLoadNoteTest.includes('labelsOnlyTheAuthoredLowerFinalWorkingSet') &&
   plannedLoadNoteTest.includes('straightAndUnverifiedLoadsAreNotMisrepresentedAsReductions') &&
-  plannedLoadNoteTest.includes('actualsAndStaleTargetCopiesCannotInventPrescribedLoadDifferences'),
+  plannedLoadNoteTest.includes('actualsAndStaleTargetCopiesCannotInventPrescribedLoadDifferences') &&
+  plannedLoadNoteTest.includes('decreasingAssistedCounterweightMeansHarderNotLighterInGeneratedWorkout') &&
+  plannedLoadNoteTest.includes('increasingAssistedCounterweightIsAPlannedEasierWorkingSet'),
   'Generated Train must explain source-issued working-set reductions without inventing a backoff or fatigue change'
 );
 

@@ -43,7 +43,6 @@ sealed interface CustomAuthoringResult {
 
 object CustomExerciseAuthoringDomain {
     private val id = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
-    private val max = BigDecimal("100000")
     private val zero = BigDecimal.ZERO
 
     /**
@@ -146,9 +145,8 @@ object CustomExerciseAuthoringDomain {
             DraftSetLoad.ExplicitBodyweight -> selection.bodyweight
             is DraftSetLoad.Verified -> {
                 val stock = selection.availability.stock
-                if (stock == null || load.value < zero ||
-                    load.value.signum()==0 && !load.basis.permitsZeroAddedLoad || load.value > max ||
-                    load.value.stripTrailingZeros().scale() > 3 ||
+                if (stock == null ||
+                    !KotlinSetNumberAuthorityDomain.validIssuedLoad(load) ||
                     load.unit != stock.unit || load.basis != stock.basis) false
                 else {
                     val checked = EquipmentLoadDomain.inspect(

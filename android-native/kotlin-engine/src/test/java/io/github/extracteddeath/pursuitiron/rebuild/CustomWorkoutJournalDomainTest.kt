@@ -625,6 +625,48 @@ class CustomWorkoutJournalDomainTest {
         assertEquals(undone,replay)
     }
 
+    @Test fun workoutSwapCannotInjectUnboundedOrNegativeIssuedWeights() {
+        val before=twoSlotInitial()
+        val base=substitute(revision=0L)
+        val row=base.replacement.sets.single()
+        val unsafe=listOf("-1","-0.01","100000.001","20.0001")
+        for((index,value) in unsafe.withIndex()) {
+            val invalid=base.copy(eventId="malformed-load-$index",
+                replacement=base.replacement.copy(sets=listOf(row.copy(
+                    prescription=row.prescription.copy(
+                        load=DraftSetLoad.Verified(
+                            LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
+                            BigDecimal(value)))))))
+            assertEquals("Invalid issued swap load: $value",
+                CustomWorkoutJournalDecision.Rejected(
+                    CustomWorkoutJournalRefusal.SWAP_INVALID_TARGET),
+                CustomWorkoutJournalDomain.reduce(before,invalid))
+            assertEquals(0L,before.revision)
+            assertEquals(emptyList<CustomWorkoutJournalReceipt>(),before.receipts)
+            assertEquals(before.originalSnapshot,before.snapshot)
+        }
+        // Real, independently authored workout stock still needs host
+        // verification. This gate is only the shared numeric envelope.
+        val legitimate=base.copy(replacement=base.replacement.copy(
+            sets=listOf(row.copy(prescription=row.prescription.copy(
+                load=DraftSetLoad.Verified(
+                    LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
+                    BigDecimal("20.00")))))))
+        val accepted=accept(before,legitimate)
+        assertEquals(1L,accepted.revision)
+        assertEquals(before.originalSnapshot,accepted.originalSnapshot)
+        assertEquals(BigDecimal("20.00"),
+            (accepted.snapshot.slots.first().sets.single().prescription.load
+                as DraftSetLoad.Verified).value)
+        // The exact same numeric target must survive append-only receipt replay.
+        var replay=CustomWorkoutJournalDomain.begin(before.workoutId,
+            before.originalSnapshot,before.preparedConsentFingerprint)
+        for(receipt in accepted.receipts)
+            replay=(CustomWorkoutJournalDomain.reduce(replay,receipt.operation)
+                as CustomWorkoutJournalDecision.Proposed).draft
+        assertEquals(accepted,replay)
+    }
+
     @Test fun swapCannotHideOverflowedOrInvalidAmplifierTiming() {
         val source=twoSlotInitial()
         val base=substitute(revision=0L)

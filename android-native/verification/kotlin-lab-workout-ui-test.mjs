@@ -232,10 +232,15 @@ assert.match(journal,/":previous-drop:"/);
 // saved correction and stage availability. No duplicated physical load
 // inequalities in the journal or historical correction reducers.
 assert.match(restPauseProtocol,/private fun eligiblePerformedDropTarget\(/);
+assert.match(restPauseProtocol,/fun validDropStageObservation\(/);
 assert.match(restPauseProtocol,/fun validPerformedDropStage\(/);
 assert.match(restPauseExecution,/AdvancedAmplifierProtocolDomain\.resolveFollowUpEntryLoad\(/);
-assert.match(restPauseJournal,/AdvancedAmplifierProtocolDomain\.validPerformedDropStage\(/);
-assert.match(savedDropCorrection,/AdvancedAmplifierProtocolDomain\.validPerformedDropStage\(/);
+assert.match(restPauseJournal,/AdvancedAmplifierProtocolDomain\.validDropStageObservation\(/);
+assert.match(savedDropCorrection,/AdvancedAmplifierProtocolDomain\.validDropStageObservation\(/);
+// Both finished and failed drop observations must be physically lower,
+// rather than trusting an authored reduction from the earlier snapshot.
+assert.match(restPauseJournal,/operation\.outcome!=KotlinJournalSetOutcome\.SKIPPED/);
+assert.match(savedDropCorrection,/operation\.outcome!=KotlinJournalSetOutcome\.SKIPPED/);
 assert.doesNotMatch(restPauseJournal,/performedLoad\.compareTo\(previousLoad\)/);
 assert.doesNotMatch(savedDropCorrection,/actualLoad\.compareTo\(previousLoad\)/);
 assert.match(restPauseJournal,/followUpLoadForStage\(/);
@@ -550,10 +555,11 @@ assert.match(journal,/onRecord\(KotlinJournalSetOutcome.COMPLETED,\s*actual\)/,
   'Actual set writing must require an explicit Complete action');
 assert.ok(journal.includes('KotlinWorkoutEntryDomain.parse(target,actualLoad,actualReps,actualRir)') &&
   journal.includes('val actual=(entry as? KotlinSetEntryResult.Accepted)?.performed') &&
-  journal.includes('Button(enabled=!locked && actual!=null && !sameLoadInvalidCompletion,') &&
+  journal.includes('!sameLoadInvalidCompletion && !invalidDropCompletion,') &&
   journal.includes('AdvancedAmplifierProtocolDomain.validSameLoadFollowUp(') &&
-  journal.includes('!sameLoadInvalidFailure'),
-  'Custom actuals must use the shared bounded Kotlin parser and block same-load amplifier mismatches');
+  journal.includes('AdvancedAmplifierProtocolDomain.validDropStageObservation(') &&
+  journal.includes('!sameLoadInvalidFailure && !invalidDropFailure,'),
+  'Custom actuals must use the bounded Kotlin parser and block all invalid completed/failed amplifier loads');
 assert.ok(journal.includes('pendingExceptionalOutcome=KotlinJournalSetOutcome.SKIPPED') &&
   journal.includes('pendingExceptionalOutcome=KotlinJournalSetOutcome.FAILED_ATTEMPT') &&
   journal.includes('if(pending!=null && !locked) AlertDialog(') &&

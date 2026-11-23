@@ -1103,6 +1103,92 @@ class CustomWorkoutExecutionDomainTest {
     }
 
 
+    @Test fun failedDropCannotLogSameOrHigherAttemptedWeightEvenAfterCrashReplay() {
+        fun weight(n:String)=DraftSetLoad.Verified(
+            LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,BigDecimal(n))
+        val amp=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+            followUpLoad=weight("15"),followUpRounds=2,
+            secondDropLoad=weight("10"))
+        var j=initial(slot("failed-drop",1,null,amplifier=amp))
+        j=record(j,"failed-drop:s1",reps=12,actualWeight="20.00",
+            station="machine-A")
+        val firstKey=visit("failed-drop:s1",CustomWorkoutVisitPart.FOLLOW_UP,1)
+        val secondKey=visit("failed-drop:s1",CustomWorkoutVisitPart.FOLLOW_UP,2)
+        assertEquals(firstKey,next(j))
+        val immutable=j.snapshot
+        for((i,attempt) in listOf("20","20.000","25","0").withIndex()) {
+            val invalid=CustomWorkoutJournalOperation.Record(
+                "invalid-failed-drop-$i",j.revision,firstKey,
+                KotlinJournalSetOutcome.FAILED_ATTEMPT,
+                KotlinPerformedSet(BigDecimal(attempt),LoadUnit.LB,0,null,
+                    "machine-A"))
+            assertEquals(CustomWorkoutJournalDecision.Rejected(
+                CustomWorkoutJournalRefusal.INVALID_ACTUAL),
+                CustomWorkoutJournalDomain.reduce(j,invalid))
+            assertEquals(firstKey,next(j))
+            assertEquals(1,j.receipts.size)
+        }
+        // A genuinely lower failed attempt is factual, but never unlocks
+        // the second drop (which needs a completed first reduction).
+        j=record(j,"failed-drop:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+            outcome=KotlinJournalSetOutcome.FAILED_ATTEMPT,stage=1,
+            actualWeight="15",station="machine-A")
+        assertNull(next(j))
+        assertTrue(j.canProposeFinish)
+        assertEquals(2,j.receipts.size)
+        assertEquals(immutable,j.snapshot)
+        val blocked=CustomWorkoutJournalOperation.Record(
+            "invent-second-drop",j.revision,secondKey,
+            KotlinJournalSetOutcome.FAILED_ATTEMPT,
+            KotlinPerformedSet(BigDecimal("10"),LoadUnit.LB,0,null,
+                "machine-A"))
+        assertEquals(CustomWorkoutJournalRefusal.FOLLOW_UP_NOT_AUTHORED,
+            (CustomWorkoutJournalDomain.reduce(j,blocked)
+                as CustomWorkoutJournalDecision.Rejected).reason)
+        var replay=CustomWorkoutJournalDomain.begin(j.workoutId,
+            j.originalSnapshot,j.preparedConsentFingerprint)
+        for(receipt in j.receipts)
+            replay=(CustomWorkoutJournalDomain.reduce(replay,receipt.operation)
+                as CustomWorkoutJournalDecision.Proposed).draft
+        assertEquals(j,replay)
+        assertEquals(immutable,replay.snapshot)
+    }
+
+    @Test fun secondDropFailedAttemptNeedsRealFirstDropAndCorrectStation() {
+        fun weight(n:String)=DraftSetLoad.Verified(
+            LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,BigDecimal(n))
+        val amp=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+            followUpLoad=weight("15"),followUpRounds=2,
+            secondDropLoad=weight("10"))
+        var j=initial(slot("two-fails",1,null,amplifier=amp))
+        j=record(j,"two-fails:s1",actualWeight="20",station="machine-A")
+        j=record(j,"two-fails:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+            stage=1,actualWeight="15.000",station="machine-A")
+        val key=visit("two-fails:s1",CustomWorkoutVisitPart.FOLLOW_UP,2)
+        for((i,bad) in listOf(
+            KotlinPerformedSet(BigDecimal("15"),LoadUnit.LB,0,null,"machine-A"),
+            KotlinPerformedSet(BigDecimal("17"),LoadUnit.LB,0,null,"machine-A"),
+            KotlinPerformedSet(BigDecimal("8"),LoadUnit.LB,0,null,"machine-B"),
+            KotlinPerformedSet(BigDecimal("8"),LoadUnit.KG,0,null,"machine-A")
+        ).withIndex()) {
+            assertEquals(CustomWorkoutJournalDecision.Rejected(
+                CustomWorkoutJournalRefusal.INVALID_ACTUAL),
+                CustomWorkoutJournalDomain.reduce(j,CustomWorkoutJournalOperation.Record(
+                    "bad-second-$i",j.revision,key,
+                    KotlinJournalSetOutcome.FAILED_ATTEMPT,bad)))
+        }
+        j=record(j,"two-fails:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+            stage=2,outcome=KotlinJournalSetOutcome.FAILED_ATTEMPT,
+            actualWeight="10.000",station="machine-A")
+        assertNull(next(j))
+        assertTrue(j.canProposeFinish)
+        assertEquals(3,j.effectiveVisits.size)
+        val last=(j.effectiveVisits.getValue(key).operation
+            as CustomWorkoutJournalOperation.Record)
+        assertEquals(0,last.performed?.reps)
+        assertEquals(BigDecimal("10.000"),last.performed?.load)
+    }
+
     @Test fun mainSetTechniqueIsVisibleBeforeAndAfterMyoStagesAndNeverInventsReps() {
         val amp=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,5,20,
             followUpRounds=5)

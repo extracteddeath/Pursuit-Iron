@@ -3245,7 +3245,18 @@ function syncSubSets(sets, ex, unit) {
             }
             return s;
         }
-        if (s.done || userOwnsRuntimeSet(s) || !(actW > 0))
+        if (s.done || !(actW > 0))
+            return s;
+        // Editing mini-set REPS marks the row user-owned, but does not mean the
+        // athlete chose a different LOAD. That old row-wide ownership check froze
+        // stale mini weights after a rep edit (47.5 activation, 30/25 minis).
+        // The authored target remains the weight baseline: a differing weight
+        // is an explicit manual load edit and must not be overwritten.
+        const manualLoad = userOwnsRuntimeSet(s) && (
+            s.kind !== "myo" || s.weightOwner === "user"
+            || s.target?.w == null || String(s.weight) !== String(s.target.w)
+        );
+        if (manualLoad)
             return s;
         let want;
         if (s.kind === "drop") {

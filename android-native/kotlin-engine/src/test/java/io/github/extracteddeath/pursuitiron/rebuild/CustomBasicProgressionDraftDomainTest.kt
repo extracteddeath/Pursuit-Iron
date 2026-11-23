@@ -221,7 +221,7 @@ class CustomBasicProgressionDraftDomainTest {
             BasicProgressionDecision.EARNED_INCREMENT,"previous",
             proposedRepTargets=listOf(6,6),changedRepOrdinals=setOf(0,1)))
         val next=checkNotNull(CustomBasicProgressionDraftDomain.forWeekEdit(
-            "slot",original,candidate))
+            "slot",original,withProof(candidate,original)))
         assertEquals(pounds(105),next[0].load)
         assertEquals(6,next[0].exactRepTarget)
         assertEquals(pounds(105),next[1].load)

@@ -24,8 +24,9 @@ assert.ok(css.includes('color-mix(in srgb,var(--pi-m3e-primary) 36%,transparent)
   'Keep the effective Plan next-session accent edge');
 assert.ok(!css.includes('.wpb-home-health{margin:10px 0 18px}'),
   'Dead Home card margin must not reappear');
-assert.ok(css.includes('.wpb-home-health{display:flex;align-items:center;gap:11px;'),
-  'The current Home health card geometry remains present');
+// B1028: the Home health card is a shared UiBanner; the feature class keeps only its spacing.
+assert.ok(css.includes('.wpb-home-health{margin:12px 0 18px}') && css.includes('#root .wpb .wpb-ui-banner{display:flex;align-items:center;'),
+  'The Home health card uses the shared banner geometry');
 assert.ok(css.includes('.wpb-injury-journal .wpb-session-dialog-heading{position:static'),
   'Injury modal header uses its final nonsticky owner');
 assert.ok(css.includes('.wpb-program-revision-footer{bottom:0;'),

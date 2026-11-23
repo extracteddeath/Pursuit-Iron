@@ -64,7 +64,7 @@ assert.ok(painApp.includes('action === "monitor" || !ids.length ? data') && pain
   'A twinge is recorded without changing the workout; every check joins the session injury reports');
 assert.ok(painApp.includes('undo: () => { setData(originals)'), 'Every pain change offers undo');
 assert.ok(app.includes('{ k: "pain", label: "Pain check", icon: Activity, on: () => setPainOpen(true) }'), 'Pain check sits in the exercise tool row');
-assert.ok(app.includes('e.injuryAdjusted && _jsxs("div", { className: "wpb-pain-banner"'), 'Adjusted lifts show a protection banner with Swap');
+assert.ok(app.includes('e.injuryAdjusted && _jsx(UiBanner, { className: "wpb-pain-banner"') && app.includes('actionLabel: "Swap"'), 'Adjusted lifts show a protection banner with Swap');
 
 // Routines: saved freestyle workouts, most recently trained first, one tap to start.
 const quick = (id, ex, createdAt) => ({ id, name: id, quick: true, createdAt, days: [{ id: 'd', exercises: ex }] });

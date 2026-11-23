@@ -105,6 +105,18 @@ export function UiWavyProgress({ value = 0, max = 1, label, className = "", ...p
             end > 0 && _jsx("path", { className: "wpb-ui-wavy-active", d })
         ] }) });
 }
+// Compose-style inline banner: leading icon, title and supporting text, one action. Home's injury
+// card and the workout's protection notice share it instead of each owning a flex row.
+export function UiBanner({ as: Element = "div", icon: Icon, title, children, actionLabel, onAction, actionVariant = "tonal", className = "", ...props }) {
+    return _jsxs(Element, { ...props, className: `wpb-ui-banner ${className}`.trim(), children: [
+        Icon && _jsx("span", { className: "wpb-ui-banner-icon", "aria-hidden": true, children: _jsx(Icon, { size: 18 }) }),
+        _jsxs("span", { className: "wpb-ui-banner-copy", children: [
+            title && _jsx("strong", { className: "wpb-ui-banner-title", children: title }),
+            children && _jsx("span", { className: "wpb-ui-banner-text", children })
+        ] }),
+        actionLabel && _jsx(UiAction, { variant: actionVariant, className: "wpb-ui-banner-action", onClick: onAction, children: actionLabel })
+    ] });
+}
 // One stat tile: value (with optional change badge) over a label, as a description-list pair.
 export function UiStatTile({ value, label, delta, deltaLabel, className = "", ...props }) {
     return _jsxs("div", { ...props, className: `wpb-ui-stat ${className}`.trim(), children: [

@@ -84,7 +84,10 @@ const b1012TemplateRules=css.slice(b1012Start,b1026Start);
 const b1027Start=css.indexOf('/* B1027 — design pass 7: one consistent, content-sized control vocabulary across screens. */');
 assert.ok(b1027Start>b1026Start,'B1027 design-pass owner follows the B1026 owner');
 assert.ok(css.slice(b1026Start,b1027Start).length<=uiStyleBudget.b1026CssCharacters,'B1026 prototype-feature owner must remain bounded');
-assert.ok(css.slice(b1027Start).length<=uiStyleBudget.b1027CssCharacters,'B1027 design-pass owner must remain bounded');
+const b1028Start=css.indexOf('/* B1028 — Compose-style shared components: ModalBottomSheet, FilterChip, ListItem, stat tile, wavy progress. */');
+assert.ok(b1028Start>b1027Start,'B1028 shared-component owner follows B1027');
+assert.ok(css.slice(b1027Start,b1028Start).length<=uiStyleBudget.b1027CssCharacters,'B1027 design-pass owner must remain bounded');
+assert.ok(css.slice(b1028Start).length<=uiStyleBudget.b1028CssCharacters,'B1028 shared-component owner must remain bounded');
 assert.ok(b1012TemplateRules.length<=uiStyleBudget.b1012CssCharacters,'B1012 Home template owner must not grow');
 assert.ok(b1011SettingsRules.length<=uiStyleBudget.b1011CssCharacters,'B1011 Settings owner must remain bounded');
 for(const role of ['wpb-settings-feedback','wpb-settings-diagnostic-run','wpb-settings-import-sheet'])

@@ -25,8 +25,11 @@ const sheets = [
 let count=0;
 for(const [path,expected,roles] of sheets){
     const source=fs.readFileSync(path,'utf8');
-    assert.ok(source.includes('UiSheetHeading') && source.includes('UiSheetClose'),path+' must retain original dismiss owner');
-    const actual=(source.match(/_jsxs\(UiSheetHeading,/g)||[]).length;
+    // B1028: a sheet may delegate its whole anatomy to the shared UiSheet (ui-sheet.js), which
+    // renders the one UiSheetHeading + UiSheetClose pair with the caller's heading/close classes.
+    const viaSheet=/_jsx\(UiSheet, \{/.test(source);
+    assert.ok(viaSheet || (source.includes('UiSheetHeading') && source.includes('UiSheetClose')),path+' must retain original dismiss owner');
+    const actual=viaSheet ? 1 : (source.match(/_jsxs\(UiSheetHeading,/g)||[]).length;
     assert.equal(actual,expected,path+' must use the single heading anatomy');
     for(const role of roles)assert.ok(source.includes(role),path+' must retain '+role);
     count+=actual;
@@ -35,7 +38,7 @@ const share=fs.readFileSync('modules/program-share-sheet.js','utf8');
 const reference=fs.readFileSync('modules/program-reference-surfaces.js','utf8');
 const exercise=fs.readFileSync('modules/program-exercise-options.js','utf8');
 const maxes=fs.readFileSync('modules/program-training-maxes.js','utf8');
-assert.ok(share.includes("_jsxs(UiSheetHeading, { as: 'header'") &&
+assert.ok((share.includes("_jsxs(UiSheetHeading, { as: 'header'") || (share.includes('_jsx(UiSheet, {') && fs.readFileSync('modules/ui-sheet.js','utf8').includes("_jsxs(UiSheetHeading, { as: 'header'"))) &&
     reference.includes("_jsxs(UiSheetHeading, { as: 'header'") &&
     exercise.includes("_jsxs(UiSheetHeading, { as: 'header'") &&
     maxes.includes("_jsxs(UiSheetHeading, { as: 'header'"),

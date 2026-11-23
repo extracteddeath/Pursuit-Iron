@@ -65,7 +65,7 @@ assert.ok(!css.includes('.wpb-exercise-options-heading .wpb-sheet-close{') &&
     !css.includes('.wpb-training-max-heading .wpb-sheet-close{'),
     'Tonal sheet close sizing is owned by UiAction, not screen-specific flex overrides');
 for (const [name, source] of [['schedule', programSchedule], ['settings', programSettings], ['share', programShare]]) {
-    assert.ok(source.includes('_jsx(UiSheetClose,') && source.includes('wpb-program-' + name + '-close'),
+    assert.ok((source.includes('_jsx(UiSheetClose,') || (source.includes('_jsx(UiSheet, {') && source.includes("closeClassName: 'wpb-program-" + name + "-close'"))) && source.includes('wpb-program-' + name + '-close'),
         'Program ' + name + ' must share the native close action and preserve the feature focus locator');
 }
 assert.ok(css.includes('.wpb-ui-sheet-close,#root .wpb-workout .wpb-b973-set-close{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;min-width:48px;min-height:48px;') &&
@@ -215,7 +215,7 @@ for(const [name,source,cls] of [
   ['Share',programShare,'wpb-program-share-body'],
   ['Training Maxes',trainingMaxes,'wpb-training-max-body'],
   ['Exercise Options',exerciseOptions,'wpb-exercise-options-body']
-]) assert.ok(source.includes(cls+' wpb-ui-sheet-scroll'),
+]) assert.ok(source.includes(cls+' wpb-ui-sheet-scroll') || source.includes("bodyClassName: '"+cls+"'"),
    name+' must consume one shared scroll-body owner');
 for(const role of ['wpb-program-reference-body','wpb-progression-choice-body'])
   assert.ok(programReference.includes(role+' wpb-ui-sheet-scroll'),
@@ -289,7 +289,9 @@ for(const [src,name,focus] of [
   [exerciseOptions,'wpb-exercise-options',true],
   [programSchedule,'wpb-program-schedule',false]
 ]){
-  assert.ok(src.includes('wpb-backdrop wpb-ui-sheet-backdrop '+(focus?'wpb-ui-sheet-focus ':'')+name+'-backdrop'),
+  // B1028: UiSheet (ui-sheet.js) supplies the shared backdrop/focus markers for delegating sheets.
+  assert.ok(src.includes('wpb-backdrop wpb-ui-sheet-backdrop '+(focus?'wpb-ui-sheet-focus ':'')+name+'-backdrop') ||
+    (focus && src.includes("className: '"+name+"-backdrop'") && src.includes('_jsx(UiSheet, {')),
     'Shared overlay marker missing: '+name);
   const local=css.split('#root .wpb .'+name+'-backdrop{')[1]?.split('}')[0]||'';
   assert.ok(local&&!local.includes('position:fixed')&&!local.includes('animation:fadeIn'),
@@ -302,7 +304,7 @@ for(const [src,cls] of [
   [programShare,'wpb-program-share-panel'],
   [trainingMaxes,'wpb-training-max-sheet'],
   [exerciseOptions,'wpb-exercise-options-sheet']
-]) assert.ok(src.includes('wpb-ui-sheet-panel '+cls),'Shared panel owner missing: '+cls);
+]) assert.ok(src.includes('wpb-ui-sheet-panel '+cls) || src.includes("panelClassName: '"+cls+"'"),'Shared panel owner missing: '+cls);
 const sharedBackdrop=css.split('#root .wpb .wpb-ui-sheet-backdrop{')[1]?.split('}')[0]||'';
 for(const p of ['position:fixed','inset:0','display:flex','align-items:flex-end',
   'justify-content:center','background:rgba(0,0,0,.6)','animation:fadeIn .2s both'])
@@ -410,7 +412,8 @@ for(const prop of ['overflow-y:auto','padding:8px 18px calc(env(safe-area-inset-
     assert.ok(footerScroll.includes(prop),'Scrollable footer must retain '+prop);
 for(const [src,name,scroll] of [[programSettings,'wpb-program-settings-footer',true],
     [programShare,'wpb-program-share-footer',true],[trainingMaxes,'wpb-training-max-footer',false]]){
-    assert.ok(src.includes('wpb-ui-sheet-footer '+(scroll?'wpb-ui-sheet-footer-scroll ':'')+name),
+    assert.ok(src.includes('wpb-ui-sheet-footer '+(scroll?'wpb-ui-sheet-footer-scroll ':'')+name) ||
+        src.includes("footerClassName: '"+(scroll?'wpb-ui-sheet-footer-scroll ':'')+name+"'"),
         'Sheet footer must consume shared owner: '+name);
     const local=css.split('#root .wpb .'+name+'{')[1]?.split('}')[0]||'';
     assert.ok(local&&!local.includes('flex-shrink:0')&&!local.includes('border-top:'),
@@ -426,7 +429,7 @@ for(const role of ['min-width:0','margin:0','font-size:var(--pi-ui-sheet-title-s
 for(const [name,source,selector] of [
   ['Schedule',programSchedule,"wpb-ui-sheet-title wpb-program-schedule-title"],
   ['Settings',programSettings,"wpb-ui-sheet-title wpb-program-settings-title"],
-  ['Share',programShare,"id: 'program-share-title', className: 'wpb-ui-sheet-title'"],
+  ['Share',programShare,"titleId: 'program-share-title'"],
   ['Details',programReference,"id: 'program-reference-title', className: 'wpb-ui-sheet-title'"],
   ['Training Maxes',trainingMaxes,"id: 'program-training-max-title', className: 'wpb-ui-sheet-title'"],
   ['Progression choice',programReference,"id: 'program-progression-title', className: 'wpb-ui-sheet-title'"],

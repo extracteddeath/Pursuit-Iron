@@ -3,8 +3,8 @@
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useMemo, useRef, useState } from 'react';
 import { Check, Copy, Layers } from 'lucide-react';
-import { UiAction, UiSheetClose, UiSheetHeading } from './ui-primitives.js';
-import { useProgramSheetFocus } from './program-sheet-focus.js';
+import { UiAction } from './ui-primitives.js';
+import { UiSheet } from './ui-sheet.js';
 import { SPLITS, weeksOf, daysInWeek, sessionPrescriptionRows, effortLabel,
     percentagePlanFor, gallerySubmission, galleryIssueBody } from './engine-api.js';
 
@@ -37,7 +37,6 @@ export function programToText(program, loadMode = 'rir', unit = 'kg', weekIndex 
 }
 
 export function ShareProgramSheet({ program, shareCode, weekIndex = 1, loadMode, unit, history = [], onClose, sheetDragRef }) {
-    const { attachPanel, onPanelKeyDown } = useProgramSheetFocus(onClose, sheetDragRef);
     const text = useMemo(() => programToText(program, loadMode, unit, weekIndex, history),
         [program, loadMode, unit, weekIndex, history]);
     const [feedback, setFeedback] = useState(null);
@@ -67,41 +66,34 @@ export function ShareProgramSheet({ program, shareCode, weekIndex = 1, loadMode,
         window.open(url, '_blank', 'noopener');
     };
     const pending = feedback?.state === 'pending';
-    return _jsx('div', { 'data-testid': 'share-program-sheet', role: 'dialog', 'aria-modal': true,
-        'aria-labelledby': 'program-share-title', 'aria-describedby': 'program-share-scope', onClick: event => { if (event.target === event.currentTarget) onClose(); },
-        className: 'wpb-backdrop wpb-ui-sheet-backdrop wpb-ui-sheet-focus wpb-program-share-backdrop', children:
-        _jsxs('section', { ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, className: 'wpb-ui-sheet-panel wpb-program-share-panel', onClick: event => event.stopPropagation(), children: [
-            _jsxs(UiSheetHeading, { as: 'header', className: 'wpb-ui-sheet-heading wpb-program-share-heading', children: [
-                _jsx('h2', { id: 'program-share-title', className: 'wpb-ui-sheet-title', children: 'Share program' }),
-                _jsx(UiSheetClose, { className: 'wpb-program-share-close', onClick: onClose })
-            ] }),
-            _jsxs('div', { className: 'wpb-scroll wpb-program-share-body wpb-ui-sheet-scroll', children: [
-                _jsx('p', { id: 'program-share-scope', children: `${weekIndex > weeksOf(program) ? 'Deload' : 'Week ' + weekIndex + ' of ' + weeksOf(program)} · Saved sets, reps and target effort.` }),
-                shareCode && _jsxs('div', { className: 'wpb-program-share-code', children: [
-                    _jsx('label', { htmlFor: 'program-share-code', children: 'Program code' }),
-                    _jsx('textarea', { id: 'program-share-code', readOnly: true, value: shareCode, rows: 2,
-                        className: 'mono wpb-program-share-text', onFocus: event => event.target.select() }),
-                    _jsxs(UiAction, { disabled: pending, onClick: () => copy(shareCode, 'code'), 'aria-label': 'Copy program code',
-                        children: [_jsx(feedback?.kind === 'code' && feedback.state === 'copied' ? Check : Copy, { size: 16 }),
-                            feedback?.kind === 'code' && feedback.state === 'copied' ? 'Code copied' : 'Copy program code'] }),
-                    _jsx('p', { children: 'Anyone can paste it into Settings → Add a shared program for an editable copy of this week’s plan.' }),
-                    _jsxs(UiAction, { onClick: submit, children: [_jsx(Layers, { size: 16 }), 'Submit to the gallery'] }),
-                    _jsx('p', { children: 'Opens a submission draft on GitHub for maintainer review.' })
-                ] }),
-                _jsx('label', { htmlFor: 'program-share-text', className: 'wpb-program-share-label', children: 'Plain-text plan' }),
-                _jsx('textarea', { id: 'program-share-text', readOnly: true, value: text,
-                    onFocus: event => event.target.select(), className: 'wpb-scroll mono wpb-program-share-text' })
-            ] }),
-            _jsxs('footer', { className: 'wpb-ui-sheet-footer wpb-ui-sheet-footer-scroll wpb-program-share-footer', children: [
-                _jsx('p', { role: 'status', className: 'wpb-program-share-status', children: feedback?.state === 'pending'
-                    ? 'Copying…' : feedback?.state === 'error'
-                    ? 'Could not copy. Select the text above and copy it manually.'
-                    : feedback?.state === 'copied' ? (feedback.kind === 'code' ? 'Program code copied.' : 'Plain-text plan copied.') : '' }),
-                _jsxs(UiAction, { variant: 'primary', disabled: pending, 'aria-label': 'Copy plain text', onClick: () => copy(text, 'text'),
-                    className: 'wpb-program-share-copy', children: [
-                        _jsx(feedback?.kind === 'text' && feedback.state === 'copied' ? Check : Copy, { size: 16 }),
-                        feedback?.kind === 'text' && feedback.state === 'copied' ? 'Copied ✓' : pending ? 'Copying…' : 'Copy plain text'
-                    ] })
-            ] })
-        ] }) });
+    return _jsx(UiSheet, { id: 'program-share', 'data-testid': 'share-program-sheet', title: 'Share program', onClose, sheetDragRef,
+        describedBy: 'program-share-scope', titleId: 'program-share-title', className: 'wpb-program-share-backdrop', panelClassName: 'wpb-program-share-panel',
+        headingClassName: 'wpb-program-share-heading', closeClassName: 'wpb-program-share-close', footerClassName: 'wpb-ui-sheet-footer-scroll wpb-program-share-footer',
+        bodyClassName: 'wpb-program-share-body', footer: [
+            _jsx('p', { role: 'status', className: 'wpb-program-share-status', children: feedback?.state === 'pending'
+                ? 'Copying…' : feedback?.state === 'error'
+                ? 'Could not copy. Select the text above and copy it manually.'
+                : feedback?.state === 'copied' ? (feedback.kind === 'code' ? 'Program code copied.' : 'Plain-text plan copied.') : '' }, 'status'),
+            _jsxs(UiAction, { variant: 'primary', disabled: pending, 'aria-label': 'Copy plain text', onClick: () => copy(text, 'text'),
+                className: 'wpb-program-share-copy', children: [
+                    _jsx(feedback?.kind === 'text' && feedback.state === 'copied' ? Check : Copy, { size: 16 }),
+                    feedback?.kind === 'text' && feedback.state === 'copied' ? 'Copied ✓' : pending ? 'Copying…' : 'Copy plain text'
+                ] }, 'copy')
+        ], children: [
+            _jsx('p', { id: 'program-share-scope', children: `${weekIndex > weeksOf(program) ? 'Deload' : 'Week ' + weekIndex + ' of ' + weeksOf(program)} · Saved sets, reps and target effort.` }, 'scope'),
+            shareCode && _jsxs('div', { className: 'wpb-program-share-code', children: [
+                _jsx('label', { htmlFor: 'program-share-code', children: 'Program code' }),
+                _jsx('textarea', { id: 'program-share-code', readOnly: true, value: shareCode, rows: 2,
+                    className: 'mono wpb-program-share-text', onFocus: event => event.target.select() }),
+                _jsxs(UiAction, { disabled: pending, onClick: () => copy(shareCode, 'code'), 'aria-label': 'Copy program code',
+                    children: [_jsx(feedback?.kind === 'code' && feedback.state === 'copied' ? Check : Copy, { size: 16 }),
+                        feedback?.kind === 'code' && feedback.state === 'copied' ? 'Code copied' : 'Copy program code'] }),
+                _jsx('p', { children: 'Anyone can paste it into Settings → Add a shared program for an editable copy of this week’s plan.' }),
+                _jsxs(UiAction, { onClick: submit, children: [_jsx(Layers, { size: 16 }), 'Submit to the gallery'] }),
+                _jsx('p', { children: 'Opens a submission draft on GitHub for maintainer review.' })
+            ] }, 'code'),
+            _jsx('label', { htmlFor: 'program-share-text', className: 'wpb-program-share-label', children: 'Plain-text plan' }, 'label'),
+            _jsx('textarea', { id: 'program-share-text', readOnly: true, value: text,
+                onFocus: event => event.target.select(), className: 'wpb-scroll mono wpb-program-share-text' }, 'text')
+        ] });
 }

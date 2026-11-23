@@ -244,8 +244,11 @@ object AdvancedAmplifierProtocolDomain {
             ?:return null
         val firstTarget=dropStageLoad(amp,1)
             as? DraftSetLoad.Verified ?:return null
-        if(activation.reps<=0 || activation.unit!=target.unit ||
-            activation.load==null ||
+        if(!KotlinSetNumberAuthorityDomain.valid(
+                issuedActivation,KotlinJournalSetOutcome.COMPLETED,activation) ||
+            (stage==2 && !KotlinSetNumberAuthorityDomain.valid(
+                firstTarget,KotlinJournalSetOutcome.COMPLETED,previous)) ||
+            activation.unit!=target.unit || activation.load==null ||
             activation.load.compareTo(firstTarget.value)<=0 ||
             activation.machineInstanceId!=selectedMachineId ||
             previous.reps<=0 || previous.unit!=target.unit ||
@@ -278,7 +281,8 @@ object AdvancedAmplifierProtocolDomain {
             else precedingDropPerformed
         val prior=previous?.load ?:return false
         val observed=completed?.load ?:return false
-        return completed.reps>0 &&
+        return KotlinSetNumberAuthorityDomain.valid(
+                target,KotlinJournalSetOutcome.COMPLETED,completed) &&
             completed.unit==target.unit &&
             completed.machineInstanceId==
                 performedActivation?.machineInstanceId &&
@@ -340,17 +344,9 @@ object AdvancedAmplifierProtocolDomain {
         val actual=performedActivation
             ?:return AmplifierFollowUpEntryLoad.ActivationUnavailable
         if(actual.machineInstanceId!=selectedMachineId ||
-            actual.reps<=0)
+            !KotlinSetNumberAuthorityDomain.valid(
+                issuedActivation,KotlinJournalSetOutcome.COMPLETED,actual))
             return AmplifierFollowUpEntryLoad.ActivationUnavailable
-        when(issuedActivation) {
-            DraftSetLoad.ExplicitBodyweight ->
-                if(actual.load!=null || actual.unit!=null)
-                    return AmplifierFollowUpEntryLoad.ActivationUnavailable
-            is DraftSetLoad.Verified ->
-                if(actual.load==null || actual.unit!=issuedActivation.unit ||
-                    actual.load.signum()<0)
-                    return AmplifierFollowUpEntryLoad.ActivationUnavailable
-        }
         return AmplifierFollowUpEntryLoad.RecordedActivation(actual)
     }
 

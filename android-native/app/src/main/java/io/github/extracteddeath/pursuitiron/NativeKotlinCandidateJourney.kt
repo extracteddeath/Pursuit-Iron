@@ -940,8 +940,15 @@ private fun NativeKotlinCandidateTrainEntry(
                 Text("Your training program",style=MaterialTheme.typography.titleMedium)
                 Text("Review the next session and its exact exercises before starting.",
                     style=MaterialTheme.typography.bodySmall)
-                PursuitPrimaryAction("Open my program",enabled=!reviewingResume) {
-                    onReturnToProgram()
+                // Opening Plan does not consume this optional unfinished
+                // custom/measured inventory result. Avoid trapping first-run
+                // program review behind a slow or failed Train inventory read.
+                // Only competing navigation or a live time-choice WRITE
+                // defers the transition; Plan rechecks its own saved source.
+                PursuitPrimaryAction("Open my program",
+                    enabled=!searching && !resumeChecking && !timeAcceptanceBusy) {
+                    if(!searching && !resumeChecking && !timeAcceptanceBusy)
+                        onReturnToProgram()
                 }
             }
             PursuitCard {

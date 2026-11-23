@@ -94,6 +94,29 @@ class CustomSameBlockLoadContinuityDomainTest {
             legacySlot.status)
     }
 
+    @Test fun mislabeledStationCannotBecomeFreeBarbellRecoveryBaseline() {
+        val stock = VerifiedLoadStock.Barbell(LoadUnit.LB, n(45),
+            mapOf(n(25) to 1, n(5) to 1, BigDecimal("2.5") to 1))
+        fun asBarbell(day:CustomWorkoutDaySnapshot,station:String?)=day.copy(
+            slots=day.slots.map{slot->slot.copy(machineInstanceId=station,
+                sets=slot.sets.map{set->set.copy(prescription=
+                    set.prescription.copy(load=DraftSetLoad.Verified(
+                        LoadUnit.LB,LoadBasis.BARBELL_TOTAL,
+                        (set.prescription.load as DraftSetLoad.Verified).value)))})})
+        val old=asBarbell(snapshot(2,listOf(95,100)),"A")
+        val next=asBarbell(snapshot(3,listOf(105,110)),"A")
+        val prior=performedOnMachine(completed(old,actualRir=listOf(2,2)),"A")
+        val refused=review(next,listOf(prior),physical=stock)
+        assertEquals(CustomSameBlockLoadStatus.EQUIPMENT_UNVERIFIED,refused.status)
+        assertNull(refused.proposedWorkout)
+
+        val authentic=review(asBarbell(snapshot(3,listOf(105,110)),null),
+            listOf(completed(asBarbell(snapshot(2,listOf(95,100)),null),
+                actualRir=listOf(2,2))),physical=stock)
+        assertEquals(CustomSameBlockLoadStatus.REVIEW_LOWER_REPEAT,authentic.status)
+        assertEquals(listOf(n(95),n(100)),authentic.sets.map{it.proposedLoad})
+    }
+
     @Test fun lowerIssuedWeightsAreVisibleButNeverSilentlyIssued() {
         val result=review()
         assertEquals(CustomSameBlockLoadStatus.REVIEW_LOWER_REPEAT,result.status)

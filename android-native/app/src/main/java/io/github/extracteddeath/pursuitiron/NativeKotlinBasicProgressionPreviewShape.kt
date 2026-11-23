@@ -31,3 +31,27 @@ internal object NativeKotlinBasicProgressionPreviewShape {
         ) != null
     }
 }
+
+/**
+ * Read-only "why this weight?" wording. The shared Kotlin physical
+ * authority has ALREADY accepted the adjacent implement setting; this
+ * formatter must not inspect equipment again, infer a different increment,
+ * or claim a proposal was issued. Provenance is shown only after the
+ * signed-slot review gate has validated the proposal.
+ */
+internal object NativeKotlinBasicLoadProofText {
+    fun describe(fact:KotlinFutureLoadFact):String {
+        val proof=fact.physicalProof
+        val unit=if(fact.unit==LoadUnit.LB)"lb" else "kg"
+        fun plain(value:java.math.BigDecimal)=
+            value.stripTrailingZeros().toPlainString()
+        return when(proof.reason) {
+            KotlinFutureLoadPhysicalReason.EARNED_ADJACENT_HIGHER_SETTING ->
+                "+${plain(proof.absoluteChange)} $unit · verified next equipment setting ${plain(proof.verifiedCandidate)} $unit"
+            KotlinFutureLoadPhysicalReason.EARNED_ADJACENT_LOWER_ASSISTANCE ->
+                "${plain(proof.absoluteChange)} $unit less assistance · verified setting ${plain(proof.verifiedCandidate)} $unit"
+            KotlinFutureLoadPhysicalReason.VERIFIED_LOWER_SETTING_HISTORY_REQUIRED ->
+                "Review return to ${plain(proof.verifiedCandidate)} $unit · earlier completed performance must be verified"
+        }
+    }
+}

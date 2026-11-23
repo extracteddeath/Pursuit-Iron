@@ -75,6 +75,15 @@ object KotlinSetNumberAuthorityDomain {
     fun validPrescribedLoad(value:BigDecimal,basis:LoadBasis):Boolean =
         validPhysicalLoadValue(value) && (value.signum()!=0 || basis.permitsZeroAddedLoad)
 
+    /** Shared shape check for every new issued or swapped set load.
+     * Confirming real gym stock and athlete consent remains the host's job.
+     * This numeric check prevents a forged/invalid new prescription from
+     * bypassing the same physical envelope used for recorded actuals. */
+    fun validIssuedLoad(load:DraftSetLoad):Boolean = when(load) {
+        DraftSetLoad.ExplicitBodyweight -> true
+        is DraftSetLoad.Verified ->validPrescribedLoad(load.value,load.basis)
+    }
+
     /** Physical-machine identity and true free-barbell loading cannot describe
      * the same working-set evidence. Keep the actual receipt, but never count
      * that mismatched record as ordinary barbell strength or earned progression.

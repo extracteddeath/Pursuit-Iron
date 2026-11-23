@@ -267,10 +267,43 @@ object AdvancedAmplifierProtocolDomain {
         return target
     }
 
-    /** The same eligibility gate also validates REAL completed drop loads
-     * for live journal receipts and historical corrections. Never use the
-     * issued target as a replacement for a performed load or silently
-     * transfer performance between Machine A/B. */
+    /**
+     * One physical-drop observation policy for both successful reductions
+     * and FAILED attempts. A zero-rep attempt is still a real attempted load
+     * and must be lower than the immediately preceding completed stage.
+     * A different unit/station or a stale first-drop anchor is not a drop.
+     * A SKIP has no attempted physical weight and is handled separately.
+     *
+     * This is shared by active workout, Focus validation and saved History:
+     * no caller may treat an issued lower target as evidence that an athlete
+     * actually attempted a reduction.
+     */
+    fun validDropStageObservation(
+        amp:CustomSetAmplifier,
+        issuedActivation:DraftSetLoad,
+        performedActivation:KotlinPerformedSet?,
+        precedingDropPerformed:KotlinPerformedSet?,
+        observedStage:KotlinPerformedSet?,
+        stage:Int,
+        outcome:KotlinJournalSetOutcome
+    ):Boolean {
+        if(outcome==KotlinJournalSetOutcome.SKIPPED)return false
+        val target=eligiblePerformedDropTarget(
+            amp,issuedActivation,performedActivation,
+            precedingDropPerformed,performedActivation?.machineInstanceId,
+            stage) ?:return false
+        val previous=if(stage==1)performedActivation else precedingDropPerformed
+        val precedingLoad=previous?.load ?:return false
+        val actual=observedStage ?:return false
+        val attemptedLoad=actual.load ?:return false
+        return KotlinSetNumberAuthorityDomain.valid(target,outcome,actual) &&
+            actual.unit==target.unit &&
+            actual.machineInstanceId==performedActivation?.machineInstanceId &&
+            attemptedLoad.signum()>0 &&
+            attemptedLoad.compareTo(precedingLoad)<0
+    }
+
+    /** Compatibility entry for callers checking a COMPLETED drop only. */
     fun validPerformedDropStage(
         amp:CustomSetAmplifier,
         issuedActivation:DraftSetLoad,
@@ -278,22 +311,9 @@ object AdvancedAmplifierProtocolDomain {
         precedingDropPerformed:KotlinPerformedSet?,
         completed:KotlinPerformedSet?,
         stage:Int
-    ):Boolean {
-        val target=eligiblePerformedDropTarget(
-            amp,issuedActivation,performedActivation,
-            precedingDropPerformed,performedActivation?.machineInstanceId,
-            stage) ?:return false
-        val previous=if(stage==1)performedActivation
-            else precedingDropPerformed
-        val prior=previous?.load ?:return false
-        val observed=completed?.load ?:return false
-        return KotlinSetNumberAuthorityDomain.valid(
-                target,KotlinJournalSetOutcome.COMPLETED,completed) &&
-            completed.unit==target.unit &&
-            completed.machineInstanceId==
-                performedActivation?.machineInstanceId &&
-            observed.signum()>0 && observed.compareTo(prior)<0
-    }
+    ):Boolean = validDropStageObservation(
+        amp,issuedActivation,performedActivation,precedingDropPerformed,
+        completed,stage,KotlinJournalSetOutcome.COMPLETED)
 
     /**
      * Only an explicit drop set owns an independently authored follow-up

@@ -176,13 +176,19 @@ class NativeFutureWeekLoadSessionProjectionTest {
         for(stale in listOf(
             current.copy(proposedLoad=n("210")),
             current.copy(maximumAuthorizedIncrease=n("2.5")),
-            current.copy(previousLoad=n("195")),
             current.copy(proposedLoad=n("205.0001")))) {
             assertEquals(stale.toString(),
                 NativeFutureWeekLoadProjection.Rejected(
                     NativeFutureWeekLoadProjectionRefusal.UNVERIFIED_EQUIPMENT),
                 run(grant=NativeFutureWeekConsentRead.Current(stale)))
         }
+        // The signed workout was issued at 200, so a saved consent claiming
+        // its original load was 195 must fail at the earlier source
+        // prescription gate, before testing the physical inventory.
+        val falseBaseline=current.copy(previousLoad=n("195"))
+        assertEquals(NativeFutureWeekLoadProjection.Rejected(
+            NativeFutureWeekLoadProjectionRefusal.PRESCRIPTION_CHANGED),
+            run(grant=NativeFutureWeekConsentRead.Current(falseBaseline)))
         val equivalent=current.copy(previousLoad=n("200.000"),
             proposedLoad=n("205.0000"))
         val same=run(grant=NativeFutureWeekConsentRead.Current(equivalent))

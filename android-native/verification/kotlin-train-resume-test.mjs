@@ -22,6 +22,27 @@ assert.match(minimizeShortcut,/withContext\(Dispatchers\.IO\)/);
 assert.doesNotMatch(minimizeShortcut,/host\.currentlyApprovedKotlinWorkoutId\(\)/,
   'A matching approval without an unfinished journal must not reopen a completed workout');
 assert.match(minimizeShortcut,/The minimized workout is no longer verifiably unfinished/);
+// Generated Resume has its own signed-journal read and must stay reachable
+// while optional custom/measured inventory or short-session previews load.
+// Both minimized and cold-restarted paths share one navigation gate,
+// not a new authorization or a bypass of disk verification.
+const resumeGate=readFileSync(
+ 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinTrainResumeGate.kt','utf8');
+const coldResume=candidate.slice(
+  candidate.indexOf('resumableGeneratedId?.takeIf {'),
+  candidate.indexOf('selectionMessage?.takeIf{minimizedGeneratedId==null}'));
+assert.match(candidate,/fun canVerifyGeneratedResume\(\)=NativeKotlinTrainResumeGate\.mayVerifyGenerated\(/);
+assert.match(resumeGate,/!resumeChecking && !manualLookupBusy && !anotherWorkoutOpen/);
+assert.doesNotMatch(resumeGate,/reviewingResume|timePreviewBusy|timePreview|customInventory/);
+assert.match(minimizeShortcut,/PursuitPrimaryAction\("Resume workout",\s*enabled=canVerifyGeneratedResume\(\)/);
+assert.match(minimizeShortcut,/if\(canVerifyGeneratedResume\(\)\)/);
+assert.match(coldResume,/PursuitPrimaryAction\("Resume saved workout",\s*enabled=canVerifyGeneratedResume\(\)/);
+assert.match(coldResume,/if\(canVerifyGeneratedResume\(\)\)/);
+assert.doesNotMatch(minimizeShortcut,/!reviewingResume|!timePreviewBusy/);
+assert.doesNotMatch(coldResume,/!reviewingResume|!timePreviewBusy/);
+assert.match(coldResume,/currentUnfinishedGeneratedWorkoutId\(host\)==\s*issuedId/);
+assert.match(coldResume,/resumableGeneratedId==issuedId/);
+
 assert.match(candidate,/selectedId==null && customWorkoutId==null/);
 assert.match(candidate,/if\(verifiedUnfinished\) \{/);
 assert.match(candidate,/selectedId=awaitingWorkoutId\s*minimizedGeneratedId=null/);

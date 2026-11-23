@@ -136,9 +136,9 @@ assert.ok(coldHistory.includes('NativeKotlinMixedHistoryReadResult.Review') &&
   coldHistory.includes('?.timeline?.completions?.isNotEmpty()==true') &&
   coldPriority.includes('hasOwnedCustomCycle=probes.ownedCustomProgram()') &&
   coldPriority.includes('hasVerifiedCompletedHistory=probes.completedVerifiedHistory()') &&
-  landing.includes('hasOwnedCustomCycle -> KotlinCandidateDestination.PROGRAM') &&
-  landing.includes('hasVerifiedCompletedHistory -> KotlinCandidateDestination.HISTORY') &&
-  landing.includes('else -> KotlinCandidateDestination.ONBOARD'),
+  journey.includes('hasOwnedCustomCycle -> KotlinCandidateDestination.PROGRAM') &&
+  journey.includes('hasVerifiedCompletedHistory -> KotlinCandidateDestination.HISTORY') &&
+  journey.includes('else -> KotlinCandidateDestination.ONBOARD'),
   'Owned program outranks verified completed History; unknown stays Setup');
 
 const recoveryHost=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt');

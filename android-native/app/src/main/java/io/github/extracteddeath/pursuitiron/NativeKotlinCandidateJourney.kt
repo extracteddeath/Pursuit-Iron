@@ -69,6 +69,35 @@ internal fun kotlinIdleColdLanding(
     else -> KotlinCandidateDestination.ONBOARD
 }
 
+/**
+ * A single, lazily evaluated cold-launch priority policy. Each probe must be
+ * a read-only, owner-verified inventory. Stop at the first proven destination:
+ * interrupted History outranks Train, which outranks a saved program, which
+ * outranks already-completed History. Nothing here issues or replays a workout.
+ */
+internal class KotlinColdLaunchProbes(
+    val pendingHistory:()->Boolean,
+    val unfinishedCustom:()->Boolean,
+    val unfinishedGenerated:()->Boolean,
+    val unfinishedMeasured:()->Boolean,
+    val confirmedMeasured:()->Boolean,
+    val ownedCustomProgram:()->Boolean,
+    val completedVerifiedHistory:()->Boolean
+)
+
+internal fun kotlinColdLaunchDestination(
+    probes:KotlinColdLaunchProbes
+):KotlinCandidateDestination {
+    if(probes.pendingHistory())return KotlinCandidateDestination.HISTORY
+    if(probes.unfinishedCustom())return KotlinCandidateDestination.TRAIN
+    if(probes.unfinishedGenerated())return KotlinCandidateDestination.TRAIN
+    if(probes.unfinishedMeasured())return KotlinCandidateDestination.TRAIN
+    if(probes.confirmedMeasured())return KotlinCandidateDestination.TRAIN
+    return kotlinIdleColdLanding(
+        hasOwnedCustomCycle=probes.ownedCustomProgram(),
+        hasVerifiedCompletedHistory=probes.completedVerifiedHistory())
+}
+
 private val primaryDestinations=listOf(
     KotlinCandidateDestination.PROGRAM,KotlinCandidateDestination.TRAIN,
     KotlinCandidateDestination.HISTORY,KotlinCandidateDestination.PROGRESS,
@@ -179,69 +208,55 @@ internal fun NativeKotlinCandidateJourney(
     LaunchedEffect(host) {
         if(!landingChecked) {
             val initial=withContext(Dispatchers.IO) {
-                // An already-prepared Finish or correction blocks the entire
-                // shared History manifest, even when another workout is
-                // unfinished. Offer its explicit recovery first; routing to
-                // Train would strand the athlete behind HISTORY_NOT_READY.
-                // This read does not replay any pending operation.
+                // Read the canonical owner-fenced ledger exactly once.
+                // A prepared Finish/correction is a recovery priority, not
+                // a reason to issue or replay a new workout at launch.
                 val readHistory=runCatching {
                     host.reviewVerifiedKotlinHistory()
                 }.getOrNull()
                 val pendingHistory=(readHistory as?
                     NativeKotlinMixedHistoryReadResult.Rejected)
                     ?.reason==NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION
-                if(pendingHistory) KotlinCandidateDestination.HISTORY
-                else {
-                val unfinished=runCatching {
-                    host.reviewResumableCustomWorkouts()
-                }.getOrNull() as? NativeCustomResumeReview.Ready
-                if(unfinished?.workouts?.isNotEmpty()==true)
-                    KotlinCandidateDestination.TRAIN
-                else {
-                    // A cold launch must recognize an unfinished GENERATED
-                    // Kotlin journal too. Its current owner/approval is
-                    // independently rechecked; an approved but unissued or
-                    // already Finished workout is not a resume candidate.
-                    // Navigation alone never issues/records any set.
-                    val generatedId=runCatching {
-                        currentUnfinishedGeneratedWorkoutId(host)
-                    }.getOrNull()
-                    if(generatedId!=null)
-                        KotlinCandidateDestination.TRAIN
-                    else {
-                        // Cold startup must also see authentic measured
-                        // parents and confirmed-but-not-yet-issued consent.
-                        // These are READ-ONLY owner-verified inventories:
-                        // never issue a measured session merely to land in
-                        // Train, or mistake a finished History for resume.
-                        val measured=(runCatching {
+                kotlinColdLaunchDestination(KotlinColdLaunchProbes(
+                    pendingHistory={pendingHistory},
+                    unfinishedCustom={
+                        (runCatching {
+                            host.reviewResumableCustomWorkouts()
+                        }.getOrNull() as? NativeCustomResumeReview.Ready)
+                            ?.workouts?.isNotEmpty()==true
+                    },
+                    unfinishedGenerated={
+                        // Approval and unfinished journal must BOTH still
+                        // verify. A merely saved navigation ID is not proof.
+                        val generatedId=runCatching {
+                            currentUnfinishedGeneratedWorkoutId(host)
+                        }.getOrNull()
+                        generatedId!=null
+                    },
+                    unfinishedMeasured={
+                        (runCatching {
                             host.reviewUnfinishedMeasuredWorkouts()
                         }.getOrNull() as? NativeMeasuredInventoryResult.Ready)
                             ?.workouts?.isNotEmpty()==true
-                        val approvedMeasured=(runCatching {
+                    },
+                    confirmedMeasured={
+                        // Confirmed consent does not issue a session here.
+                        (runCatching {
                             host.reviewConfirmedUnissuedMeasuredWorkouts()
                         }.getOrNull() as? NativeMeasuredConsentInventoryResult.Ready)
                             ?.confirmed?.isNotEmpty()==true
-                        if(measured || approvedMeasured)
-                            KotlinCandidateDestination.TRAIN
-                        else {
-                            val programs=runCatching {
-                                host.listOwnedCustomCycleDrafts()
-                            }.getOrNull() as? NativeCustomDraftListResult.Ready
-                            // An athlete may have completed their sessions and
-                            // have no custom drafts. Only a completed,
-                            // independently verified owner-scoped timeline
-                            // warrants returning straight to History.
-                            val hasVerifiedCompletions=(readHistory as?
-                                NativeKotlinMixedHistoryReadResult.Review)
-                                ?.timeline?.completions?.isNotEmpty()==true
-                            kotlinIdleColdLanding(
-                                hasOwnedCustomCycle=programs?.drafts?.isNotEmpty()==true,
-                                hasVerifiedCompletedHistory=hasVerifiedCompletions)
-                        }
+                    },
+                    ownedCustomProgram={
+                        (runCatching {
+                            host.listOwnedCustomCycleDrafts()
+                        }.getOrNull() as? NativeCustomDraftListResult.Ready)
+                            ?.drafts?.isNotEmpty()==true
+                    },
+                    completedVerifiedHistory={
+                        (readHistory as? NativeKotlinMixedHistoryReadResult.Review)
+                            ?.timeline?.completions?.isNotEmpty()==true
                     }
-                }
-                }
+                ))
             }
             // Do not steal focus after a deliberate tab choice, or from a
             // restored workout currently open in the saved Android state.

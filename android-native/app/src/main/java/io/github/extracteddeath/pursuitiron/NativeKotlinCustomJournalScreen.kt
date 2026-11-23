@@ -1922,6 +1922,22 @@ private fun NativeKotlinCustomVisitEditor(
             requireNotNull(follower),prescription.load,activationPerformed,
             failedActual.copy(machineInstanceId=machineInstanceId),
             KotlinJournalSetOutcome.FAILED_ATTEMPT)
+    // A drop is a physical decrease even when the athlete records a failed
+    // attempt. Focus, saved corrections and the durable reducer all call the
+    // same engine rule; an issued lower target does not authorize a higher
+    // entered attempted weight.
+    val dropStage=part==CustomWorkoutVisitPart.FOLLOW_UP &&
+        follower?.kind==CustomAmplifierKind.DROP_SET
+    fun validDropEntry(observed:KotlinPerformedSet?,
+        outcome:KotlinJournalSetOutcome):Boolean =
+        observed!=null && AdvancedAmplifierProtocolDomain.validDropStageObservation(
+            requireNotNull(follower),prescription.load,activationPerformed,
+            precedingDropPerformed,observed.copy(machineInstanceId=machineInstanceId),
+            stageOrdinal,outcome)
+    val invalidDropCompletion=dropStage && actual!=null &&
+        !validDropEntry(actual,KotlinJournalSetOutcome.COMPLETED)
+    val invalidDropFailure=dropStage && failedActual!=null &&
+        !validDropEntry(failedActual,KotlinJournalSetOutcome.FAILED_ATTEMPT)
     val invalid=(entry as? KotlinSetEntryResult.Rejected)?.reason
     val entryFields:@Composable ()->Unit={
             Text("Edit the values to match your set. Blank RIR stays unreported.",
@@ -1989,8 +2005,16 @@ private fun NativeKotlinCustomVisitEditor(
                     "weight or end this extension; no weight was changed.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.error)
+            if(invalidDropCompletion || invalidDropFailure)
+                Text("A drop-set stage must attempt a lower weight than the " +
+                    "last completed stage on the same machine. The planned " +
+                    "target cannot prove an actual reduction. Correct the " +
+                    "entry or skip the optional stage; nothing was changed.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.error)
             val completeButton:@Composable (Modifier)->Unit={buttonModifier->
-                Button(enabled=!locked && actual!=null && !sameLoadInvalidCompletion,
+                Button(enabled=!locked && actual!=null &&
+                    !sameLoadInvalidCompletion && !invalidDropCompletion,
                     modifier=buttonModifier,
                     onClick={
                         onRecord(KotlinJournalSetOutcome.COMPLETED,
@@ -2005,7 +2029,8 @@ private fun NativeKotlinCustomVisitEditor(
             }
             val failedButton:@Composable (Modifier)->Unit={buttonModifier->
                 OutlinedButton(enabled=!locked && failedActual!=null &&
-                    !sameLoadInvalidFailure,modifier=buttonModifier,
+                    !sameLoadInvalidFailure && !invalidDropFailure,
+                    modifier=buttonModifier,
                     onClick={pendingExceptionalOutcome=KotlinJournalSetOutcome.FAILED_ATTEMPT}) {
                     Text("Failed")
                 }

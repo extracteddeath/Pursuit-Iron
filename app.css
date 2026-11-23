@@ -384,7 +384,7 @@ display:block!important;
 #root[data-pi-motion="expressive"] .wpb .wpb-exercise-tabs{
   border-radius:16px!important;
   padding:3px!important;
-  gap:3px!important;
+  gap:var(--pi-segment-gap,3px)!important;
   overflow:visible;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs>button,
@@ -3373,7 +3373,7 @@ display:block!important;
   margin-top:7px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs>button{
-  min-width:0!important;
+  min-width:var(--pi-segment-min,0)!important;
   line-height:1.15!important;
   text-align:center;
 }
@@ -10222,7 +10222,8 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-routine-remove{flex:none;width:48px;height:48px;margin-right:4px;border:0;border-radius:50%;background:none;color:var(--pi-color-on-muted)}
 #root .wpb .wpb-routine-hint{margin:var(--pi-space-2) 0 0;font-size:var(--pi-type-support);color:var(--pi-color-on-muted)}
 /* B1027 — design pass 7: one consistent, content-sized control vocabulary across screens. */
-@media (max-width:359px){#root .wpb .wpb-progress .wpb-premium-tabs{--pi-progress-tab-pad:3px}}
+#root .wpb .wpb-progress .wpb-premium-tabs{--pi-segment-min:48px}
+@media (max-width:359px){#root .wpb .wpb-progress .wpb-premium-tabs{--pi-progress-tab-pad:2px;--pi-segment-gap:1px}}
 #root[data-pi-motion] .wpb .wpb-home .wpb-action-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 #root[data-pi-motion] .wpb .wpb-home .wpb-action-grid>.wpb-action-tile:not(.wpb-action-tile-featured){--pi-home-tile-min:112px;--pi-control-min:112px;--pi-home-tile-pad:14px;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:10px;text-align:left}
 #root[data-pi-motion] .wpb .wpb-home .wpb-action-grid>.wpb-action-tile:last-child:nth-child(even){grid-column:1/-1}

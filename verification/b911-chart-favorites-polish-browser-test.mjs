@@ -146,7 +146,7 @@ try{
       if(width===320||width===1280)await page.screenshot({path:root+'/verification/m292-body-'+theme+'-'+width+'-'+(enlarged?'large':'normal')+'-phone.png'});
     }
     await page.click('[data-tab="profile"]');
-    await page.$$eval('.wpb-profile-toolbar button',bs=>bs.find(b=>b.textContent.includes('Strength standards')).click());
+    await page.$$eval('.wpb-profile-toolbar button',bs=>bs.find(b=>b.getAttribute('aria-label')==='Strength standards').click());
     await page.waitForSelector('.wpb-strength-standards');
     assert.equal(await page.$eval('.wpb-progress .wpb-premium-tabs button[aria-selected="true"]',b=>b.textContent),'Strength','Profile opens the direct Strength destination');
     await page.reload({waitUntil:'networkidle0'});await open();

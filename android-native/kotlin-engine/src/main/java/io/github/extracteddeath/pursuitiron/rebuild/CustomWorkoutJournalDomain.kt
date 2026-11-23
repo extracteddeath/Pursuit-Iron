@@ -244,7 +244,7 @@ object CustomWorkoutJournalDomain {
                                     key.part==CustomWorkoutVisitPart.FOLLOW_UP &&
                                     (receipt.operation as?
                                         CustomWorkoutJournalOperation.Record)
-                                        ?.outcome==KotlinJournalSetOutcome.COMPLETED
+                                        ?.outcome!=KotlinJournalSetOutcome.SKIPPED
                             } &&
                             !CustomWorkoutExecutionDomain.sameActualLoadAndStation(
                                 main.performed,operation.performed))
@@ -291,10 +291,12 @@ object CustomWorkoutJournalDomain {
                         // different physical station or load. This is a
                         // separate factual partial count, never a full-ROM
                         // regular working set or an invented load reduction.
-                        if(amp.kind==CustomAmplifierKind.LENGTHENED_PARTIALS &&
+                        if(AdvancedAmplifierProtocolDomain.requiresActivationLoad(
+                                amp.kind) &&
                             operation.outcome!=KotlinJournalSetOutcome.SKIPPED &&
-                            !CustomWorkoutExecutionDomain.sameActualLoadAndStation(
-                                main.performed,operation.performed))
+                            !AdvancedAmplifierProtocolDomain.validSameLoadFollowUp(
+                                amp,target.prescription.load,main.performed,
+                                operation.performed,operation.outcome))
                             return CustomWorkoutJournalDecision.Rejected(
                                 CustomWorkoutJournalRefusal.INVALID_ACTUAL)
                         // The independently reviewed lower stage target
@@ -389,7 +391,8 @@ object CustomWorkoutJournalDomain {
                         (set.prescription.type==DraftSetType.WARMUP &&
                             set.prescription.amplifier!=null) ||
                         (set.prescription.amplifier?.let{amp->
-                            amp.kind==CustomAmplifierKind.DROP_SET &&
+                            !AdvancedAmplifierProtocolDomain.validStagedFollowUps(amp) ||
+                                amp.kind==CustomAmplifierKind.DROP_SET &&
                                 !AdvancedAmplifierProtocolDomain.validDropSequence(
                                     set.prescription.load,amp)
                         }==true)

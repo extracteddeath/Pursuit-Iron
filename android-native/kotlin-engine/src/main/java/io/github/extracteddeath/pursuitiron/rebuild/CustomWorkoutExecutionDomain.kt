@@ -122,17 +122,14 @@ object CustomWorkoutExecutionDomain {
             visits+=key
             val recorded=recordFor(key) ?:break
             if(recorded.outcome!=KotlinJournalSetOutcome.COMPLETED)break
+            if(AdvancedAmplifierProtocolDomain.requiresActivationLoad(amp.kind) &&
+                !AdvancedAmplifierProtocolDomain.validSameLoadFollowUp(
+                    amp,set.prescription.load,main.performed,
+                    recorded.performed,recorded.outcome))break
             if(amp.followUpRounds>1 &&
-                (amp.kind==CustomAmplifierKind.MYO_REPS ||
-                 amp.kind==CustomAmplifierKind.REST_PAUSE ||
-                 amp.kind==CustomAmplifierKind.CLUSTER)) {
-                // These protocols require the EXACT activation load and
-                // station. Keep any unexpected observation as factual history
-                // but never unlock more same-load work from changed equipment.
-                val activation=main.performed ?:break
-                val observed=recorded.performed ?:break
-                if(!sameActualLoadAndStation(activation,observed))break
-                observedFollowUpReps+=observed.reps
+                amp.kind in setOf(CustomAmplifierKind.MYO_REPS,
+                    CustomAmplifierKind.REST_PAUSE,CustomAmplifierKind.CLUSTER)) {
+                observedFollowUpReps+=recorded.performed?.reps ?:break
                 val continueTraining=when(amp.kind) {
                     CustomAmplifierKind.MYO_REPS ->
                         AdvancedAmplifierProtocolDomain.nextMyoRepStep(

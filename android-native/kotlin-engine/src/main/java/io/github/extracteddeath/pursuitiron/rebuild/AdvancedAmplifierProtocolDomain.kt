@@ -295,14 +295,49 @@ object AdvancedAmplifierProtocolDomain {
             observed.signum()>0 && observed.compareTo(prior)<0
     }
 
-    /** All stage-specific target loads are immutable prescribed values.
-     * Actuals are separately recorded and may differ, but do not
-     * retroactively rewrite these targets or automatically promote stages. */
+    /**
+     * Only an explicit drop set owns an independently authored follow-up
+     * load. A same-load technique has ONE issued target and ONE performed
+     * activation anchor; it must never acquire a separate stage weight.
+     */
     fun followUpLoadForStage(amp:CustomSetAmplifier,
         main:DraftSetLoad,stage:Int):DraftSetLoad =
         if(amp.kind==CustomAmplifierKind.DROP_SET)
             dropStageLoad(amp,stage) ?:main
-        else amp.followUpLoad ?:main
+        else main
+
+    /** Applies equally to single-stage and staged versions of a technique. */
+    fun requiresActivationLoad(kind:CustomAmplifierKind):Boolean =
+        kind in setOf(CustomAmplifierKind.MYO_REPS,
+            CustomAmplifierKind.REST_PAUSE,CustomAmplifierKind.CLUSTER,
+            CustomAmplifierKind.LENGTHENED_PARTIALS)
+
+    /**
+     * Validation for every durable same-load follow-up and history correction.
+     * Comparing physical BigDecimal values rather than display strings avoids
+     * false mismatches (47.50 == 47.5). Station identity and unit are exact.
+     * A manual load change is a different actual technique, not a myo-rep.
+     * Do not silently recategorize it or rewrite the recorded weight.
+     */
+    fun validSameLoadFollowUp(
+        amp:CustomSetAmplifier,
+        issuedActivation:DraftSetLoad,
+        performedActivation:KotlinPerformedSet?,
+        followUp:KotlinPerformedSet?,
+        outcome:KotlinJournalSetOutcome
+    ):Boolean {
+        if(!requiresActivationLoad(amp.kind) ||
+            !validStagedFollowUps(amp) ||
+            outcome==KotlinJournalSetOutcome.SKIPPED)return false
+        val activation=performedActivation ?:return false
+        val observed=followUp ?:return false
+        return KotlinSetNumberAuthorityDomain.valid(
+                issuedActivation,KotlinJournalSetOutcome.COMPLETED,activation) &&
+            KotlinSetNumberAuthorityDomain.valid(
+                issuedActivation,outcome,observed) &&
+            CustomWorkoutExecutionDomain.sameActualLoadAndStation(
+                activation,observed)
+    }
 
     /**
      * The entry field for every new same-load myo / rest-pause / cluster /
@@ -310,9 +345,9 @@ object AdvancedAmplifierProtocolDomain {
      * that amplifier is attached: not the first working set, issued load,
      * other exercise, another physical machine or previous session.
      *
-     * Legacy single-stage techniques with their own explicitly authored
-     * follow-up load retain the historical target; never silently migrate
-     * an existing signed prescription. Drop-set weights are always authored.
+     * Same-load protocols cannot carry independent authored follow-up
+     * weights, even in their single-stage form. Only drop sets have distinct
+     * authored loads, which must be verified against completed actuals.
      * This is presentation input only, never a change to issued targets,
      * performed receipts or the next session's suggestion.
      */
@@ -329,7 +364,7 @@ object AdvancedAmplifierProtocolDomain {
         // An authored target is not evidence that it is a real *drop*
         // from the completed activation. This applies to legacy single-drop
         // and newer two-drop recipes identically, including Focus prefill.
-        if(stage !in 1..amp.followUpRounds)
+        if(stage !in 1..amp.followUpRounds || !validStagedFollowUps(amp))
             return AmplifierFollowUpEntryLoad.ActivationUnavailable
         if(amp.kind==CustomAmplifierKind.DROP_SET) {
             val target=eligiblePerformedDropTarget(
@@ -338,15 +373,8 @@ object AdvancedAmplifierProtocolDomain {
                 ?:return AmplifierFollowUpEntryLoad.ActivationUnavailable
             return AmplifierFollowUpEntryLoad.AuthoredStage(target)
         }
-        val issued=followUpLoadForStage(amp,issuedActivation,stage)
-        if(amp.followUpLoad!=null)
-            return AmplifierFollowUpEntryLoad.AuthoredStage(issued)
-        if(amp.kind !in setOf(
-                CustomAmplifierKind.MYO_REPS,
-                CustomAmplifierKind.REST_PAUSE,
-                CustomAmplifierKind.CLUSTER,
-                CustomAmplifierKind.LENGTHENED_PARTIALS))
-            return AmplifierFollowUpEntryLoad.AuthoredStage(issued)
+        if(!requiresActivationLoad(amp.kind))
+            return AmplifierFollowUpEntryLoad.ActivationUnavailable
         val actual=performedActivation
             ?:return AmplifierFollowUpEntryLoad.ActivationUnavailable
         if(actual.machineInstanceId!=selectedMachineId ||
@@ -366,7 +394,7 @@ object AdvancedAmplifierProtocolDomain {
                     amp.secondDropLoad!=null &&
                     amp.followUpReps in 6..15 &&
                     amp.followUpRestSeconds in 0..15)
-        else if(amp.secondDropLoad!=null)false
+        else if(amp.followUpLoad!=null || amp.secondDropLoad!=null)false
         else if(amp.kind==CustomAmplifierKind.LENGTHENED_PARTIALS)
             amp.followUpRounds==1 && amp.followUpReps in 1..8 &&
                 amp.followUpRestSeconds==0 && amp.followUpLoad==null

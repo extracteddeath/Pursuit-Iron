@@ -175,15 +175,16 @@ class KotlinWorkoutRestDomainTest {
             val reduced=if(kind==CustomAmplifierKind.DROP_SET)
                 DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
                     BigDecimal("15")) else null
-            var j=custom(CustomSetAmplifier(kind,4,20,
+            val shortRest=if(kind==CustomAmplifierKind.LENGTHENED_PARTIALS)0 else 20
+            var j=custom(CustomSetAmplifier(kind,4,shortRest,
                 followUpLoad=reduced))
             assertEquals(visit("a:s1"),CustomWorkoutJournalDomain.nextUnresolvedVisit(j))
             assertEquals(90,rest(j).manualRestSeconds)
             j=record(j)
             assertEquals(visit("a:s1",CustomWorkoutVisitPart.FOLLOW_UP),
                 CustomWorkoutJournalDomain.nextUnresolvedVisit(j))
-            assertEquals(20,rest(j).manualRestSeconds)
-            assertEquals(KotlinWorkoutRestCue("event-0",20,0),rest(j).automaticCue)
+            assertEquals(shortRest,rest(j).manualRestSeconds)
+            assertEquals(KotlinWorkoutRestCue("event-0",shortRest,0),rest(j).automaticCue)
             j=record(j,part=CustomWorkoutVisitPart.FOLLOW_UP)
             assertEquals(visit("b:s1"),CustomWorkoutJournalDomain.nextUnresolvedVisit(j))
             assertEquals(KotlinWorkoutRestCue("event-1",90,0),rest(j).automaticCue)

@@ -265,7 +265,8 @@ class AdvancedAmplifierProtocolDomainTest {
                 else -> listOf(1,4)
             }
             for(rounds in roundOptions) {
-                val amp=CustomSetAmplifier(kind,4,20,
+                val amp=CustomSetAmplifier(kind,4,
+                    if(kind==CustomAmplifierKind.LENGTHENED_PARTIALS)0 else 20,
                     followUpRounds=rounds)
                 val result=AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
                     amp,issued,logged,null,1)
@@ -336,7 +337,7 @@ class AdvancedAmplifierProtocolDomainTest {
                     LoadUnit.LB,12,1,"machine-A"),"machine-A",1))
     }
 
-    @Test fun explicitLegacyAndDropLoadsRemainAuthoredWhileBodyweightFollowsActual() {
+    @Test fun onlyDropsHaveIndependentAuthoredLoadWhileBodyweightFollowsActual() {
         val issued=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.SMITH_TOTAL,
             java.math.BigDecimal("185"))
         val logged=KotlinPerformedSet(java.math.BigDecimal("175"),
@@ -348,11 +349,16 @@ class AdvancedAmplifierProtocolDomainTest {
         assertEquals(AmplifierFollowUpEntryLoad.AuthoredStage(reduced),
             AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
                 drop,issued,logged,null,1))
-        val legacy=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,
+        val invalidMyo=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,
             4,20,followUpLoad=reduced,followUpRounds=1)
-        assertEquals(AmplifierFollowUpEntryLoad.AuthoredStage(reduced),
+        assertFalse(AdvancedAmplifierProtocolDomain.validStagedFollowUps(invalidMyo))
+        assertEquals(AmplifierFollowUpEntryLoad.ActivationUnavailable,
             AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
-                legacy,issued,logged,null,1))
+                invalidMyo,issued,logged,null,1))
+        // Even an old encoded one-stage same-load recipe cannot turn
+        // its independent number into a new legitimate myo weight.
+        assertEquals(issued,AdvancedAmplifierProtocolDomain.followUpLoadForStage(
+            invalidMyo,issued,1))
         val bodyweight=KotlinPerformedSet(null,null,15,1)
         assertEquals(AmplifierFollowUpEntryLoad.RecordedActivation(bodyweight),
             AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
@@ -506,6 +512,49 @@ class AdvancedAmplifierProtocolDomainTest {
                 amp,DraftSetLoad.ExplicitBodyweight,bodyweight,null,2))
         assertEquals(expected,AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
             amp,DraftSetLoad.ExplicitBodyweight,bodyweight.copy(reps=101),null,2))
+    }
+
+    @Test fun oneNumericalAndMachineAuthorityCoversEverySameLoadTechnique() {
+        val load=DraftSetLoad.Verified(LoadUnit.LB,
+            LoadBasis.MACHINE_STACK,java.math.BigDecimal("50"))
+        val actual=KotlinPerformedSet(java.math.BigDecimal("47.50"),
+            LoadUnit.LB,13,1,"station-A")
+        val kinds=listOf(CustomAmplifierKind.MYO_REPS,
+            CustomAmplifierKind.REST_PAUSE,CustomAmplifierKind.CLUSTER,
+            CustomAmplifierKind.LENGTHENED_PARTIALS)
+        for(kind in kinds) {
+            val amp=CustomSetAmplifier(kind,
+                if(kind==CustomAmplifierKind.CLUSTER)2 else 4,
+                if(kind==CustomAmplifierKind.LENGTHENED_PARTIALS)0 else 20,
+                followUpRounds=if(kind==CustomAmplifierKind.LENGTHENED_PARTIALS)1 else 3)
+            val same=KotlinPerformedSet(java.math.BigDecimal("47.5"),
+                LoadUnit.LB,4,null,"station-A")
+            assertTrue(kind.name,AdvancedAmplifierProtocolDomain.validSameLoadFollowUp(
+                amp,load,actual,same,KotlinJournalSetOutcome.COMPLETED))
+            for(wrong in listOf(
+                same.copy(load=java.math.BigDecimal("30")),
+                same.copy(load=java.math.BigDecimal("25")),
+                same.copy(load=java.math.BigDecimal("45")),
+                same.copy(machineInstanceId="station-B"),
+                same.copy(unit=LoadUnit.KG),
+                same.copy(load=null))) {
+                assertFalse("$kind must reject $wrong",
+                    AdvancedAmplifierProtocolDomain.validSameLoadFollowUp(
+                        amp,load,actual,wrong,KotlinJournalSetOutcome.COMPLETED))
+            }
+            assertTrue(AdvancedAmplifierProtocolDomain.validSameLoadFollowUp(
+                amp,load,actual,same.copy(reps=0),
+                KotlinJournalSetOutcome.FAILED_ATTEMPT))
+            assertFalse(AdvancedAmplifierProtocolDomain.validSameLoadFollowUp(
+                amp,load,actual,same.copy(reps=0,load=java.math.BigDecimal("25")),
+                KotlinJournalSetOutcome.FAILED_ATTEMPT))
+        }
+        // Different techniques cannot receive automatic same-load semantics.
+        val drop=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,6,10,
+            followUpLoad=DraftSetLoad.Verified(LoadUnit.LB,
+                LoadBasis.MACHINE_STACK,java.math.BigDecimal("35")))
+        assertFalse(AdvancedAmplifierProtocolDomain.validSameLoadFollowUp(
+            drop,load,actual,actual,KotlinJournalSetOutcome.COMPLETED))
     }
 
     @Test fun dropStagesRejectInvalidActualsAndMalformedAuthoredWeightPrecision() {

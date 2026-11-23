@@ -131,4 +131,52 @@ class NativeKotlinBasicProgressionPreviewShapeTest {
             emptyList(),CustomBasicHistoryResult.Rejected(
                 CustomBasicHistoryRefusal.HISTORY_SOURCE_CHANGED)))
     }
+
+
+    @Test fun whyThisWeightRendersOnlyAcceptedPhysicalFacts() {
+        val proposed=candidate()
+        val accepted=checkNotNull(proposed.approvedFutureLoadFacts[1])
+        assertEquals(
+            "+5 lb · verified next equipment setting 25 lb",
+            NativeKotlinBasicLoadProofText.describe(accepted))
+        assertTrue(NativeKotlinBasicProgressionPreviewShape.canRender(
+            listOf(slot()),reviewed(proposed)))
+
+        val invalid=proposed.copy(approvedFutureLoadFacts=
+            proposed.approvedFutureLoadFacts + (1 to
+                accepted.copy(physicalProof=accepted.physicalProof.copy(
+                    nextHigher=BigDecimal("30")))))
+        assertFalse(NativeKotlinBasicProgressionPreviewShape.canRender(
+            listOf(slot()),reviewed(invalid)))
+        assertFalse(NativeKotlinBasicProgressionPreviewShape.canRender(
+            listOf(slot()),reviewed(proposed.copy(
+                approvedFutureLoadFacts=emptyMap()))))
+    }
+
+    @Test fun counterweightReasonCommunicatesLessAssistanceNotLoadDecrease() {
+        val stock=VerifiedLoadStock.Stack(LoadUnit.LB,
+            LoadBasis.ASSISTANCE_COUNTERWEIGHT,
+            BigDecimal("5"),BigDecimal("5"),BigDecimal("200"))
+        val accepted=(KotlinFutureLoadNumberAuthorityDomain.review(
+            BigDecimal("70"),BigDecimal("65"),LoadUnit.LB,
+            LoadBasis.ASSISTANCE_COUNTERWEIGHT,stock,BigDecimal("5"),
+            KotlinFutureLoadSource.EARNED_ASSISTANCE_DECREMENT)
+            as KotlinFutureLoadReview.Accepted).fact
+        assertEquals(
+            "5 lb less assistance · verified setting 65 lb",
+            NativeKotlinBasicLoadProofText.describe(accepted))
+        val weighted=slot(load=DraftSetLoad.Verified(
+            LoadUnit.LB,LoadBasis.ASSISTANCE_COUNTERWEIGHT,
+            BigDecimal("70")))
+        val proposal=candidate().copy(
+            strategy=BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION,
+            proposedWorkingLoads=listOf(BigDecimal("65"),BigDecimal("65")),
+            increasedOrdinals=setOf(0,1),
+            dynamicSetDecisions=emptyList(),
+            sourceScope=candidate().sourceScope!!.copy(
+                basis=LoadBasis.ASSISTANCE_COUNTERWEIGHT),
+            approvedFutureLoadFacts=mapOf(0 to accepted,1 to accepted))
+        assertTrue(NativeKotlinBasicProgressionPreviewShape.canRender(
+            listOf(weighted),reviewed(proposal)))
+    }
 }

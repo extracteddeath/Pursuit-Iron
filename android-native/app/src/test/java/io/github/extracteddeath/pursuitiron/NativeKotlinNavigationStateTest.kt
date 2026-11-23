@@ -11,19 +11,19 @@ class NativeKotlinNavigationStateTest {
 
     @Test fun idleLaunchWithVerifiedCompletedHistoryDoesNotResetToOnboarding() {
         assertEquals(KotlinCandidateDestination.HISTORY,
-            kotlinIdleColdLanding(false,true))
+            kotlinIdleColdLanding(false){true})
         assertEquals(KotlinCandidateDestination.PROGRAM,
-            kotlinIdleColdLanding(true,true))
+            kotlinIdleColdLanding(true){true})
         assertEquals(KotlinCandidateDestination.PROGRAM,
-            kotlinIdleColdLanding(true,false))
+            kotlinIdleColdLanding(true){false})
         assertEquals(KotlinCandidateDestination.ONBOARD,
-            kotlinIdleColdLanding(false,false))
+            kotlinIdleColdLanding(false){false})
     }
 
     @Test fun anIdleColdLandingNeverPushesSetupBehindTheReturningAthlete() {
         for(hasProgram in listOf(false,true))
             for(hasHistory in listOf(false,true)) {
-                val selected=kotlinIdleColdLanding(hasProgram,hasHistory)
+                val selected=kotlinIdleColdLanding(hasProgram){hasHistory}
                 val navigation=NativeKotlinNavigationState.start(selected)
                 assertEquals(selected,navigation.current.destination)
                 assertFalse(navigation.canGoBack)

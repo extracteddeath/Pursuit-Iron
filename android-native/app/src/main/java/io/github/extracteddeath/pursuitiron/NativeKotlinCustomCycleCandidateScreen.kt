@@ -1224,7 +1224,42 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                     declaredNonSetSeconds=session.declaredNonSetSeconds)==session &&
                                 result.next.stamp.cycleRevision==draft.revision &&
                                 result.next.stamp.gymCatalogSourceRevision==state.sourceRevision
-                            }?.let{NativeKotlinBasicProgressionPreview(it)}
+                            }?.let { reviewed ->
+                                NativeKotlinBasicProgressionPreview(reviewed)
+                                // Only a genuine, current and exact-source
+                                // recommendation may open the week editor.
+                                // The editor still requires a separate
+                                // Use reviewed targets tap, full-cycle
+                                // comparison and renewed program consent.
+                                val matchingNext = currentSelection is
+                                    NativeCustomNextCycleSlot.Next &&
+                                    currentSelection.absoluteWeek==session.absoluteWeek &&
+                                    currentSelection.weekday==session.weekday
+                                val changedWorkingSets = if(matchingNext &&
+                                    NativeKotlinBasicProgressionPreviewShape.canRender(
+                                        reviewed.next.slots,reviewed.projection))
+                                    CustomBasicProgressionDraftDomain.forWeekEdit(
+                                        slot.slotId,slot.sets.map {it.prescription},
+                                        reviewed.projection)
+                                else null
+                                if(changedWorkingSets!=null) {
+                                    OutlinedButton(
+                                        enabled=!busy && signed &&
+                                            state.preparedWorkout==null &&
+                                            !calibrationLocked,
+                                        modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
+                                        onClick={
+                                            weekEditFromCoach=false
+                                            weekExerciseEditor=Triple(
+                                                session.absoluteWeek,
+                                                session.weekday,slot.slotId)
+                                        }
+                                    ) {Text("Review suggested week changes")}
+                                    Text("Opens the week editor without changing your program. Choose whether to copy the suggestion, compare the full cycle, then explicitly approve the new program.",
+                                        style=MaterialTheme.typography.bodySmall,
+                                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
                         }
                         OutlinedButton(enabled=!busy && session.stamp.cycleRevision==draft.revision,
                             onClick={

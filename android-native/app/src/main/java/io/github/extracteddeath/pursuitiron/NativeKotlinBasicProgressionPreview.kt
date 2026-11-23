@@ -139,7 +139,13 @@ internal fun NativeKotlinBasicProgressionPreview(
                         BasicProgressionDecision.EARNED_INCREMENT -> " · ${prescription.reps.maximum}-rep ceiling met"
                         else -> ""
                     }
-                    Text("Working set ${index+1} · $load$reps$reason",
+                    // The source-shaped candidate has already passed the
+                    // same future-week edit gate. Present exactly its accepted
+                    // physical evidence, never a newly calculated increment.
+                    val physical=candidate.approvedFutureLoadFacts[index]?.let {
+                        " · " + NativeKotlinBasicLoadProofText.describe(it)
+                    } ?: ""
+                    Text("Working set ${index+1} · $load$reps$reason$physical",
                         style=MaterialTheme.typography.bodyMedium)
                 }
             }

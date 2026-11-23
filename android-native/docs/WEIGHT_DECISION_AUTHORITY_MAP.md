@@ -177,7 +177,8 @@ cannot turn into a successful projection after reopening.
 This deliberately does **not** skip the athlete's explicit review, create
 an already-issued workout, amend historical sets, persist unverified UI
 labels, or silently change a saved cycle. The durable consent now binds a **v2 domain-separated fingerprint**
-to the exact reviewed machine-instance ID and normalized shared physical
+to the owner-resolved machine-instance ID (including gym-default A/B
+selection when the slot has no explicit machine tag) and normalized shared physical
 number proof (unit, load basis, source, accepted issued/candidate loads,
 authorized increase, verified next higher/lower settings, absolute step
 and physical decision reason), in addition to its previous cycle/history/

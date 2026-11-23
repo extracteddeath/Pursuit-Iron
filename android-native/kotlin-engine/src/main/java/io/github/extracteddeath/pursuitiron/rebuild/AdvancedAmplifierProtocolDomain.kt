@@ -345,9 +345,9 @@ object AdvancedAmplifierProtocolDomain {
      * that amplifier is attached: not the first working set, issued load,
      * other exercise, another physical machine or previous session.
      *
-     * Legacy single-stage techniques with their own explicitly authored
-     * follow-up load retain the historical target; never silently migrate
-     * an existing signed prescription. Drop-set weights are always authored.
+     * Same-load protocols cannot carry independent authored follow-up
+     * weights, even in their single-stage form. Only drop sets have distinct
+     * authored loads, which must be verified against completed actuals.
      * This is presentation input only, never a change to issued targets,
      * performed receipts or the next session's suggestion.
      */

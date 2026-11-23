@@ -89,14 +89,21 @@ sealed interface BasicProgressionResult {
     data class Candidate(
         val strategy: BasicProgressionStrategy,
         val proposedWorkingLoads: List<BigDecimal>,
-        /** Zero-based set ordinals whose *future* load may be raised. */
+        /** Zero-based set ordinals whose next approved load would change:
+         * external loads rise, assisted counterweights decrease. */
         val increasedOrdinals: Set<Int>,
         val decision: BasicProgressionDecision,
         val evidenceWorkoutId: String?,
         val proposedRepTargets: List<Int>? = null,
         val changedRepOrdinals: Set<Int> = emptySet(),
         /** Independent load decisions, in working-set order, for dynamic progression. */
-        val dynamicSetDecisions: List<BasicProgressionDecision> = emptyList()
+        val dynamicSetDecisions: List<BasicProgressionDecision> = emptyList(),
+        /** Authenticated scope that must be rechecked before owner acceptance. */
+        val sourceScope: BasicProgressionScope? = null,
+        /** EXACT accepted set-specific numeric facts from the shared future
+         * number authority. A hold, refusal, rep-only mode, or atomic
+         * rollback must not retain a speculative approval. */
+        val approvedFutureLoadFacts: Map<Int,KotlinFutureLoadFact> = emptyMap()
     ): BasicProgressionResult {
         val mayModifyLoggedSets: Boolean get() = false
         val mayModifyIssuedWorkout: Boolean get() = false
@@ -124,14 +131,17 @@ object BasicProgressionPolicyDomain {
         fun candidate(values: List<BigDecimal>, changed: Set<Int>,
             decision: BasicProgressionDecision, workoutId: String? = null,
             repTargets: List<Int>? = null, changedReps: Set<Int> = emptySet(),
-            dynamicDecisions: List<BasicProgressionDecision> = emptyList()) =
+            dynamicDecisions: List<BasicProgressionDecision> = emptyList(),
+            approved: Map<Int,KotlinFutureLoadFact> = emptyMap()) =
             BasicProgressionResult.Candidate(
                 request.strategy,
                 Collections.unmodifiableList(values.toList()),
                 Collections.unmodifiableSet(changed.toSet()),decision,workoutId,
                 repTargets?.let { Collections.unmodifiableList(it.toList()) },
                 Collections.unmodifiableSet(changedReps.toSet()),
-                Collections.unmodifiableList(dynamicDecisions.toList()))
+                Collections.unmodifiableList(dynamicDecisions.toList()),
+                request.nextScope,
+                Collections.unmodifiableMap(approved.toSortedMap()))
 
         // Basic logging deliberately neither requires a history or a gym
         // inventory, nor invokes progression or adaptive coaching.
@@ -255,6 +265,7 @@ object BasicProgressionPolicyDomain {
         // Dynamic works on each stable set ordinal independently.
         val proposals = loads.toMutableList()
         val changed = linkedSetOf<Int>()
+        val approved = linkedMapOf<Int,KotlinFutureLoadFact>()
         var blockedByLimit = false
         var atMaximum = false
         for (ordinal in eligible) {
@@ -290,6 +301,7 @@ object BasicProgressionPolicyDomain {
             dynamicDecisions?.set(ordinal, BasicProgressionDecision.EARNED_INCREMENT)
             proposals[ordinal] = accepted.fact.proposedLoad
             changed.add(ordinal)
+            approved[ordinal] = accepted.fact
         }
         if (uniformStrategy && changed.size != facts.size)
             return candidate(loads,emptySet(),
@@ -309,6 +321,6 @@ object BasicProgressionPolicyDomain {
             ladderReset, if(ladderReset==null)emptySet()
                 else ladderReset.indices.filter{
                     ladderReset[it]!=request.issuedRepTargets!![it]
-                }.toSet(), dynamicDecisions.orEmpty())
+                }.toSet(), dynamicDecisions.orEmpty(), approved)
     }
 }

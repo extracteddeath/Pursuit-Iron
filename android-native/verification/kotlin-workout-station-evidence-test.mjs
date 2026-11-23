@@ -36,6 +36,12 @@ assert.match(generated,/issuedGymId=issuedGymId,machineRoster=machineRoster/);
 assert.match(custom,/issuedGymId=current\.originalSnapshot\.stamp\.gymId/);
 assert.match(labels,/NativeKotlinMachineStationLabels\.label\(/);
 assert.match(labels,/fun nativeSavedSetCaption\(/);
+assert.match(labels,/val observed=kotlinActualLoadLabel\(actual,issuedLoad\)/);
+assert.match(labels,/"Load not reported" -> "load not reported"/);
+assert.match(generated,/target\.load,target\.exerciseId,issuedGymId,machineRoster/);
+assert.match(custom,/target,exerciseId,issuedGymId,machineRoster/);
+assert.doesNotMatch(labels,/else "bodyweight"/);
+
 assert.match(labels,/workoutPhysicalStationName\(/);
 assert.match(labels,/parts\+=.*actual\.reps.*reps/);
 assert.match(labels,/it\.gymId==gymId && it\.exerciseId==exerciseId/);

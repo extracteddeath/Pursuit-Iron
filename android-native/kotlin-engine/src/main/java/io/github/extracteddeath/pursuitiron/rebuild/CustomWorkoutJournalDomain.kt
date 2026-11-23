@@ -244,7 +244,7 @@ object CustomWorkoutJournalDomain {
                                     key.part==CustomWorkoutVisitPart.FOLLOW_UP &&
                                     (receipt.operation as?
                                         CustomWorkoutJournalOperation.Record)
-                                        ?.outcome==KotlinJournalSetOutcome.COMPLETED
+                                        ?.outcome!=KotlinJournalSetOutcome.SKIPPED
                             } &&
                             !CustomWorkoutExecutionDomain.sameActualLoadAndStation(
                                 main.performed,operation.performed))

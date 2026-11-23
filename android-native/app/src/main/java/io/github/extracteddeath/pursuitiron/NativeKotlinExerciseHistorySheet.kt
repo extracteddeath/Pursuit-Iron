@@ -118,7 +118,12 @@ internal fun NativeKotlinExerciseHistorySheet(
     var historyView by rememberSaveable(exerciseId){mutableStateOf(ExerciseHistoryView.WORKING)}
     var selectedMachineId by rememberSaveable(exerciseId){mutableStateOf("")}
     var selectedGymId by rememberSaveable(exerciseId){mutableStateOf("")}
-    var showAllMachines by rememberSaveable(exerciseId){mutableStateOf(false)}
+    var selectedMachineAthleteId by rememberSaveable(exerciseId){
+        mutableStateOf<String?>(null)
+    }
+    // Opening full exercise History must actually show all saved visits.
+    // A single station is visible only after the athlete explicitly filters.
+    var showAllMachines by rememberSaveable(exerciseId){mutableStateOf(true)}
     var machineRoster by remember(host,exerciseId) {
         mutableStateOf<NativeMachineRosterSnapshot?>(null)
     }
@@ -269,9 +274,15 @@ internal fun NativeKotlinExerciseHistorySheet(
                             KotlinMachineAlternativesDomain.normalizeMachineId(
                                 row.actual?.machineInstanceId))
                     val machineKeys=rows.map(::historyMachine).distinct()
-                    val activeMachine=machineKeys.find{
-                        it.gymId==selectedGymId && it.machineId==selectedMachineId
-                    } ?:machineKeys.firstOrNull()
+                    val activeStation=NativeKotlinHistoryFocusPolicy.admitStation(
+                        showAllMachines,selectedMachineAthleteId,verified.athleteId,
+                        selectedGymId,selectedMachineId,
+                        machineKeys.map{it.gymId to it.machineId})
+                    val activeMachine=activeStation?.let{chosen->
+                        machineKeys.singleOrNull{
+                            it.gymId==chosen.first && it.machineId==chosen.second
+                        }
+                    }
                     // A saved name is only a label. The exact gym + machine
                     // key still controls filtering and history isolation.
                     val displayStations=machineKeys.map{
@@ -311,14 +322,15 @@ internal fun NativeKotlinExerciseHistorySheet(
                                 color=MaterialTheme.colorScheme.onSurfaceVariant)
                             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                                 horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-                                FilterChip(selected=showAllMachines,
+                                FilterChip(selected=activeMachine==null,
                                     onClick={showAllMachines=true},
                                     label={Text("All machines · labeled")})
                                 machineKeys.forEach {key->
-                                    FilterChip(selected=!showAllMachines && activeMachine==key,
+                                    FilterChip(selected=activeMachine==key,
                                         onClick={
                                             selectedGymId=key.gymId
                                             selectedMachineId=key.machineId
+                                            selectedMachineAthleteId=verified.athleteId
                                             showAllMachines=false
                                         },
                                         label={Text(machineLabel(key))})
@@ -334,7 +346,7 @@ internal fun NativeKotlinExerciseHistorySheet(
                                 it.outcome!=KotlinJournalSetOutcome.COMPLETED
                             }
                         }
-                        val visible=if(machineKeys.size>1 && !showAllMachines)
+                        val visible=if(machineKeys.size>1 && activeMachine!=null)
                             shown.filter{historyMachine(it)==activeMachine}
                         else shown
                         val sessions=visible.groupBy { it.sessionOrder }

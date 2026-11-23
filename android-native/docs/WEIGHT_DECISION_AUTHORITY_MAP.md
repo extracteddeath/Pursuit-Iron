@@ -118,6 +118,39 @@ number after the accepted review. The next integration pass must carry it
 through authenticated owner acceptance, saved proposed revisions and both
 live workload presenters with cold-reopen tests.
 
+## November 23 native preview and week-edit handoff
+
+The signed custom next-week **basic progression preview** and its
+`CustomBasicProgressionDraftDomain.reviewedSets` / `forWeekEdit` source
+adapter now consume the same per-set facts that the evaluator already
+accepted. A load-changing row cannot appear in the preview or become a
+week-edit draft without:
+
+- An **exactly matching** `approvedFutureLoadFacts` set by working ordinal;
+  unchanged and rep-only rows have no speculative load approval.
+- A valid reviewed `sourceScope` that matches the active block, training-day
+  identity, selected machine instance, load unit and physical basis.
+- Equal issued and proposed numbers in the approved fact and its physical
+  proof, the true absolute difference within the verified increment limit,
+  and the correct verified adjacent setting for ordinary load increases
+  versus **lower assistance counterweights**.
+- No attempt to use the independently reviewed *return to demonstrated load*
+  as an earned basic double-progression increase.
+
+The Compose read-only preview now displays the engine's accepted change
+magnitude and verified next equipment setting per changed set, rather than
+inventing an increment from the UI's rep ceiling or exercise labels.
+Tests cover real verified 20 → 25 per-hand loads, assistance 70 → 65,
+zero-added landmine 0 → 25, and forged missing/mismatched proof, machine,
+weekday, source and held-set approvals.
+
+**Boundary:** this is an authenticated-source *shape check and projection*,
+not source authentication or consent. The native owner still must reopen
+current history, gym and program revision and perform the full cycle/week
+audit in its existing transaction before accepting or issuing any changed
+workout. A cryptographically durable explanation record and future
+accepted-review cold-replay proof are still open.
+
 ## 5. Contract tests and continuing acceptance matrix
 
 - `EquipmentLoadDomainTest`: valid and invalid decimal envelope agreed with `KotlinSetNumberAuthorityDomain`, plus malformed selector increment refusal.

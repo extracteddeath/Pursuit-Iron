@@ -114,8 +114,9 @@ assert.ok(coldHistory.includes('host.reviewVerifiedKotlinHistory()') &&
     coldHistory.indexOf('host.listOwnedCustomCycleDrafts()') &&
   !coldHistory.includes('host.recoverPendingNativeHistory()'),
   'Pending native Finish must be reachable on launch after resume priority, with no implicit recovery');
-const recovery=host.slice(host.indexOf('fun recoverPendingNativeHistory():'),
-  host.indexOf('fun reviewVerifiedKotlinHistory():'));
+const recoveryHost=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt');
+const recovery=recoveryHost.slice(recoveryHost.indexOf('fun recoverPendingNativeHistory():'),
+  recoveryHost.indexOf('fun reviewVerifiedKotlinHistory():'));
 for(const [intent,coordinator] of [
   ['MeasuredFinish','measuredHistoryTransactions'],
   ['CustomFinish','customHistoryTransactions'],

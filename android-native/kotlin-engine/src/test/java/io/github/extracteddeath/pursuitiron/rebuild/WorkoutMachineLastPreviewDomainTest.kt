@@ -32,6 +32,28 @@ class WorkoutMachineLastPreviewDomainTest {
             WorkoutMachineLastPreviewDomain.review(history,listOf(first),"C"))
     }
 
+    @Test fun stationLastCarriesTheActualSavedPhysicalLoadConvention() {
+        val assisted=WorkoutLastSetReference(
+            "assisted-visit",5,KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("70.00"),LoadUnit.LB,10,1,
+                machineInstanceId="assisted-A"),LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+        val unknownBasis=assisted.copy(
+            workoutId="unknown-basis",loadBasis=null)
+        val confirmed=WorkoutMachineLastPreviewDomain.review(
+            ready(WorkoutMachineReferenceKey(first,"assisted-A") to assisted),
+            listOf(first),"assisted-A") as WorkoutMachineLastPreview.Completed
+        assertEquals(BigDecimal("70.00"),confirmed.load)
+        assertEquals(LoadBasis.ASSISTANCE_COUNTERWEIGHT,confirmed.loadBasis)
+        assertEquals(1,confirmed.actualRir)
+        val unlabelled=WorkoutMachineLastPreviewDomain.review(
+            ready(WorkoutMachineReferenceKey(first,"assisted-A") to unknownBasis),
+            listOf(first),"assisted-A") as WorkoutMachineLastPreview.Completed
+        assertNull(unlabelled.loadBasis)
+        assertEquals(BigDecimal("70.00"),unlabelled.load)
+        // The exact physical station and unchanged observation are retained.
+        assertEquals(5L,unlabelled.completionOrder)
+    }
+
     @Test fun latestFailureNeverResurrectsEarlierCompletedWork() {
         val history=ready(
             WorkoutMachineReferenceKey(first,"A") to completed("A",200,8,1),

@@ -54,6 +54,37 @@ class CustomWorkoutJournalDomainTest {
         return (result as CustomWorkoutJournalDecision.Proposed).draft
     }
 
+    @Test fun invalidIssuedCustomTargetCannotBecomeACompletedOrFailedFact() {
+        val malformed=makeSet(load=DraftSetLoad.Verified(
+            LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,BigDecimal("-5")),
+            amplifier=null)
+        val original=initial(malformed)
+        val attempted=KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,8,null)
+        val completed=record("invalid-weight-completed",0,
+            outcome=KotlinJournalSetOutcome.COMPLETED,performed=attempted)
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.INVALID_ACTUAL),
+            CustomWorkoutJournalDomain.reduce(original,completed))
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.INVALID_ACTUAL),
+            CustomWorkoutJournalDomain.reduce(original,completed.copy(
+                eventId="invalid-weight-failed",
+                outcome=KotlinJournalSetOutcome.FAILED_ATTEMPT,
+                performed=attempted.copy(reps=0))))
+        val skipped=accept(original,record("skip-invalid",0,
+            outcome=KotlinJournalSetOutcome.SKIPPED,performed=null))
+        assertTrue(skipped.canProposeFinish)
+        assertEquals(0L,original.revision)
+        assertEquals(1L,skipped.revision)
+        assertEquals(original.snapshot,skipped.snapshot)
+        var replay=CustomWorkoutJournalDomain.begin(original.workoutId,
+            original.originalSnapshot,original.preparedConsentFingerprint)
+        for(receipt in skipped.receipts)
+            replay=(CustomWorkoutJournalDomain.reduce(replay,receipt.operation)
+                as CustomWorkoutJournalDecision.Proposed).draft
+        assertEquals(skipped,replay)
+    }
+
     @Test fun boundedSessionNoteIsRevisionedClearableAndNeverCompletesSets() {
         val start=initial(makeSet(amplifier=null))
         val add=CustomWorkoutJournalOperation.SessionNote("note-1",0,"Breathing felt good")

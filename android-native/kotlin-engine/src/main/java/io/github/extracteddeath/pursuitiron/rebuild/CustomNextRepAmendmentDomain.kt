@@ -21,7 +21,7 @@ data class CustomNextRepAmendment(
 
 enum class CustomNextRepAmendmentRefusal {
     NOT_AN_ELIGIBLE_REP_REVIEW, INVALID_TARGET_SLOT, SUGGESTIONS_CHANGED,
-    NO_ACTUAL_REP_INCREASE
+    NO_ACTUAL_REP_INCREASE, DIFFERENT_PHYSICAL_MACHINE
 }
 sealed interface CustomNextRepAmendmentResult {
     data class Proposed(val amendment:CustomNextRepAmendment):
@@ -43,6 +43,11 @@ object CustomNextRepAmendmentDomain {
             return fail(CustomNextRepAmendmentRefusal.NOT_AN_ELIGIBLE_REP_REVIEW)
         val slot=original.slots.singleOrNull{it.slotId==slotId}
             ?:return fail(CustomNextRepAmendmentRefusal.INVALID_TARGET_SLOT)
+        // A completed Machine A session cannot issue a rep preview for a
+        // different physical Machine B with coincidentally identical set keys.
+        // Only the reviewed machine can receive this future, unissued proposal.
+        if(reviewed.physicalMachineInstanceId!=slot.machineInstanceId)
+            return fail(CustomNextRepAmendmentRefusal.DIFFERENT_PHYSICAL_MACHINE)
         val working=slot.sets.filter{it.prescription.type==DraftSetType.WORKING}
         if(working.isEmpty() || working.size!=reviewed.nextSetSuggestions.size ||
             reviewed.nextSetSuggestions.map{it.setKey}!=working.map{it.setKey} ||

@@ -2,6 +2,12 @@
 import { Accessibility, Activity, AlertTriangle, Award, Ban, BarChart3, Brain, Calendar, Check, CheckCircle2, Clock, Dumbbell, Flame, GripVertical, HardDrive, HelpCircle, Home as HomeIcon, Info, Layers, Library, Maximize2, Medal, Milestone, Minus, Palette, Play, Plus, PlusCircle, RefreshCw, Repeat, Save, Search, Settings2, Share2, Shield, Smartphone, Sparkles, Target, Timer, Trash2, TrendingUp, Trophy, Undo2, Wand2, Zap } from 'lucide-react';
 
 export const CHANGELOG = [
+    { version: "4.0.0", build: "1027", items: [
+        "Buttons filled with your theme colour (Finish workout, Add exercise, the warm-up button and dialog confirms) now use readable dark-on-accent text.",
+        "Progress tabs and other segmented controls no longer split words across lines.",
+        "Home has a bolder Up next card, even shortcut tiles, and saved routines live in Freestyle instead of the program list.",
+        "Library exercises are colour-coded by push, pull, legs and core."
+    ] },
     { version: "4.0.0", build: "1026", items: [
         "Home opens with your week: Monday to Sunday at a glance, scheduled days marked, and a weekly streak.",
         "The Last 7 days card compares sessions with your plan and shows time trained, your best set and your most-trained muscle. Share recap sends it to a friend.",

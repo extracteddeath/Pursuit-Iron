@@ -59,7 +59,7 @@ export function HomeWeekStrip({ history, program, weekLabel }) {
         ? 'Log a workout this week to start a streak'
         : strip.atRisk
             ? `${strip.streak}-week streak · train this week to keep it`
-            : `${strip.streak}-week streak · one workout a week keeps it`;
+            : `${strip.streak}-week streak · one a week keeps it`;
     return _jsxs(UiCard, { className: 'wpb-home-strip', 'aria-label': 'This week', children: [
         weekLabel && _jsx('div', { className: 'wpb-home-strip-title', children: weekLabel }),
         _jsx('ol', { className: 'wpb-home-strip-days', children: strip.days.map(d => _jsxs('li', {
@@ -98,7 +98,7 @@ export function HomeRecapCard({ history, unit, program }) {
     const range = start.getMonth() === end.getMonth() ? `${fmt(start, true)}–${fmt(end, false)}` : `${fmt(start, true)} – ${fmt(end, true)}`;
     const full = planned > 0 && r.count >= planned;
     const headline = planned > 0
-        ? `${r.count} of ${planned} ${planned === 1 ? 'session' : 'sessions'}${full ? ' — a full week' : ''}`
+        ? `${r.count} of ${planned} ${planned === 1 ? 'session' : 'sessions'}`
         : `${r.count} ${r.count === 1 ? 'session' : 'sessions'}`;
     const delta = (cur, prev) => prev ? Math.round((cur - prev) / prev * 100) : null;
     const stats = [
@@ -124,7 +124,7 @@ export function HomeRecapCard({ history, unit, program }) {
             _jsx(BarChart3, { size: 16, 'aria-hidden': true }),
             _jsx('span', { className: 'wpb-home-recap-kicker', children: `Last 7 days · ${range}` })
         ] }),
-        _jsx('h3', { className: 'wpb-home-recap-title', children: headline }),
+        _jsxs('h3', { className: 'wpb-home-recap-title', children: [headline, full && _jsx('span', { className: 'wpb-home-recap-badge', children: 'Full week' })] }),
         meta && _jsx('p', { className: 'wpb-home-recap-meta', children: meta }),
         _jsx('dl', { className: 'wpb-home-recap-stats', children: stats.map(s => _jsxs('div', { className: 'wpb-home-recap-stat', children: [
             _jsx('dt', { children: s.k }),

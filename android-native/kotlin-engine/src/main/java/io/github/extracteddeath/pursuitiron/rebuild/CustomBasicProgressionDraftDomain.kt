@@ -78,6 +78,7 @@ object CustomBasicProgressionDraftDomain {
                 }
                 if (changedLoads != candidate.increasedOrdinals ||
                     changedReps != candidate.changedRepOrdinals ||
+                    !validPhysicalProof(projection, working, changedLoads) ||
                     !validWeightedClaim(working, candidate, changedLoads, changedReps)) null
                 else edits
             }
@@ -113,6 +114,72 @@ object CustomBasicProgressionDraftDomain {
             }
             is CustomBasicHistoryResult.Rejected -> null
         }
+    }
+
+    /**
+     * Inspect the EXACT physical facts emitted by BasicProgressionPolicyDomain.
+     * Do not call an inventory inspector a second time: its stock could have
+     * changed between recommendation and review. An unchanged/rep-only row
+     * has no approved load-change fact. A changed row must have exactly one
+     * authenticated-scope physical approval from the shared future-number
+     * gate. Owner-fenced acceptance must still independently replay history,
+     * inventory, consent and source revision before changing any program.
+     */
+    private fun validPhysicalProof(
+        projection: CustomBasicHistoryResult.Reviewed,
+        working: List<CustomAuthoredSet>,
+        changedLoads: Set<Int>
+    ): Boolean {
+        val candidate=projection.candidate
+        val facts=candidate.approvedFutureLoadFacts
+        if(facts.keys!=changedLoads)return false
+        if(changedLoads.isEmpty())return true
+        val scope=candidate.sourceScope ?:return false
+        if(!scope.valid() || scope.blockId!=projection.blockId ||
+            scope.trainingDayId!=projection.blockId+":d"+projection.weekday ||
+            scope.machineInstanceId!=projection.machineInstanceId)return false
+        for(index in changedLoads) {
+            val approved=facts[index] ?:return false
+            val original=working[index].load as? DraftSetLoad.Verified ?:return false
+            val proposed=candidate.proposedWorkingLoads[index]
+            val evidence=approved.physicalProof
+            if(scope.unit!=original.unit || scope.basis!=original.basis ||
+                approved.unit!=original.unit || approved.basis!=original.basis ||
+                approved.issuedLoad.compareTo(original.value)!=0 ||
+                approved.proposedLoad.compareTo(proposed)!=0 ||
+                evidence.verifiedIssued.compareTo(approved.issuedLoad)!=0 ||
+                evidence.verifiedCandidate.compareTo(approved.proposedLoad)!=0 ||
+                evidence.absoluteChange.compareTo(
+                    proposed.subtract(original.value).abs())!=0 ||
+                approved.authorizedIncrease<=java.math.BigDecimal.ZERO ||
+                evidence.absoluteChange>approved.authorizedIncrease ||
+                !evidence.requiresIndependentPerformanceEvidence ||
+                evidence.requiresPreviouslyDemonstratedLoad ||
+                evidence.mayIssueWorkout || evidence.maySaveProgram ||
+                approved.mayChangeIssuedWorkout || approved.maySaveFutureProgram ||
+                approved.mayModifyHistory)return false
+            when(approved.source) {
+                KotlinFutureLoadSource.EARNED_NEXT_INCREMENT -> {
+                    if(original.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT ||
+                        evidence.reason!=
+                            KotlinFutureLoadPhysicalReason.EARNED_ADJACENT_HIGHER_SETTING ||
+                        proposed<=original.value ||
+                        evidence.nextHigher?.compareTo(proposed)!=0)return false
+                }
+                KotlinFutureLoadSource.EARNED_ASSISTANCE_DECREMENT -> {
+                    if(original.basis!=LoadBasis.ASSISTANCE_COUNTERWEIGHT ||
+                        evidence.reason!=
+                            KotlinFutureLoadPhysicalReason.EARNED_ADJACENT_LOWER_ASSISTANCE ||
+                        proposed>=original.value ||
+                        proposed.signum()==0 ||
+                        evidence.nextLower?.compareTo(proposed)!=0)return false
+                }
+                // A separately demonstrated lower return is COACH review,
+                // never a basic progression award.
+                KotlinFutureLoadSource.RETURN_TO_DEMONSTRATED_LOAD -> return false
+            }
+        }
+        return true
     }
 
     /**

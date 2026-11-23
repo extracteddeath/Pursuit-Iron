@@ -194,6 +194,15 @@ class NativeKotlinCustomFutureWeekLoadOptionReview(
                     NativeFutureWeekLoadRefusal.HISTORY_UNVERIFIED)
             val advice=verified.review
             val physical=verified.verifiedStock
+            // A null authored machine tag can still resolve to the gym's
+            // physical default A/B variant. Bind THAT actual owner-selected
+            // instance to consent; otherwise changing the default could
+            // reuse the same 200 -> 205 fingerprint on a different station.
+            if(verified.selectedSlotId!=slotId ||
+                (slot.machineInstanceId!=null &&
+                    verified.resolvedMachineInstanceId!=slot.machineInstanceId))
+                return@withOwnerTransaction no(
+                    NativeFutureWeekLoadRefusal.EQUIPMENT_UNVERIFIED)
             if(advice.status!=CustomNextWorkoutCoachingStatus.READY_FOR_LOAD_REVIEW ||
                 advice.loadReviewCandidate==null ||
                 advice.observedStraightSetLoad==null ||
@@ -337,7 +346,7 @@ class NativeKotlinCustomFutureWeekLoadOptionReview(
                 maximumAuthorizedIncrease=maxAuthorizedIncrease,
                 evidenceWorkoutIds=advice.comparedWorkoutIds,
                 numberFact=numberFact,
-                machineInstanceId=slot.machineInstanceId)
+                machineInstanceId=verified.resolvedMachineInstanceId)
             NativeFutureWeekLoadOptionResult.Ready(
                 option,compared,ledger.manifestRevision,original.revision,
                 source.revision,currentSettings.revision,permission.revision,

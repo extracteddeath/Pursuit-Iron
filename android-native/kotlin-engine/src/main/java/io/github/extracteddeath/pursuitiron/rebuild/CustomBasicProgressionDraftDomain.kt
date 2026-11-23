@@ -35,6 +35,17 @@ object CustomBasicProgressionDraftDomain {
             is CustomBasicHistoryResult.Reviewed -> {
                 if (projection.slotId != slotId) return null
                 val candidate = projection.candidate
+                // The optional future-week edit must carry the same last
+                // verified workout as the sole progression evaluator. Manual
+                // logging has no historic evidence and must not impersonate it.
+                if (candidate.strategy == BasicProgressionStrategy.MANUAL_LOGGING) {
+                    if (projection.historyWorkoutId != null ||
+                        projection.completionOrder != null ||
+                        candidate.evidenceWorkoutId != null) return null
+                } else if (projection.historyWorkoutId.isNullOrBlank() ||
+                    projection.completionOrder?.let { it > 0 } != true ||
+                    candidate.evidenceWorkoutId != projection.historyWorkoutId)
+                    return null
                 if (candidate.proposedWorkingLoads.size != working.size ||
                     candidate.proposedRepTargets?.size?.let { it != working.size } == true ||
                     working.any { it.load !is DraftSetLoad.Verified ||
@@ -73,6 +84,10 @@ object CustomBasicProgressionDraftDomain {
             is CustomBasicHistoryResult.UnloadedReviewed -> {
                 if (projection.slotId != slotId) return null
                 val candidate = projection.candidate
+                if (projection.historyWorkoutId.isBlank() ||
+                    projection.completionOrder <= 0 ||
+                    candidate.evidenceWorkoutId != projection.historyWorkoutId)
+                    return null
                 if (candidate.proposedExactReps.size != working.size ||
                     working.any { it.load != DraftSetLoad.ExplicitBodyweight ||
                         it.exactRepTarget == null || it.amplifier != null })
@@ -129,15 +144,20 @@ object CustomBasicProgressionDraftDomain {
             }) return false
         if (changedLoads.isNotEmpty() &&
             candidate.decision != BasicProgressionDecision.EARNED_INCREMENT) return false
-        if (candidate.dynamicSetDecisions.isNotEmpty() &&
-            (strategy != BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION ||
-                candidate.dynamicSetDecisions.size != working.size ||
+        // The shared evaluator ALWAYS emits one independent decision for
+        // every dynamic set, including unchanged sets. Missing vectors and
+        // stray vectors on other methods must not become an editable week.
+        if (strategy == BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION) {
+            if (candidate.dynamicSetDecisions.size != working.size ||
                 candidate.dynamicSetDecisions.withIndex().any { (index, decision) ->
                     decision !in setOf(BasicProgressionDecision.EARNED_INCREMENT,
-                        BasicProgressionDecision.BUILD_REPS, BasicProgressionDecision.MAXIMUM_LOAD_REACHED,
+                        BasicProgressionDecision.BUILD_REPS,
+                        BasicProgressionDecision.MAXIMUM_LOAD_REACHED,
                         BasicProgressionDecision.AUTHORIZED_INCREMENT_TOO_SMALL) ||
-                        (index in changedLoads) != (decision == BasicProgressionDecision.EARNED_INCREMENT)
-                })) return false
+                        (index in changedLoads) !=
+                            (decision == BasicProgressionDecision.EARNED_INCREMENT)
+                }) return false
+        } else if (candidate.dynamicSetDecisions.isNotEmpty()) return false
 
         // Uniform strategies cannot turn an atomic earned progression into
         // a single changed working row; the real evaluator always advances

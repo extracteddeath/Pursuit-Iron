@@ -1182,6 +1182,10 @@ internal fun NativeKotlinCustomJournalScreen(
                                     color=MaterialTheme.colorScheme.primary)
                                 Text(advice.coaching.message,
                                     style=MaterialTheme.typography.bodyMedium)
+                                kotlinOptionalLiveSetAdviceLabel(
+                                    advice.coaching,set.prescription.load)?.let{label->
+                                    Text(label,style=MaterialTheme.typography.labelMedium)
+                                }
                                 Text("Choose any change in the set fields. Planned targets and your entries stay unchanged.",
                                     style=MaterialTheme.typography.bodySmall,
                                     color=MaterialTheme.colorScheme.onSurfaceVariant)

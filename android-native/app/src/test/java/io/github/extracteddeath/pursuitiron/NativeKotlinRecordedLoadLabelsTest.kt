@@ -71,4 +71,46 @@ class NativeKotlinRecordedLoadLabelsTest {
         assertEquals(BigDecimal("130.00"),observed.load)
         assertEquals(BigDecimal("135"),issued.value)
     }
+
+    private fun optionalReview(proposal:String?,issued:String="215")=
+        InWorkoutReviewResult(
+            if(proposal==null) InWorkoutDirection.REVIEW_MORE_RECOVERY
+            else InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD,
+            proposal?.let(::BigDecimal),CoachConfidence.LIMITED,
+            "Review only. No changes are applied.",false,BigDecimal(issued))
+
+    @Test fun generatedAndCustomCoachProposalsUseExactIssuedPhysicalConvention() {
+        val advice=optionalReview("210.000")
+        val smith=target(LoadBasis.SMITH_TOTAL,"215.00")
+        val db=target(LoadBasis.DUMBBELL_PER_HAND,"215")
+        assertEquals(
+            "Optional review only: 210 lb · total Smith weight. " +
+                "Issued target 215 lb · total Smith weight remains unchanged. " +
+                "A different actual must be entered and confirmed in the set editor.",
+            kotlinOptionalLiveSetAdviceLabel(advice,smith))
+        assertTrue(kotlinOptionalLiveSetAdviceLabel(advice,db)!!
+            .contains("210 lb · per hand"))
+        assertEquals(BigDecimal("215.00"),smith.value)
+        assertEquals(BigDecimal("210.000"),advice.weightForHumanReview)
+    }
+
+    @Test fun proposalFormattingHidesAStaleOrNonPhysicalTargetInsteadOfInventingAWeight() {
+        val advice=optionalReview("210")
+        assertNull(kotlinOptionalLiveSetAdviceLabel(advice,
+            target(LoadBasis.SMITH_TOTAL,"220")))
+        assertNull(kotlinOptionalLiveSetAdviceLabel(advice,
+            DraftSetLoad.ExplicitBodyweight))
+        assertNull(kotlinOptionalLiveSetAdviceLabel(optionalReview(null),
+            target(LoadBasis.SMITH_TOTAL,"215")))
+    }
+
+    @Test fun independentUnitAndMachineConventionsAreNeverConverted() {
+        val advice=optionalReview("37.5","40")
+        val result=kotlinOptionalLiveSetAdviceLabel(advice,
+            target(LoadBasis.CABLE_STACK,"40",LoadUnit.KG))
+        assertTrue(result.orEmpty().contains("37.5 kg · cable stack"))
+        assertTrue(result.orEmpty().contains(
+            "Issued target 40 kg · cable stack remains unchanged"))
+        assertFalse(result.orEmpty().contains("lb"))
+    }
 }

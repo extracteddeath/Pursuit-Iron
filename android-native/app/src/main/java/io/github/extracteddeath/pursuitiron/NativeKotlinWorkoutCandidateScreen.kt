@@ -636,13 +636,10 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             Text("Coach · next set",style=MaterialTheme.typography.titleMedium)
             Text(coach.coaching.message,
                 style=MaterialTheme.typography.bodyMedium)
-            coach.coaching.weightForHumanReview?.let{weight->
-                Text("Optional review: ${weight.stripTrailingZeros().toPlainString()} "+
-                    "${selected?.target?.load.let{
-                        (it as? DraftSetLoad.Verified)?.unit?.name?.lowercase()
-                            ?: ""
-                    }} · your original target is unchanged.",
-                    style=MaterialTheme.typography.labelMedium)
+            selected?.target?.load?.let{issued->
+                kotlinOptionalLiveSetAdviceLabel(coach.coaching,issued)?.let{label->
+                    Text(label,style=MaterialTheme.typography.labelMedium)
+                }
             }
             Text("Based on saved sets · no automatic weight or rep changes",
                 style=MaterialTheme.typography.labelSmall,

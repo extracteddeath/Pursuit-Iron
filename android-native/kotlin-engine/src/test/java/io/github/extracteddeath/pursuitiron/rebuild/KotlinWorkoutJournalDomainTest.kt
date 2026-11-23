@@ -37,6 +37,33 @@ class KotlinWorkoutJournalDomainTest {
         assertTrue(accepted.toString(),accepted is KotlinJournalDecision.Proposed)
         return (accepted as KotlinJournalDecision.Proposed).state
     }
+    @Test fun invalidIssuedGeneratedTargetCannotBeHiddenByValidActual() {
+        val invalid=original.copy(targets=listOf(target("bad-target",
+            prescribed=load.copy(value=n("-10")))))
+        val initial=KotlinWorkoutJournalDomain.begin(invalid,receipt)
+        val forged=record("forged-performed",0,"bad-target",
+            KotlinJournalSetOutcome.COMPLETED,actual(8,2,"30"))
+        assertEquals(KotlinJournalDecision.Rejected(
+            KotlinJournalRefusal.INVALID_VALUES),
+            KotlinWorkoutJournalDomain.reduce(initial,forged))
+        val failed=record("forged-attempt",0,"bad-target",
+            KotlinJournalSetOutcome.FAILED_ATTEMPT,actual(0,null,"30"))
+        assertEquals(KotlinJournalDecision.Rejected(
+            KotlinJournalRefusal.INVALID_VALUES),
+            KotlinWorkoutJournalDomain.reduce(initial,failed))
+        assertEquals(0L,initial.revision)
+        assertTrue(initial.effectiveSets.isEmpty())
+        val skipped=apply(initial,record("skip-invalid",0,"bad-target",
+            KotlinJournalSetOutcome.SKIPPED,null))
+        assertEquals(invalid,skipped.snapshot)
+        assertEquals(1,skipped.effectiveSets.size)
+        var replay=KotlinWorkoutJournalDomain.begin(invalid,receipt)
+        for(receipt in skipped.receipts)
+            replay=(KotlinWorkoutJournalDomain.reduce(replay,receipt.operation)
+                as KotlinJournalDecision.Proposed).state
+        assertEquals(skipped,replay)
+    }
+
     @Test fun generatedSessionNoteReceiptsAreBoundedReplayedAndSetNeutral() {
         val start=begin()
         val note=KotlinJournalOperation.SessionNote("note-one",0,"Elbows felt great")

@@ -82,7 +82,11 @@ data class CustomNextWorkoutCoachingReview(
     val forecastLimitations:Set<RepForecastLimitation> = emptySet(),
     /** Confirmed drops measured only from two exact same-slot workouts with
      * independently reported RIR. Not a fatigue diagnosis or new consent. */
-    val capacityDropsFromPreviousSession:List<Int> = emptyList()
+    val capacityDropsFromPreviousSession:List<Int> = emptyList(),
+    /** Exact physical station used for the read-only candidate. A review of
+     * Machine A cannot be carried into an otherwise identical Machine B
+     * prescription when their workout set keys are the same. */
+    val physicalMachineInstanceId:String? = null
 ) {
     val mayIssueWorkout:Boolean get()=false
     val mayEditProgram:Boolean get()=false
@@ -267,7 +271,10 @@ object CustomNextWorkoutCoachingDomain {
                         remove(RepForecastLimitation.SINGLE_EXPOSURE)
                 }
             else emptySet(),
-            Collections.unmodifiableList(trendDrops.toList()))
+            Collections.unmodifiableList(trendDrops.toList()),
+            request.requestedMachineInstanceId ?:
+                request.next.slots.singleOrNull{it.slotId==request.slotId}
+                    ?.machineInstanceId)
         if(request.maximumAuthorizedIncrease<=zero ||
             request.maximumAuthorizedIncrease>maximum ||
             request.maximumAuthorizedIncrease.stripTrailingZeros().scale()>3 ||

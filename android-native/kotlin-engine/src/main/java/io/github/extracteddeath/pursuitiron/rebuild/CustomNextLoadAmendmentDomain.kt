@@ -24,7 +24,8 @@ data class CustomNextLoadAmendment(
 }
 enum class CustomNextLoadAmendmentRefusal {
     NOT_EARNED, UNRELATED_SLOT, NON_STRAIGHT_SETS,
-    DIFFERENT_PLANNED_LOAD, UNVERIFIED_EQUIPMENT, INVALID_INCREMENT
+    DIFFERENT_PLANNED_LOAD, DIFFERENT_PHYSICAL_MACHINE,
+    UNVERIFIED_EQUIPMENT, INVALID_INCREMENT
 }
 sealed interface CustomNextLoadAmendmentResult {
     data class Proposed(val amendment:CustomNextLoadAmendment):
@@ -55,6 +56,11 @@ object CustomNextLoadAmendmentDomain {
             return no(CustomNextLoadAmendmentRefusal.NOT_EARNED)
         val slot=original.slots.singleOrNull{it.slotId==slotId}
             ?:return no(CustomNextLoadAmendmentRefusal.UNRELATED_SLOT)
+        // Two gym machines can share the same exercise and set keys while
+        // having completely independent verified performance. The evidence
+        // preview must be scoped to the exact station of the amended slot.
+        if(reviewed.physicalMachineInstanceId!=slot.machineInstanceId)
+            return no(CustomNextLoadAmendmentRefusal.DIFFERENT_PHYSICAL_MACHINE)
         val sets=slot.sets.filter{it.prescription.type==DraftSetType.WORKING}
         val verified=sets.mapNotNull{it.prescription.load as? DraftSetLoad.Verified}
         if(sets.isEmpty() || sets.size>32 ||

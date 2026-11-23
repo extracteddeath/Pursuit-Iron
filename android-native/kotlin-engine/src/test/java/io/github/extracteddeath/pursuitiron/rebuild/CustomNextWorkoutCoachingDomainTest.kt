@@ -1680,11 +1680,93 @@ class CustomNextWorkoutCoachingDomainTest {
             mapOf(n(45) to 1,n(25) to 1,n(5) to 1,
                 BigDecimal("2.5") to 2))
         assertEquals(CustomNextLoadAmendmentResult.Rejected(
-            CustomNextLoadAmendmentRefusal.UNVERIFIED_EQUIPMENT),
+            CustomNextLoadAmendmentRefusal.DIFFERENT_PHYSICAL_MACHINE),
             CustomNextLoadAmendmentDomain.propose(
                 inconsistent,"main",favorable,verifiedBarbell,n(5)))
         assertEquals(n(200),(inconsistent.slots.single().sets.first()
             .prescription.load as DraftSetLoad.Verified).value)
+    }
+
+
+    @Test fun earnedLoadReviewIsBoundToTheExactReviewedMachineABStation() {
+        fun stationDay(day:CustomWorkoutDaySnapshot,id:String?)=
+            day.copy(slots=day.slots.map {it.copy(machineInstanceId=id)})
+        fun performedAt(order:Long,week:Int,id:String)=
+            completed(order,week).let{session ->
+                session.copy(snapshot=stationDay(session.snapshot,id),
+                    evidence=session.evidence.copy(visits=session.evidence.visits.map{
+                        it.copy(actual=it.actual?.copy(machineInstanceId=id))
+                    }))
+            }
+        val nextA=stationDay(snapshot(5),"A")
+        val reviewed=CustomNextWorkoutCoachingDomain.review(
+            CustomNextWorkoutCoachingRequest(nextA,"main",
+                listOf(performedAt(1,3,"A"),performedAt(2,4,"A")),
+                stock(),n(5),CoachReadiness.NORMAL,false,
+                CustomRepForecastPolicy.TARGET_RIR_V2,
+                requestedMachineInstanceId="A"))
+        assertEquals(CustomNextWorkoutCoachingStatus.READY_FOR_LOAD_REVIEW,
+            reviewed.status)
+        assertEquals("A",reviewed.physicalMachineInstanceId)
+        assertEquals(n(205),reviewed.loadReviewCandidate)
+        assertTrue(CustomNextLoadAmendmentDomain.propose(
+            nextA,"main",reviewed,stock(),n(5))
+            is CustomNextLoadAmendmentResult.Proposed)
+        for(unrelated in listOf(
+            stationDay(nextA,"B"),stationDay(nextA,null))) {
+            assertEquals(CustomNextLoadAmendmentResult.Rejected(
+                CustomNextLoadAmendmentRefusal.DIFFERENT_PHYSICAL_MACHINE),
+                CustomNextLoadAmendmentDomain.propose(
+                    unrelated,"main",reviewed,stock(),n(5)))
+            assertEquals(n(200),(unrelated.slots.single().sets.first()
+                .prescription.load as DraftSetLoad.Verified).value)
+        }
+        // An unbound/old synthetic readout cannot impersonate a real
+        // station-specific approval just by copying the weight numbers.
+        assertEquals(CustomNextLoadAmendmentResult.Rejected(
+            CustomNextLoadAmendmentRefusal.DIFFERENT_PHYSICAL_MACHINE),
+            CustomNextLoadAmendmentDomain.propose(
+                nextA,"main",reviewed.copy(physicalMachineInstanceId=null),
+                stock(),n(5)))
+    }
+
+
+    @Test fun earnedRepReviewCannotTransferFromMachineAToMachineB() {
+        fun stationDay(day:CustomWorkoutDaySnapshot,id:String?)=
+            day.copy(slots=day.slots.map {it.copy(machineInstanceId=id)})
+        fun performedOnA(session:CustomCoachingHistoricalSession)=
+            session.copy(snapshot=stationDay(session.snapshot,"A"),
+                evidence=session.evidence.copy(visits=session.evidence.visits.map{
+                    it.copy(actual=it.actual?.copy(machineInstanceId="A"))
+                }))
+        val nextA=stationDay(snapshot(5),"A")
+        val reviewed=CustomNextWorkoutCoachingDomain.review(
+            CustomNextWorkoutCoachingRequest(nextA,"main",
+                listOf(performedOnA(completed(1,3)),
+                    performedOnA(completed(2,4,
+                        reps=listOf(5,6),rirs=listOf(5,4)))),
+                stock(),n(5),CoachReadiness.NORMAL,false,
+                CustomRepForecastPolicy.TARGET_RIR_V2,
+                requestedMachineInstanceId="A"))
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,reviewed.status)
+        assertEquals("A",reviewed.physicalMachineInstanceId)
+        assertEquals(listOf(8,8),
+            reviewed.nextSetSuggestions.map{it.proposedNextReps})
+        assertTrue(CustomNextRepAmendmentDomain.propose(
+            nextA,"main",reviewed) is CustomNextRepAmendmentResult.Proposed)
+        for(unrelated in listOf(
+            stationDay(nextA,"B"),stationDay(nextA,null))) {
+            assertEquals(CustomNextRepAmendmentResult.Rejected(
+                CustomNextRepAmendmentRefusal.DIFFERENT_PHYSICAL_MACHINE),
+                CustomNextRepAmendmentDomain.propose(
+                    unrelated,"main",reviewed))
+            assertEquals(RepBand(5,8),
+                unrelated.slots.single().sets.first().prescription.reps)
+        }
+        assertEquals(CustomNextRepAmendmentResult.Rejected(
+            CustomNextRepAmendmentRefusal.DIFFERENT_PHYSICAL_MACHINE),
+            CustomNextRepAmendmentDomain.propose(
+                nextA,"main",reviewed.copy(physicalMachineInstanceId=null)))
     }
 
 }

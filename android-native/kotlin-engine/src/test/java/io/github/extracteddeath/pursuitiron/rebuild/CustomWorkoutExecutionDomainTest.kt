@@ -342,11 +342,12 @@ class CustomWorkoutExecutionDomainTest {
             val prescribedReduction=if(kind==CustomAmplifierKind.DROP_SET)
                 DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
                     BigDecimal("15")) else null
-            var j=initial(slot("a",amplifier=CustomSetAmplifier(kind,4,15,
+            val shortRest=if(kind==CustomAmplifierKind.LENGTHENED_PARTIALS)0 else 15
+            var j=initial(slot("a",amplifier=CustomSetAmplifier(kind,4,shortRest,
                 followUpLoad=prescribedReduction)),slot("b"))
             j=record(j,"a:s1")
             assertEquals(visit("a:s1",CustomWorkoutVisitPart.FOLLOW_UP),next(j))
-            assertEquals(15,rest(j).automaticCue?.seconds)
+            assertEquals(shortRest,rest(j).automaticCue?.seconds)
             j=record(j,"a:s1",CustomWorkoutVisitPart.FOLLOW_UP)
             assertEquals(visit("b:s1"),next(j))
             assertEquals(0,rest(j).automaticCue?.seconds)
@@ -564,7 +565,7 @@ class CustomWorkoutExecutionDomainTest {
                 as CustomWorkoutJournalDecision.Rejected).reason)
     }
 
-    @Test fun changingMachineOrLoadEndsTheMyoSequenceWithoutErasingFactualStage() {
+    @Test fun changingMachineOrLoadRejectsMyoStageWithoutInventingAFactualReceipt() {
         val amp=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,20,
             followUpRounds=5)
         var j=initial(slot("myo",1,null,amplifier=amp))
@@ -579,13 +580,12 @@ class CustomWorkoutExecutionDomainTest {
             visit(set,CustomWorkoutVisitPart.FOLLOW_UP,1),
             KotlinJournalSetOutcome.COMPLETED,
             KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,4,2,"B"))
-        j=(CustomWorkoutJournalDomain.reduce(j,differentMachine)
-            as CustomWorkoutJournalDecision.Proposed).draft
-        assertTrue(j.canProposeFinish)
-        assertNull(next(j))
-        assertEquals("B",((j.effectiveVisits.getValue(
-            visit(set,CustomWorkoutVisitPart.FOLLOW_UP,1)).operation
-            as CustomWorkoutJournalOperation.Record).performed?.machineInstanceId))
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.INVALID_ACTUAL),
+            CustomWorkoutJournalDomain.reduce(j,differentMachine))
+        assertFalse(j.canProposeFinish)
+        assertEquals(1,j.effectiveVisits.size)
+        assertEquals(visit(set,CustomWorkoutVisitPart.FOLLOW_UP,1),next(j))
         // The same rule applies to a different logged load on the same machine.
         var k=initial(slot("myo",1,null,amplifier=amp))
         k=(CustomWorkoutJournalDomain.reduce(k,recordMain)
@@ -594,10 +594,12 @@ class CustomWorkoutExecutionDomainTest {
             visit(set,CustomWorkoutVisitPart.FOLLOW_UP,1),
             KotlinJournalSetOutcome.COMPLETED,
             KotlinPerformedSet(BigDecimal("15"),LoadUnit.LB,4,2,"A"))
-        k=(CustomWorkoutJournalDomain.reduce(k,changedWeight)
-            as CustomWorkoutJournalDecision.Proposed).draft
-        assertTrue(k.canProposeFinish)
-        assertNull(next(k))
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.INVALID_ACTUAL),
+            CustomWorkoutJournalDomain.reduce(k,changedWeight))
+        assertFalse(k.canProposeFinish)
+        assertEquals(1,k.effectiveVisits.size)
+        assertEquals(visit(set,CustomWorkoutVisitPart.FOLLOW_UP,1),next(k))
     }
 
     @Test fun restPauseEffortsAreRecordedIndividuallyWithShortRestsAndHardStageCap() {
@@ -668,7 +670,7 @@ class CustomWorkoutExecutionDomainTest {
         assertEquals(visit("pause:s1",CustomWorkoutVisitPart.FOLLOW_UP,2),next(j))
     }
 
-    @Test fun changedPhysicalStationOrLoadEndsRestPauseButNeverDeletesReceipts() {
+    @Test fun changedPhysicalStationOrLoadIsRejectedForRestPauseWithoutReceipts() {
         val amp=CustomSetAmplifier(CustomAmplifierKind.REST_PAUSE,
             3,20,followUpRounds=3)
         var station=initial(slot("pause",1,null,amplifier=amp))
@@ -681,13 +683,12 @@ class CustomWorkoutExecutionDomainTest {
             visit("pause:s1",CustomWorkoutVisitPart.FOLLOW_UP,1),
             KotlinJournalSetOutcome.COMPLETED,
             KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,3,2,"B"))
-        station=(CustomWorkoutJournalDomain.reduce(station,changeStation)
-            as CustomWorkoutJournalDecision.Proposed).draft
-        assertNull(next(station))
-        assertEquals(2,station.effectiveVisits.size)
-        assertEquals("B",((station.effectiveVisits.getValue(
-            visit("pause:s1",CustomWorkoutVisitPart.FOLLOW_UP,1)).operation
-            as CustomWorkoutJournalOperation.Record).performed?.machineInstanceId))
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.INVALID_ACTUAL),
+            CustomWorkoutJournalDomain.reduce(station,changeStation))
+        assertEquals(visit("pause:s1",CustomWorkoutVisitPart.FOLLOW_UP,1),
+            next(station))
+        assertEquals(1,station.effectiveVisits.size)
 
         var load=initial(slot("pause",1,null,amplifier=amp))
         load=(CustomWorkoutJournalDomain.reduce(load,main)
@@ -696,10 +697,12 @@ class CustomWorkoutExecutionDomainTest {
             visit("pause:s1",CustomWorkoutVisitPart.FOLLOW_UP,1),
             KotlinJournalSetOutcome.COMPLETED,
             KotlinPerformedSet(BigDecimal("15"),LoadUnit.LB,3,2,"A"))
-        load=(CustomWorkoutJournalDomain.reduce(load,changeWeight)
-            as CustomWorkoutJournalDecision.Proposed).draft
-        assertNull(next(load))
-        assertEquals(2,load.effectiveVisits.size)
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.INVALID_ACTUAL),
+            CustomWorkoutJournalDomain.reduce(load,changeWeight))
+        assertEquals(visit("pause:s1",CustomWorkoutVisitPart.FOLLOW_UP,1),
+            next(load))
+        assertEquals(1,load.effectiveVisits.size)
     }
 
     @Test fun activationLoadCannotChangeOnceMyoFollowUpsExist() {
@@ -818,13 +821,12 @@ class CustomWorkoutExecutionDomainTest {
             visit("cluster:s1",CustomWorkoutVisitPart.FOLLOW_UP,2),
             KotlinJournalSetOutcome.COMPLETED,
             KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,2,2,"B"))
-        val changed=(CustomWorkoutJournalDomain.reduce(j,wrongStation)
-            as CustomWorkoutJournalDecision.Proposed).draft
-        assertNull(next(changed))
-        assertEquals(3,changed.effectiveVisits.size)
-        assertEquals("B",((changed.effectiveVisits.getValue(
-            visit("cluster:s1",CustomWorkoutVisitPart.FOLLOW_UP,2)).operation
-            as CustomWorkoutJournalOperation.Record).performed?.machineInstanceId))
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.INVALID_ACTUAL),
+            CustomWorkoutJournalDomain.reduce(j,wrongStation))
+        assertEquals(visit("cluster:s1",CustomWorkoutVisitPart.FOLLOW_UP,2),
+            next(j))
+        assertEquals(2,j.effectiveVisits.size)
     }
 
     @Test fun finalSetLengthenedPartialsLogSeparateActualsWithoutNewRegularWork() {

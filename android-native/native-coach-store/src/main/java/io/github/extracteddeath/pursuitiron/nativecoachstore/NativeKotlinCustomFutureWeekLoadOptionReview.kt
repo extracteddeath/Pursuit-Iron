@@ -335,7 +335,9 @@ class NativeKotlinCustomFutureWeekLoadOptionReview(
                 previousLoad=current,candidateLoad=candidate,
                 readiness=readiness,movementRestricted=movementRestricted,
                 maximumAuthorizedIncrease=maxAuthorizedIncrease,
-                evidenceWorkoutIds=advice.comparedWorkoutIds)
+                evidenceWorkoutIds=advice.comparedWorkoutIds,
+                numberFact=numberFact,
+                machineInstanceId=slot.machineInstanceId)
             NativeFutureWeekLoadOptionResult.Ready(
                 option,compared,ledger.manifestRevision,original.revision,
                 source.revision,currentSettings.revision,permission.revision,

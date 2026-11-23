@@ -549,7 +549,7 @@ internal fun NativeKotlinCandidateHistoryScreen(
                     NativeKotlinMixedHistoryRefusal.NOT_ENROLLED ->
                         "This Kotlin athlete has no enrolled native workout history. Existing web training history is NOT migrated here."
                     NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION ->
-                        "A saved Finish transaction is waiting for recovery. A measured Finish can be recovered here; generated or custom Finish may require reopening its workout in Train."
+                        "A saved workout Finish or correction was interrupted. Recover its original transaction before using History."
                     else ->"Saved history could not be verified. Your saved workouts have been kept."
                 },color=MaterialTheme.colorScheme.error)
                 if(read.reason==NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION) {
@@ -559,36 +559,32 @@ internal fun NativeKotlinCandidateHistoryScreen(
                             finishRecoveryNotice=null
                             scope.launch {
                                 try {
-                                    // Only a previously staged measured Finish
-                                    // can be recovered. This creates neither a
-                                    // set nor new consent/Finish intent.
-                                    val attempted=withContext(Dispatchers.IO) {
-                                        runCatching {
-                                            host.recoverPendingMeasuredHistory()
-                                        }.getOrNull()
-                                    }
-                                    // Never mark History usable from a Finish
-                                    // acknowledgment alone. Reread its whole
-                                    // current-owner manifest and all journals.
+                                    // The host reopens the exact pending ledger
+                                    // intent and selects its single native
+                                    // coordinator (generated, custom, measured
+                                    // or correction). It never starts a new
+                                    // Finish and returns only independently
+                                    // verified mixed History.
                                     val refreshed=withContext(Dispatchers.IO) {
                                         runCatching {
-                                            host.reviewVerifiedKotlinHistory()
+                                            host.recoverPendingNativeHistory()
                                         }.getOrElse {
                                             NativeKotlinMixedHistoryReadResult.Rejected(
                                                 NativeKotlinMixedHistoryRefusal.STORAGE_UNAVAILABLE)
                                         }
                                     }
                                     result=refreshed
-                                    finishRecoveryNotice=when {
-                                        refreshed is NativeKotlinMixedHistoryReadResult.Review ->
-                                            "History was independently verified after the recovery check."
-                                        attempted is NativeMeasuredFinishResult.Committed ->
-                                            "The measured Finish was recovered, but History is not yet verifiable. Retry the History read."
-                                        else ->"No pending measured Finish was recoverable. An unfinished generated or custom Finish may require opening its workout in Train."
+                                    finishRecoveryNotice=when(refreshed) {
+                                        is NativeKotlinMixedHistoryReadResult.Review ->
+                                            "The saved transaction was checked and your complete History is verified."
+                                        is NativeKotlinMixedHistoryReadResult.Rejected ->
+                                            "The pending transaction could not be verified ("+
+                                                refreshed.reason.name.replace('_',' ').lowercase()+
+                                                "). Saved records were not discarded; retry or reopen the workout."
                                     }
                                 } finally {busy=false}
                             }
-                        }) {Text("Recover pending measured Finish")}
+                        }) {Text("Recover pending History")}
                 }
                 if(read.reason==NativeKotlinMixedHistoryRefusal.NOT_ENROLLED) {
                     PursuitCard {

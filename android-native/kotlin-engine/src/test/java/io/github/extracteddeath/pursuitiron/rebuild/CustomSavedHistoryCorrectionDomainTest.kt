@@ -84,6 +84,37 @@ class CustomSavedHistoryCorrectionDomainTest {
         return r.state
     }
 
+    @Test fun savedFailedDropCorrectionsCannotReclassifyHigherAttemptedWeights() {
+        val original=finished(failedFollow=true)
+        val state=CustomSavedHistoryCorrectionDomain.begin(original)
+        assertEquals(KotlinJournalSetOutcome.FAILED_ATTEMPT,
+            (original.effectiveVisits.getValue(follow).operation
+                as CustomWorkoutJournalOperation.Record).outcome)
+        for((i,wrong) in listOf(
+            KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,0,null),
+            KotlinPerformedSet(BigDecimal("25"),LoadUnit.LB,0,null),
+            KotlinPerformedSet(BigDecimal("15"),LoadUnit.KG,0,null),
+            KotlinPerformedSet(BigDecimal("15"),LoadUnit.LB,0,null,"machine-B")
+        ).withIndex()) {
+            assertEquals(CustomSavedCorrectionDecision.Rejected(
+                CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER),
+                CustomSavedHistoryCorrectionDomain.reduce(state,
+                    correction("wrong-failed-drop-$i",0,follow,"follow-original",
+                        KotlinJournalSetOutcome.FAILED_ATTEMPT,wrong)))
+            assertEquals(0L,state.correctionRevision)
+        }
+        val same=accept(state,correction(
+            "same-lower-attempt",0,follow,"follow-original",
+            KotlinJournalSetOutcome.FAILED_ATTEMPT,
+            KotlinPerformedSet(BigDecimal("15.000"),LoadUnit.LB,0,null)))
+        assertEquals(original,same.originalFinishedJournal)
+        val evidence=(CustomSavedHistoryEvidenceDomain.projectSaved(same)
+            as CustomSavedHistoryProjectionResult.Candidate).corrected.evidence
+        assertEquals(BigDecimal("15.000"),evidence.visits.last().actual?.load)
+        assertEquals(0,evidence.visits.last().actual?.reps)
+        assertFalse(evidence.canApplyProgression)
+    }
+
     @Test fun correctedSavedActivationCannotOrphanAttemptedMyoWeight() {
         val original=finished(
             activationLoad=BigDecimal("47.5"),

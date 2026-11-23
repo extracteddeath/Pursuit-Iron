@@ -42,7 +42,10 @@ class CustomBasicProgressionDraftDomainTest {
         val proposed=weighted(BasicProgressionResult.Candidate(
             BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION,
             listOf(BigDecimal(105),BigDecimal(105)),setOf(0),
-            BasicProgressionDecision.EARNED_INCREMENT,"previous"))
+            BasicProgressionDecision.EARNED_INCREMENT,"previous",
+            dynamicSetDecisions=listOf(
+                BasicProgressionDecision.EARNED_INCREMENT,
+                BasicProgressionDecision.BUILD_REPS)))
         val next=checkNotNull(CustomBasicProgressionDraftDomain.forWeekEdit(
             "slot",original,proposed))
         assertEquals(warmup,next[0])
@@ -52,6 +55,79 @@ class CustomBasicProgressionDraftDomainTest {
         assertEquals(original[1].restSeconds,next[1].restSeconds)
         assertEquals(original[1].reps,next[1].reps)
         assertEquals(pounds(100),original[1].load)
+    }
+
+    @Test fun dynamicEditRequiresCompletePerSetEvaluatorDecisionVector() {
+        val original=listOf(set(100),set(105),set(110))
+        val authenticated=BasicProgressionResult.Candidate(
+            BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION,
+            listOf(BigDecimal(105),BigDecimal(105),BigDecimal(115)),
+            setOf(0,2),BasicProgressionDecision.EARNED_INCREMENT,"previous",
+            dynamicSetDecisions=listOf(
+                BasicProgressionDecision.EARNED_INCREMENT,
+                BasicProgressionDecision.BUILD_REPS,
+                BasicProgressionDecision.EARNED_INCREMENT))
+        val reviewed=weighted(authenticated)
+        val edit=checkNotNull(CustomBasicProgressionDraftDomain.forWeekEdit(
+            "slot",original,reviewed))
+        assertEquals(listOf(pounds(105),pounds(105),pounds(115)),
+            edit.map {it.load})
+        for(spoofed in listOf(
+            authenticated.copy(dynamicSetDecisions=emptyList()),
+            authenticated.copy(dynamicSetDecisions=listOf(
+                BasicProgressionDecision.EARNED_INCREMENT)),
+            authenticated.copy(dynamicSetDecisions=listOf(
+                BasicProgressionDecision.EARNED_INCREMENT,
+                BasicProgressionDecision.EARNED_INCREMENT,
+                BasicProgressionDecision.EARNED_INCREMENT)),
+            authenticated.copy(dynamicSetDecisions=listOf(
+                BasicProgressionDecision.BUILD_REPS,
+                BasicProgressionDecision.BUILD_REPS,
+                BasicProgressionDecision.EARNED_INCREMENT)))) {
+            assertNull(CustomBasicProgressionDraftDomain.reviewedSets(
+                "slot",original,weighted(spoofed)))
+        }
+        val improperUniform=authenticated.copy(
+            strategy=BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,
+            proposedWorkingLoads=listOf(BigDecimal(115),BigDecimal(115),BigDecimal(115)),
+            increasedOrdinals=setOf(0,1,2))
+        assertNull(CustomBasicProgressionDraftDomain.reviewedSets(
+            "slot",listOf(set(100),set(100),set(100)),weighted(improperUniform)))
+    }
+
+    @Test fun weightedAndBodyweightEditMustMatchTheirVerifiedHistorySource() {
+        val source=listOf(set(100),set(100))
+        val earned=BasicProgressionResult.Candidate(
+            BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,
+            listOf(BigDecimal(105),BigDecimal(105)),setOf(0,1),
+            BasicProgressionDecision.EARNED_INCREMENT,"previous")
+        assertNotNull(CustomBasicProgressionDraftDomain.forWeekEdit(
+            "slot",source,weighted(earned)))
+        for(stale in listOf(
+            weighted(earned.copy(evidenceWorkoutId=null)),
+            weighted(earned.copy(evidenceWorkoutId="older-success")),
+            weighted(earned).copy(historyWorkoutId="other-workout"),
+            weighted(earned).copy(historyWorkoutId=null),
+            weighted(earned).copy(completionOrder=0),
+            weighted(earned).copy(completionOrder=null))) {
+            assertNull(CustomBasicProgressionDraftDomain.forWeekEdit(
+                "slot",source,stale))
+        }
+
+        val body=set(100,8).copy(load=DraftSetLoad.ExplicitBodyweight)
+        val bodyCandidate=BasicUnloadedProgressionResult.Candidate(
+            listOf(9),setOf(0),"previous")
+        val authentic=CustomBasicHistoryResult.UnloadedReviewed(
+            "previous",1,bodyCandidate,"block",0,"slot")
+        assertNotNull(CustomBasicProgressionDraftDomain.forWeekEdit(
+            "slot",listOf(body),authentic))
+        assertNull(CustomBasicProgressionDraftDomain.reviewedSets(
+            "slot",listOf(body),authentic.copy(historyWorkoutId="other")))
+        assertNull(CustomBasicProgressionDraftDomain.reviewedSets(
+            "slot",listOf(body),authentic.copy(completionOrder=0)))
+        assertNull(CustomBasicProgressionDraftDomain.reviewedSets(
+            "slot",listOf(body),authentic.copy(
+                candidate=bodyCandidate.copy(evidenceWorkoutId="older"))))
     }
 
     @Test fun exactRepAdvancementDoesNotInventLoadOrModifyOtherSets() {

@@ -45,7 +45,7 @@ try{
     // M290: XP semantics and actual fill agree, with complete level/next-level
     // copy at ordinary and enlarged text; presentation migration cannot clip it.
     const level=await page.$eval('.wpb-profile-hero',hero=>{
-      const box=hero.getBoundingClientRect(),track=hero.querySelector('[role="progressbar"]'),fill=track.firstElementChild;
+      const box=hero.getBoundingClientRect(),track=hero.querySelector('[role="progressbar"]'),fill=track.querySelector('.wpb-ui-wavy-active')||track.firstElementChild; // B1028: wavy indicator's active wave
       const t=track.getBoundingClientRect(),f=fill.getBoundingClientRect(),value=Number(track.getAttribute('aria-valuenow'));
       const walker=document.createTreeWalker(hero,NodeFilter.SHOW_TEXT),fragments=[];
       while(walker.nextNode()){if(!walker.currentNode.textContent.trim())continue;const range=document.createRange();range.selectNodeContents(walker.currentNode);fragments.push(...range.getClientRects());}

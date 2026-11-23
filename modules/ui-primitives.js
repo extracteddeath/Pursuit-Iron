@@ -91,7 +91,7 @@ export function UiListItem({ leading, overline, headline, supporting, trailing, 
 // separated by a gap and ended by a stop dot. Pure SVG; the wave flattens under reduced motion.
 export function UiWavyProgress({ value = 0, max = 1, label, className = "", ...props }) {
     const pct = Math.max(0, Math.min(1, max ? value / max : 0));
-    const W = 240, H = 12, mid = H / 2, amp = 3, wave = 20, end = Math.max(0, pct * W - (pct < 1 ? 4 : 0));
+    const W = 240, H = 12, mid = H / 2, amp = 3, wave = 20, end = Math.round(pct * 100) / 100 * W;
     let d = `M0 ${mid}`;
     for (let x = 0; x < end; x += wave / 2) {
         const nx = Math.min(end, x + wave / 2), up = Math.round(x / (wave / 2)) % 2 === 0;

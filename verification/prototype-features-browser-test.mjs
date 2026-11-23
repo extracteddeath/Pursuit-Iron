@@ -92,7 +92,7 @@ try {
     await page.click('.wpb-home-freestyle');
     await page.waitForSelector('[data-routine-picker]');
     const sheet = await page.evaluate(() => {
-      const panel = document.querySelector('.wpb-routine-panel').getBoundingClientRect();
+      const panel = document.querySelector('[data-routine-picker] .wpb-ui-modal-sheet-panel').getBoundingClientRect();
       const hit = document.elementFromPoint(panel.left + panel.width / 2, Math.min(panel.bottom, innerHeight) - 8);
       return { onTop: !!hit?.closest('[data-routine-picker]'), text: document.querySelector('[data-routine-picker]').innerText };
     });

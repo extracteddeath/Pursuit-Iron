@@ -10245,7 +10245,7 @@ background:var(--pi-color-card)!important;
 #root .wpb :is(.wpb-add-back,.wpb-add-save){flex:1}
 #root .wpb .wpb-add-save{flex:2}
 #root .wpb .wpb-ui-modal-sheet-toolbar{display:grid;flex:none;gap:4px;padding:4px 18px 8px;border-bottom:1px solid var(--wpb-theme-border-soft)}
-#root .wpb .wpb-ui-chip-row{display:flex;align-items:center;gap:8px;overflow-x:auto;scrollbar-width:none;margin-inline:-18px;padding-inline:18px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 18px,#000 calc(100% - 18px),transparent);mask-image:linear-gradient(90deg,transparent,#000 18px,#000 calc(100% - 18px),transparent)}
+#root .wpb .wpb-ui-chip-row{display:flex;align-items:center;gap:8px;overflow-x:auto;scrollbar-width:none;margin-inline:-18px;padding-inline:18px}
 #root .wpb .wpb-ui-chip-row::-webkit-scrollbar{display:none}
 #root .wpb .wpb-ui-chip-row>*{flex:none;white-space:nowrap}
 #root .wpb .wpb-ui-chip-row-label{font-size:var(--pi-type-caption);font-weight:600;color:var(--pi-color-on-muted)}

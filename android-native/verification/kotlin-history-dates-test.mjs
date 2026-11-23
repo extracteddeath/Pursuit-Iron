@@ -38,6 +38,7 @@ assert.match(screen,/Show more matching exercises/);
 assert.doesNotMatch(screen,/filteredMovements\.take\(8\)|Showing the first 8/);
 assert.match(dates,/Instant\.ofEpochMilli/);
 assert.match(screen,/nativeHistoryDateSelection\(historyDateKey,historyDayKey,historyMonths,historyZone\)/);
+assert.match(screen,/remember\(historyDateKey,historyDayKey,dateSelectionAthlete,verified\?\.athleteId,historyMonths,historyZone\)/);
 assert.match(dates,/section\.sessions\.any\{entry->/);
 assert.match(dates,/nativeHistoryRecordedDate\(entry\.manifest,zone\)==selectedDay/);
 const datesTest=read('android-native/app/src/test/java/io/github/extracteddeath/pursuitiron/NativeKotlinHistoryDatesTest.kt');

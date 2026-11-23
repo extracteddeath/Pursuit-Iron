@@ -4590,12 +4590,12 @@ background:var(--pi-color-card)!important;
 .wpb-program-exercise-heading{display:flex;align-items:center;gap:6px;}
 .wpb-program-exercise-name{font-size:var(--pi-type-body);font-weight:600;}
 .wpb-program-lift-badge{font-size:.6875rem;font-weight:700;letter-spacing:.03em;padding:2px 6px;border-radius:8px;}
-.wpb-program-superset-badge{flex-shrink:0;font-size:.6875rem;font-weight:700;letter-spacing:.02em;color:var(--wpb-theme-accentText);background:var(--wpb-theme-accent);border-radius:8px;padding:2px 6px;}
+.wpb-program-superset-badge{flex-shrink:0;font-size:.6875rem;font-weight:700;letter-spacing:.02em;color:var(--wpb-theme-accent-text);background:var(--wpb-theme-accent);border-radius:8px;padding:2px 6px;}
 .wpb-program-exercise-meta{font-size:var(--pi-type-support);margin-top:2px;}
 .wpb-exercise-actions{display:grid;grid-template-columns:40px minmax(0,1fr) 40px;align-items:center;gap:8px;width:calc(100% + 66px);max-width:calc(100% + 66px);margin:8px -66px 0 0;padding:0;overflow:visible;}
 .wpb-exercise-actions[data-percentage="true"]{grid-template-columns:40px 40px;width:auto;max-width:100%;margin-right:0;}
 #root .wpb .wpb-exercise-actions>button{display:inline-flex;align-items:center;justify-content:center;gap:4px;width:100%;min-width:0;min-height:40px;flex-shrink:0;padding:8px;border:1px solid var(--pi-color-divider);border-radius:12px;background:var(--wpb-theme-card);color:var(--wpb-theme-muted);font-size:var(--pi-type-support);font-weight:650;cursor:pointer;}
-#root .wpb .wpb-exercise-actions>button[data-emphasis="accent"]{color:var(--wpb-theme-accentInk);border-color:color-mix(in srgb,var(--wpb-theme-accent) 40%,var(--pi-color-divider));}
+#root .wpb .wpb-exercise-actions>button[data-emphasis="accent"]{color:var(--wpb-theme-accent-ink);border-color:color-mix(in srgb,var(--wpb-theme-accent) 40%,var(--pi-color-divider));}
 .wpb-exercise-actions>button>svg{flex-shrink:0;}
 .wpb-exercise-actions>button>span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
 #root .wpb .wpb-program-exercise[data-manual="true"]{display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px;}
@@ -7013,7 +7013,7 @@ background:var(--pi-color-card)!important;
 #root .wpb-workout .wpb-set-controls [data-reference-action]{
   touch-action:manipulation;
   min-height:36px;
-  color:var(--pi-color-on-surface,var(--pi-m3e-on-surface))!important;
+  color:var(--wpb-theme-text)!important;
   border-radius:8px!important;
   line-height:1.25!important;
 }
@@ -7130,7 +7130,7 @@ background:var(--pi-color-card)!important;
 
 #root .wpb-workout .wpb-set-index[aria-expanded="true"]{
   background:var(--pi-m3e-primary-container)!important;
-  color:var(--pi-m3e-on-primary-container)!important;
+  color:var(--wpb-theme-text)!important;
 }
 @media(max-width:420px){
   #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>.wpb-set-index{
@@ -10240,3 +10240,5 @@ background:var(--pi-color-card)!important;
 #root[data-pi-motion] .wpb .wpb-library-row-icon:is([data-part=quads],[data-part=hamstrings],[data-part=glutes],[data-part=calves],[data-part=adductors],[data-part=abductors]){--pi-region:#58b368}
 #root[data-pi-motion] .wpb .wpb-library-row-icon:is([data-part=abs],[data-part=lower_back],[data-part=neck]){--pi-region:#d9a520}
 #root[data-pi-motion] .wpb .wpb-library-row-part{color:inherit;font-weight:800;letter-spacing:.02em}
+#root[data-pi-motion] .wpb .wpb-program .wpb-exercise-actions>button{border-color:transparent;background:color-mix(in srgb,var(--wpb-theme-text) 6%,transparent)}
+#root[data-pi-motion] .wpb .wpb-program .wpb-exercise-actions>button[data-emphasis=accent]{background:var(--wpb-theme-accent-dim)}

@@ -43,7 +43,7 @@ internal object NativeKotlinHistoryFocusPolicy {
     ):Pair<String,String>? {
         if(showAll || selectedAthleteId.isNullOrBlank() ||
             selectedAthleteId!=currentAthleteId ||
-            selectedGymId.isBlank() || selectedMachineId.isBlank())return null
+            selectedMachineId.isBlank())return null
         val chosen=selectedGymId to selectedMachineId
         return chosen.takeIf { verifiedStations.count{it==chosen}==1 }
     }

@@ -82,11 +82,22 @@ assert.match(ui,/private data class PhysicalMachineHistoryKey\(val gymId:String,
 assert.match(ui,/completed\.evidence\.source\.gymId/);
 assert.match(ui,/completed\.gymId/);
 assert.match(ui,/val machineKeys=rows\.map\(::historyMachine\)\.distinct\(\)/);
-assert.match(ui,/it\.gymId==selectedGymId && it\.machineId==selectedMachineId/);
+const focusPolicy=readFileSync(
+  'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinHistoryFocusPolicy.kt','utf8');
+assert.match(ui,/var showAllMachines by rememberSaveable\(exerciseId\)\{mutableStateOf\(true\)\}/);
+assert.match(ui,/selectedMachineAthleteId=verified\.athleteId/);
+assert.match(ui,/NativeKotlinHistoryFocusPolicy\.admitStation\(/);
+assert.match(ui,/selectedMachineAthleteId,verified\.athleteId/);
+assert.match(focusPolicy,/selectedAthleteId!=currentAthleteId/);
+assert.match(focusPolicy,/verifiedStations\.count\{it==chosen\}==1/);
+assert.match(ui,/activeStation\?\.let\{chosen->/);
+assert.match(ui,/it\.gymId==chosen\.first && it\.machineId==chosen\.second/);
+assert.doesNotMatch(ui,/\?:machineKeys\.firstOrNull\(\)/);
 assert.match(ui,/NativeKotlinMachineStationLabels\.label\(/);
 assert.match(ui,/displayStations=machineKeys\.map/);
 assert.doesNotMatch(ui,/Machine \$\{key\.machineId\}|\$\{row\.gymId\}/);
-assert.match(ui,/val visible=if\(machineKeys\.size>1 && !showAllMachines\)/);
+assert.match(ui,/val visible=if\(machineKeys\.size>1 && activeMachine!=null\)/);
+assert.match(ui,/FilterChip\(selected=activeMachine==null,/);
 assert.match(ui,/Text\("All machines · labeled"\)/);
 assert.match(ui,/showAllMachines=false/);
 assert.match(ui,/shown\.filter\{historyMachine\(it\)==activeMachine\}/);

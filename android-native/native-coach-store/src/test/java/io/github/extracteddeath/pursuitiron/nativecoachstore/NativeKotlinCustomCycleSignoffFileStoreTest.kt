@@ -4996,4 +4996,135 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertArrayEquals(changed,Files.readAllBytes(file))
     }
 
+
+    /**
+     * The production writer must replay a real, history-earned physical step:
+     * completed prior visits -> signed option -> durable athlete consent ->
+     * fresh owner proof -> prepared snapshot -> issued journal -> actual Finish.
+     * The UI or a saved digest may not create a second number authority.
+     */
+    @Test fun realFutureWeekPhysicalApprovalSurvivesColdReopenThroughIssuedAndFinishedHistory() {
+        weightedFixture=true
+        val f=liveFutureCoachFixture()
+        finishRealActivatedSession(f,4,15)
+        finishRealActivatedSession(f,5,15)
+        permitNextLoadAndWeekOverrides()
+        val inputs=futureInputs()
+        val reviewer=futureWeekLoadOption(f)
+        val consents=NativeKotlinFutureWeekLoadConsentFileStore(
+            temp.root.toPath(),fence,identity,reviewer)
+        val shown=consents.preview("owner-1","cycle-1","build",inputs,6,1,
+            "slot-1",CoachReadiness.NORMAL,false,n("5"))
+        assertTrue(shown.toString(),shown is NativeFutureWeekConsentPreview.Ready)
+        val offered=shown as NativeFutureWeekConsentPreview.Ready
+        val accepted=consents.accept("owner-1","cycle-1","build",inputs,6,1,
+            "slot-1",CoachReadiness.NORMAL,false,n("5"),
+            offered.fingerprint,offered.recordRevision,true)
+        assertTrue(accepted.toString(),accepted is NativeFutureWeekConsentWrite.Accepted)
+
+        // Read actual bytes using an independently constructed store and
+        // fence; no in-memory candidate/receipt is trusted as current.
+        val coldFence=NativeKotlinApprovalRevisionFence(temp.root.toPath())
+        val coldConsents=NativeKotlinFutureWeekLoadConsentFileStore(
+            temp.root.toPath(),coldFence,identity,reviewer)
+        assertTrue(coldConsents.readCurrent("owner-1","cycle-1","build",
+            inputs,6,1,"slot-1") is NativeFutureWeekConsentRead.Current)
+        val handoff=NativeKotlinAcceptedFutureWeekLoadHandoff(
+            fence,coldConsents,reviewer,f.coach,f.activation)
+        val signed=handoff.preview("owner-1","cycle-1","build",
+            inputs,6,1,"slot-1")
+        assertTrue(signed.toString(),signed is NativeAcceptedFutureWeekLoadHandoff.Ready)
+        val physical=(signed as NativeAcceptedFutureWeekLoadHandoff.Ready).numberFact
+        assertEquals(LoadBasis.DUMBBELL_PER_HAND,physical.basis)
+        assertEquals(n("20"),physical.issuedLoad)
+        assertEquals(n("25"),physical.proposedLoad)
+        assertEquals(n("25"),physical.physicalProof.nextHigher)
+        assertEquals(KotlinFutureLoadSource.EARNED_NEXT_INCREMENT,physical.source)
+        assertFalse(signed.mayIssueWorkout)
+        assertFalse(signed.mayModifyHistory)
+
+        val workoutId="signed-future-physical-week6"
+        val prepared=f.prepared.prepareActivated("owner-1",workoutId,"cycle-1",
+            6,1,inputs,f.signoff,f.activation,f.repApprovals,
+            futureWeek=handoff,futureWeekSlotId="slot-1")
+        assertTrue(prepared.toString(),prepared is NativeCustomPrepareResult.Prepared)
+        val saved=(prepared as NativeCustomPrepareResult.Prepared).workout
+        assertEquals(offered.fingerprint,saved.futureWeekApprovalFingerprint)
+        assertNull(saved.loadApprovalFingerprint)
+        assertNull(saved.repApprovalFingerprint)
+        assertEquals(n("25"),(saved.snapshot.slots.single().sets.single()
+            .prescription.load as DraftSetLoad.Verified).value)
+        assertEquals(NativeCustomPreparedRead.Found(saved),
+            f.prepared.open("owner-1",workoutId))
+
+        val issued=f.issuer.issueActivated("owner-1",workoutId,"cycle-1",
+            6,1,inputs,f.signoff,f.activation,f.repApprovals,
+            futureWeek=handoff)
+        assertTrue(issued.toString(),issued is NativeCustomJournalResult.Durable)
+        val journal=(issued as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals(saved.snapshot,journal.snapshot)
+        assertEquals(n("25"),(journal.snapshot.slots.single().sets.single()
+            .prescription.load as DraftSetLoad.Verified).value)
+        assertTrue(f.issuer.record("owner-1",workoutId,
+            CustomWorkoutJournalOperation.Record(
+                "physical-future-performed",0,
+                CustomWorkoutVisitKey("cycle-1:w6:d1:slot-1:s1",
+                    CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n("25"),LoadUnit.LB,15,2)))
+            is NativeCustomJournalResult.Durable)
+        assertTrue(NativeKotlinCustomHistoryTransaction(
+            f.history,f.issuer,fence,identity).complete("owner-1","athlete-1",
+                workoutId,CustomWorkoutJournalOperation.Finish(
+                    "physical-future-finished",1)) is NativeCustomFinishResult.Committed)
+        val restored=f.reader.read("owner-1","athlete-1")
+        assertTrue(restored.toString(),
+            restored is NativeKotlinMixedHistoryReadResult.Review)
+        val last=(restored as NativeKotlinMixedHistoryReadResult.Review)
+            .timeline.completions.last() as NativeKotlinMixedHistoryCompletion.Custom
+        assertEquals(n("25"),last.evidence.visits.single().actual?.load)
+        assertEquals(15,last.evidence.visits.single().actual?.reps)
+    }
+
+    @Test fun revokedPhysicalFutureConsentCannotIssuePreparedWeightOrFallBackSilently() {
+        weightedFixture=true
+        val f=liveFutureCoachFixture()
+        finishRealActivatedSession(f,4,15)
+        finishRealActivatedSession(f,5,15)
+        permitNextLoadAndWeekOverrides()
+        val inputs=futureInputs()
+        val reviewer=futureWeekLoadOption(f)
+        val consents=NativeKotlinFutureWeekLoadConsentFileStore(
+            temp.root.toPath(),fence,identity,reviewer)
+        val offered=consents.preview("owner-1","cycle-1","build",inputs,
+            6,1,"slot-1",CoachReadiness.NORMAL,false,n("5"))
+            as NativeFutureWeekConsentPreview.Ready
+        assertTrue(consents.accept("owner-1","cycle-1","build",inputs,
+            6,1,"slot-1",CoachReadiness.NORMAL,false,n("5"),
+            offered.fingerprint,offered.recordRevision,true)
+            is NativeFutureWeekConsentWrite.Accepted)
+        val handoff=NativeKotlinAcceptedFutureWeekLoadHandoff(
+            fence,consents,reviewer,f.coach,f.activation)
+        val workoutId="revoked-physical-week6"
+        val prepared=f.prepared.prepareActivated("owner-1",workoutId,
+            "cycle-1",6,1,inputs,f.signoff,f.activation,f.repApprovals,
+            futureWeek=handoff,futureWeekSlotId="slot-1")
+        assertTrue(prepared.toString(),prepared is NativeCustomPrepareResult.Prepared)
+        val saved=(prepared as NativeCustomPrepareResult.Prepared).workout
+        assertEquals(n("25"),(saved.snapshot.slots.single().sets.single()
+            .prescription.load as DraftSetLoad.Verified).value)
+        assertEquals(NativeFutureWeekConsentWrite.Revoked(2),
+            consents.revoke("owner-1","cycle-1","build",6,1,"slot-1",1))
+        assertEquals(NativeCustomJournalResult.Rejected(
+            NativeCustomJournalRefusal.CONSENT_CHANGED),
+            f.issuer.issueActivated("owner-1",workoutId,"cycle-1",
+                6,1,inputs,f.signoff,f.activation,f.repApprovals,
+                futureWeek=handoff))
+        assertEquals(NativeCustomJournalResult.Rejected(
+            NativeCustomJournalRefusal.NOT_ISSUED),
+            f.issuer.open("owner-1",workoutId))
+        assertEquals(NativeCustomPreparedRead.Found(saved),
+            f.prepared.open("owner-1",workoutId))
+    }
+
 }

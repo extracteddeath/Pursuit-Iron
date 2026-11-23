@@ -391,7 +391,8 @@ object CustomWorkoutJournalDomain {
                         (set.prescription.type==DraftSetType.WARMUP &&
                             set.prescription.amplifier!=null) ||
                         (set.prescription.amplifier?.let{amp->
-                            amp.kind==CustomAmplifierKind.DROP_SET &&
+                            !AdvancedAmplifierProtocolDomain.validStagedFollowUps(amp) ||
+                                amp.kind==CustomAmplifierKind.DROP_SET &&
                                 !AdvancedAmplifierProtocolDomain.validDropSequence(
                                     set.prescription.load,amp)
                         }==true)

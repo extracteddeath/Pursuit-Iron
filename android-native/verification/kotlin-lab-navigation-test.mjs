@@ -922,3 +922,34 @@ assert.ok(tokens.includes('const val DEFAULT_ID="amethyst"') &&
   journey.includes('onOpenAppearance={appearanceExpanded=true}'),
   'Kotlin Lab must start with original Amethyst, persist native theme choice, expose all web palettes, and update system bar contrast live');
 console.log('PASS Kotlin Lab navigation, corrected History and selectable original web themes with Amethyst default');
+
+
+// An earned basic-progression preview must lead to the existing explicit
+// week editor, not mutate a signed/issued workout or save from the preview.
+// All projection numbers remain owned by the single Kotlin evaluator; the
+// handoff requires exact current week/slot and a changed, valid set shape.
+const cycleUi=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleCandidateScreen.kt');
+const progressionHandoff=cycleUi.slice(cycleUi.indexOf('NativeKotlinBasicProgressionPreview(reviewed)'),
+  cycleUi.indexOf('Text("Review suggested week changes")')+80);
+assert.ok(progressionHandoff.includes('NativeKotlinBasicProgressionPreviewShape.canRender(') &&
+  progressionHandoff.includes('CustomBasicProgressionDraftDomain.forWeekEdit(') &&
+  progressionHandoff.includes('slot.sets.map {it.prescription}') &&
+  progressionHandoff.includes('currentSelection.absoluteWeek==session.absoluteWeek') &&
+  progressionHandoff.includes('currentSelection.weekday==session.weekday') &&
+  progressionHandoff.includes('if(changedWorkingSets!=null)') &&
+  progressionHandoff.includes('state.preparedWorkout==null') &&
+  progressionHandoff.includes('weekEditFromCoach=false') &&
+  progressionHandoff.includes('weekExerciseEditor=Triple(') &&
+  !progressionHandoff.includes('controller.acceptWeekEdit()') &&
+  !progressionHandoff.includes('controller.issue('),
+  'Basic progression CTA must only navigate to the exact reviewed future-week editor');
+const cycleWeekEdit=cycleUi.slice(cycleUi.indexOf('basicReference=state.basicDayProgression?.takeIf'),
+  cycleUi.indexOf('saveLabel="Compare full-cycle effects"'));
+const editorUi=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomExerciseSheet.kt');
+assert.ok(cycleWeekEdit.includes('state.preparedWorkout==null') &&
+  cycleWeekEdit.includes('state.basicDayProgressionSlotId==slotId') &&
+  cycleWeekEdit.includes('result.next.copy(declaredNonSetSeconds=session.declaredNonSetSeconds)==session') &&
+  editorUi.includes('Use reviewed targets in this edit') &&
+  editorUi.includes('forms = reviewed.map { it.toFields() }') &&
+  editorUi.includes('Check the resulting sets and compare full-cycle effects before separately approving a change'),
+  'Review-to-edit must retain explicit athlete copy, signed-source recheck and separate full-cycle approval');

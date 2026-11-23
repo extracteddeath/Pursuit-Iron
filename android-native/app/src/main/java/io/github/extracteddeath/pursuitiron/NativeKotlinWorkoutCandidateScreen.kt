@@ -393,8 +393,8 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     val coach=state.liveCoach?.takeIf {
         // A pre-restriction recommendation is unsafe to keep showing while
         // a fresh owner-scoped review is in flight.
-        !movementRestricted && !hasUnsubmittedCurrentEdit && !state.busy &&
-        machineChoices.ready && !machineChoices.busy &&
+        !movementRestricted && !state.busy &&
+        !hasUnsubmittedCurrentEdit && machineChoices.ready && !machineChoices.busy &&
             it.journalRevision==presentation?.revision &&
             it.setKey==selected?.target?.setKey &&
             // A result for station A may linger for one Compose frame

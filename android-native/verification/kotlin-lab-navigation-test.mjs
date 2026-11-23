@@ -26,7 +26,9 @@ assert.ok(landing.includes('host.reviewUnfinishedMeasuredWorkouts()'));
 assert.ok(landing.includes('host.reviewConfirmedUnissuedMeasuredWorkouts()'));
 assert.ok(landing.includes('NativeMeasuredInventoryResult.Ready'));
 assert.ok(landing.includes('NativeMeasuredConsentInventoryResult.Ready'));
-assert.ok(landing.includes('if(measured || approvedMeasured)'));
+assert.ok(journey.includes('if(probes.unfinishedMeasured())return KotlinCandidateDestination.TRAIN') &&
+  journey.includes('if(probes.confirmedMeasured())return KotlinCandidateDestination.TRAIN'),
+  'Cold launch must handle either confirmed measured inventory independently');
 assert.ok(!landing.includes('host.issueMeasuredWorkout(') &&
   !landing.includes('host.confirmMeasuredWorkoutConsent('),
   'Cold launch must not issue or confirm a measured workout without a tap');

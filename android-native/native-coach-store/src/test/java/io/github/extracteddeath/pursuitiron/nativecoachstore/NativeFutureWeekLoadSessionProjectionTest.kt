@@ -3,9 +3,12 @@ package io.github.extracteddeath.pursuitiron.nativecoachstore
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import java.math.BigDecimal
 import org.junit.Assert.*
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 
 class NativeFutureWeekLoadSessionProjectionTest {
+    @get:Rule val temp=TemporaryFolder()
     private fun n(v:String)=BigDecimal(v)
     private val physical=VerifiedLoadStock.Totals(
         LoadUnit.LB,LoadBasis.MACHINE_STACK,
@@ -72,6 +75,17 @@ class NativeFutureWeekLoadSessionProjectionTest {
         assertFalse(result.mayWriteTrainingCycle)
         assertFalse(result.mayChangeHistory)
         assertEquals(source,result.original)
+        assertEquals(KotlinFutureLoadSource.EARNED_NEXT_INCREMENT,
+            result.numberFact.source)
+        assertEquals(KotlinFutureLoadPhysicalReason.EARNED_ADJACENT_HIGHER_SETTING,
+            result.numberFact.physicalProof.reason)
+        assertEquals(n("200"),result.numberFact.issuedLoad)
+        assertEquals(n("205"),result.numberFact.proposedLoad)
+        assertEquals(n("205"),result.numberFact.physicalProof.nextHigher)
+        assertEquals(n("195"),result.numberFact.physicalProof.nextLower)
+        assertEquals(n("5"),result.numberFact.physicalProof.absoluteChange)
+        assertFalse(result.numberFact.mayChangeIssuedWorkout)
+        assertFalse(result.numberFact.maySaveFutureProgram)
         assertEquals(source.slots[1],result.preview.slots[1])
         assertEquals(source.stamp,result.preview.stamp)
         assertEquals(source.knownSetAndRestSeconds,
@@ -143,5 +157,133 @@ class NativeFutureWeekLoadSessionProjectionTest {
                 NativeFutureWeekLoadProjectionRefusal.UNVERIFIED_EQUIPMENT),
                 run(stock=stock))
         }
+    }
+
+
+    @Test fun changedPhysicalStockOrConsentCannotAcquireAFreshAcceptedNumberFact() {
+        val current=receipt()
+        val incompatible=listOf(
+            physical.copy(loads=listOf(n("195"),n("200"),n("210"))),
+            VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.CABLE_STACK,
+                listOf(n("200"),n("205"))),
+            VerifiedLoadStock.Totals(LoadUnit.KG,LoadBasis.MACHINE_STACK,
+                listOf(n("200"),n("205"))))
+        for(stock in incompatible) {
+            assertEquals(NativeFutureWeekLoadProjection.Rejected(
+                NativeFutureWeekLoadProjectionRefusal.UNVERIFIED_EQUIPMENT),
+                run(stock=stock))
+        }
+        for(stale in listOf(
+            current.copy(proposedLoad=n("210")),
+            current.copy(maximumAuthorizedIncrease=n("2.5")),
+            current.copy(proposedLoad=n("205.0001")))) {
+            assertEquals(stale.toString(),
+                NativeFutureWeekLoadProjection.Rejected(
+                    NativeFutureWeekLoadProjectionRefusal.UNVERIFIED_EQUIPMENT),
+                run(grant=NativeFutureWeekConsentRead.Current(stale)))
+        }
+        // The signed workout was issued at 200, so a saved consent claiming
+        // its original load was 195 must fail at the earlier source
+        // prescription gate, before testing the physical inventory.
+        val falseBaseline=current.copy(previousLoad=n("195"))
+        assertEquals(NativeFutureWeekLoadProjection.Rejected(
+            NativeFutureWeekLoadProjectionRefusal.PRESCRIPTION_CHANGED),
+            run(grant=NativeFutureWeekConsentRead.Current(falseBaseline)))
+        val equivalent=current.copy(previousLoad=n("200.000"),
+            proposedLoad=n("205.0000"))
+        val same=run(grant=NativeFutureWeekConsentRead.Current(equivalent))
+            as NativeFutureWeekLoadProjection.Ready
+        assertEquals((run() as NativeFutureWeekLoadProjection.Ready).numberFact,
+            same.numberFact)
+    }
+
+
+    @Test fun acceptedConsentColdReopenRechecksSourceAndPreservesExactNumberProof() {
+        val path=temp.newFolder("durable-week-approval").toPath()
+        val identity=NativeKotlinCurrentIdentity {
+            NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        }
+        var offer:NativeFutureWeekConsentCandidate?=NativeFutureWeekConsentCandidate(
+            "cycle-1","block-2","a".repeat(64),31,8,4,2,3,
+            n("200"),n("205"))
+        fun store()=NativeKotlinFutureWeekLoadConsentFileStore(
+            path,NativeKotlinApprovalRevisionFence(path),identity,
+            {_,_,_,_,_,_,_,_,_,_,_->offer})
+        val args=CustomCoachAuditInputs()
+        val first=store()
+        val shown=first.preview("owner-1","cycle-1","block-2",args,
+            9,1,"bench",CoachReadiness.NORMAL,false,n("5"))
+            as NativeFutureWeekConsentPreview.Ready
+        val accepted=first.accept("owner-1","cycle-1","block-2",
+            args,9,1,"bench",CoachReadiness.NORMAL,false,n("5"),
+            shown.fingerprint,shown.recordRevision,true)
+            as NativeFutureWeekConsentWrite.Accepted
+        assertFalse(accepted.receipt.mayIssueWorkout)
+
+        // A newly constructed fence and file-store instance reads the
+        // ACTUAL disk bytes and re-derives the same physical-number fact.
+        val reopened=store()
+        val durable=reopened.readCurrent("owner-1","cycle-1","block-2",
+            args,9,1,"bench") as NativeFutureWeekConsentRead.Current
+        assertEquals(accepted.receipt,durable.receipt)
+        val before=run()
+            as NativeFutureWeekLoadProjection.Ready
+        val after=run(grant=durable)
+            as NativeFutureWeekLoadProjection.Ready
+        assertEquals(before.numberFact,after.numberFact)
+        assertEquals(before.preview,after.preview)
+        assertEquals(n("205"),after.numberFact.physicalProof.nextHigher)
+        assertFalse(after.numberFact.maySaveFutureProgram)
+
+        // Reopening never licenses a changed source, consent fingerprint
+        // or now-unavailable gym step.
+        offer=offer!!.copy(historyRevision=32)
+        val stale=store().readCurrent("owner-1","cycle-1","block-2",
+            args,9,1,"bench")
+        assertEquals(NativeFutureWeekConsentRead.Rejected(
+            NativeFutureWeekConsentRefusal.STALE_REVIEW),stale)
+        assertEquals(NativeFutureWeekLoadProjection.Rejected(
+            NativeFutureWeekLoadProjectionRefusal.CONSENT_NOT_CURRENT),
+            run(grant=stale))
+        offer=offer!!.copy(historyRevision=31)
+        val recovered=store().readCurrent("owner-1","cycle-1","block-2",
+            args,9,1,"bench")
+        assertTrue(recovered is NativeFutureWeekConsentRead.Current)
+        assertEquals(NativeFutureWeekLoadProjection.Rejected(
+            NativeFutureWeekLoadProjectionRefusal.UNVERIFIED_EQUIPMENT),
+            run(grant=recovered,stock=physical.copy(
+                loads=listOf(n("195"),n("200"),n("210")))))
+
+        assertEquals(NativeFutureWeekConsentWrite.Revoked(2),
+            store().revoke("owner-1","cycle-1","block-2",9,1,"bench",1))
+        assertEquals(NativeFutureWeekConsentRead.Revoked(2),
+            store().readCurrent("owner-1","cycle-1","block-2",
+                args,9,1,"bench"))
+    }
+
+
+    @Test fun twoOwnerReviewsMustAgreeOnExactPhysicalProofBeforeHandoff() {
+        val fact=(run() as NativeFutureWeekLoadProjection.Ready).numberFact
+        fun matches(other:KotlinFutureLoadFact=fact,
+            observed:BigDecimal?=n("200"),
+            previously:BigDecimal=n("200"),
+            next:BigDecimal=n("205"))=
+            NativeAcceptedFutureWeekNumberProof.matches(
+                fact,other,observed,previously,next)
+        assertTrue(matches())
+        assertTrue(matches(observed=n("200.000"),previously=n("200.0"),
+            next=n("205.000")))
+        assertFalse(matches(observed=null))
+        assertFalse(matches(observed=n("195")))
+        assertFalse(matches(previously=n("195")))
+        assertFalse(matches(next=n("210")))
+        assertFalse(matches(fact.copy(authorizedIncrease=n("10"))))
+        assertFalse(matches(fact.copy(physicalProof=
+            fact.physicalProof.copy(nextHigher=n("210")))))
+        assertFalse(matches(fact.copy(physicalProof=
+            fact.physicalProof.copy(absoluteChange=n("10")))))
+        assertFalse(matches(fact.copy(
+            source=KotlinFutureLoadSource.RETURN_TO_DEMONSTRATED_LOAD)))
+        assertFalse(matches(fact.copy(proposedLoad=n("210"))))
     }
 }

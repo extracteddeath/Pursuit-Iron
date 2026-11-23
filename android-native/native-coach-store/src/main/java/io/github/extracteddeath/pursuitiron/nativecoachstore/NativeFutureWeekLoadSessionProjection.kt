@@ -18,7 +18,10 @@ internal sealed interface NativeFutureWeekLoadProjection {
         val original:CustomWorkoutDaySnapshot,
         val preview:CustomWorkoutDaySnapshot,
         val fingerprint:String,
-        val changedSlotId:String
+        val changedSlotId:String,
+        /** Same shared-authority physical receipt reproduced from current
+         * consent and the current owner-verified equipment inventory. */
+        val numberFact:KotlinFutureLoadFact
     ):NativeFutureWeekLoadProjection {
         val mayIssueWorkout:Boolean get()=false
         val mayWriteTrainingCycle:Boolean get()=false
@@ -85,29 +88,26 @@ internal object NativeFutureWeekLoadSessionProjection {
             physical.unit!=loads.first().unit||
             physical.basis!=loads.first().basis)
             return no(NativeFutureWeekLoadProjectionRefusal.UNVERIFIED_EQUIPMENT)
-        val inspection=EquipmentLoadDomain.inspect(
-            physical,item.previousLoad,physical.unit)
-        val replacement=EquipmentLoadDomain.inspect(
-            physical,item.proposedLoad,physical.unit)
-        // Do not smart-cast nullable fields owned by the engine module:
-        // the Kotlin compiler treats cross-module public properties as
-        // unstable. Capture the physical step once before comparisons.
-        val nextPhysical=(inspection as? LoadInspection.Confirmed)?.nextAbove
-        if(inspection !is LoadInspection.Confirmed||
-            !inspection.exact||nextPhysical==null||
-            !same(nextPhysical,item.proposedLoad)||
-            replacement !is LoadInspection.Confirmed||
-            !replacement.exact)
-            return no(NativeFutureWeekLoadProjectionRefusal.UNVERIFIED_EQUIPMENT)
+        // Re-derive the entire physical proof from CURRENT verified stock
+        // after a durable consent read. This is not permission to issue and
+        // is intentionally the same authority used by the earning review.
+        val numberReview=KotlinFutureLoadNumberAuthorityDomain.review(
+            issuedLoad=item.previousLoad,candidateLoad=item.proposedLoad,
+            unit=loads.first().unit,basis=loads.first().basis,stock=physical,
+            maximumAuthorizedIncrease=item.maximumAuthorizedIncrease,
+            source=KotlinFutureLoadSource.EARNED_NEXT_INCREMENT)
+            as? KotlinFutureLoadReview.Accepted
+            ?:return no(NativeFutureWeekLoadProjectionRefusal.UNVERIFIED_EQUIPMENT)
+        val numberFact=numberReview.fact
         val amendedSlot=slot.copy(sets=Collections.unmodifiableList(
             sets.map{set->
                 val old=set.prescription.load as DraftSetLoad.Verified
                 set.copy(prescription=set.prescription.copy(load=old.copy(
-                    value=normalized(item.proposedLoad))))
+                    value=normalized(numberFact.proposedLoad))))
             }))
         val amended=source.copy(slots=Collections.unmodifiableList(
             source.slots.map{if(it.slotId==slot.slotId)amendedSlot else it}))
         return NativeFutureWeekLoadProjection.Ready(
-            source,amended,item.reviewFingerprint,slot.slotId)
+            source,amended,item.reviewFingerprint,slot.slotId,numberFact)
     }
 }

@@ -151,6 +151,54 @@ audit in its existing transaction before accepting or issuing any changed
 workout. A cryptographically durable explanation record and future
 accepted-review cold-replay proof are still open.
 
+## November 23: accepted future-week physical-number replay
+
+The **activated custom future-week load path** now uses the existing shared
+`KotlinFutureLoadNumberAuthorityDomain.review` instead of independent
+"physically next" calculations in both `NativeKotlinCustomFutureWeekLoadOptionReview`
+and `NativeFutureWeekLoadSessionProjection`.
+
+The earning reviewer retains `KotlinFutureLoadFact` in its read-only
+`NativeFutureWeekLoadOptionResult.Ready`. After durable athlete consent,
+the projection **reopens the current verified inventory** and rederives
+the same fact. The owner-fenced
+`NativeKotlinAcceptedFutureWeekLoadHandoff` refuses the projected workout
+unless both rederivations match exactly, the observed signed original and
+consented previous/proposed numbers match, and the source is an ordinary
+earned adjacent increase (not recovery or reversed assistance). Its
+`Ready.numberFact` is a read-only audit receipt, never an issuance grant.
+
+New JVM tests include numeric/basis/stock divergence, "same displayed
+weight but different physical proof" refusal, and **cold reopening** the
+existing durable athlete consent using a new file-store/fence instance.
+A changed history watermark, removed equipment step and revoked consent
+cannot turn into a successful projection after reopening.
+
+This deliberately does **not** skip the athlete's explicit review, create
+an already-issued workout, amend historical sets, persist unverified UI
+labels, or silently change a saved cycle. The durable consent now binds a **v2 domain-separated fingerprint**
+to the owner-resolved machine-instance ID (including gym-default A/B
+selection when the slot has no explicit machine tag) and normalized shared physical
+number proof (unit, load basis, source, accepted issued/candidate loads,
+authorized increase, verified next higher/lower settings, absolute step
+and physical decision reason), in addition to its previous cycle/history/
+settings/permission/activation bytes. A new A/B machine choice or changed
+reviewed neighbor invalidates an older confirmation even if the displayed
+load remains 200 → 205. Old v1 fingerprints will fail the current-review
+replay and require fresh athlete approval; no backward-compatible bypass
+is added to this first official native build. Unrelated distant stock
+configurations that do not alter the immediately reviewed numbers or proof
+remain subject to owner/current-gym source-revision checks.
+
+The owner-fenced activated workout preparation and journal issuer already
+re-preview the accepted handoff and require exact saved/fresh prepared
+snapshots plus current consent fingerprint. This pass makes those existing
+replays depend on the shared physical proof indirectly; it does not
+manufacture a second issuance route. Full hardware/cold-start end-to-end
+accept→prepare→issue acceptance evidence still remains open. The cold-reopen fixture uses an injected review offer
+to isolate file integrity and projection; a full real owner-source
+end-to-end issuance test remains separate.
+
 ## 5. Contract tests and continuing acceptance matrix
 
 - `EquipmentLoadDomainTest`: valid and invalid decimal envelope agreed with `KotlinSetNumberAuthorityDomain`, plus malformed selector increment refusal.

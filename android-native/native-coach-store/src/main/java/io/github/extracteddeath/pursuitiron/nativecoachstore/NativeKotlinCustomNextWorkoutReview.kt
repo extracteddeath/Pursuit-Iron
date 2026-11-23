@@ -33,7 +33,11 @@ sealed interface NativeCustomNextCoachResult {
         /** A heavier authored week needs explicit review even after failed work. */
         val authoredLoadReversion:CustomAuthoredLoadReversionReview?=null,
         /** Earned equipment step from the accepted lower same-day baseline. */
-        val reducedBaselineProgression:CustomReducedBaselineProgressionReview?=null
+        val reducedBaselineProgression:CustomReducedBaselineProgressionReview?=null,
+        /** Physical station actually resolved by the signed owner inventory.
+         * May be the gym's default A/B machine when the authored slot has no
+         * explicit machine ID. Do not substitute the raw slot label. */
+        val resolvedMachineInstanceId:String?=null
     ):NativeCustomNextCoachResult {
         /** Display-only: re-review after subsequent Finish/correction. */
         val mayIssueWorkout:Boolean get()=false
@@ -277,7 +281,8 @@ class NativeKotlinCustomNextWorkoutReview(
             NativeCustomNextCoachResult.Reviewed(
                 full.timeline.manifestRevision,consentRevision,
                 validated,currentSettings?.revision ?:0,verifiedStock,
-                starting.baseline,starting,next,slotId,transition,sameBlock,reversion,reduced)
+                starting.baseline,starting,next,slotId,transition,sameBlock,reversion,reduced,
+                selectedMachine)
         }}.getOrElse{reject(NativeCustomNextCoachRefusal.STORAGE_UNAVAILABLE)}
     }
 }

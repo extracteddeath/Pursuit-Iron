@@ -37,7 +37,11 @@ sealed interface NativeFutureWeekLoadOptionResult {
         val previousLoad:BigDecimal,
         val candidateLoad:BigDecimal,
         /** SHA-256 of exact audited proposal, verified history and settings. */
-        val reviewFingerprint:String
+        val reviewFingerprint:String,
+        /** Exact accepted physical-number receipt, NOT historical evidence
+         * or a workout issuance grant. It cannot be reconstructed from
+         * the displayed weight without a fresh authenticated review. */
+        val numberFact:KotlinFutureLoadFact
     ):NativeFutureWeekLoadOptionResult {
         val mayApplyAutomatically:Boolean get()=false
         val mayIssueWorkout:Boolean get()=false
@@ -190,6 +194,15 @@ class NativeKotlinCustomFutureWeekLoadOptionReview(
                     NativeFutureWeekLoadRefusal.HISTORY_UNVERIFIED)
             val advice=verified.review
             val physical=verified.verifiedStock
+            // A null authored machine tag can still resolve to the gym's
+            // physical default A/B variant. Bind THAT actual owner-selected
+            // instance to consent; otherwise changing the default could
+            // reuse the same 200 -> 205 fingerprint on a different station.
+            if(verified.selectedSlotId!=slotId ||
+                (slot.machineInstanceId!=null &&
+                    verified.resolvedMachineInstanceId!=slot.machineInstanceId))
+                return@withOwnerTransaction no(
+                    NativeFutureWeekLoadRefusal.EQUIPMENT_UNVERIFIED)
             if(advice.status!=CustomNextWorkoutCoachingStatus.READY_FOR_LOAD_REVIEW ||
                 advice.loadReviewCandidate==null ||
                 advice.observedStraightSetLoad==null ||
@@ -247,21 +260,22 @@ class NativeKotlinCustomFutureWeekLoadOptionReview(
             val candidate=advice.loadReviewCandidate
                 ?:return@withOwnerTransaction no(
                     NativeFutureWeekLoadRefusal.NOT_EARNED)
-            if(physical==null || candidate<=current ||
-                candidate.subtract(current)>maxAuthorizedIncrease)
-                return@withOwnerTransaction no(
+            // Use the SAME physical-number gate as basic progression,
+            // generated coaching and custom amendments. Neither this
+            // reviewer nor the native workout presenter may invent another
+            // adjacent-step rule.
+            val numberReview=physical?.let {
+                KotlinFutureLoadNumberAuthorityDomain.review(
+                    issuedLoad=current,candidateLoad=candidate,
+                    unit=it.unit,basis=it.basis,stock=it,
+                    maximumAuthorizedIncrease=maxAuthorizedIncrease,
+                    source=KotlinFutureLoadSource.EARNED_NEXT_INCREMENT)
+            } as? KotlinFutureLoadReview.Accepted
+                ?:return@withOwnerTransaction no(
                     NativeFutureWeekLoadRefusal.EQUIPMENT_UNVERIFIED)
-            val inspected=EquipmentLoadDomain.inspect(
-                physical,current,physical.unit)
-            val nextPhysical=EquipmentLoadDomain.inspect(
-                physical,candidate,physical.unit)
-            val nextAvailable=(inspected as? LoadInspection.Confirmed)
-                ?.nextAbove
-            if(inspected !is LoadInspection.Confirmed ||
-                !inspected.exact || nextAvailable==null ||
-                !same(nextAvailable,candidate) ||
-                nextPhysical !is LoadInspection.Confirmed ||
-                !nextPhysical.exact)
+            val numberFact=numberReview.fact
+            if(!same(numberFact.issuedLoad,current) ||
+                !same(numberFact.proposedLoad,candidate))
                 return@withOwnerTransaction no(
                     NativeFutureWeekLoadRefusal.EQUIPMENT_UNVERIFIED)
             val changed=authored.map {set->
@@ -330,13 +344,15 @@ class NativeKotlinCustomFutureWeekLoadOptionReview(
                 previousLoad=current,candidateLoad=candidate,
                 readiness=readiness,movementRestricted=movementRestricted,
                 maximumAuthorizedIncrease=maxAuthorizedIncrease,
-                evidenceWorkoutIds=advice.comparedWorkoutIds)
+                evidenceWorkoutIds=advice.comparedWorkoutIds,
+                numberFact=numberFact,
+                machineInstanceId=verified.resolvedMachineInstanceId)
             NativeFutureWeekLoadOptionResult.Ready(
                 option,compared,ledger.manifestRevision,original.revision,
                 source.revision,currentSettings.revision,permission.revision,
                 Collections.unmodifiableList(advice.comparedWorkoutIds),
                 absoluteWeek,weekday,slotId,norm(current),norm(candidate),
-                fingerprint)
+                fingerprint,numberFact)
         }}.getOrElse{no(NativeFutureWeekLoadRefusal.STORAGE_UNAVAILABLE)}
     }
 }

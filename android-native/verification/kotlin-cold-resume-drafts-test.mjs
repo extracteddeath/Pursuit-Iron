@@ -19,6 +19,11 @@ assert.match(store,/if\(committed\)store\.discard\(identity\)/);
 assert.match(store,/if\(!committed\)store\.save\(/);
 assert.match(store,/NativePendingWorkoutDraftCodec\.decode\(/);
 assert.match(store,/NativePendingWorkoutDraftCodec\.encode\(/);
+assert.match(store,/if\(parts\.any\{it\.length>MAX_FIELD \|\| !utf8RoundTrips\(it\)\}\)return null/);
+assert.match(store,/return encoded\.takeIf\{it\.length<=MAX_RECORD\}/);
+assert.match(store,/it\.toByteArray\(Charsets\.UTF_8\)\.contentEquals\(bytes\)/);
+assert.match(store,/rememberSaveable\(identity\.value,receiptRevision,committed\)/);
+assert.match(tests,/draftEncodingMustAlwaysBeRecoverableWithoutTextReplacement/);
 assert.doesNotMatch(store,/KotlinPerformedSet\(|RecordSet\(|recordIssuedCustomSet\(|issueWorkout\(/);
 
 assert.match(generated,/journal\?\.snapshot\?\.source\?\.athleteId\.orEmpty\(\)/);

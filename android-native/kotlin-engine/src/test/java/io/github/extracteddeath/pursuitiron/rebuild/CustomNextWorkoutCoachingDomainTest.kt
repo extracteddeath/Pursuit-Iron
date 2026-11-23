@@ -1680,7 +1680,7 @@ class CustomNextWorkoutCoachingDomainTest {
             mapOf(n(45) to 1,n(25) to 1,n(5) to 1,
                 BigDecimal("2.5") to 2))
         assertEquals(CustomNextLoadAmendmentResult.Rejected(
-            CustomNextLoadAmendmentRefusal.UNVERIFIED_EQUIPMENT),
+            CustomNextLoadAmendmentRefusal.DIFFERENT_PHYSICAL_MACHINE),
             CustomNextLoadAmendmentDomain.propose(
                 inconsistent,"main",favorable,verifiedBarbell,n(5)))
         assertEquals(n(200),(inconsistent.slots.single().sets.first()

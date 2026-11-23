@@ -114,6 +114,7 @@ internal fun NativeKotlinCandidateHistoryScreen(
     var historyExerciseId by rememberSaveable{mutableStateOf<String?>(null)}
     var historyExerciseAthleteId by rememberSaveable{mutableStateOf<String?>(null)}
     var exerciseSearch by rememberSaveable{mutableStateOf("")}
+    var exerciseSearchAthleteId by rememberSaveable{mutableStateOf<String?>(null)}
     fun reload() {
         if(busy)return
         busy=true;result=null;finishRecoveryNotice=null
@@ -179,17 +180,24 @@ internal fun NativeKotlinCandidateHistoryScreen(
             historyExerciseId,historyExerciseAthleteId,
             verified?.athleteId,verifiedRepMovements)
     }
-    val filteredMovements=remember(searchableMovements,exerciseSearch) {
-        val query=exerciseSearch.trim()
+    // Saveable query text is a browser preference, not evidence that another
+    // athlete has matching workouts. A change of authenticated owner opens
+    // the new verified timeline without the previous athlete's stale filter.
+    val activeExerciseSearch=remember(exerciseSearch,exerciseSearchAthleteId,verified?.athleteId) {
+        NativeKotlinHistoryFocusPolicy.admitSearch(
+            exerciseSearch,exerciseSearchAthleteId,verified?.athleteId)
+    }
+    val filteredMovements=remember(searchableMovements,activeExerciseSearch) {
+        val query=activeExerciseSearch.trim()
         if(query.isEmpty())emptyList()
         else searchableMovements.filter{
             it.contains(query,ignoreCase=true) ||
                 kotlinExerciseLabel(it).contains(query,ignoreCase=true)
         }
     }
-    val visibleSessions=remember(verified,filteredMovements,exerciseSearch,
+    val visibleSessions=remember(verified,filteredMovements,activeExerciseSearch,
         focusedWorkoutId,preferredWorkoutId) {
-        val query=exerciseSearch.trim()
+        val query=activeExerciseSearch.trim()
         if(focusedWorkoutId!=null)verified?.completions.orEmpty().filter{
             it.manifest.workoutId==focusedWorkoutId
         }
@@ -223,7 +231,7 @@ internal fun NativeKotlinCandidateHistoryScreen(
         else nativeHistorySessionsInSelection(visibleSessions,dateSelection,historyZone)
     }
     val monthSections=remember(displayedSessions,historyZone){nativeHistoryMonths(displayedSessions,historyZone)}
-    var visibleExerciseCount by rememberSaveable(exerciseSearch){mutableStateOf(12)}
+    var visibleExerciseCount by rememberSaveable(activeExerciseSearch){mutableStateOf(12)}
     val historyListState=rememberLazyListState()
     // Opening an exact completed session must not reuse the old History
     // browser's distant scroll position and hide the finished result.
@@ -342,13 +350,16 @@ internal fun NativeKotlinCandidateHistoryScreen(
                         PursuitSectionHeading("Find an exercise",
                             "Search completed sessions, or open a movement's full history.")
                         OutlinedTextField(
-                            value=exerciseSearch,
-                            onValueChange={exerciseSearch=it.take(80)},
+                            value=activeExerciseSearch,
+                            onValueChange={
+                                exerciseSearch=it.take(80)
+                                exerciseSearchAthleteId=read.timeline.athleteId
+                            },
                             singleLine=true,
                             label={Text("Search exercises")},
                             modifier=Modifier.fillMaxWidth()
                         )
-                        if(exerciseSearch.isNotBlank()) {
+                        if(activeExerciseSearch.isNotBlank()) {
                             Row(Modifier.fillMaxWidth(),
                                 horizontalArrangement=Arrangement.SpaceBetween) {
                                 Text("${displayedSessions.size} matching sessions in this view",
@@ -366,8 +377,11 @@ internal fun NativeKotlinCandidateHistoryScreen(
                                     filteredMovements.take(visibleExerciseCount).forEach{exercise->
                                         if(exercise in measuredOnlyExercises) {
                                             FilterChip(
-                                                selected=exerciseSearch==exercise,
-                                                onClick={exerciseSearch=exercise},
+                                                selected=activeExerciseSearch==exercise,
+                                                onClick={
+                                                    exerciseSearch=exercise
+                                                    exerciseSearchAthleteId=read.timeline.athleteId
+                                                },
                                                 label={Text("Measured · ${kotlinExerciseLabel(exercise)}")}
                                             )
                                         } else Row(horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {

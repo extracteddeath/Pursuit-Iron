@@ -26,7 +26,9 @@ assert.ok(landing.includes('host.reviewUnfinishedMeasuredWorkouts()'));
 assert.ok(landing.includes('host.reviewConfirmedUnissuedMeasuredWorkouts()'));
 assert.ok(landing.includes('NativeMeasuredInventoryResult.Ready'));
 assert.ok(landing.includes('NativeMeasuredConsentInventoryResult.Ready'));
-assert.ok(landing.includes('if(measured || approvedMeasured)'));
+assert.ok(journey.includes('if(probes.unfinishedMeasured())return KotlinCandidateDestination.TRAIN') &&
+  journey.includes('if(probes.confirmedMeasured())return KotlinCandidateDestination.TRAIN'),
+  'Cold launch must handle either confirmed measured inventory independently');
 assert.ok(!landing.includes('host.issueMeasuredWorkout(') &&
   !landing.includes('host.confirmMeasuredWorkoutConsent('),
   'Cold launch must not issue or confirm a measured workout without a tap');
@@ -104,33 +106,41 @@ const history=read('android-native/app/src/main/java/io/github/extracteddeath/pu
 // replay a Finish before an explicit History recovery tap.
 const coldHistory=landing.slice(landing.indexOf('val initial=withContext(Dispatchers.IO)'),
   landing.indexOf('landingChecked=true'));
-assert.ok(coldHistory.includes('host.reviewVerifiedKotlinHistory()') &&
-  coldHistory.includes('NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION') &&
-  coldHistory.includes('if(pendingHistory) KotlinCandidateDestination.HISTORY') &&
-  coldHistory.indexOf('if(pendingHistory)')<
-    coldHistory.indexOf('host.reviewResumableCustomWorkouts()') &&
-  coldHistory.indexOf('if(pendingHistory)')<
-    coldHistory.indexOf('currentUnfinishedGeneratedWorkoutId(host)') &&
-  coldHistory.indexOf('if(pendingHistory)')<
-    coldHistory.indexOf('host.reviewUnfinishedMeasuredWorkouts()') &&
-  coldHistory.indexOf('if(pendingHistory)')<
-    coldHistory.indexOf('host.listOwnedCustomCycleDrafts()') &&
-  !coldHistory.includes('host.recoverPendingNativeHistory()'),
-  'Pending canonical History must take priority over every Train resume route, without automatic recovery');
-// An athlete with fully completed, independently verified native workouts
-// but no unfinished session or custom draft must not be mistaken for a
-// first-time user after a cold start. Existing program remains higher
-// priority; an unknown or rejected ledger is never accepted as History.
+const coldPriority=journey.slice(journey.indexOf('internal fun kotlinColdLaunchDestination('),
+  journey.indexOf('private val primaryDestinations'));
+// The verified ledger is fetched exactly once before the lazy probes.
+// The pure priority policy short-circuits: prepared History recovery cannot
+// be preempted by Train; proven sessions cannot be misrouted to onboarding.
 assert.ok(coldHistory.includes('val readHistory=runCatching {') &&
   coldHistory.includes('host.reviewVerifiedKotlinHistory()') &&
-  coldHistory.includes('NativeKotlinMixedHistoryReadResult.Review') &&
+  coldHistory.includes('NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION') &&
+  coldHistory.includes('pendingHistory={pendingHistory}') &&
+  coldHistory.includes('kotlinColdLaunchDestination(KotlinColdLaunchProbes(') &&
+  coldHistory.indexOf('host.reviewVerifiedKotlinHistory()')<
+    coldHistory.indexOf('host.reviewResumableCustomWorkouts()') &&
+  coldHistory.includes('currentUnfinishedGeneratedWorkoutId(host)') &&
+  coldHistory.includes('host.reviewUnfinishedMeasuredWorkouts()') &&
+  coldHistory.includes('host.reviewConfirmedUnissuedMeasuredWorkouts()') &&
+  coldHistory.includes('host.listOwnedCustomCycleDrafts()') &&
+  !coldHistory.includes('host.recoverPendingNativeHistory()') &&
+  coldPriority.includes('if(probes.pendingHistory())return KotlinCandidateDestination.HISTORY') &&
+  coldPriority.includes('if(probes.unfinishedCustom())return KotlinCandidateDestination.TRAIN') &&
+  coldPriority.includes('if(probes.unfinishedGenerated())return KotlinCandidateDestination.TRAIN') &&
+  coldPriority.includes('if(probes.unfinishedMeasured())return KotlinCandidateDestination.TRAIN') &&
+  coldPriority.includes('if(probes.confirmedMeasured())return KotlinCandidateDestination.TRAIN') &&
+  coldPriority.includes('return kotlinIdleColdLanding(') &&
+  coldPriority.includes('hasVerifiedCompletedHistory=probes.completedVerifiedHistory)'),
+  'Owner-verified cold-start probes must have deterministic recovery-before-resume priority');
+// Incomplete, failed, or wrong-owner History cannot be used to infer
+// a returning athlete. Only a successful verified timeline is eligible.
+assert.ok(coldHistory.includes('NativeKotlinMixedHistoryReadResult.Review') &&
   coldHistory.includes('?.timeline?.completions?.isNotEmpty()==true') &&
-  coldHistory.includes('kotlinIdleColdLanding('),
-  'Completed verified History must be a returning athlete landing option');
-assert.ok(journey.includes('hasOwnedCustomCycle -> KotlinCandidateDestination.PROGRAM') &&
-  journey.includes('hasVerifiedCompletedHistory -> KotlinCandidateDestination.HISTORY') &&
+  coldPriority.includes('hasOwnedCustomCycle=probes.ownedCustomProgram()') &&
+  coldPriority.includes('hasVerifiedCompletedHistory=probes.completedVerifiedHistory') &&
+  journey.includes('hasOwnedCustomCycle -> KotlinCandidateDestination.PROGRAM') &&
+  journey.includes('hasVerifiedCompletedHistory() -> KotlinCandidateDestination.HISTORY') &&
   journey.includes('else -> KotlinCandidateDestination.ONBOARD'),
-  'Owned program outranks verified History; empty/unverified remains Setup');
+  'Owned program outranks verified completed History; unknown stays Setup');
 
 const recoveryHost=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt');
 const recovery=recoveryHost.slice(recoveryHost.indexOf('fun recoverPendingNativeHistory():'),

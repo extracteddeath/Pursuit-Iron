@@ -204,10 +204,16 @@ object AdvancedAmplifierProtocolDomain {
         val before=main as? DraftSetLoad.Verified ?:return false
         val first=amp.followUpLoad as? DraftSetLoad.Verified ?:return false
         if(before.unit!=first.unit || before.basis!=first.basis ||
+            !KotlinSetNumberAuthorityDomain.validPrescribedLoad(
+                before.value,before.basis) ||
+            !KotlinSetNumberAuthorityDomain.validPrescribedLoad(
+                first.value,first.basis) ||
             first.value.signum()<=0 || first.value>=before.value)return false
         if(amp.followUpRounds==1)return amp.secondDropLoad==null
         val second=amp.secondDropLoad as? DraftSetLoad.Verified ?:return false
         return first.unit==second.unit && first.basis==second.basis &&
+            KotlinSetNumberAuthorityDomain.validPrescribedLoad(
+                second.value,second.basis) &&
             second.value.signum()>0 && second.value<first.value
     }
 

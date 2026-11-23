@@ -1687,4 +1687,47 @@ class CustomNextWorkoutCoachingDomainTest {
             .prescription.load as DraftSetLoad.Verified).value)
     }
 
+
+    @Test fun earnedLoadReviewIsBoundToTheExactReviewedMachineABStation() {
+        fun stationDay(day:CustomWorkoutDaySnapshot,id:String?)=
+            day.copy(slots=day.slots.map {it.copy(machineInstanceId=id)})
+        fun performedAt(order:Long,week:Int,id:String)=
+            completed(order,week).let{session ->
+                session.copy(snapshot=stationDay(session.snapshot,id),
+                    evidence=session.evidence.copy(visits=session.evidence.visits.map{
+                        it.copy(actual=it.actual?.copy(machineInstanceId=id))
+                    }))
+            }
+        val nextA=stationDay(snapshot(5),"A")
+        val reviewed=CustomNextWorkoutCoachingDomain.review(
+            CustomNextWorkoutCoachingRequest(nextA,"main",
+                listOf(performedAt(1,3,"A"),performedAt(2,4,"A")),
+                stock(),n(5),CoachReadiness.NORMAL,false,
+                CustomRepForecastPolicy.TARGET_RIR_V2,
+                requestedMachineInstanceId="A"))
+        assertEquals(CustomNextWorkoutCoachingStatus.READY_FOR_LOAD_REVIEW,
+            reviewed.status)
+        assertEquals("A",reviewed.physicalMachineInstanceId)
+        assertEquals(n(205),reviewed.loadReviewCandidate)
+        assertTrue(CustomNextLoadAmendmentDomain.propose(
+            nextA,"main",reviewed,stock(),n(5))
+            is CustomNextLoadAmendmentResult.Proposed)
+        for(unrelated in listOf(
+            stationDay(nextA,"B"),stationDay(nextA,null))) {
+            assertEquals(CustomNextLoadAmendmentResult.Rejected(
+                CustomNextLoadAmendmentRefusal.DIFFERENT_PHYSICAL_MACHINE),
+                CustomNextLoadAmendmentDomain.propose(
+                    unrelated,"main",reviewed,stock(),n(5)))
+            assertEquals(n(200),(unrelated.slots.single().sets.first()
+                .prescription.load as DraftSetLoad.Verified).value)
+        }
+        // An unbound/old synthetic readout cannot impersonate a real
+        // station-specific approval just by copying the weight numbers.
+        assertEquals(CustomNextLoadAmendmentResult.Rejected(
+            CustomNextLoadAmendmentRefusal.DIFFERENT_PHYSICAL_MACHINE),
+            CustomNextLoadAmendmentDomain.propose(
+                nextA,"main",reviewed.copy(physicalMachineInstanceId=null),
+                stock(),n(5)))
+    }
+
 }

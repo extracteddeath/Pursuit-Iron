@@ -23,14 +23,27 @@ class NativeKotlinBasicProgressionPreviewShapeTest {
             ComposerRole.ACCESSORY, null, null, true, "", sets)
     }
 
-    private fun candidate(): BasicProgressionResult.Candidate =
-        BasicProgressionResult.Candidate(
+    private fun candidate(): BasicProgressionResult.Candidate {
+        val stock=VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.DUMBBELL_PER_HAND,
+            listOf("15","20","25","30").map(::BigDecimal))
+        val verified=KotlinFutureLoadNumberAuthorityDomain.review(
+            BigDecimal("20"),BigDecimal("25"),LoadUnit.LB,
+            LoadBasis.DUMBBELL_PER_HAND,stock,BigDecimal("5"),
+            KotlinFutureLoadSource.EARNED_NEXT_INCREMENT)
+            as KotlinFutureLoadReview.Accepted
+        return BasicProgressionResult.Candidate(
             BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION,
             listOf(BigDecimal("20"),BigDecimal("25")),
             setOf(1),BasicProgressionDecision.EARNED_INCREMENT,"prior",
             dynamicSetDecisions=listOf(
                 BasicProgressionDecision.BUILD_REPS,
-                BasicProgressionDecision.EARNED_INCREMENT))
+                BasicProgressionDecision.EARNED_INCREMENT),
+            sourceScope=BasicProgressionScope("athlete","program","gym",
+                "block","block:d1","exercise",null,LoadUnit.LB,
+                LoadBasis.DUMBBELL_PER_HAND),
+            approvedFutureLoadFacts=mapOf(1 to verified.fact))
+    }
 
     private fun reviewed(
         candidate: BasicProgressionResult.Candidate = candidate()
@@ -90,7 +103,21 @@ class NativeKotlinBasicProgressionPreviewShapeTest {
         assertFalse(NativeKotlinBasicProgressionPreviewShape.canRender(listOf(slot()),proposal))
         val landmine=slot(load=DraftSetLoad.Verified(
             LoadUnit.LB,LoadBasis.LANDMINE_ADDED_PLATES,BigDecimal.ZERO))
-        assertTrue(NativeKotlinBasicProgressionPreviewShape.canRender(listOf(landmine),proposal))
+        val stock=VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.LANDMINE_ADDED_PLATES,
+            listOf(BigDecimal.ZERO,BigDecimal("25")))
+        val approved=(KotlinFutureLoadNumberAuthorityDomain.review(
+            BigDecimal.ZERO,BigDecimal("25"),LoadUnit.LB,
+            LoadBasis.LANDMINE_ADDED_PLATES,stock,BigDecimal("25"),
+            KotlinFutureLoadSource.EARNED_NEXT_INCREMENT)
+            as KotlinFutureLoadReview.Accepted).fact
+        val landmineClaim=candidate().copy(
+            proposedWorkingLoads=listOf(BigDecimal.ZERO,BigDecimal("25")),
+            sourceScope=candidate().sourceScope!!.copy(
+                basis=LoadBasis.LANDMINE_ADDED_PLATES),
+            approvedFutureLoadFacts=mapOf(1 to approved))
+        assertTrue(NativeKotlinBasicProgressionPreviewShape.canRender(
+            listOf(landmine),reviewed(landmineClaim)))
     }
 
     @Test fun bodyweightManualModeMustHaveItsOwnSignedBodyweightSlot() {

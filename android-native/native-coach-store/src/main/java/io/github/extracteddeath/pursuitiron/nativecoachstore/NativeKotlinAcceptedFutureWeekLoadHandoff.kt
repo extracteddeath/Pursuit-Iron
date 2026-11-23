@@ -39,6 +39,39 @@ enum class NativeAcceptedFutureWeekLoadRefusal {
     STORAGE_UNAVAILABLE
 }
 
+/**
+ * Identity check only, not another number engine: BOTH owner reviews must
+ * yield an identical accepted physical fact. A screen weight and a consent
+ * fingerprint alone cannot be substituted for this verified provenance.
+ * Historical earning, authorization and owner-source revision checks are
+ * separate prerequisites performed by the surrounding handoff transaction.
+ */
+internal object NativeAcceptedFutureWeekNumberProof {
+    private fun same(a:BigDecimal,b:BigDecimal)=a.compareTo(b)==0
+
+    fun matches(
+        earned:KotlinFutureLoadFact,
+        projected:KotlinFutureLoadFact,
+        observed:BigDecimal?,
+        acceptedPrevious:BigDecimal,
+        acceptedNext:BigDecimal
+    ):Boolean {
+        return earned==projected &&
+            observed!=null &&
+            same(observed,earned.issuedLoad) &&
+            same(acceptedPrevious,earned.issuedLoad) &&
+            same(acceptedNext,earned.proposedLoad) &&
+            earned.source==KotlinFutureLoadSource.EARNED_NEXT_INCREMENT &&
+            earned.physicalProof.reason==
+                KotlinFutureLoadPhysicalReason.EARNED_ADJACENT_HIGHER_SETTING &&
+            !earned.mayChangeIssuedWorkout &&
+            !earned.maySaveFutureProgram &&
+            !earned.mayModifyHistory &&
+            !earned.physicalProof.mayIssueWorkout &&
+            !earned.physicalProof.maySaveProgram
+    }
+}
+
 class NativeKotlinAcceptedFutureWeekLoadHandoff(
     private val fence:NativeKotlinApprovalRevisionFence,
     private val consents:NativeKotlinFutureWeekLoadConsentFileStore,
@@ -142,16 +175,9 @@ class NativeKotlinAcceptedFutureWeekLoadHandoff(
             // A displayed weight alone is never sufficient provenance.
             val fact=earned.numberFact
             val observed=rechecked.review.observedStraightSetLoad
-            if(fact!=projected.numberFact ||
-                observed==null ||
-                !same(observed,fact.issuedLoad) ||
-                !same(accepted.previousLoad,fact.issuedLoad) ||
-                !same(accepted.proposedLoad,fact.proposedLoad) ||
-                fact.source!=KotlinFutureLoadSource.EARNED_NEXT_INCREMENT ||
-                fact.physicalProof.reason!=
-                    KotlinFutureLoadPhysicalReason.EARNED_ADJACENT_HIGHER_SETTING ||
-                fact.mayChangeIssuedWorkout || fact.maySaveFutureProgram ||
-                fact.mayModifyHistory)
+            if(!NativeAcceptedFutureWeekNumberProof.matches(
+                fact,projected.numberFact,observed,
+                accepted.previousLoad,accepted.proposedLoad))
                 return@withOwnerTransaction no(
                     NativeAcceptedFutureWeekLoadRefusal.PHYSICAL_NUMBER_PROOF_DIVERGED)
             NativeAcceptedFutureWeekLoadHandoff.Ready(

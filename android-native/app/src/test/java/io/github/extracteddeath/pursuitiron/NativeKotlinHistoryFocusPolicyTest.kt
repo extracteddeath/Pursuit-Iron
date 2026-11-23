@@ -40,6 +40,25 @@ class NativeKotlinHistoryFocusPolicyTest {
             "bench_press","athleteA","athleteA",verifiedRepetitions))
     }
 
+    @Test fun savedExerciseSearchAppliesOnlyToItsOwnVerifiedAthlete() {
+        assertEquals("bench",NativeKotlinHistoryFocusPolicy.admitSearch(
+            "bench","athleteA","athleteA"))
+        assertEquals("",NativeKotlinHistoryFocusPolicy.admitSearch(
+            "bench","athleteA","athleteB"))
+        assertEquals("",NativeKotlinHistoryFocusPolicy.admitSearch(
+            "bench","athleteA",null))
+        assertEquals("",NativeKotlinHistoryFocusPolicy.admitSearch(
+            "bench",null,"athleteA"))
+        assertEquals("",NativeKotlinHistoryFocusPolicy.admitSearch(
+            "bench","","athleteA"))
+        assertEquals("",NativeKotlinHistoryFocusPolicy.admitSearch(
+            "","athleteA","athleteA"))
+        // A routine same-owner refresh must retain both the literal query
+        // and its case; the browser, not this policy, decides text matching.
+        assertEquals("DB Press",NativeKotlinHistoryFocusPolicy.admitSearch(
+            "DB Press","athleteA","athleteA"))
+    }
+
     @Test fun invalidOrDuplicateIdentifiersFailClosed() {
         assertNull(NativeKotlinHistoryFocusPolicy.admit(
             "workout invalid",listOf("workout invalid")))

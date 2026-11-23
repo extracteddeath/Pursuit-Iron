@@ -2096,7 +2096,7 @@ private fun NativeKotlinCustomVisitEditor(
         }
         if(saved!=null){
             Text(nativeSavedSetCaption("Recorded",saved.outcome,saved.performed,
-                exerciseId,issuedGymId,machineRoster),
+                target,exerciseId,issuedGymId,machineRoster),
                 style=MaterialTheme.typography.bodyMedium)
             TextButton(enabled=!locked,onClick={editing=true},
                 modifier=Modifier.heightIn(min=48.dp)) {

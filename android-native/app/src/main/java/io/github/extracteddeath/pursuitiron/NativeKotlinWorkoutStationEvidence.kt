@@ -59,6 +59,7 @@ internal fun nativeSavedSetCaption(
     prefix:String,
     outcome:KotlinJournalSetOutcome?,
     actual:KotlinPerformedSet?,
+    issuedLoad:DraftSetLoad,
     exerciseId:String,
     issuedGymId:String?,
     roster:NativeMachineRosterSnapshot?
@@ -67,10 +68,17 @@ internal fun nativeSavedSetCaption(
         outcome?.name?.replace('_',' ')?.lowercase() ?: "outcome unavailable")
     if(actual!=null) {
         parts+="${actual.reps} reps"
-        val amount=actual.load?.stripTrailingZeros()?.toPlainString()
-        parts+=if(amount!=null) {
-            "at $amount ${actual.unit?.name?.lowercase() ?: "(unit unreported)"}"
-        } else "bodyweight"
+        // One factual load-label authority across the in-workout receipt,
+        // Target/Last, set correction and final History. A missing observed
+        // weight is NOT evidence of bodyweight. Per-hand, stack and assisted
+        // counterweight conventions come only from a matching issued unit,
+        // never from an inferred machine or gym.
+        val observed=kotlinActualLoadLabel(actual,issuedLoad)
+        parts+=when(observed) {
+            "Bodyweight" -> "bodyweight"
+            "Load not reported" -> "load not reported"
+            else -> "at $observed"
+        }
         parts+=(actual.actualRir?.let{"$it actual RIR"} ?: "actual RIR unreported")
         if(actual.machineInstanceId!=null)
             workoutPhysicalStationName(

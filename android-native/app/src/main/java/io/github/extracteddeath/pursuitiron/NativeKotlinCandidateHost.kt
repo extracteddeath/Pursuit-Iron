@@ -1398,6 +1398,41 @@ internal class NativeKotlinCandidateHost(context:Context) {
             signed.ownerKey,signed.athleteId))
     }
 
+    /**
+     * Explicit History recovery after an interrupted native transaction.
+     * Select the existing owner-fenced coordinator from the TYPE recorded
+     * in the canonical pending manifest, not from a UI-provided workout ID.
+     *
+     * All five native pending intent kinds keep their separate durable
+     * owners. Each coordinator can only redo its own already-prepared intent
+     * and refuses foreign types; nothing creates a new Finish, correction,
+     * approved workout or athlete. The final answer is ALWAYS a fresh
+     * full-History verification, never a writer's optimistic receipt.
+     */
+    fun recoverPendingNativeHistory():NativeKotlinMixedHistoryReadResult {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeKotlinMixedHistoryReadResult.Rejected(
+                NativeKotlinMixedHistoryRefusal.NOT_AUTHORIZED)
+        val pending=(historyStore.open(signed.ownerKey,signed.athleteId)
+            as? NativeHistoryLedgerResult.Durable)?.ledger?.pending
+        when(pending) {
+            is NativeHistoryWriteIntent.MeasuredFinish ->
+                measuredHistoryTransactions.recover(signed.ownerKey,signed.athleteId)
+            is NativeHistoryWriteIntent.CustomFinish ->
+                customHistoryTransactions.recover(signed.ownerKey,signed.athleteId)
+            is NativeHistoryWriteIntent.CustomCorrect ->
+                customCorrectionTransactions.recover(signed.ownerKey,signed.athleteId)
+            is NativeHistoryWriteIntent.Finish,
+            is NativeHistoryWriteIntent.Correct ->
+                historyTransactions.recover(signed.ownerKey,signed.athleteId)
+            null -> Unit
+        }
+        if(localAthlete.signedInIdentity()!=signed)
+            return NativeKotlinMixedHistoryReadResult.Rejected(
+                NativeKotlinMixedHistoryRefusal.NOT_AUTHORIZED)
+        return mixedHistoryReader.read(signed.ownerKey,signed.athleteId)
+    }
+
     fun reviewVerifiedKotlinHistory():NativeKotlinMixedHistoryReadResult {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeKotlinMixedHistoryReadResult.Rejected(

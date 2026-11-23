@@ -60,7 +60,7 @@ try {
     await page.reload({ waitUntil: 'networkidle0' });
     await page.waitForFunction(() => !!window.__pursuitMounted);
     const openPlan = async () => {
-        await page.locator('.hp-open').click();
+        await page.locator('[data-tab="plan"]').click();await page.locator('.hp-open').click();
         await page.locator('button[title="Program details"]').click();
         await page.waitForFunction(() => [...document.querySelectorAll('[data-infocard] > button')].some(b => /Weekly volume/.test(b.textContent)));
         await page.evaluate(() => [...document.querySelectorAll('[data-infocard] > button')].find(b => /Weekly volume/.test(b.textContent)).click());

@@ -52,7 +52,7 @@ async function verifyProgramSharing(browser){
         localStorage.setItem('r54-share-seeded','1');localStorage.setItem('wpb:v1',JSON.stringify(seed));
       },{...store(theme),saved:[p],pinnedId:p.id});
       await page.goto('http://127.0.0.1:8796/',{waitUntil:'networkidle0'});
-      await page.waitForSelector('.wpb-home');
+      await page.waitForSelector('.wpb-home');await page.click('[data-tab="plan"]');await page.waitForSelector('button[aria-label="Open '+p.name+'"]');
       await page.$eval('button[aria-label="Open '+p.name+'"]',button=>button.click());
       await page.waitForSelector('.wpb-program .wpb-week-rail');
       const before=await page.evaluate(()=>{
@@ -141,7 +141,7 @@ async function verifyProgramExerciseOptions(browser){
         localStorage.setItem('r54-options-seeded','1');localStorage.setItem('wpb:v1',JSON.stringify(seed));
       },{...store(theme),exNotes:{'bb-bench':'J-hooks 9.5. Pause on the chest, then drive steadily. '.repeat(6)}});
       await page.goto('http://127.0.0.1:8796/',{waitUntil:'networkidle0'});
-      await page.waitForSelector('.wpb-home');
+      await page.waitForSelector('.wpb-home');await page.click('[data-tab="plan"]');await page.waitForSelector('button[aria-label="Open R54 Manual"]');
       await page.$eval('button[aria-label="Open R54 Manual"]',button=>button.click());
       const opener='button[aria-label="More options for '+name+'"]';
       await page.waitForSelector(opener);
@@ -222,7 +222,7 @@ async function verifyProgramExerciseOptions(browser){
       await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
       await page.evaluateOnNewDocument(seed=>localStorage.setItem('wpb:v1',JSON.stringify(seed)),{...store('rose'),saved:[p],pinnedId:p.id});
       await page.goto('http://127.0.0.1:8796/',{waitUntil:'networkidle0'});
-      await page.waitForSelector('button[aria-label="Open R54 Manual"]');
+      await page.waitForSelector('.wpb-tabbar');await page.click('[data-tab="plan"]');await page.waitForSelector('button[aria-label="Open R54 Manual"]');
       await page.$eval('button[aria-label="Open R54 Manual"]',button=>button.click());
       const id=variant==='last-lift'?'inc-curl':'bb-bench',name=EXERCISES.find(ex=>ex.id===id).name;
       const opener='button[aria-label="More options for '+name+'"]';
@@ -250,7 +250,7 @@ async function verifyPinnedNoteTransactions(browser){
       await page.evaluateOnNewDocument(seed=>{if(localStorage.getItem('r54-note-seeded'))return;
         localStorage.setItem('r54-note-seeded','1');localStorage.setItem('wpb:v1',JSON.stringify(seed));
       },seed);
-      await page.goto('http://127.0.0.1:8796/',{waitUntil:'networkidle0'});await page.waitForSelector('.wpb-home');
+      await page.goto('http://127.0.0.1:8796/',{waitUntil:'networkidle0'});await page.waitForSelector('.wpb-home');await page.click('[data-tab="plan"]');await page.waitForSelector('[aria-label="Open R54 Manual"]');
       await page.$eval('[aria-label="Open R54 Manual"]',button=>button.click());
       const read=()=>page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('wpb:v1'));return {saved:s.saved,history:s.history,cycles:s.cycles,notes:s.exNotes,setup:s.exSetup};});
       const before=await read();
@@ -279,7 +279,7 @@ async function verifyPinnedNoteTransactions(browser){
       await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:v1')).exSetup?.['bb-bench']?.hooks==='11.5');
       assert.equal((await read()).notes['bb-bench'],'Saved cue','Save commits note and setup together');
       assert.equal((await read()).setup['bb-bench'].legacy,'Keep this setting','Save retains orphaned setup fields');
-      await page.reload({waitUntil:'networkidle0'});await page.waitForSelector('.wpb-tabbar');await page.click('[data-tab="home"]');
+      await page.reload({waitUntil:'networkidle0'});await page.waitForSelector('.wpb-tabbar');await page.click('[data-tab="plan"]');await page.waitForSelector('[aria-label="Open R54 Manual"]');
       await page.$eval('[aria-label="Open R54 Manual"]',button=>button.click());await open();
       assert.equal(await page.$eval('.wpb-program textarea',ta=>ta.value),'Saved cue','Saved note survives reload');
       for(const width of [320,393,834,1280])for(const text of [16,32]){
@@ -436,21 +436,22 @@ async function verifyNavigationFlow(browser,theme,width){
     assert.ok(Math.abs(returnedScroll-beforeScroll)<=2,'Back restores the selected week scroll position: '+JSON.stringify({beforeScroll,returnedScroll}));
 
     // Browsing a second program is not a request to change the active training program.
-    await page.click('[data-tab="home"]');
+    // B1029: saved programs live in Plan, so browsing one returns to Plan.
+    await page.click('[data-tab="plan"]');
     await page.click('button[aria-label="Open R59 Alternate"]');await page.waitForSelector('.wpb-program');
-    await back();await route('home');await page.click('[data-tab="plan"]');await assertPlan(3);
+    await back();await route('plan');await assertPlan(3);
     await page.click('[data-plan-pane="volume"]');
     await page.click('[data-tab="profile"]');await page.click('[data-tab="plan"]');
     assert.equal(await page.$eval('[data-plan-pane="volume"]',node=>node.getAttribute('aria-pressed')),'true',
       'Switching tabs retains the selected Plan section');
 
     // Each actual program switch gets its own browsing context, never another program's week.
-    await page.click('[data-tab="home"]');await page.click('button[aria-label="Switch to R59 Alternate"]');
+    await page.click('[data-tab="plan"]');await page.click('button[aria-label="Switch to R59 Alternate"]');
     await page.click('[data-tab="plan"]');await route('plan');
     assert.equal(await page.$eval('.wpb-plan-title',node=>node.textContent),'R59 Alternate');
     assert.equal(await selectedWeek(),'Week 1','A newly active program starts at its own current week');
     await page.click('[data-plan-week-picker] [aria-label="Week 2"]');
-    await page.click('[data-tab="home"]');await page.click('button[aria-label="Switch to R54 Manual"]');
+    await page.click('[data-tab="plan"]');await page.click('button[aria-label="Switch to R54 Manual"]');
     await page.click('[data-tab="plan"]');
     assert.equal(await page.$eval('[data-plan-pane="volume"]',node=>node.getAttribute('aria-pressed')),'true');
     await page.click('[data-plan-pane="schedule"]');await assertPlan(3);
@@ -774,8 +775,9 @@ async function verifyBrowseMemory(browser,theme,width){
     await clickText('Body','.wpb-premium-tabs button');await assertScroll(0,'Body does not inherit the Strength offset');
     await clickText('Sessions','.wpb-premium-tabs button');await assertScroll(sessionsScroll,'Switching sections restores Sessions exactly');
     await clickText('Lifts','.wpb-premium-tabs button');
-    await page.click('[data-tab="home"]');await page.click('button[aria-label="Workout history"]');
-    await page.waitForSelector('#history-search');await assertScroll(0,'The explicit Home history shortcut opens Sessions at the top');
+    // B1029: Home no longer duplicates the Progress tab with a history shortcut.
+    await page.click('[data-tab="home"]');assert.equal(await page.$('button[aria-label="Workout history"]'),null,'Home has no history shortcut');
+    await page.click('[data-tab="progress"]');await clickText('Sessions','.wpb-premium-tabs button');await page.waitForSelector('#history-search');
     assert.equal(await page.$eval('.wpb-premium-tabs [aria-selected="true"]',button=>button.textContent),'Sessions');
     assert.deepEqual(await training(),before,'Browsing never changes saved programs, history, performance or drafts');
     assert.equal(await page.evaluate(()=>localStorage.getItem('wpb:live')),null,'Browsing never starts a workout');
@@ -808,7 +810,7 @@ async function verifyWeekChoices(browser,theme){
     await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
     await page.goto('http://127.0.0.1:8796/',{waitUntil:'networkidle0'});
     // Native auto-scroll collapses Home context; wait for the real card target to stop moving.
-    await page.locator('.hp-open').click({timeout:12000});
+    await page.click('[data-tab="plan"]');await page.locator('.wpb-plan-programs .hp-open').click({timeout:12000});
     await page.waitForSelector('.wpb-week-rail');
     for(const width of [320,393,834,1280])for(const font of [16,32]){
       await page.setViewport({width,height:1000,deviceScaleFactor:1,isMobile:true,hasTouch:true});
@@ -922,11 +924,11 @@ try{
     await page.reload({waitUntil:'networkidle0'});
     // A reload can restore the previous detail route. Open Home explicitly rather
     // than clicking a background program card that is still mounted but obscured.
-    await page.waitForSelector('[data-tab="home"]');
-    await page.click('[data-tab="home"]');
+    await page.waitForSelector('[data-tab="plan"]');
+    await page.click('[data-tab="plan"]');
     await page.waitForSelector('.wpb-exercise-detail', {hidden:true});
-    await page.waitForSelector('[data-view-frame="home"] .hp-open[aria-label="Open R54 Manual"]', {visible:true});
-    await page.click('[data-view-frame="home"] .hp-open[aria-label="Open R54 Manual"]');
+    await page.waitForSelector('[data-view-frame="plan"] .hp-open[aria-label="Open R54 Manual"]', {visible:true});
+    await page.click('[data-view-frame="plan"] .hp-open[aria-label="Open R54 Manual"]');
     await page.waitForSelector('.wpb-program .wpb-week-rail', {visible:true}).catch(async error=>{
       throw new Error('Manual program did not open: '+JSON.stringify({errors,body:await page.evaluate(()=>document.body.innerText.slice(0,5000))}),{cause:error});
     });

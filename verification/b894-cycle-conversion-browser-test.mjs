@@ -20,7 +20,7 @@ try{
   const history=[{id:'old-history',programId:program.id,date:'2026-10-14',dayId:program.days[0].id,sets:{}}];
   const store={v:13,savedAt:1,saved:[program],cycles:[],history,perf:{},drafts:{},tombs:{},seenIntro:999,seenWhatsNew:999,pinnedId:program.id,theme,unit:'lb',unitChosen:true,experience:'intermediate',bodyweight:185,installDismissedAt:Date.now(),lastBackup:Date.now()};
   await page.evaluateOnNewDocument(store=>{if(!sessionStorage.getItem('b894-seeded')){localStorage.setItem('wpb:v1',JSON.stringify(store));sessionStorage.setItem('b894-seeded','1');}},store);
-  const open=async()=>{await page.goto(`http://127.0.0.1:${server.address().port}/index.html`,{waitUntil:'networkidle0'});await page.waitForSelector('.wpb-home');await page.$eval(`button[aria-label="More options for ${program.name}"]`,n=>n.click());await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(b=>b.textContent.includes('adaptive training cycle')));await page.evaluate(()=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes('adaptive training cycle')).click());await page.waitForSelector('[aria-label="Turn program into training cycle"]');};
+  const open=async()=>{await page.goto(`http://127.0.0.1:${server.address().port}/index.html`,{waitUntil:'networkidle0'});await page.waitForSelector('.wpb-home');await page.click('[data-tab="plan"]');await page.waitForSelector(`button[aria-label="More options for ${program.name}"]`);await page.$eval(`button[aria-label="More options for ${program.name}"]`,n=>n.click());await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(b=>b.textContent.includes('adaptive training cycle')));await page.evaluate(()=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes('adaptive training cycle')).click());await page.waitForSelector('[aria-label="Turn program into training cycle"]');};
   await open();
   const dialog='[aria-label="Turn program into training cycle"]';
   await page.$eval(dialog,n=>[...n.querySelectorAll('button')].find(b=>b.textContent.includes('Custom cycle')).click());
@@ -62,7 +62,8 @@ try{
   await page.waitForSelector('.wpb-home');
   // Home's scroll/header layout can move this card between coordinate lookup and
   // activation. Use the stable native-pointer locator already owned by Home tests.
-  await page.locator('[aria-label="Open cycle My existing program Cycle"]').click({timeout:12000});
+  await page.click('[data-tab="plan"]');
+  await page.locator('.wpb-plan-programs [aria-label="Open cycle My existing program Cycle"]').click({timeout:12000});
   try { await page.waitForSelector('.wpb-cycle-detail'); }
   catch(error){
     console.error('B894 cycle navigation diagnostic',JSON.stringify({kind,width,errors,

@@ -70,7 +70,7 @@ try {
     const plan = async page => { await page.click('[data-tab="plan"]'); await page.waitForSelector('.wpb-plan-view'); };
     const done = async page => { await page.waitForSelector('[data-generation-busy]', { hidden: true }); };
     const template = async (page, waitForStatus = true) => {
-        await page.click('[data-tab="home"]');
+        await page.click('[data-tab="plan"]');
         if (!(await page.$('.wpb-carousel-card'))) await textButton(page, 'Browse', true);
         await page.waitForSelector('.wpb-carousel-card');
         await page.$eval('.wpb-carousel-card', button => button.click());
@@ -80,7 +80,7 @@ try {
     // Actual template button; double tap cannot produce two jobs or a competing plan.
     {
         const { page, context } = await open(storeFor());
-        await page.click('[data-tab="home"]');
+        await page.click('[data-tab="plan"]');
         if (!(await page.$('.wpb-carousel-card'))) await textButton(page, 'Browse', true);
         await page.waitForSelector('.wpb-carousel-card');
         const before = await page.evaluate(() => window.__m265.ticks);
@@ -190,6 +190,7 @@ try {
         const { page, context } = await open(storeFor(), 390);
         // Home can still be laying out its library card after hydration. The locator waits
         // for a stable, visible hit target before clicking, rather than using stale coordinates.
+        await page.locator('[data-tab="plan"]').click();
         await page.locator(`button[aria-label="More options for ${program.name}"]`).click();
         // The menu mounts on React's next commit; click only after its real action exists.
         // Preserve the original conversion button and all saved-block/history assertions.

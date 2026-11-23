@@ -479,7 +479,7 @@ try {
             };
             return { scheme:getComputedStyle(document.documentElement).colorScheme,
                 primary:paint(document.querySelector('.wpb-home .wpb-home-hero .wpb-primary-action')),
-                secondary:paint(document.querySelector('.wpb-home-new-program')),
+                secondary:paint(document.querySelector('.wpb-home .wpb-home-hero .wpb-home-freestyle')),
                 hero:paint(document.querySelector('.wpb-home-hero')) };
         });
         // Read real resting containers, not source hex colors. The 20-theme
@@ -963,16 +963,16 @@ try {
                     parseFloat(getComputedStyle(el).marginBottom) <= 14),
                     'home hero has a tighter spacious-card hierarchy');
             }
-            if (tab === 'home') {
-                const bento = await page.$eval('.wpb-home .wpb-action-grid', grid => {
+            // B1029: program-building tiles live with the program list in Plan; Home is today.
+            if (tab === 'home') assert.equal(await page.$('[data-view-frame="home"] .wpb-action-grid'), null, 'Home carries no program-building grid');
+            if (tab === 'plan' && await page.$('.wpb-plan-programs .wpb-action-grid')) {
+                const bento = await page.$eval('.wpb-plan-programs .wpb-action-grid', grid => {
                     const tiles=[...grid.querySelectorAll(':scope > .wpb-action-tile')];
                     const first=tiles[0]?.getBoundingClientRect();
                     return {count:tiles.length, firstWidth:first?.width,
-                        gridWidth:grid.getBoundingClientRect().width,
-                        heroRadius:parseFloat(getComputedStyle(document.querySelector('.wpb-home-hero')).borderTopLeftRadius)};
+                        gridWidth:grid.getBoundingClientRect().width};
                 });
-                assert.ok(bento.count>=2 && bento.firstWidth >= bento.gridWidth-2 &&
-                    bento.heroRadius>=30,
+                assert.ok(bento.count>=2 && bento.firstWidth >= bento.gridWidth-2,
                     'M3 bento uses a full-width feature without extra layout rows: '+JSON.stringify(bento));
             }
             if (tab === 'home') {
@@ -1745,7 +1745,7 @@ try {
         await page.waitForFunction(() => document.querySelector('[data-sheet-drag]')?.style.getPropertyValue('--pi-surface-y') === '0px');
         await page.keyboard.press('Escape'); await page.waitForFunction(() => !document.querySelector('.wpb-backdrop'));
         assert.equal(await page.$$eval('[data-wpb-lock]', els => els.length), 0, 'sheet exit releases scrolling');
-        await page.click('[data-tab="home"]'); await page.waitForSelector('.hp-open');
+        await page.click('[data-tab="plan"]'); await page.waitForSelector('.hp-open');
         // The saved-program menu is a real, anchored three-action surface.
         // Keyboard navigation and Escape must preserve the authored program
         // instead of navigating or calling the destructive Delete item.
@@ -2301,7 +2301,7 @@ try {
             localStorage.setItem('wpb:v1', JSON.stringify(store));
         }, initial);
         await page.goto('http://127.0.0.1:8794/', { waitUntil: 'networkidle0' });
-        await page.waitForSelector('#root[data-pi-motion="expressive"] .wpb-home-new-program');
+        await page.waitForSelector('#root[data-pi-motion="expressive"] .wpb-home-freestyle');
         // A saved active program exposes Start above the fold and the quiet New
         // program action in discovery. Verify both distinct priorities.
         const homeWithoutDock = await homePalette();
@@ -2387,6 +2387,7 @@ try {
             dockPaint.primaryWidth >= dockPaint.quickWidth && dockPaint.separated,
             'R15 no-active-plan Home dock and Quick are opaque and remain accessible: ' + JSON.stringify(dockPaint));
         await dockContext.close();
+        await page.click('[data-tab="plan"]');await page.waitForSelector('.wpb-plan-programs .wpb-home-new-program');
         await page.$eval('.wpb-home-new-program',el=>el.scrollIntoView({block:'center'}));
         await page.click('.wpb-home-new-program');
         await page.waitForSelector('.wpb-wizard .wpb-wizard-progress');

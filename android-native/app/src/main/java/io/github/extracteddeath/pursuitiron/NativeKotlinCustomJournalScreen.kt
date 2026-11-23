@@ -1905,6 +1905,23 @@ private fun NativeKotlinCustomVisitEditor(
     val failedEntry=KotlinWorkoutEntryDomain.parse(
         target,actualLoad,actualReps,actualRir,failed=true)
     val failedActual=(failedEntry as? KotlinSetEntryResult.Accepted)?.performed
+    // The renderer uses the SAME physical-station and numerical rule as
+    // durable journal validation. A rep edit never owns or reduces a myo
+    // weight; an explicitly different load cannot be saved as a myo mini.
+    // The actual machine ID is attached by the durable host after parsing.
+    val sameLoadTechnique=part==CustomWorkoutVisitPart.FOLLOW_UP &&
+        follower?.let{AdvancedAmplifierProtocolDomain.requiresActivationLoad(
+            it.kind)}==true
+    val sameLoadInvalidCompletion=sameLoadTechnique && actual!=null &&
+        !AdvancedAmplifierProtocolDomain.validSameLoadFollowUp(
+            requireNotNull(follower),prescription.load,activationPerformed,
+            actual.copy(machineInstanceId=machineInstanceId),
+            KotlinJournalSetOutcome.COMPLETED)
+    val sameLoadInvalidFailure=sameLoadTechnique && failedActual!=null &&
+        !AdvancedAmplifierProtocolDomain.validSameLoadFollowUp(
+            requireNotNull(follower),prescription.load,activationPerformed,
+            failedActual.copy(machineInstanceId=machineInstanceId),
+            KotlinJournalSetOutcome.FAILED_ATTEMPT)
     val invalid=(entry as? KotlinSetEntryResult.Rejected)?.reason
     val entryFields:@Composable ()->Unit={
             Text("Edit the values to match your set. Blank RIR stays unreported.",
@@ -1965,8 +1982,15 @@ private fun NativeKotlinCustomVisitEditor(
                     Text("View plates for entered weight")
                 }
             }
+            if(sameLoadInvalidCompletion || sameLoadInvalidFailure)
+                Text("This technique must use the exact weight and physical " +
+                    "machine logged on its activation set. A lower weight is " +
+                    "a separate drop set, not myo-reps. Restore the activation " +
+                    "weight or end this extension; no weight was changed.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.error)
             val completeButton:@Composable (Modifier)->Unit={buttonModifier->
-                Button(enabled=!locked && actual!=null,
+                Button(enabled=!locked && actual!=null && !sameLoadInvalidCompletion,
                     modifier=buttonModifier,
                     onClick={
                         onRecord(KotlinJournalSetOutcome.COMPLETED,
@@ -1980,7 +2004,8 @@ private fun NativeKotlinCustomVisitEditor(
                     "End sequence" else "Skip")}
             }
             val failedButton:@Composable (Modifier)->Unit={buttonModifier->
-                OutlinedButton(enabled=!locked && failedActual!=null,modifier=buttonModifier,
+                OutlinedButton(enabled=!locked && failedActual!=null &&
+                    !sameLoadInvalidFailure,modifier=buttonModifier,
                     onClick={pendingExceptionalOutcome=KotlinJournalSetOutcome.FAILED_ATTEMPT}) {
                     Text("Failed")
                 }

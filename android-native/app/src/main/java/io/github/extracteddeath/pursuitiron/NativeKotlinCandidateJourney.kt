@@ -164,6 +164,17 @@ internal fun NativeKotlinCandidateJourney(
     LaunchedEffect(host) {
         if(!landingChecked) {
             val initial=withContext(Dispatchers.IO) {
+                // An already-prepared Finish or correction blocks the entire
+                // shared History manifest, even when another workout is
+                // unfinished. Offer its explicit recovery first; routing to
+                // Train would strand the athlete behind HISTORY_NOT_READY.
+                // This read does not replay any pending operation.
+                val pendingHistory=(runCatching {
+                    host.reviewVerifiedKotlinHistory()
+                }.getOrNull() as? NativeKotlinMixedHistoryReadResult.Rejected)
+                    ?.reason==NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION
+                if(pendingHistory) KotlinCandidateDestination.HISTORY
+                else {
                 val unfinished=runCatching {
                     host.reviewResumableCustomWorkouts()
                 }.getOrNull() as? NativeCustomResumeReview.Ready
@@ -197,29 +208,15 @@ internal fun NativeKotlinCandidateJourney(
                         if(measured || approvedMeasured)
                             KotlinCandidateDestination.TRAIN
                         else {
-                            // A crash between persisting a Finish receipt and
-                            // finalizing the shared History manifest leaves no
-                            // unfinished workout to resume. Do not abandon
-                            // this athlete in Setup or an unrelated Plan.
-                            // History exposes an explicit owner-checked
-                            // recovery action; landing itself is read-only.
-                            val pendingHistory=(runCatching {
-                                host.reviewVerifiedKotlinHistory()
-                            }.getOrNull() as?
-                                NativeKotlinMixedHistoryReadResult.Rejected)
-                                ?.reason==NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION
-                            if(pendingHistory)
-                                KotlinCandidateDestination.HISTORY
-                            else {
-                                val programs=runCatching {
-                                    host.listOwnedCustomCycleDrafts()
-                                }.getOrNull() as? NativeCustomDraftListResult.Ready
-                                if(programs?.drafts?.isNotEmpty()==true)
-                                    KotlinCandidateDestination.PROGRAM
-                                else KotlinCandidateDestination.ONBOARD
-                            }
+                            val programs=runCatching {
+                                host.listOwnedCustomCycleDrafts()
+                            }.getOrNull() as? NativeCustomDraftListResult.Ready
+                            if(programs?.drafts?.isNotEmpty()==true)
+                                KotlinCandidateDestination.PROGRAM
+                            else KotlinCandidateDestination.ONBOARD
                         }
                     }
+                }
                 }
             }
             // Do not steal focus after a deliberate tab choice, or from a

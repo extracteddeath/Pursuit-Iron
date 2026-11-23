@@ -9,7 +9,9 @@ const root=path.resolve(new URL('../',import.meta.url).pathname);
 const program={id:'home-entry',name:'My Program',custom:true,weeks:4,
  config:{unit:'lb',goal:'both',experience:'intermediate',progression:'double',weeks:4,session:'s60',deload:false},
  days:[{id:'upper',label:'Upper',primaryIndex:0,exercises:['bb-bench','inc-curl']}],
- overrides:{'upper:0':{sets:3,reps:'6-8',rir:'2'}}};
+ // B1030: Home's game plan carries only lifts with something to act on, so the curl's myo-reps
+ // finisher gives this fixture real news to show.
+ overrides:{'upper:0':{sets:3,reps:'6-8',rir:'2'},'upper:1':{techOverride:'myo'}}};
 const baseline={v:13,savedAt:1,saved:[],cycles:[],history:[],perf:{},drafts:{},tombs:{},
  seenIntro:999,seenWhatsNew:999,unit:'lb',unitChosen:true,experience:'intermediate',
  bodyweight:185,installDismissedAt:Date.now(),lastBackup:Date.now()};

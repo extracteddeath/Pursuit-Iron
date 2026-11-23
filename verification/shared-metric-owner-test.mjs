@@ -26,9 +26,9 @@ assert.ok(owner.includes('labelFirst ? [labelNode, valueNode] : [valueNode, labe
 assert.ok(!owner.includes('style:') && !owner.includes('!important'),
   'Shared metric markup cannot introduce inline presentation or priority');
 assert.ok(app.includes('UiCard, UiMetric, UiAction') &&
-  report.shared.Metric.ownerExported && report.shared.Metric.appCalls===3,
-  'Three actual cross-screen consumers use the exported component');
-for(const [name,source] of [['Plan',plan],['Progress',progress],['Profile',profile]])
+  report.shared.Metric.ownerExported && report.shared.Metric.appCalls===2,
+  'Two actual cross-screen consumers use the exported component (B1030: Profile\'s lifetime strip moved to Progress)');
+for(const [name,source] of [['Plan',plan],['Progress',progress]])
   assert.equal((source.match(/_jsx\(UiMetric,/g)||[]).length,1,name+' owns one shared metric template');
 assert.ok(plan.includes('const tile = (label, value, accent) => _jsx(UiMetric,') &&
   plan.includes('labelFirst: true, label, value') &&
@@ -44,17 +44,10 @@ assert.ok(progress.includes('className: "wpb-progress-glance-item"') &&
   'Progress keeps zero-value cue and relative time captions');
 for(const role of ['wpb-progress-glance-value','wpb-progress-glance-label','wpb-progress-glance-context'])
   assert.ok(progress.includes(role)&&css.includes('.'+role),'Progress typography unchanged: '+role);
-assert.ok(profile.includes('className: "wpb-profile-stat"') &&
-  profile.includes('valueProps: { "data-has-unit": !!sub }') &&
-  profile.includes('className: "wpb-profile-stat-number", children: val') &&
-  profile.includes('className: "wpb-profile-stat-unit", children: sub') &&
-  profile.includes('labelClassName: "wpb-profile-stat-label"'),
-  'Profile keeps nested number/unit DOM and label position');
-for(const role of ['wpb-profile-stat-value','wpb-profile-stat-label','wpb-profile-stat-unit'])
-  assert.ok(profile.includes(role)&&css.includes('.'+role),'Profile typography unchanged: '+role);
+assert.ok(!profile.includes('_jsx(UiMetric,'),'Profile does not repeat Progress lifetime metrics');
 assert.ok(report.screens.Plan.sharedMetricCalls===1 &&
   report.screens.Progress.sharedMetricCalls===1 &&
-  report.screens.Profile.sharedMetricCalls===1,'Metric calls attributable to each destination');
+  !report.screens.Profile?.sharedMetricCalls,'Metric calls attributable to each destination');
 assert.ok(report.appInlineStyleObjects<=uiStyleBudget.appInlineObjects,'Metric migration cannot add inline styles');
 assert.equal(css.length,uiStyleBudget.cssCharacters,'Metric uses existing CSS only');
 assert.ok((css.match(/!important/g)||[]).length<=uiStyleBudget.cssPriorityDeclarations,

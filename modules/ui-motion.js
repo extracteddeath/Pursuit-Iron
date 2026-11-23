@@ -362,7 +362,7 @@ export function installAppMotion(root) {
 // One lead-card entrance carries navigation context without moving a row of cards.
 // Workout logger controls, engine values and React-owned children never participate.
 const entranceKeys = new WeakMap();
-const entranceSelector = '.wpb-home-hero, .wpb-home .wpb-action-tile, .wpb-program .wpb-day-card, .wpb-progress .wpb-progress-glance-item, .wpb-profile .wpb-profile-strength-cell, .wpb-settings .wpb-settings-card, .wpb-plan-view .wpb-plan-glance-tile, .wpb-plan-view .wpb-plan-up-next';
+const entranceSelector = '.wpb-home-hero, .wpb-plan-view .wpb-action-tile, .wpb-program .wpb-day-card, .wpb-progress .wpb-progress-glance-item, .wpb-profile .wpb-profile-share-card, .wpb-settings .wpb-settings-card, .wpb-plan-view .wpb-plan-glance-tile, .wpb-plan-view .wpb-plan-selected-week';
 // Record the real source geometry before React navigates. The next mounted
 // destination uses a short, bounded translation of its first meaningful card.
 // This is spatial continuity (not a cloned shared element or a second router).

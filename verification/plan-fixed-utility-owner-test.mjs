@@ -8,7 +8,7 @@ const start=app.indexOf('function PlanView(');
 const end=app.indexOf('\nfunction ',start+1);
 const plan=app.slice(start,end);
 assert.ok(start>0 && end>start,'Plan has one screen owner');
-assert.equal((plan.match(/style:\s*\{/g)||[]).length,18,'Plan utility adoption and owner retirement must not regress');
+assert.equal((plan.match(/style:\s*\{/g)||[]).length,12,'Plan utility adoption and owner retirement must not regress');
 assert.ok(plan.includes('className: "mono pi-t-muted wpb-s956-fontsize-14 wpb-s956-margintop-2"'),
   'Week set/time metadata must use the shared muted text utilities');
 assert.ok(plan.includes('className: "wpb-plan-glance", children:'),
@@ -22,13 +22,14 @@ assert.equal(css.length,uiStyleBudget.cssCharacters,'Plan migration cannot add C
 for(const cl of ['wpb-s956-display-block','wpb-s956-margintop-2','wpb-s956-overflow-hidden','wpb-s956-textoverflow-ellipsis','wpb-s956-whitespace-nowrap','wpb-s956-flexshrink-0','wpb-s956-textalign-right','wpb-type-body'])
  assert.ok(plan.includes(cl)&&css.includes('.'+cl),'Plan must reuse existing owner '+cl);
 assert.ok(plan.includes('onClick: () => onOpenDay && onOpenDay(d.dayId, w.week)')&&
- plan.includes('onClick: () => setOpenWeek(isOpen ? null : w.week)')&&
+ plan.includes('onClick: () => pickWeek(w.week)')&&
  plan.includes('onClick: () => onOpenProgram(openWeek || plan.currentWeek)'),
  'Plan native navigation and week disclosure callbacks remain');
 assert.ok(plan.includes('role: "group"') &&
  plan.includes('pane === "schedule" && featuredWeek'),
  'Plan selected week and disclosure structure remain');
-assert.ok(plan.includes('className: "wpb-type-value", children: ph.label')&&
+// B1030: the phase archive under the selected week is gone; the week chip names the phase.
+assert.ok(plan.includes('caption: chipCaption(w)')&&
  plan.includes('className: "wpb-s956-display-flex wpb-s956-justifycontent-space-between wpb-s956-marginbottom-4 wpb-type-support-muted"'),
  'Plan uses the existing typography and layout owners, not new CSS');
 // B1029: completion renders through the shared wavy LinearProgressIndicator, which owns role/aria.

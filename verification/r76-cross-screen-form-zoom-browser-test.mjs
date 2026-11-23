@@ -285,9 +285,10 @@ try{
         // Inspect the real rendered responsive grid after enlarged typography.
         if(width===320 && route==='profile'){
           const columns=await page.evaluate(()=>getComputedStyle(
-            document.querySelector('.wpb-profile-stat-grid')).gridTemplateColumns
+            document.querySelector('.wpb-profile-card-metrics')).gridTemplateColumns
               .trim().split(/\s+/).length);
-          assert.equal(columns,1,'Profile metrics reflow to one readable column at 200%');
+          // B1030: the share card is Profile's metric surface (lifetime totals moved to Progress).
+          assert.equal(columns,1,'Profile card metrics reflow to one readable column at 200%');
         }
         if(width===320 && route==='progress'){
           const columns=await page.evaluate(()=>getComputedStyle(

@@ -414,24 +414,18 @@ try{
         // create a second navigation/data owner. Exercise the actual live DOM.
         if(width===768&&theme==='rose'){
           await page.click('[data-tab="plan"]');
-          await page.waitForSelector('.wpb-plan-view [data-plan-week="2"]');
-          // The seeded history can make week 2 the current/default-open week.
-          // Clicking an already-expanded week would close it, so establish
-          // the desired state without depending on initial scheduling.
-          const weekTwoOpen=await page.$eval('.wpb-plan-view [data-plan-week="2"] > button',
-            el=>el.getAttribute('aria-expanded')==='true');
-          if(!weekTwoOpen) await page.click('.wpb-plan-view [data-plan-week="2"] > button');
-          await page.waitForFunction(()=>document.querySelector(
-            '.wpb-plan-view [data-plan-week="2"] > button')?.getAttribute('aria-expanded')==='true');
+          // B1030: the week rail is the one selector; the selected week renders as the only card.
+          await page.waitForSelector('[data-plan-week-picker] [aria-label="Week 2"]');
+          await page.click('[data-plan-week-picker] [aria-label="Week 2"]');
+          await page.waitForSelector('.wpb-plan-selected-week [data-plan-week="2"]');
           await page.setViewport({width:393,height:852,deviceScaleFactor:1,isMobile:true,hasTouch:true});
           await page.waitForFunction(()=>document.querySelector('.wpb-plan-view')?.getBoundingClientRect().width<=462);
-          assert.equal(await page.$eval('.wpb-plan-view [data-plan-week="2"] > button',
-            el=>el.getAttribute('aria-expanded')),'true',
+          assert.equal(await page.$eval('[data-plan-week-picker] [aria-pressed="true"]',el=>el.getAttribute('aria-label')),'Week 2',
             'Selected Plan week survives compact reflow');
+          assert.ok(await page.$('.wpb-plan-selected-week [data-plan-week="2"]'),'Selected week card survives compact reflow');
           await page.setViewport({width:768,height:900,deviceScaleFactor:1,isMobile:true,hasTouch:true});
           await page.waitForFunction(()=>document.querySelector('.wpb-plan-view')?.getBoundingClientRect().width>=715);
-          assert.equal(await page.$eval('.wpb-plan-view [data-plan-week="2"] > button',
-            el=>el.getAttribute('aria-expanded')),'true',
+          assert.equal(await page.$eval('[data-plan-week-picker] [aria-pressed="true"]',el=>el.getAttribute('aria-label')),'Week 2',
             'Selected Plan week survives medium reflow');
           assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2),false,
             'Medium Plan reflow never causes horizontal overflow');

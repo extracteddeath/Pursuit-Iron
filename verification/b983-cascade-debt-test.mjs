@@ -20,8 +20,8 @@ assert.ok(css.includes('--pi-r11-edge:var(--pi-color-divider)'),
   'Surface divider retains its canonical palette owner');
 assert.ok(!css.includes('box-shadow:inset 3px 0 0 color-mix(in srgb,var(--pi-m3e-primary) 44%,transparent)!important'),
   'Outdated Plan next-session priority shadow must be removed');
-assert.ok(css.includes('color-mix(in srgb,var(--pi-m3e-primary) 36%,transparent)!important'),
-  'Keep the effective Plan next-session accent edge');
+// B1030: the Plan Up next card (and its accent edge) is gone; Home owns today's session.
+assert.ok(!css.includes('.wpb-plan-up-next'),'No orphaned Plan Up next owner');
 assert.ok(!css.includes('.wpb-home-health{margin:10px 0 18px}'),
   'Dead Home card margin must not reappear');
 // B1028: the Home health card is a shared UiBanner; the feature class keeps only its spacing.
@@ -276,7 +276,7 @@ const b1009Contract=[
   ],
   [
     "pi-t-caption-mt2",
-    4,
+    3, // B1030: the Plan phase archive header that used one was removed
     "style: { fontSize: 11, color: C.muted, marginTop: 2 }"
   ],
   [
@@ -336,7 +336,7 @@ const b1009Contract=[
   ],
   [
     "pi-t-faint-mt2",
-    1, // B1028: the swap-sheet row became a UiListItem
+    0, // B1028: the swap-sheet row became a UiListItem; B1030: the Profile strength section moved to Progress
     "style: { fontSize: 11, color: C.faint, marginTop: 2 }"
   ]
 ];

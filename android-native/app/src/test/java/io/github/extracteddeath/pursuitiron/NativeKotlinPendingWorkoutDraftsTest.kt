@@ -81,6 +81,23 @@ class NativeKotlinPendingWorkoutDraftsTest {
             NativePendingWorkoutDraft("1".repeat(65),"8","")))
     }
 
+    @Test fun draftEncodingMustAlwaysBeRecoverableWithoutTextReplacement() {
+        val unicode=NativePendingWorkoutDraft("45.5","10","💪")
+        val encoded=NativePendingWorkoutDraftCodec.encode(unicode)
+        assertNotNull(encoded)
+        assertEquals(unicode,NativePendingWorkoutDraftCodec.decode(encoded))
+        // A corrupted, non-UTF-8 field is not a usable saved input.
+        assertNull(NativePendingWorkoutDraftCodec.decode("v1:/w==:OA==:"))
+        // Java/Kotlin UTF-8 encoders otherwise silently replace lone surrogates.
+        assertNull(NativePendingWorkoutDraftCodec.encode(
+            NativePendingWorkoutDraft("\uD800","8","")))
+        // The old encoder accepted text longer than its own 512-char decoder
+        // limit, returning save success for a draft that could never recover.
+        val extended="é".repeat(64)
+        assertNull(NativePendingWorkoutDraftCodec.encode(
+            NativePendingWorkoutDraft(extended,extended,extended)))
+    }
+
     @Test fun codecDoesNotPretendToBeJournalOrAutoFillActuals() {
         val draft=NativePendingWorkoutDraft("135.5","8","")
         val encoded=NativePendingWorkoutDraftCodec.encode(draft)

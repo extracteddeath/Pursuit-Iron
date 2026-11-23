@@ -82,8 +82,10 @@ class NativeKotlinHistoryFocusPolicyTest {
         val stations=listOf("gymA" to "machineA","gymA" to "machineB")
         assertNull(NativeKotlinHistoryFocusPolicy.admitStation(
             false,"athleteA","athleteA","gymA","retired",stations))
-        assertNull(NativeKotlinHistoryFocusPolicy.admitStation(
-            false,"athleteA","athleteA","","machineA",stations))
+        assertEquals("" to "machineA",
+            NativeKotlinHistoryFocusPolicy.admitStation(
+                false,"athleteA","athleteA","","machineA",
+                stations+("" to "machineA")))
         assertNull(NativeKotlinHistoryFocusPolicy.admitStation(
             false,"athleteA","athleteA","gymA","",stations))
         assertNull(NativeKotlinHistoryFocusPolicy.admitStation(

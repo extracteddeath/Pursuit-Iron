@@ -248,4 +248,61 @@ class BasicProgressionPolicyDomainTest {
                 y.increasedOrdinals)
         }
     }
+
+
+    @Test fun basicProgressionCarriesExactApprovedPhysicalEvidencePerChangedSet() {
+        val result=candidate(request(
+            BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION,
+            reps=listOf(10,9,10)))
+        assertEquals(scope,result.sourceScope)
+        assertEquals(result.increasedOrdinals,result.approvedFutureLoadFacts.keys)
+        assertEquals(setOf(0,2),result.approvedFutureLoadFacts.keys)
+        for((ordinal,fact) in result.approvedFutureLoadFacts) {
+            assertEquals(n("100"),fact.issuedLoad)
+            assertEquals(result.proposedWorkingLoads[ordinal],fact.proposedLoad)
+            assertEquals(n("105"),fact.physicalProof.nextHigher)
+            assertEquals(n("95"),fact.physicalProof.nextLower)
+            assertEquals(n("5"),fact.physicalProof.absoluteChange)
+            assertEquals(KotlinFutureLoadPhysicalReason.EARNED_ADJACENT_HIGHER_SETTING,
+                fact.physicalProof.reason)
+            assertFalse(fact.maySaveFutureProgram)
+        }
+        assertEquals(n("100"),result.proposedWorkingLoads[1])
+        assertNull(result.approvedFutureLoadFacts[1])
+    }
+
+    @Test fun heldAtomicAndManualModesNeverLeakSpeculativePhysicalApproval() {
+        val strict=BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION
+        val heldByReps=candidate(request(strict,reps=listOf(10,10,9)))
+        assertTrue(heldByReps.approvedFutureLoadFacts.isEmpty())
+        val heldByLimit=candidate(request(strict,
+            reps=listOf(10,10,10),maximumIncrement="2.5"))
+        assertTrue(heldByLimit.approvedFutureLoadFacts.isEmpty())
+        assertEquals(listOf(n("100"),n("100"),n("100")),
+            heldByLimit.proposedWorkingLoads)
+        val manual=candidate(request(BasicProgressionStrategy.MANUAL_LOGGING,
+            previous=null,previousScope=null,verifiedStock=null,
+            loads=listOf("100","105","100")))
+        assertTrue(manual.approvedFutureLoadFacts.isEmpty())
+        assertEquals(scope,manual.sourceScope)
+        val eligible=candidate(request(strict,reps=listOf(10,10,10)))
+        assertEquals(setOf(0,1,2),eligible.approvedFutureLoadFacts.keys)
+    }
+
+    @Test fun dynamicReviewDoesNotPublishUnverifiedLimitsOrMixedSetDecisions() {
+        val available=VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.MACHINE_STACK,
+            listOf("95","100","105","115").map(::n))
+        val result=candidate(request(
+            BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION,
+            reps=listOf(10,9,10,10),loads=listOf("95","100","105","115"),
+            verifiedStock=available))
+        assertEquals(setOf(0),result.approvedFutureLoadFacts.keys)
+        val accepted=checkNotNull(result.approvedFutureLoadFacts[0])
+        assertEquals(n("95"),accepted.physicalProof.verifiedIssued)
+        assertEquals(n("100"),accepted.physicalProof.verifiedCandidate)
+        assertEquals(n("100"),accepted.physicalProof.nextHigher)
+        assertEquals(n("5"),accepted.physicalProof.absoluteChange)
+        assertNull(result.approvedFutureLoadFacts[2])
+        assertNull(result.approvedFutureLoadFacts[3])
+    }
 }

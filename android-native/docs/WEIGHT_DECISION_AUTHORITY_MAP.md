@@ -89,6 +89,35 @@ flowchart TD
 | Drop-stage candidate and live completed drop checked reps, direction and station without reusing the full set-number envelope | Corrupt historical/prefill stages could appear structurally plausible | Validate activation, first performed drop and completed stage with shared set-number gate; authored drops also use shared prescribed-load envelope |
 | Many distinct upstream inputs may legitimately affect future numbers | A single output decimal cannot explain a change | Keep provenance of scope, approved source, baseline, strategy, reason, stock, proposed value and acceptance state; do not manufacture it from the UI |
 
+## November 23 continuation: preserve physical-number proof in Kotlin results
+
+The shared `KotlinFutureLoadNumberAuthorityDomain` now returns a read-only
+`KotlinFutureLoadPhysicalProof` **as part of the accepted numeric fact**.
+It captures the exact inspected issued/candidate values, next verified higher
+and lower settings, absolute change, and why the source was authorized:
+ordinary adjacent increase, less machine assistance, or a checked lower
+setting needing separate previously demonstrated performance. It never
+converts that physical feasibility into proof of historical performance or
+automatic permission to save or issue.
+
+The pure `BasicProgressionPolicyDomain` forwards those **same accepted
+physical facts** by stable working-set ordinal, together with the reviewed
+`BasicProgressionScope` (athlete/program/gym/block/day/exercise/machine/unit/
+basis). It retains *no* physical approval on a manually logged repeat,
+rep-only change, ineligible dynamic set, failed stock limit, or strict/ladder
+atomic rollback. Generated and custom coaching already carry a
+`KotlinFutureLoadFact` through their review models, so this is shared proof,
+not a second generated/custom calculation.
+
+The proof reports what the physical gate verified and nothing more. The
+native owner must independently recheck source revision, comparable
+performance, permissions and full-program constraints before any future
+workout revision can be issued. UI "Why this?" views should **render the
+captured proof**, not call equipment inspection again or synthesize a new
+number after the accepted review. The next integration pass must carry it
+through authenticated owner acceptance, saved proposed revisions and both
+live workload presenters with cold-reopen tests.
+
 ## 5. Contract tests and continuing acceptance matrix
 
 - `EquipmentLoadDomainTest`: valid and invalid decimal envelope agreed with `KotlinSetNumberAuthorityDomain`, plus malformed selector increment refusal.

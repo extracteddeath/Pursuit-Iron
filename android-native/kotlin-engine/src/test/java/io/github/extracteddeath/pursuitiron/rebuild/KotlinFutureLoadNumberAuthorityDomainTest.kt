@@ -152,4 +152,74 @@ class KotlinFutureLoadNumberAuthorityDomainTest {
             KotlinFutureLoadRefusal.UNVERIFIED_CANDIDATE_LOAD),
             review(to="204"))
     }
+
+
+    @Test fun earnedIncreaseCarriesExactPhysicalNeighborProofWithoutRecalculation() {
+        val fact=(review() as KotlinFutureLoadReview.Accepted).fact
+        val proof=fact.physicalProof
+        assertEquals(KotlinFutureLoadPhysicalReason.EARNED_ADJACENT_HIGHER_SETTING,
+            proof.reason)
+        assertEquals(n("200"),proof.verifiedIssued)
+        assertEquals(n("205"),proof.verifiedCandidate)
+        assertEquals(n("205"),proof.nextHigher)
+        assertEquals(n("195"),proof.nextLower)
+        assertEquals(n("5"),proof.absoluteChange)
+        assertTrue(proof.requiresIndependentPerformanceEvidence)
+        assertFalse(proof.requiresPreviouslyDemonstratedLoad)
+        assertFalse(proof.maySaveProgram)
+        assertFalse(proof.mayIssueWorkout)
+        assertFalse(fact.mayChangeIssuedWorkout)
+
+        // Every decimal representation of the same physical load creates
+        // identical review evidence; UI formatting is not a new numeric rule.
+        val alternate=(review(from="200.0000",to="205.000") as
+            KotlinFutureLoadReview.Accepted).fact
+        assertEquals(fact,alternate)
+        assertEquals(proof,alternate.physicalProof)
+    }
+
+    @Test fun assistanceAndRecoveryHaveDistinctVerifiedPhysicalLineage() {
+        val assistance=(review(from="100",to="95",
+            source=KotlinFutureLoadSource.EARNED_ASSISTANCE_DECREMENT,
+            stock=assisted,basis=LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+            as KotlinFutureLoadReview.Accepted).fact.physicalProof
+        assertEquals(KotlinFutureLoadPhysicalReason.EARNED_ADJACENT_LOWER_ASSISTANCE,
+            assistance.reason)
+        assertEquals(n("105"),assistance.nextHigher)
+        assertEquals(n("95"),assistance.nextLower)
+        assertEquals(n("5"),assistance.absoluteChange)
+        assertFalse(assistance.requiresPreviouslyDemonstratedLoad)
+
+        val recovery=(review(from="210",to="195",
+            source=KotlinFutureLoadSource.RETURN_TO_DEMONSTRATED_LOAD,
+            limit="5") as KotlinFutureLoadReview.Accepted).fact.physicalProof
+        assertEquals(
+            KotlinFutureLoadPhysicalReason.VERIFIED_LOWER_SETTING_HISTORY_REQUIRED,
+            recovery.reason)
+        assertEquals(n("210"),recovery.verifiedIssued)
+        assertEquals(n("195"),recovery.verifiedCandidate)
+        // The candidate intentionally skips the adjacent lower physical
+        // setting. This is NOT evidence that 195 lb was previously completed.
+        assertEquals(n("205"),recovery.nextLower)
+        assertEquals(n("215"),recovery.nextHigher)
+        assertEquals(n("15"),recovery.absoluteChange)
+        assertTrue(recovery.requiresPreviouslyDemonstratedLoad)
+        assertTrue(recovery.requiresIndependentPerformanceEvidence)
+        assertFalse(recovery.maySaveProgram)
+        assertFalse(recovery.mayIssueWorkout)
+    }
+
+    @Test fun invalidCandidateCannotAcquireAPhysicalProof() {
+        val blocked=listOf(
+            review(to="210",limit="20"),
+            review(to="202.5"),
+            review(limit="2"),
+            review(stock=null),
+            review(from="205",to="210",
+                source=KotlinFutureLoadSource.RETURN_TO_DEMONSTRATED_LOAD))
+        for(result in blocked) {
+            assertTrue("A rejected physical candidate must not carry an accepted proof",
+                result is KotlinFutureLoadReview.Rejected)
+        }
+    }
 }

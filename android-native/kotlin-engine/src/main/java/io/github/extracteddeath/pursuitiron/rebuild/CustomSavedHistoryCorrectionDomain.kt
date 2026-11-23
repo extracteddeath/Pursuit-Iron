@@ -184,27 +184,24 @@ object CustomSavedHistoryCorrectionDomain {
                         amplifier,target.prescription.load,main.performed,
                         operation.performed,operation.outcome))
                     return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
-                if(operation.outcome==KotlinJournalSetOutcome.COMPLETED) {
-                    val completed=operation.performed
-                        ?:return reject(CustomSavedCorrectionRefusal.INVALID_VALUES)
-                    val activation=main.performed
-                        ?:return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
-                    // Same-load techniques were validated above for BOTH completed\n                    // and failed observations, including one-stage protocols.
-                    if(amplifier.kind==CustomAmplifierKind.DROP_SET) {
-                        val previous=if(operation.visit.stage==1)main
-                            else current(state,CustomWorkoutVisitKey(
-                                operation.visit.setKey,
-                                CustomWorkoutVisitPart.FOLLOW_UP,
-                                operation.visit.stage-1))
-                        if(previous?.outcome!=KotlinJournalSetOutcome.COMPLETED ||
-                            !AdvancedAmplifierProtocolDomain.validPerformedDropStage(
-                                amplifier,target.prescription.load,activation,
-                                if(operation.visit.stage==1)null
-                                    else previous.performed,
-                                completed,operation.visit.stage))
-                            return reject(
-                                CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
-                    }
+                // Same-load techniques are checked above. Drop stages
+                // require a real lower attempted load, even for failures:
+                // never infer a reduction from the issued target.
+                if(amplifier.kind==CustomAmplifierKind.DROP_SET &&
+                    operation.outcome!=KotlinJournalSetOutcome.SKIPPED) {
+                    val previous=if(operation.visit.stage==1)main
+                        else current(state,CustomWorkoutVisitKey(
+                            operation.visit.setKey,
+                            CustomWorkoutVisitPart.FOLLOW_UP,
+                            operation.visit.stage-1))
+                    if(previous?.outcome!=KotlinJournalSetOutcome.COMPLETED ||
+                        !AdvancedAmplifierProtocolDomain.validDropStageObservation(
+                            amplifier,target.prescription.load,main.performed,
+                            if(operation.visit.stage==1)null
+                                else previous.performed,
+                            operation.performed,operation.visit.stage,
+                            operation.outcome))
+                        return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
                 }
                 stageTarget
             }

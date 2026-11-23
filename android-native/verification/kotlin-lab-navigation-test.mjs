@@ -98,16 +98,45 @@ assert.ok(measuredFinished.includes('host.verifyFinishedMeasuredWorkoutInHistory
 
 const navigation=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinNavigationState.kt');
 const history=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHistoryScreen.kt');
-// A completed measured parent is omitted from the unfinished-workout picker.
-// Cold process recovery must therefore also be reachable FROM History, not
-// only from a measured editor that might no longer be navigable.
-assert.ok(history.includes('Recover pending measured Finish') &&
-  history.includes('host.recoverPendingMeasuredHistory()') &&
-  history.includes('host.reviewVerifiedKotlinHistory()') &&
+// A completed parent with an interrupted History write is no longer a
+// resumable unfinished workout. Cold process restart must surface the REAL
+// pending ledger to the athlete; it must not invent a session or silently
+// replay a Finish before an explicit History recovery tap.
+const coldHistory=landing.slice(landing.indexOf('val measured='),
+  landing.indexOf('landingChecked=true'));
+assert.ok(coldHistory.includes('host.reviewVerifiedKotlinHistory()') &&
+  coldHistory.includes('NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION') &&
+  coldHistory.includes('if(pendingHistory)') &&
+  coldHistory.includes('KotlinCandidateDestination.HISTORY') &&
+  coldHistory.indexOf('if(measured || approvedMeasured)')<
+    coldHistory.indexOf('if(pendingHistory)') &&
+  coldHistory.indexOf('if(pendingHistory)')<
+    coldHistory.indexOf('host.listOwnedCustomCycleDrafts()') &&
+  !coldHistory.includes('host.recoverPendingNativeHistory()'),
+  'Pending native Finish must be reachable on launch after resume priority, with no implicit recovery');
+const recovery=host.slice(host.indexOf('fun recoverPendingNativeHistory():'),
+  host.indexOf('fun reviewVerifiedKotlinHistory():'));
+for(const [intent,coordinator] of [
+  ['MeasuredFinish','measuredHistoryTransactions'],
+  ['CustomFinish','customHistoryTransactions'],
+  ['CustomCorrect','customCorrectionTransactions'],
+  ['Finish','historyTransactions'],
+  ['Correct','historyTransactions']
+])assert.ok(recovery.includes('is NativeHistoryWriteIntent.'+intent) &&
+  recovery.includes(coordinator+'.recover(signed.ownerKey,signed.athleteId)'),
+  'History recovery must delegate '+intent+' to its original file owner');
+assert.ok(recovery.includes('historyStore.open(signed.ownerKey,signed.athleteId)') &&
+  recovery.includes('localAthlete.signedInIdentity()!=signed') &&
+  recovery.includes('return mixedHistoryReader.read(signed.ownerKey,signed.athleteId)') &&
+  !recovery.includes('issueWorkout(') &&
+  !recovery.includes('confirmMeasuredWorkoutConsent('),
+  'Recovery must only replay a prepared transaction, then verify complete owner-scoped History');
+assert.ok(history.includes('Recover pending History') &&
+  history.includes('host.recoverPendingNativeHistory()') &&
   history.includes('NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION') &&
-  history.includes('attempted is NativeMeasuredFinishResult.Committed') &&
-  history.includes('refreshed is NativeKotlinMixedHistoryReadResult.Review'),
-  'History must offer a safe route to reconcile already-prepared measured Finish after cold restart');
+  history.includes('refreshed is NativeKotlinMixedHistoryReadResult.Review') &&
+  !history.includes('Recover pending measured Finish'),
+  'History must expose a safe owner-verified recovery route for all native pending kinds');
 
 const csvExport=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinVerifiedHistoryCsvExport.kt');
 assert.ok(csvExport.includes('fun prepare(history:NativeKotlinMixedHistoryTimeline)') &&

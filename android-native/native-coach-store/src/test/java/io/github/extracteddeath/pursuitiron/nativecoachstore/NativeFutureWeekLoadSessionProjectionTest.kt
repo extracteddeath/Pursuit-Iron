@@ -72,6 +72,17 @@ class NativeFutureWeekLoadSessionProjectionTest {
         assertFalse(result.mayWriteTrainingCycle)
         assertFalse(result.mayChangeHistory)
         assertEquals(source,result.original)
+        assertEquals(KotlinFutureLoadSource.EARNED_NEXT_INCREMENT,
+            result.numberFact.source)
+        assertEquals(KotlinFutureLoadPhysicalReason.EARNED_ADJACENT_HIGHER_SETTING,
+            result.numberFact.physicalProof.reason)
+        assertEquals(n("200"),result.numberFact.issuedLoad)
+        assertEquals(n("205"),result.numberFact.proposedLoad)
+        assertEquals(n("205"),result.numberFact.physicalProof.nextHigher)
+        assertEquals(n("195"),result.numberFact.physicalProof.nextLower)
+        assertEquals(n("5"),result.numberFact.physicalProof.absoluteChange)
+        assertFalse(result.numberFact.mayChangeIssuedWorkout)
+        assertFalse(result.numberFact.maySaveFutureProgram)
         assertEquals(source.slots[1],result.preview.slots[1])
         assertEquals(source.stamp,result.preview.stamp)
         assertEquals(source.knownSetAndRestSeconds,
@@ -143,5 +154,37 @@ class NativeFutureWeekLoadSessionProjectionTest {
                 NativeFutureWeekLoadProjectionRefusal.UNVERIFIED_EQUIPMENT),
                 run(stock=stock))
         }
+    }
+
+
+    @Test fun changedPhysicalStockOrConsentCannotAcquireAFreshAcceptedNumberFact() {
+        val current=receipt()
+        val incompatible=listOf(
+            physical.copy(totals=listOf(n("195"),n("200"),n("210"))),
+            VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.CABLE_STACK,
+                listOf(n("200"),n("205"))),
+            VerifiedLoadStock.Totals(LoadUnit.KG,LoadBasis.MACHINE_STACK,
+                listOf(n("200"),n("205"))))
+        for(stock in incompatible) {
+            assertEquals(NativeFutureWeekLoadProjection.Rejected(
+                NativeFutureWeekLoadProjectionRefusal.UNVERIFIED_EQUIPMENT),
+                run(stock=stock))
+        }
+        for(stale in listOf(
+            current.copy(proposedLoad=n("210")),
+            current.copy(maximumAuthorizedIncrease=n("2.5")),
+            current.copy(previousLoad=n("195")),
+            current.copy(proposedLoad=n("205.0001")))) {
+            assertEquals(stale.toString(),
+                NativeFutureWeekLoadProjection.Rejected(
+                    NativeFutureWeekLoadProjectionRefusal.UNVERIFIED_EQUIPMENT),
+                run(grant=NativeFutureWeekConsentRead.Current(stale)))
+        }
+        val equivalent=current.copy(previousLoad=n("200.000"),
+            proposedLoad=n("205.0000"))
+        val same=run(grant=NativeFutureWeekConsentRead.Current(equivalent))
+            as NativeFutureWeekLoadProjection.Ready
+        assertEquals((run() as NativeFutureWeekLoadProjection.Ready).numberFact,
+            same.numberFact)
     }
 }

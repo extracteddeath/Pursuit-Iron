@@ -265,7 +265,8 @@ class AdvancedAmplifierProtocolDomainTest {
                 else -> listOf(1,4)
             }
             for(rounds in roundOptions) {
-                val amp=CustomSetAmplifier(kind,4,20,
+                val amp=CustomSetAmplifier(kind,4,
+                    if(kind==CustomAmplifierKind.LENGTHENED_PARTIALS)0 else 20,
                     followUpRounds=rounds)
                 val result=AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
                     amp,issued,logged,null,1)

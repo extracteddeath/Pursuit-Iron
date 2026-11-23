@@ -6,14 +6,24 @@ const controller=readFileSync(
  'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinSessionController.kt','utf8');
 
 // The minimized shortcut belongs to the current host/athlete and is NOT an
-// access grant. Resume must cold recheck signed current program approval.
+// access grant. Resume must recheck BOTH the current signed approval and the
+// unfinished owner-verified disk journal, not just a matching workout ID.
 assert.match(candidate,/var minimizedGeneratedId by rememberSaveable\(host\)/);
 assert.match(candidate,/var selectedId by rememberSaveable\(host\)/);
 assert.match(candidate,/PursuitPrimaryAction\("Resume workout"/);
 assert.match(candidate,/host\.currentlyApprovedKotlinWorkoutId\(\)/);
 assert.match(candidate,/minimizedGeneratedId==awaitingWorkoutId/);
+const minimizeShortcut=candidate.slice(
+  candidate.indexOf('minimizedGeneratedId?.let { awaitingWorkoutId ->'),
+  candidate.indexOf('// This is the COLD-RESTART case:'));
+assert.match(minimizeShortcut,/currentUnfinishedGeneratedWorkoutId\(host\)==\s*awaitingWorkoutId/);
+assert.match(minimizeShortcut,/runCatching\s*\{/);
+assert.match(minimizeShortcut,/withContext\(Dispatchers\.IO\)/);
+assert.doesNotMatch(minimizeShortcut,/host\.currentlyApprovedKotlinWorkoutId\(\)/,
+  'A matching approval without an unfinished journal must not reopen a completed workout');
+assert.match(minimizeShortcut,/The minimized workout is no longer verifiably unfinished/);
 assert.match(candidate,/selectedId==null && customWorkoutId==null/);
-assert.match(candidate,/if\(approved==awaitingWorkoutId\) \{/);
+assert.match(candidate,/if\(verifiedUnfinished\) \{/);
 assert.match(candidate,/selectedId=awaitingWorkoutId\s*minimizedGeneratedId=null/);
 assert.match(candidate,/if\(generatedWorkoutId!=null && selectedId!=generatedWorkoutId\)/);
 assert.doesNotMatch(candidate,/if\(generatedWorkoutId!=null\) \{\s*if\(selectedId/);

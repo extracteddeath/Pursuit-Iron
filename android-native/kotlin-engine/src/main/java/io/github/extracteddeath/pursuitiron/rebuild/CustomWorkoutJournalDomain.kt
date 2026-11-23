@@ -299,14 +299,12 @@ object CustomWorkoutJournalDomain {
                                 operation.performed,operation.outcome))
                             return CustomWorkoutJournalDecision.Rejected(
                                 CustomWorkoutJournalRefusal.INVALID_ACTUAL)
-                        // The independently reviewed lower stage target
-                        // does not prove the athlete actually reduced weight.
-                        // Enforce the REAL completed reduction at every drop,
-                        // including the legacy one-drop path and corrected
-                        // observations. Never invent a second-stage weight
-                        // from a first-stage load or another Machine A/B.
+                        // The issued lower target never proves that even
+                        // an ATTEMPTED drop was physically lower. This gate
+                        // applies to failed and completed stages identically
+                        // and preserves exact station and last-stage identity.
                         if(amp.kind==CustomAmplifierKind.DROP_SET &&
-                            operation.outcome==KotlinJournalSetOutcome.COMPLETED) {
+                            operation.outcome!=KotlinJournalSetOutcome.SKIPPED) {
                             val predecessor=if(operation.visit.stage==1)main
                                 else (nextEffective[CustomWorkoutVisitKey(
                                     operation.visit.setKey,
@@ -314,11 +312,12 @@ object CustomWorkoutJournalDomain {
                                     operation.visit.stage-1)]?.operation as?
                                         CustomWorkoutJournalOperation.Record)
                             if(predecessor?.outcome!=KotlinJournalSetOutcome.COMPLETED ||
-                                !AdvancedAmplifierProtocolDomain.validPerformedDropStage(
+                                !AdvancedAmplifierProtocolDomain.validDropStageObservation(
                                     amp,target.prescription.load,main.performed,
                                     if(operation.visit.stage==1)null
                                         else predecessor.performed,
-                                    operation.performed,operation.visit.stage))
+                                    operation.performed,operation.visit.stage,
+                                    operation.outcome))
                                 return CustomWorkoutJournalDecision.Rejected(
                                     CustomWorkoutJournalRefusal.INVALID_ACTUAL)
                         }
@@ -383,6 +382,8 @@ object CustomWorkoutJournalDomain {
                         set.ordinalInSlot !in 1..count ||
                         set.setKey!=
                             "${prior.snapshot.stamp.cycleId}:w${prior.snapshot.absoluteWeek}:d${prior.snapshot.weekday}:${next.slotId}:s${set.ordinalInSlot}" ||
+                        !KotlinSetNumberAuthorityDomain.validIssuedLoad(
+                            set.prescription.load) ||
                         set.prescription.reps.minimum !in 1..100 ||
                         set.prescription.reps.maximum !in set.prescription.reps.minimum..100 ||
                         set.prescription.targetRir?.let{it !in 0..10}==true ||

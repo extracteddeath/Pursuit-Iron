@@ -54,6 +54,21 @@ internal fun currentUnfinishedGeneratedWorkoutId(
     }
 }
 
+/**
+ * Read-only landing for an idle athlete with no unfinished or approved
+ * session. A current owned plan takes precedence; independently verified
+ * completed History is still a valid home when no custom draft survives.
+ * Unknown, foreign or failed History reads must never masquerade as proof.
+ */
+internal fun kotlinIdleColdLanding(
+    hasOwnedCustomCycle:Boolean,
+    hasVerifiedCompletedHistory:Boolean
+):KotlinCandidateDestination = when {
+    hasOwnedCustomCycle -> KotlinCandidateDestination.PROGRAM
+    hasVerifiedCompletedHistory -> KotlinCandidateDestination.HISTORY
+    else -> KotlinCandidateDestination.ONBOARD
+}
+
 private val primaryDestinations=listOf(
     KotlinCandidateDestination.PROGRAM,KotlinCandidateDestination.TRAIN,
     KotlinCandidateDestination.HISTORY,KotlinCandidateDestination.PROGRESS,
@@ -169,9 +184,11 @@ internal fun NativeKotlinCandidateJourney(
                 // unfinished. Offer its explicit recovery first; routing to
                 // Train would strand the athlete behind HISTORY_NOT_READY.
                 // This read does not replay any pending operation.
-                val pendingHistory=(runCatching {
+                val readHistory=runCatching {
                     host.reviewVerifiedKotlinHistory()
-                }.getOrNull() as? NativeKotlinMixedHistoryReadResult.Rejected)
+                }.getOrNull()
+                val pendingHistory=(readHistory as?
+                    NativeKotlinMixedHistoryReadResult.Rejected)
                     ?.reason==NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION
                 if(pendingHistory) KotlinCandidateDestination.HISTORY
                 else {
@@ -211,9 +228,16 @@ internal fun NativeKotlinCandidateJourney(
                             val programs=runCatching {
                                 host.listOwnedCustomCycleDrafts()
                             }.getOrNull() as? NativeCustomDraftListResult.Ready
-                            if(programs?.drafts?.isNotEmpty()==true)
-                                KotlinCandidateDestination.PROGRAM
-                            else KotlinCandidateDestination.ONBOARD
+                            // An athlete may have completed their sessions and
+                            // have no custom drafts. Only a completed,
+                            // independently verified owner-scoped timeline
+                            // warrants returning straight to History.
+                            val hasVerifiedCompletions=(readHistory as?
+                                NativeKotlinMixedHistoryReadResult.Review)
+                                ?.timeline?.completions?.isNotEmpty()==true
+                            kotlinIdleColdLanding(
+                                hasOwnedCustomCycle=programs?.drafts?.isNotEmpty()==true,
+                                hasVerifiedCompletedHistory=hasVerifiedCompletions)
                         }
                     }
                 }

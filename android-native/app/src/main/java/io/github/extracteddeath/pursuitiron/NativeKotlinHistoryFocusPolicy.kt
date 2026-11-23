@@ -22,4 +22,10 @@ internal object NativeKotlinHistoryFocusPolicy {
                 selectedAthleteId==currentAthleteId &&
                 exerciseId.isNotBlank() && exerciseId in verifiedRepExerciseIds
         }
+    /** A saved search must not filter another athlete's verified timeline.
+     * Do not erase the original UI text on refresh or manufacture a match. */
+    fun admitSearch(query:String,selectedAthleteId:String?,
+        currentAthleteId:String?):String =
+        query.takeIf { !selectedAthleteId.isNullOrBlank() &&
+            selectedAthleteId==currentAthleteId } ?: ""
 }

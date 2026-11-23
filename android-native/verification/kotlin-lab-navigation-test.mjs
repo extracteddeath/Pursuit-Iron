@@ -66,8 +66,49 @@ assert.ok(measured.includes('journal.bySetKey[planned.setKey]') &&
 assert.doesNotMatch(measured,/null -> LinearProgressIndicator\(Modifier\.fillMaxWidth\(\)\)/,
   'A failed source read must not present a never-ending loading state');
 
+// An interrupted measured Finish writes its parent journal before finalizing
+// the shared ledger. The UI cannot infer History publication from that receipt.
+// The host may recover only an already-prepared measured Finish intent, then
+// must reread the independently owner-verified mixed History timeline.
+const measuredHost=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt');
+const finishHandoff=measuredHost.slice(
+  measuredHost.indexOf('fun verifyFinishedMeasuredWorkoutInHistory('),
+  measuredHost.indexOf('fun reviewVerifiedKotlinHistory()'));
+assert.ok(finishHandoff.includes('saved.journal.finishedByEventId ?:return false') &&
+  finishHandoff.includes('mixedHistoryReader.read(signed.ownerKey,signed.athleteId)') &&
+  finishHandoff.includes('NativeKotlinMixedHistoryCompletion.Measured') &&
+  finishHandoff.includes('entry.manifest.finishEventId==event') &&
+  finishHandoff.includes('entry.stored==saved') &&
+  finishHandoff.includes('NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION') &&
+  finishHandoff.includes('measuredHistoryTransactions.recover(') &&
+  finishHandoff.includes('recovered.completion.workoutId!=workoutId') &&
+  finishHandoff.includes('return matches(mixedHistoryReader.read('),
+  'A measured Finish is not complete until the exact enrolled history entry is verified');
+const measuredFinished=measured.slice(
+  measured.indexOf('if(journal.finishedByEventId!=null) {'),
+  measured.indexOf('} else {\n                val focus=reviewedFocus'));
+assert.ok(measuredFinished.includes('host.verifyFinishedMeasuredWorkoutInHistory(') &&
+  measuredFinished.includes('withContext(Dispatchers.IO)') &&
+  measuredFinished.includes('if(verified)onViewHistory(requestedId)') &&
+  measuredFinished.includes('stored?.journal?.finishedByEventId==requestedFinish') &&
+  measuredFinished.includes('Verify Finish and view History') &&
+  !measuredFinished.includes('already committed to History') &&
+  !measuredFinished.includes('onClick={onViewHistory(workoutId)}'),
+  'A parent Finish receipt must not offer an unverified History handoff');
+
 const navigation=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinNavigationState.kt');
 const history=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHistoryScreen.kt');
+// A completed measured parent is omitted from the unfinished-workout picker.
+// Cold process recovery must therefore also be reachable FROM History, not
+// only from a measured editor that might no longer be navigable.
+assert.ok(history.includes('Recover pending measured Finish') &&
+  history.includes('host.recoverPendingMeasuredHistory()') &&
+  history.includes('host.reviewVerifiedKotlinHistory()') &&
+  history.includes('NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION') &&
+  history.includes('attempted is NativeMeasuredFinishResult.Committed') &&
+  history.includes('refreshed is NativeKotlinMixedHistoryReadResult.Review'),
+  'History must offer a safe route to reconcile already-prepared measured Finish after cold restart');
+
 const csvExport=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinVerifiedHistoryCsvExport.kt');
 assert.ok(csvExport.includes('fun prepare(history:NativeKotlinMixedHistoryTimeline)') &&
   csvExport.includes('NativeKotlinMixedHistoryCompletion.Composer') &&

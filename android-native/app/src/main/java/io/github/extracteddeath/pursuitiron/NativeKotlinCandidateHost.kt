@@ -1360,6 +1360,44 @@ internal class NativeKotlinCandidateHost(context:Context) {
             signed.ownerKey,signed.athleteId)
     }
 
+    /**
+     * A durable parent Finish event is NOT proof that the shared History
+     * manifest finalized it. Return true only after the current owner-fenced
+     * mixed History reader independently replays the exact measured entry.
+     *
+     * When Finish was interrupted after the journal write, recover only an
+     * already prepared, owner-authorized measured Finish intent, then reread
+     * the full ledger. Never create a Finish, consent or new workout here.
+     */
+    fun verifyFinishedMeasuredWorkoutInHistory(workoutId:String):Boolean {
+        val signed=localAthlete.signedInIdentity() ?:return false
+        val saved=(measuredParentHistoryStore.open(signed.ownerKey,workoutId)
+            as? NativeMeasuredWorkoutStoreResult.Durable)?.stored ?:return false
+        val event=saved.journal.finishedByEventId ?:return false
+        fun matches(result:NativeKotlinMixedHistoryReadResult):Boolean {
+            val verified=result as? NativeKotlinMixedHistoryReadResult.Review
+                ?:return false
+            if(verified.timeline.athleteId!=signed.athleteId)return false
+            val entry=verified.timeline.completions
+                .filterIsInstance<NativeKotlinMixedHistoryCompletion.Measured>()
+                .singleOrNull{it.manifest.workoutId==workoutId} ?:return false
+            return entry.manifest.finishEventId==event &&
+                entry.stored==saved
+        }
+        val initial=mixedHistoryReader.read(signed.ownerKey,signed.athleteId)
+        if(matches(initial))return true
+        // A failed read for another reason never authorizes recovery.
+        if(initial !is NativeKotlinMixedHistoryReadResult.Rejected ||
+            initial.reason!=NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION)
+            return false
+        val recovered=measuredHistoryTransactions.recover(
+            signed.ownerKey,signed.athleteId)
+        if(recovered !is NativeMeasuredFinishResult.Committed ||
+            recovered.completion.workoutId!=workoutId)return false
+        return matches(mixedHistoryReader.read(
+            signed.ownerKey,signed.athleteId))
+    }
+
     fun reviewVerifiedKotlinHistory():NativeKotlinMixedHistoryReadResult {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeKotlinMixedHistoryReadResult.Rejected(

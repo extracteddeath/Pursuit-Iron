@@ -242,6 +242,54 @@ class KotlinSetNumberAuthorityDomainTest {
         assertFalse(customHistory.evidence.canApplyProgression)
     }
 
+    @Test fun malformedIssuedWeightsCannotBeMadeValidByARealPerformedNumber() {
+        val impossible=listOf("-1","100000.001","20.0001").map(::load)
+        for(issued in impossible) {
+            val observation=actual("20.0",8,2)
+            assertFalse(KotlinSetNumberAuthorityDomain.validIssuedLoad(issued))
+            assertEquals(KotlinSetNumberReview.Rejected(
+                KotlinSetNumberRefusal.INVALID_ISSUED_LOAD),
+                KotlinSetNumberAuthorityDomain.review(issued,
+                    KotlinJournalSetOutcome.COMPLETED,observation))
+            assertEquals(KotlinSetNumberReview.Rejected(
+                KotlinSetNumberRefusal.INVALID_ISSUED_LOAD),
+                KotlinSetNumberAuthorityDomain.review(issued,
+                    KotlinJournalSetOutcome.FAILED_ATTEMPT,
+                    observation.copy(reps=0,actualRir=null)))
+            assertFalse(KotlinWorkoutJournalDomain.validPerformed(
+                KotlinWorkoutTarget("press",ComposerRole.ACCESSORY,
+                    ComposerSessionPurpose.HYPERTROPHY,"press:bad",
+                    DraftSetType.WORKING,0,issued,RepBand(8,12),
+                    2,45,90),
+                KotlinJournalSetOutcome.COMPLETED,observation))
+            assertFalse(CustomWorkoutJournalDomain.actualValid(
+                issued,KotlinJournalSetOutcome.COMPLETED,observation))
+            assertEquals(KotlinSetEntryResult.Rejected(
+                KotlinSetEntryRefusal.INVALID_WEIGHT),
+                KotlinWorkoutEntryDomain.parse(issued,"20","8","2"))
+            // No performed facts may be invented; inspect/Skip still
+            // permit an athlete to resolve an invalid signed workout.
+            assertEquals(KotlinSetLoadRelation.UNRECORDED,
+                (KotlinSetNumberAuthorityDomain.review(issued,null,null)
+                    as KotlinSetNumberReview.Accepted).fact.relation)
+            assertEquals(KotlinSetLoadRelation.SKIPPED,
+                (KotlinSetNumberAuthorityDomain.review(issued,
+                    KotlinJournalSetOutcome.SKIPPED,null)
+                    as KotlinSetNumberReview.Accepted).fact.relation)
+        }
+        if(!LoadBasis.DUMBBELL_PER_HAND.permitsZeroAddedLoad) {
+            val zero=DraftSetLoad.Verified(LoadUnit.LB,
+                LoadBasis.DUMBBELL_PER_HAND,n("0"))
+            assertFalse(KotlinSetNumberAuthorityDomain.validIssuedLoad(zero))
+            assertFalse(KotlinSetNumberAuthorityDomain.valid(zero,
+                KotlinJournalSetOutcome.COMPLETED,actual("20")))
+        }
+        assertTrue(KotlinSetNumberAuthorityDomain.validIssuedLoad(load("215.000")))
+        assertTrue(KotlinSetNumberAuthorityDomain.valid(
+            load("215.000"),KotlinJournalSetOutcome.COMPLETED,
+            actual("205",8,null)))
+    }
+
     @Test fun futureProposalsAndPerformedSetsShareExactlyOnePhysicalWeightEnvelope() {
         // Numeric format (not history, consent, increment stock or effort)
         // must be identical across the present and future number policies.

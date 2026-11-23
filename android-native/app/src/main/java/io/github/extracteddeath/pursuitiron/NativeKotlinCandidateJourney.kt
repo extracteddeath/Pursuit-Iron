@@ -62,10 +62,10 @@ internal fun currentUnfinishedGeneratedWorkoutId(
  */
 internal fun kotlinIdleColdLanding(
     hasOwnedCustomCycle:Boolean,
-    hasVerifiedCompletedHistory:Boolean
+    hasVerifiedCompletedHistory:()->Boolean
 ):KotlinCandidateDestination = when {
     hasOwnedCustomCycle -> KotlinCandidateDestination.PROGRAM
-    hasVerifiedCompletedHistory -> KotlinCandidateDestination.HISTORY
+    hasVerifiedCompletedHistory() -> KotlinCandidateDestination.HISTORY
     else -> KotlinCandidateDestination.ONBOARD
 }
 
@@ -95,7 +95,7 @@ internal fun kotlinColdLaunchDestination(
     if(probes.confirmedMeasured())return KotlinCandidateDestination.TRAIN
     return kotlinIdleColdLanding(
         hasOwnedCustomCycle=probes.ownedCustomProgram(),
-        hasVerifiedCompletedHistory=probes.completedVerifiedHistory())
+        hasVerifiedCompletedHistory=probes.completedVerifiedHistory)
 }
 
 private val primaryDestinations=listOf(

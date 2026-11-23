@@ -1498,7 +1498,7 @@ private fun NativeKotlinSetCard(
         }
         if(set.isResolved) {
             Text(nativeSavedSetCaption("Saved",set.outcome,existing,
-                target.exerciseId,issuedGymId,machineRoster),
+                target.load,target.exerciseId,issuedGymId,machineRoster),
                 color=MaterialTheme.colorScheme.onSurfaceVariant,
                 style=MaterialTheme.typography.bodyMedium)
         }

@@ -4,8 +4,9 @@ const app=fs.readFileSync('modules/App.js','utf8');
 const uiModules=app+'\n'+fs.readFileSync('modules/exercise-picker-sheet.js','utf8');
 const css=fs.readFileSync('app.css','utf8');
 const owners=[...css.matchAll(/#root \.wpb \.(wpb-b964-layout-\d{2}),#root \.\1\{([^}]+)\}/g)];
-assert.equal(owners.length,35,'B964 must retain all 35 canonical static layout classes');
-assert.equal(new Set(owners.map(m=>m[1])).size,35,'layout selectors have one CSS owner');
+// B1028: layout-10 (picker chip rows) retired by the shared chip row.
+assert.equal(owners.length,34,'B964 must retain all 34 canonical static layout classes');
+assert.equal(new Set(owners.map(m=>m[1])).size,34,'layout selectors have one CSS owner');
 for(const [,name,body] of owners){
  assert.ok(body && !body.includes('!important'),'B964 does not introduce priority overrides: '+name);
  assert.ok((uiModules.match(new RegExp(name,'g'))||[]).length>=1,'retired layout must use its class: '+name);

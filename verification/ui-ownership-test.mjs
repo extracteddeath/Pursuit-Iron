@@ -838,8 +838,9 @@ assert.equal((app.split("function BlockReviewView(")[1].split(String.fromCharCod
 assert.equal((app.split("function LegacyProgramsCard(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,1,"LegacyProgramsCard shared owner regression");
 assert.equal((app.split("function ChangelogSheet(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,7,"ChangelogSheet shared owner regression");
 // B958 cross-screen shared presentation ownership: 80 literal JSX objects retired.
+// B1028: AddSheet moved chips, rows and actions onto UiChoice/UiListItem/UiAction (10 → 9 utilities).
 const b958Names=["PlanView","NextWorkoutView","Home","SettingsView","ProgressDetail","CompareView","MilestonesCard","StrengthComparisonCard","RecoveryTrendCard","MuscleRecoveryCard","ProfileMiniForm","ConvertProgramToCycleSheet","VolumeCard","AddSheet","SwapSheet"];
-const b958Counts=[11,6,2,2,1,1,4,8,7,3,4,5,3,10,13];
+const b958Counts=[11,6,2,2,1,1,4,8,7,3,4,5,3,9,13];
 for(let i=0;i<b958Names.length;i++){
   const name=b958Names[i],start=app.indexOf("function "+name+"(");
   const end=app.indexOf(String.fromCharCode(10)+"function ",start+1);

@@ -5,7 +5,7 @@
   "build": 1027,
   "engineVersion": "0.65.10",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "614587b7866f4b278c73392a91978ce4e7ef554fe6ec1294cb0d8ee82845bc28",
+  "runtimeAggregate": "c54ca94c16f20ca1ebae3acc1b7b14c59372631daf376815a0ea633db1c4164f",
   "runtimeFiles": {
     "modules/app-storage-ownership.js": "765ef4d37d4f73967fee7ef1942de229e905e112c7735b53de86a8e7106b3e39",
     "modules/backup-restore-panel.js": "194d953c2478a300c21e303c19fd7dd27ac436ddef21bcacaa7b8299d60123df",
@@ -13,7 +13,7 @@
     "modules/engine-api.js": "f5ec1e86b818120507a43edb7d6eae9035b45fc1146e0904444283c3c4c6ee83",
     "modules/engine-shell.js": "73645bf4d914423074c0e90b992b58a6c57f7fbb726621d417803e906d140675",
     "modules/exercise-notes.js": "0decb389616ffdee43f5969a411597c8feef75358b9bab2ddecf353f00d8cace",
-    "modules/exercise-picker-sheet.js": "a3ef5c36b8a0bc03dfacebad09faddb958506be6875730f86e9f989f32d97b16",
+    "modules/exercise-picker-sheet.js": "d5fe771ab528bc37fb2275508fdb2cc04ae25fcf0ab8b725b93f651930125f90",
     "modules/exercise-variant-browse.js": "c01b02ffe948c6a0356ab869c86925bcb65f899cc1d3a3afad6901e7eee15117",
     "modules/generation-runtime.js": "a8375d92b33d226ef25fce6a2efddb3b84cfbb93e7327a92a4d749ca3071fb76",
     "modules/generation-worker.js": "098d2de152993933990ea44ff0faf6b828b9c579aff53ecbffddb716599899b6",
@@ -139,7 +139,7 @@
     "modules/ui-menu.js": "464a41a975997d1a19e030f628ee1141a7272c8b8b36d2feac8dc70fc41a1ef6",
     "modules/ui-motion.js": "bcda84ffc9aad48e05ccc35a00f4d626d992af5bb12661e83b4580b11653662a",
     "modules/ui-primitives.js": "09bbe709ac66be332b1d1cc990679e500e6e386ed0e1310ea5cfbc2cebe26859",
-    "modules/ui-sheet.js": "ccd920aa3dc298fbb7c915a0d8b1b01cd9f0c42a975a6883ccb7c4b68855e739",
+    "modules/ui-sheet.js": "d4304da225facc1f487a79d17d4f13f40da5c1f932088e641fde7bebd7c041f9",
     "modules/wizard-stability.js": "a62b2bed8a1f5ab880bfeab036a83ec630c93048b8a352652fe00ae75374a3d1",
     "modules/workout-context.js": "7a4662dd3d2340d01f8c332e18070d27ed94493d21991a28801d61ee0bd64248",
     "modules/workout-machine-runtime.js": "4bcc4176be4b54bae5a180ea493a338cfe7295f4dcf80c55ba88b123558dc71f",
@@ -161,18 +161,18 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "ebed66dd88b3f13afc96e9d4674974ea67cbb890d1a26688ebda64c11d1c6ea2",
+    "modules/App.js": "13d16d5a7d5ab58fc006c2bef73a2d2cc74e5ea97ff21071b3f6211496910ab6",
     "index.html": "efe97bcf3cb0fd9942d48f193b5a1f82dc14a4226f324e87baf6902ef210fce2",
-    "sw.js": "b21c79c06c8305d7877e8bdd6e95363afbb7418423651ec502c280ee9deeb392",
-    "BUILD_PROFILE.json": "57959b3b3411a53fab6bfffff77e9f757f5483113e02639fa74efc76768c7019",
+    "sw.js": "34d707faed5a8d6bb3d5caeed4bc919564b70cb7f81ac87d2f9f653474cb82fb",
+    "BUILD_PROFILE.json": "9ec55406ea3b7331c0ea7bb0767d33a97167404a3a6c63cb03b25ee6ab6cae4f",
     "CHANGELOG.md": "b2652caa581ef510ddbf292f8422749da1a1616e8c07b2de372922a2782a2539",
-    "app.css": "cec8090fbb7cf9c11f24daf29090c881c739d77ef435d903083afe8804e6d05c",
+    "app.css": "09979ed02b00be6c53bf9743713a04ef7116c83ae51b230bf857aa0e73221088",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1027-r0f75cb84fdc7f74f",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1027-r66b148856eb1a7e6",
   "uiMilestone": "Build 1027 · M3 type scale (14/16 body) and 48px touch targets"
 }

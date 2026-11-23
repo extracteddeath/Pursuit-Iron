@@ -336,7 +336,7 @@ const b1009Contract=[
   ],
   [
     "pi-t-faint-mt2",
-    2,
+    1, // B1028: the swap-sheet row became a UiListItem
     "style: { fontSize: 11, color: C.faint, marginTop: 2 }"
   ]
 ];

@@ -1,5 +1,6 @@
 // One modal bottom sheet for feature sheets (Compose ModalBottomSheet anatomy): scrim, drag
-// handle, heading with optional kicker and close, scrolling body and an optional pinned footer.
+// handle, heading with optional kicker and close, an optional pinned toolbar (search, filter
+// chips), a scrolling body and an optional pinned footer.
 // Portaled to the app root so a screen's own stacking context (Home isolates) never puts the
 // tab bar above it. Focus trap, Escape and restore come from the shared sheet-focus owner.
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
@@ -9,7 +10,7 @@ import { useProgramSheetFocus } from './program-sheet-focus.js';
 
 const appRoot = () => (typeof document !== 'undefined' && (document.querySelector('#root .wpb') || document.body)) || null;
 
-export function UiSheet({ id, title, kicker, onClose, footer, children, className = '', panelClassName = '',
+export function UiSheet({ id, title, kicker, onClose, footer, toolbar, children, className = '', panelClassName = '',
     bodyClassName = '', headingClassName = '', footerClassName = '', closeClassName = '', titleId: givenTitleId, closeLabel = 'Close', describedBy, sheetDragRef, portal = true, ...props }) {
     const { attachPanel, onPanelKeyDown } = useProgramSheetFocus(onClose, sheetDragRef);
     const titleId = givenTitleId || `${id}-title`;
@@ -26,6 +27,7 @@ export function UiSheet({ id, title, kicker, onClose, footer, children, classNam
                     ] }),
                     _jsx(UiSheetClose, { onClick: onClose, 'aria-label': closeLabel, className: closeClassName })
                 ] }),
+                toolbar && _jsx('div', { className: 'wpb-ui-modal-sheet-toolbar', children: toolbar }),
                 _jsx('div', { className: `wpb-scroll wpb-ui-sheet-scroll wpb-ui-modal-sheet-body ${bodyClassName}`.trim(), children }),
                 footer && _jsx('footer', { className: `wpb-ui-sheet-footer wpb-ui-modal-sheet-footer ${footerClassName}`.trim(), children: footer })
             ] }) });

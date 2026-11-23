@@ -3,7 +3,7 @@
  * The audit spans all JSX modules, not only inline styles or the Home screen.
  */
 export const uiElementBudget=Object.freeze({
- rawInteractive:507,
+ rawInteractive:497,
  rawSurfaceCandidates:84,
  minSharedComponents:235
 });

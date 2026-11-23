@@ -674,6 +674,12 @@ private fun NativeKotlinCandidateTrainEntry(
     }
     var timePreviewBusy by remember {mutableStateOf(false)}
     var timeAcceptanceBusy by remember {mutableStateOf(false)}
+    // Both minimized and cold-resumed generated sessions verify their own
+    // signed, unfinished journal on tap. Optional inventory/time previews
+    // can fail or run slowly without blocking that independent recovery.
+    fun canVerifyGeneratedResume()=NativeKotlinTrainResumeGate.mayVerifyGenerated(
+        resumeChecking=resumeChecking,manualLookupBusy=searching,
+        anotherWorkoutOpen=selectedId!=null || customWorkoutId!=null || measuredOpen)
     var showIdEntry by rememberSaveable {mutableStateOf(false)}
     var showOtherWorkouts by rememberSaveable {mutableStateOf(false)}
     var visibleUnfinishedCount by rememberSaveable(host) {mutableIntStateOf(20)}
@@ -777,9 +783,9 @@ private fun NativeKotlinCandidateTrainEntry(
                     PursuitSectionHeading("Resume workout",
                         "Continue the currently approved native session. Recorded sets remain saved.")
                     PursuitPrimaryAction("Resume workout",
-                        enabled=!resumeChecking && !searching && !reviewingResume,
+                        enabled=canVerifyGeneratedResume(),
                         onClick={
-                            if(!resumeChecking && !searching && !reviewingResume) {
+                            if(canVerifyGeneratedResume()) {
                                 resumeChecking=true
                                 selectionMessage=null
                                 scope.launch {
@@ -830,10 +836,9 @@ private fun NativeKotlinCandidateTrainEntry(
                     PursuitSectionHeading("Resume your saved workout",
                         "Your previously recorded sets and prescribed weights are kept.")
                     PursuitPrimaryAction("Resume saved workout",
-                        enabled=!resumeChecking && !searching && !reviewingResume &&
-                            !timePreviewBusy,
+                        enabled=canVerifyGeneratedResume(),
                         onClick={
-                            if(!resumeChecking && !searching && !reviewingResume) {
+                            if(canVerifyGeneratedResume()) {
                                 resumeChecking=true
                                 selectionMessage=null
                                 scope.launch {
@@ -935,8 +940,15 @@ private fun NativeKotlinCandidateTrainEntry(
                 Text("Your training program",style=MaterialTheme.typography.titleMedium)
                 Text("Review the next session and its exact exercises before starting.",
                     style=MaterialTheme.typography.bodySmall)
-                PursuitPrimaryAction("Open my program",enabled=!reviewingResume) {
-                    onReturnToProgram()
+                // Opening Plan does not consume this optional unfinished
+                // custom/measured inventory result. Avoid trapping first-run
+                // program review behind a slow or failed Train inventory read.
+                // Only competing navigation or a live time-choice WRITE
+                // defers the transition; Plan rechecks its own saved source.
+                PursuitPrimaryAction("Open my program",
+                    enabled=!searching && !resumeChecking && !timeAcceptanceBusy) {
+                    if(!searching && !resumeChecking && !timeAcceptanceBusy)
+                        onReturnToProgram()
                 }
             }
             PursuitCard {

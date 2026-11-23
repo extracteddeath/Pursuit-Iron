@@ -22,6 +22,27 @@ assert.match(minimizeShortcut,/withContext\(Dispatchers\.IO\)/);
 assert.doesNotMatch(minimizeShortcut,/host\.currentlyApprovedKotlinWorkoutId\(\)/,
   'A matching approval without an unfinished journal must not reopen a completed workout');
 assert.match(minimizeShortcut,/The minimized workout is no longer verifiably unfinished/);
+// Generated Resume has its own signed-journal read and must stay reachable
+// while optional custom/measured inventory or short-session previews load.
+// Both minimized and cold-restarted paths share one navigation gate,
+// not a new authorization or a bypass of disk verification.
+const resumeGate=readFileSync(
+ 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinTrainResumeGate.kt','utf8');
+const coldResume=candidate.slice(
+  candidate.indexOf('resumableGeneratedId?.takeIf {'),
+  candidate.indexOf('selectionMessage?.takeIf{minimizedGeneratedId==null}'));
+assert.match(candidate,/fun canVerifyGeneratedResume\(\)=NativeKotlinTrainResumeGate\.mayVerifyGenerated\(/);
+assert.match(resumeGate,/!resumeChecking && !manualLookupBusy && !anotherWorkoutOpen/);
+assert.doesNotMatch(resumeGate,/reviewingResume|timePreviewBusy|timePreview|customInventory/);
+assert.match(minimizeShortcut,/PursuitPrimaryAction\("Resume workout",\s*enabled=canVerifyGeneratedResume\(\)/);
+assert.match(minimizeShortcut,/if\(canVerifyGeneratedResume\(\)\)/);
+assert.match(coldResume,/PursuitPrimaryAction\("Resume saved workout",\s*enabled=canVerifyGeneratedResume\(\)/);
+assert.match(coldResume,/if\(canVerifyGeneratedResume\(\)\)/);
+assert.doesNotMatch(minimizeShortcut,/!reviewingResume|!timePreviewBusy/);
+assert.doesNotMatch(coldResume,/!reviewingResume|!timePreviewBusy/);
+assert.match(coldResume,/currentUnfinishedGeneratedWorkoutId\(host\)==\s*issuedId/);
+assert.match(coldResume,/resumableGeneratedId==issuedId/);
+
 assert.match(candidate,/selectedId==null && customWorkoutId==null/);
 assert.match(candidate,/if\(verifiedUnfinished\) \{/);
 assert.match(candidate,/selectedId=awaitingWorkoutId\s*minimizedGeneratedId=null/);
@@ -74,6 +95,14 @@ const otherTools=candidate.indexOf('TextButton(onClick={showOtherWorkouts=!showO
 assert.ok(trainEntry>0 && customResume>trainEntry && customResume<primaryProgram &&
   primaryProgram<timeChoice && timeChoice<measuredTools &&
   measuredTools<otherTools,'Main workout and its time choice must not be buried behind measured workout tools');
+// Plan is a separately owner-verified destination. Optional unfinished
+// workout inventory must not block program review or first-session entry.
+// Competing workout navigation and in-flight SHORTEN acceptance still gate
+// this action so it cannot race a durable session-choice write.
+const programSection=candidate.slice(primaryProgram,timeChoice);
+assert.match(programSection,/PursuitPrimaryAction\("Open my program",\s*enabled=!searching && !resumeChecking && !timeAcceptanceBusy\)/);
+assert.match(programSection,/if\(!searching && !resumeChecking && !timeAcceptanceBusy\)\s*onReturnToProgram\(\)/);
+assert.doesNotMatch(programSection,/!reviewingResume|!timePreviewBusy/);
 assert.match(candidate,/var showMeasuredWorkouts by rememberSaveable/);
 const measuredSection=candidate.slice(measuredTools,otherTools);
 assert.match(measuredSection,/val unfinishedMeasured=/);

@@ -647,6 +647,12 @@ private fun NativeKotlinCandidateTrainEntry(
             onClearGeneratedWorkout()
         }
     }
+    // Both minimized and cold-resumed generated sessions verify their own
+    // signed, unfinished journal on tap. Optional inventory/time previews
+    // can fail or run slowly without blocking that independent recovery.
+    fun canVerifyGeneratedResume()=NativeKotlinTrainResumeGate.mayVerifyGenerated(
+        resumeChecking=resumeChecking,manualLookupBusy=searching,
+        anotherWorkoutOpen=selectedId!=null || customWorkoutId!=null || measuredOpen)
     fun minimizeGeneratedWorkout() {
         val openId=selectedId ?:return
         if(!controller.state.value.busy) {
@@ -777,9 +783,9 @@ private fun NativeKotlinCandidateTrainEntry(
                     PursuitSectionHeading("Resume workout",
                         "Continue the currently approved native session. Recorded sets remain saved.")
                     PursuitPrimaryAction("Resume workout",
-                        enabled=!resumeChecking && !searching && !reviewingResume,
+                        enabled=canVerifyGeneratedResume(),
                         onClick={
-                            if(!resumeChecking && !searching && !reviewingResume) {
+                            if(canVerifyGeneratedResume()) {
                                 resumeChecking=true
                                 selectionMessage=null
                                 scope.launch {
@@ -830,10 +836,9 @@ private fun NativeKotlinCandidateTrainEntry(
                     PursuitSectionHeading("Resume your saved workout",
                         "Your previously recorded sets and prescribed weights are kept.")
                     PursuitPrimaryAction("Resume saved workout",
-                        enabled=!resumeChecking && !searching && !reviewingResume &&
-                            !timePreviewBusy,
+                        enabled=canVerifyGeneratedResume(),
                         onClick={
-                            if(!resumeChecking && !searching && !reviewingResume) {
+                            if(canVerifyGeneratedResume()) {
                                 resumeChecking=true
                                 selectionMessage=null
                                 scope.launch {

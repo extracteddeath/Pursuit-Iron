@@ -13,6 +13,34 @@ class CustomBasicProgressionDraftDomainTest {
     private fun weighted(candidate: BasicProgressionResult.Candidate) =
         CustomBasicHistoryResult.Reviewed("previous",1,candidate,"block",0,"slot",null)
 
+    /** Test-only authentic future-number gate proofs for 5-lb selectors. */
+    private fun withProof(
+        reviewed:CustomBasicHistoryResult.Reviewed,
+        originals:List<CustomAuthoredSet>
+    ):CustomBasicHistoryResult.Reviewed {
+        val working=originals.filter{it.type==DraftSetType.WORKING}
+        val unit=LoadUnit.LB
+        val basis=(working.first().load as DraftSetLoad.Verified).basis
+        val stock=VerifiedLoadStock.Stack(unit,basis,
+            BigDecimal("5"),BigDecimal("5"),BigDecimal("200"))
+        val approved=reviewed.candidate.increasedOrdinals.associateWith { index ->
+            val issued=working[index].load as DraftSetLoad.Verified
+            val source=if(basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+                KotlinFutureLoadSource.EARNED_ASSISTANCE_DECREMENT
+            else KotlinFutureLoadSource.EARNED_NEXT_INCREMENT
+            (KotlinFutureLoadNumberAuthorityDomain.review(
+                issued.value,reviewed.candidate.proposedWorkingLoads[index],
+                unit,basis,stock,BigDecimal("5"),source)
+                as KotlinFutureLoadReview.Accepted).fact
+        }
+        val scope=BasicProgressionScope(
+            "athlete","program","gym",reviewed.blockId,
+            reviewed.blockId+":d"+reviewed.weekday,"exercise",
+            reviewed.machineInstanceId,unit,basis)
+        return reviewed.copy(candidate=reviewed.candidate.copy(
+            sourceScope=scope,approvedFutureLoadFacts=approved))
+    }
+
     @Test fun uniformProgressionNeverIssuesDifferentNextLoadsForIdenticalSets() {
         val candidate=weighted(BasicProgressionResult.Candidate(
             BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,
@@ -47,7 +75,7 @@ class CustomBasicProgressionDraftDomainTest {
                 BasicProgressionDecision.EARNED_INCREMENT,
                 BasicProgressionDecision.BUILD_REPS)))
         val next=checkNotNull(CustomBasicProgressionDraftDomain.forWeekEdit(
-            "slot",original,proposed))
+            "slot",original,withProof(proposed,original)))
         assertEquals(warmup,next[0])
         assertEquals(pounds(105),next[1].load)
         assertEquals(original[2],next[2])
@@ -69,7 +97,7 @@ class CustomBasicProgressionDraftDomainTest {
                 BasicProgressionDecision.EARNED_INCREMENT))
         val reviewed=weighted(authenticated)
         val edit=checkNotNull(CustomBasicProgressionDraftDomain.forWeekEdit(
-            "slot",original,reviewed))
+            "slot",original,withProof(reviewed,original)))
         assertEquals(listOf(pounds(105),pounds(105),pounds(115)),
             edit.map {it.load})
         for(spoofed in listOf(
@@ -102,7 +130,7 @@ class CustomBasicProgressionDraftDomainTest {
             listOf(BigDecimal(105),BigDecimal(105)),setOf(0,1),
             BasicProgressionDecision.EARNED_INCREMENT,"previous")
         assertNotNull(CustomBasicProgressionDraftDomain.forWeekEdit(
-            "slot",source,weighted(earned)))
+            "slot",source,withProof(weighted(earned),source)))
         for(stale in listOf(
             weighted(earned.copy(evidenceWorkoutId=null)),
             weighted(earned.copy(evidenceWorkoutId="older-success")),
@@ -179,7 +207,7 @@ class CustomBasicProgressionDraftDomainTest {
             listOf(BigDecimal(65),BigDecimal(65)),setOf(0,1),
             BasicProgressionDecision.EARNED_INCREMENT,"previous"))
         val next=checkNotNull(CustomBasicProgressionDraftDomain.forWeekEdit(
-            "slot",original,candidate))
+            "slot",original,withProof(candidate,original)))
         assertEquals(BigDecimal(65),(next[0].load as DraftSetLoad.Verified).value)
         assertEquals(BigDecimal(65),(next[1].load as DraftSetLoad.Verified).value)
         assertEquals(original.map { it.reps },next.map { it.reps })

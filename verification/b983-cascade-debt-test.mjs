@@ -24,8 +24,9 @@ assert.ok(css.includes('color-mix(in srgb,var(--pi-m3e-primary) 36%,transparent)
   'Keep the effective Plan next-session accent edge');
 assert.ok(!css.includes('.wpb-home-health{margin:10px 0 18px}'),
   'Dead Home card margin must not reappear');
-assert.ok(css.includes('.wpb-home-health{display:flex;align-items:center;gap:11px;'),
-  'The current Home health card geometry remains present');
+// B1028: the Home health card is a shared UiBanner; the feature class keeps only its spacing.
+assert.ok(css.includes('.wpb-home-health{margin:12px 0 18px}') && css.includes('#root .wpb .wpb-ui-banner{display:flex;align-items:center;'),
+  'The Home health card uses the shared banner geometry');
 assert.ok(css.includes('.wpb-injury-journal .wpb-session-dialog-heading{position:static'),
   'Injury modal header uses its final nonsticky owner');
 assert.ok(css.includes('.wpb-program-revision-footer{bottom:0;'),
@@ -84,7 +85,10 @@ const b1012TemplateRules=css.slice(b1012Start,b1026Start);
 const b1027Start=css.indexOf('/* B1027 — design pass 7: one consistent, content-sized control vocabulary across screens. */');
 assert.ok(b1027Start>b1026Start,'B1027 design-pass owner follows the B1026 owner');
 assert.ok(css.slice(b1026Start,b1027Start).length<=uiStyleBudget.b1026CssCharacters,'B1026 prototype-feature owner must remain bounded');
-assert.ok(css.slice(b1027Start).length<=uiStyleBudget.b1027CssCharacters,'B1027 design-pass owner must remain bounded');
+const b1028Start=css.indexOf('/* B1028 — Compose-style shared components: ModalBottomSheet, FilterChip, ListItem, stat tile, wavy progress. */');
+assert.ok(b1028Start>b1027Start,'B1028 shared-component owner follows B1027');
+assert.ok(css.slice(b1027Start,b1028Start).length<=uiStyleBudget.b1027CssCharacters,'B1027 design-pass owner must remain bounded');
+assert.ok(css.slice(b1028Start).length<=uiStyleBudget.b1028CssCharacters,'B1028 shared-component owner must remain bounded');
 assert.ok(b1012TemplateRules.length<=uiStyleBudget.b1012CssCharacters,'B1012 Home template owner must not grow');
 assert.ok(b1011SettingsRules.length<=uiStyleBudget.b1011CssCharacters,'B1011 Settings owner must remain bounded');
 for(const role of ['wpb-settings-feedback','wpb-settings-diagnostic-run','wpb-settings-import-sheet'])
@@ -332,7 +336,7 @@ const b1009Contract=[
   ],
   [
     "pi-t-faint-mt2",
-    2,
+    1, // B1028: the swap-sheet row became a UiListItem
     "style: { fontSize: 11, color: C.faint, marginTop: 2 }"
   ]
 ];

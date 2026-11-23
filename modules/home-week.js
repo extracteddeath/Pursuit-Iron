@@ -4,7 +4,7 @@ import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useMemo, useState } from 'react';
 import { Check, Flame, Share2, BarChart3 } from 'lucide-react';
 import { weeklyRecap, PART_LABEL } from './engine-api.js';
-import { UiCard, UiAction } from './ui-primitives.js';
+import { UiCard, UiAction, UiStatTile } from './ui-primitives.js';
 
 const DAY_MS = 86400000;
 const startOfDay = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
@@ -126,11 +126,8 @@ export function HomeRecapCard({ history, unit, program }) {
         ] }),
         _jsxs('h3', { className: 'wpb-home-recap-title', children: [headline, full && _jsx('span', { className: 'wpb-home-recap-badge', children: 'Full week' })] }),
         meta && _jsx('p', { className: 'wpb-home-recap-meta', children: meta }),
-        _jsx('dl', { className: 'wpb-home-recap-stats', children: stats.map(s => _jsxs('div', { className: 'wpb-home-recap-stat', children: [
-            _jsx('dt', { children: s.k }),
-            _jsxs('dd', { className: 'mono', children: [s.v, s.d != null && s.d !== 0 && _jsxs('span', { className: 'wpb-home-recap-delta', 'data-up': s.d > 0 ? 'true' : 'false',
-                'aria-label': `${Math.abs(s.d)}% ${s.d > 0 ? 'more' : 'less'} than the 7 days before`, children: [s.d > 0 ? '▲' : '▼', Math.abs(s.d), '%'] })] })
-        ] }, s.k)) }),
+        _jsx('dl', { className: 'wpb-ui-stat-row', children: stats.map(s => _jsx(UiStatTile, { label: s.k, value: s.v, delta: s.d,
+            deltaLabel: s.d ? `${Math.abs(s.d)}% ${s.d > 0 ? 'more' : 'less'} than the 7 days before` : undefined }, s.k)) }),
         (r.best || r.topMuscle) && _jsxs('p', { className: 'wpb-home-recap-lines', children: [
             r.best && _jsxs('span', { children: [_jsx('b', { children: 'Best: ' }), `${r.best.name} ${fmtLoad(r.best.w)} ${r.unit} × ${r.best.r}${r.best.rir != null ? ` @${r.best.rir}` : ''}, est. 1RM ${Math.round(r.best.e1rm)} ${r.unit}.`] }),
             r.topMuscle && _jsxs('span', { children: [_jsx('b', { children: 'Most trained: ' }), `${PART_LABEL[r.topMuscle[0]] || r.topMuscle[0]}, ${Math.round(r.topMuscle[1])} sets.`] })

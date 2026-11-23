@@ -65,8 +65,9 @@ const programModules=[
 const programSheetCoverage=Object.fromEntries(programModules.map(file=>{
  const source=fs.readFileSync(file,'utf8');
  return [file,{
-  sharedHeadingCalls:count(source,/_jsx(?:s)?\(UiSheetHeading,/g),
-  sharedCloseCalls:count(source,/_jsx(?:s)?\(UiSheetClose,/g),
+  // A sheet that delegates to UiSheet (ui-sheet.js) gets that one shared heading and close.
+  sharedHeadingCalls:count(source,/_jsx(?:s)?\(UiSheet(?:Heading)?,/g),
+  sharedCloseCalls:count(source,/_jsx(?:s)?\(UiSheet(?:Close)?,/g),
   sharedActionCalls:count(source,/_jsx(?:s)?\(UiAction,/g),
   inlineStyleObjects:count(source,/style:\s*\{/g)
  }];

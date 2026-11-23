@@ -4,7 +4,8 @@ const app=fs.readFileSync('modules/App.js','utf8');
 const uiModules=app+'\n'+fs.readFileSync('modules/exercise-picker-sheet.js','utf8');
 const css=fs.readFileSync('app.css','utf8');
 const owners=[...css.matchAll(/#root \.wpb \.(wpb-b965-layout-\d{2}),#root \.\1\{([^}]+)\}/g)];
-assert.equal(owners.length,45,'B965 must have 45 exact CSS layout owners');
+// B1028: layout-09 (picker list scroller) retired by UiSheet's body.
+assert.equal(owners.length,44,'B965 must have 44 exact CSS layout owners');
 for(const [,name,body] of owners){
  assert.ok(!body.includes('!important'),'Static CSS migration must not add priority owners');
  assert.ok(uiModules.includes(name),'Every retired layout must have a JSX class owner');

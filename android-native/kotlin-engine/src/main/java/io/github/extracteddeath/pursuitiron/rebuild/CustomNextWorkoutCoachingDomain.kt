@@ -298,6 +298,21 @@ object CustomNextWorkoutCoachingDomain {
             return result(CustomNextWorkoutCoachingStatus.CHANGED_PRESCRIPTION,
                 explanation="There is no comparable working-set prescription.")
 
+        // The shared issued-number authority distinguishes an actual
+        // physical Machine A/B from a free barbell. The factual receipt can
+        // remain in History, but even two apparent ceiling sessions cannot
+        // earn either a rep or weight coaching proposal from this mixed
+        // identity. Do not treat the station's barbell label as proof of stock.
+        val selectedStation=request.requestedMachineInstanceId ?: target.machineInstanceId
+        if(nextSets.any {set ->
+                (set.prescription.load as? DraftSetLoad.Verified)?.let {load ->
+                    KotlinSetNumberAuthorityDomain.machineTagContradictsFreeBarbell(
+                        load.basis,selectedStation)
+                }==true
+            })
+            return result(CustomNextWorkoutCoachingStatus.CHANGED_PRESCRIPTION,
+                explanation="A tagged physical machine is not verified free-barbell coaching evidence.")
+
         // The most recent two appearances of THIS DAY are selected from the
         // entire ledger, including missed or changed exercises. Never skip an
         // unfavorable occurrence or borrow strength from another weekday.

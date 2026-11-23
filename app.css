@@ -10189,7 +10189,7 @@ background:var(--pi-color-card)!important;
 #root[data-pi-motion] .wpb .wpb-program .wpb-exercise-actions>button[data-emphasis=accent]{background:var(--wpb-theme-accent-dim)}
 /* B1028 — Compose-style shared components: ModalBottomSheet, FilterChip, ListItem, stat tile, wavy progress. */
 #root .wpb .wpb-ui-modal-sheet{z-index:90}
-#root .wpb .wpb-ui-modal-sheet-panel{max-width:40rem;--pi-ui-sheet-radius:28px;--pi-ui-sheet-max-vh:88dvh}
+#root .wpb :where(.wpb-ui-modal-sheet-panel){max-width:40rem;--pi-ui-sheet-radius:28px}
 #root .wpb .wpb-ui-modal-sheet-panel:focus{outline:none}
 #root .wpb .wpb-ui-sheet-handle{flex:none;width:32px;height:4px;margin:12px auto 0;border-radius:2px;background:color-mix(in srgb,var(--wpb-theme-text) 40%,transparent)}
 #root .wpb .wpb-ui-modal-sheet-heading{padding:8px 18px 4px}

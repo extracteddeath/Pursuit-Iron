@@ -8,7 +8,14 @@ const schedule=fs.readFileSync('modules/program-schedule-sheet.js','utf8');
 const exercise=fs.readFileSync('modules/program-exercise-options.js','utf8');
 const reference=fs.readFileSync('modules/program-reference-surfaces.js','utf8');
 const maxes=fs.readFileSync('modules/program-training-maxes.js','utf8');
-for(const [name,source] of [['Settings',settings],['Share',share],['Schedule',schedule],['Exercise options',exercise],['Training maxes',maxes],['Progression and reference',reference]]){
+// B1028: Share delegates its whole sheet anatomy to UiSheet, which owns the same focus hook,
+// drag ref forwarding and focusable trapped panel.
+const uiSheet=fs.readFileSync('modules/ui-sheet.js','utf8');
+assert.ok(share.includes("_jsx(UiSheet, { id: 'program-share'") && share.includes('sheetDragRef') &&
+  uiSheet.includes("import { useProgramSheetFocus } from './program-sheet-focus.js';") &&
+  uiSheet.includes('useProgramSheetFocus(onClose, sheetDragRef)') &&
+  uiSheet.includes('ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown'),'Share uses the shared sheet focus owner through UiSheet');
+for(const [name,source] of [['Settings',settings],['Schedule',schedule],['Exercise options',exercise],['Training maxes',maxes],['Progression and reference',reference]]){
  assert.ok(source.includes("import { useProgramSheetFocus } from './program-sheet-focus.js';"),name+' uses shared focus hook');
  assert.ok(source.includes('useProgramSheetFocus(onClose, sheetDragRef)') || source.includes('useProgramSheetFocus(close, sheetDragRef)') || source.includes('useProgramSheetFocus(dismiss, sheetDragRef)') || source.includes('useProgramSheetFocus(conversion ? closeConversion : onClose, sheetDragRef)'),name+' preserves drag owner');
  assert.ok(source.includes('ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown') || source.includes('tabIndex: -1, ref: attachPanel, onKeyDown: onPanelKeyDown'),name+' traps keyboard on focusable sheet');
@@ -19,11 +26,13 @@ for(const term of ['useEffect','useCallback','getClientRects','details:not([open
 }
 assert.ok(css.includes('.wpb-ui-sheet-backdrop{position:fixed;inset:0;display:flex;') &&
     settings.includes('wpb-ui-sheet-backdrop wpb-ui-sheet-focus wpb-program-settings-backdrop') &&
-    share.includes('wpb-ui-sheet-backdrop wpb-ui-sheet-focus wpb-program-share-backdrop'),
+    (share.includes('wpb-ui-sheet-backdrop wpb-ui-sheet-focus wpb-program-share-backdrop') ||
+     (share.includes("className: 'wpb-program-share-backdrop'") && uiSheet.includes('wpb-backdrop wpb-ui-sheet-backdrop wpb-ui-sheet-focus'))),
     'Settings and Share reuse one overlay/focus owner');
 assert.ok(css.includes('.wpb-ui-sheet-panel{box-sizing:border-box;display:flex;flex-direction:column;') &&
     settings.includes('wpb-ui-sheet-panel wpb-program-settings-panel') &&
-    share.includes('wpb-ui-sheet-panel wpb-program-share-panel'),
+    (share.includes('wpb-ui-sheet-panel wpb-program-share-panel') ||
+     (share.includes("panelClassName: 'wpb-program-share-panel'") && uiSheet.includes('wpb-ui-sheet-panel wpb-ui-modal-sheet-panel'))),
     'Settings and Share reuse shared panel sizing');
 assert.ok(css.includes('max-height:min(var(--pi-ui-sheet-max-vh,86dvh),calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - var(--pi-ui-sheet-top-gap,24px)),100%)') &&
     css.includes('.wpb-program-settings-panel{--pi-ui-sheet-max-vh:88dvh;--pi-ui-sheet-top-gap:32px}') &&

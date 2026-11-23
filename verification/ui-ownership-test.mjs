@@ -1030,8 +1030,9 @@ for(const suffix of ['.wpb-profile-strength','.wpb-profile-strength-grid',
 // M291: Profile has three data-derived progress widths and no fixed JSX presentation.
 const profilePresentation=app.slice(app.indexOf('function ProfileView('),app.indexOf('// The app shell',app.indexOf('function ProfileView(')));
 assert.ok(profilePresentation.length>500,'The existing Profile view remains present');
-assert.equal((profilePresentation.match(/style:\s*\{/g)||[]).length,3,'Only three calculated Profile progress widths remain inline');
-assert.equal((profilePresentation.match(/style:\s*\{\s*width:\s*`[^`]+%`\s*\}/g)||[]).length,3,'All remaining Profile inline presentation is calculated progress');
+// B1028: the level bar is a UiWavyProgress, leaving two calculated widths inline.
+assert.equal((profilePresentation.match(/style:\s*\{/g)||[]).length,2,'Only two calculated Profile progress widths remain inline');
+assert.equal((profilePresentation.match(/style:\s*\{\s*width:\s*`[^`]+%`\s*\}/g)||[]).length,2,'All remaining Profile inline presentation is calculated progress');
 for(const suffix of ['.wpb-profile-hero','.wpb-profile-level-mark'])
     assert.ok(!css.includes('#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile '+suffix+'{'),
         'Retired R17 level-card style owner cannot return: '+suffix);

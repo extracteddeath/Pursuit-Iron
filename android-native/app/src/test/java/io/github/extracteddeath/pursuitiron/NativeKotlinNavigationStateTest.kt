@@ -9,6 +9,27 @@ class NativeKotlinNavigationStateTest {
         KotlinCandidateDestination.PROGRESS,KotlinCandidateDestination.COACH)
     private fun root(destination:KotlinCandidateDestination)=NativeKotlinNavigationState.start(destination)
 
+    @Test fun idleLaunchWithVerifiedCompletedHistoryDoesNotResetToOnboarding() {
+        assertEquals(KotlinCandidateDestination.HISTORY,
+            kotlinIdleColdLanding(false,true))
+        assertEquals(KotlinCandidateDestination.PROGRAM,
+            kotlinIdleColdLanding(true,true))
+        assertEquals(KotlinCandidateDestination.PROGRAM,
+            kotlinIdleColdLanding(true,false))
+        assertEquals(KotlinCandidateDestination.ONBOARD,
+            kotlinIdleColdLanding(false,false))
+    }
+
+    @Test fun anIdleColdLandingNeverPushesSetupBehindTheReturningAthlete() {
+        for(hasProgram in listOf(false,true))
+            for(hasHistory in listOf(false,true)) {
+                val selected=kotlinIdleColdLanding(hasProgram,hasHistory)
+                val navigation=NativeKotlinNavigationState.start(selected)
+                assertEquals(selected,navigation.current.destination)
+                assertFalse(navigation.canGoBack)
+            }
+    }
+
     @Test fun primaryTabsHaveNoSyntheticBackDestination() {
         for(origin in primary) {
             val state=root(origin)

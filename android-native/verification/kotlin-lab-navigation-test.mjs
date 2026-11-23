@@ -117,6 +117,21 @@ assert.ok(coldHistory.includes('host.reviewVerifiedKotlinHistory()') &&
     coldHistory.indexOf('host.listOwnedCustomCycleDrafts()') &&
   !coldHistory.includes('host.recoverPendingNativeHistory()'),
   'Pending canonical History must take priority over every Train resume route, without automatic recovery');
+// An athlete with fully completed, independently verified native workouts
+// but no unfinished session or custom draft must not be mistaken for a
+// first-time user after a cold start. Existing program remains higher
+// priority; an unknown or rejected ledger is never accepted as History.
+assert.ok(coldHistory.includes('val readHistory=runCatching {') &&
+  coldHistory.includes('host.reviewVerifiedKotlinHistory()') &&
+  coldHistory.includes('NativeKotlinMixedHistoryReadResult.Review') &&
+  coldHistory.includes('?.timeline?.completions?.isNotEmpty()==true') &&
+  coldHistory.includes('kotlinIdleColdLanding('),
+  'Completed verified History must be a returning athlete landing option');
+assert.ok(journey.includes('hasOwnedCustomCycle -> KotlinCandidateDestination.PROGRAM') &&
+  journey.includes('hasVerifiedCompletedHistory -> KotlinCandidateDestination.HISTORY') &&
+  journey.includes('else -> KotlinCandidateDestination.ONBOARD'),
+  'Owned program outranks verified History; empty/unverified remains Setup');
+
 const recoveryHost=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt');
 const recovery=recoveryHost.slice(recoveryHost.indexOf('fun recoverPendingNativeHistory():'),
   recoveryHost.indexOf('fun reviewVerifiedKotlinHistory():'));

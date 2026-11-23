@@ -2549,7 +2549,7 @@ display:block!important;
    drag/enter/exit; these classes own static layout, paint and responsive size. */
 #root .wpb .wpb-selection-backdrop{position:fixed;inset:0;max-height:var(--visual-h,var(--app-h,100dvh));background:rgba(0,0,0,.6);display:flex;align-items:flex-end;z-index:80;animation:fadeIn .2s both}
 #root .wpb .wpb-selection-sheet .wpb-selection-copy{flex:1;min-width:0}
-#root .wpb .wpb-selection-sheet .wpb-selection-title{font-size:18px;font-weight:700;color:var(--wpb-theme-text)}
+#root .wpb .wpb-selection-sheet .wpb-selection-title{min-width:0;font-size:18px;font-weight:700;color:var(--wpb-theme-text);overflow-wrap:break-word}
 #root .wpb .wpb-selection-sheet .wpb-selection-intro{font-size:14px;color:var(--wpb-theme-muted);margin-top:2px}
 #root .wpb .wpb-selection-sheet .wpb-switcher-done{flex-shrink:0;border:1px solid var(--pi-r11-edge);background:var(--pi-r11-raised);color:var(--wpb-theme-text);border-radius:16px;padding:9px 14px;font-size:14px;font-weight:600;cursor:pointer;min-height:48px;min-width:55px;background-image:none;box-shadow:none}
 #root .wpb .wpb-selection-sheet .wpb-switcher-search{width:100%;box-sizing:border-box;margin:10px 0 4px;padding:10px 12px;border-radius:16px;border:1px solid var(--pi-color-divider);background:var(--pi-color-control);color:var(--pi-color-on-control);font-size:16px;min-height:48px;background-image:none;box-shadow:none}

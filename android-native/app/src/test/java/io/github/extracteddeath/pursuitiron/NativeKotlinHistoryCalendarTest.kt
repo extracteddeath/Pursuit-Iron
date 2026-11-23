@@ -81,16 +81,16 @@ class NativeKotlinHistoryCalendarTest {
     @Test fun removedOrMalformedRestoredMonthFallsBackToAllCurrentRecords() {
         val available=nativeHistoryMonths(listOf(entry(1,"2026-11-14T17:00:00Z")),zone)
         for(key in listOf("not-a-month","2026-10","undated","2026-13",""))
-            assertEquals(NativeKotlinHistoryDateSelection.All,nativeHistoryDateSelection(key,"2026-11-14",available))
-        assertEquals(NativeKotlinHistoryDateSelection.All,nativeHistoryDateSelection("2026-11",null,emptyList()))
+            assertEquals(NativeKotlinHistoryDateSelection.All,nativeHistoryDateSelection(key,"2026-11-14",available,zone))
+        assertEquals(NativeKotlinHistoryDateSelection.All,nativeHistoryDateSelection("2026-11",null,emptyList(),zone))
     }
     @Test fun malformedOrWrongMonthRestoredDayKeepsTheWholeSelectedMonthAccessible() {
         val month=YearMonth.of(2026,11)
         val available=nativeHistoryMonths(listOf(entry(1,"2026-11-14T17:00:00Z")),zone)
         for(day in listOf("invalid","2026-10-14","2026-11-31","2026-02-29"))
-            assertEquals(NativeKotlinHistoryDateSelection.Month(month),nativeHistoryDateSelection(month.toString(),day,available))
+            assertEquals(NativeKotlinHistoryDateSelection.Month(month),nativeHistoryDateSelection(month.toString(),day,available,zone))
         assertEquals(NativeKotlinHistoryDateSelection.Month(month,month.atDay(14)),
-            nativeHistoryDateSelection(month.toString(),"2026-11-14",available))
+            nativeHistoryDateSelection(month.toString(),"2026-11-14",available,zone))
     }
     @Test fun searchAndDateFiltersComposeWithoutRevealingAnUnmatchedWorkout() {
         val all=listOf(entry(1,"2026-11-14T17:00:00Z"),entry(2,"2026-11-14T18:00:00Z"),
@@ -104,7 +104,7 @@ class NativeKotlinHistoryCalendarTest {
     @Test fun selectedDayCanBecomeEmptyAfterSearchWithoutSilentlyChangingTheSelection() {
         val month=YearMonth.of(2026,11)
         val available=nativeHistoryMonths(listOf(entry(1,"2026-11-14T17:00:00Z")),zone)
-        val selected=nativeHistoryDateSelection("2026-11","2026-11-14",available)
+        val selected=nativeHistoryDateSelection("2026-11","2026-11-14",available,zone)
         assertEquals(NativeKotlinHistoryDateSelection.Month(month,month.atDay(14)),selected)
         assertTrue(nativeHistorySessionsInSelection(emptyList(),selected,zone).isEmpty())
     }

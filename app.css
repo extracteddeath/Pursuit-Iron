@@ -7277,14 +7277,9 @@ background:var(--pi-color-card)!important;
 .wpb-injury-tabs,.wpb-injury-side{display:flex;gap:5px;padding:4px;border:1px solid var(--wpb-theme-border);border-radius:16px;background:var(--wpb-theme-card)}
 .wpb-injury-tabs button,.wpb-injury-side button{flex:1;min-width:0;min-height:48px;border:0;border-radius:12px;padding:8px 4px;background:transparent;color:var(--wpb-theme-muted);font:inherit;font-size:12px;font-weight:650;cursor:pointer}
 .wpb-injury-tabs button[aria-pressed=true],.wpb-injury-side button[aria-pressed=true]{background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink)}
-.wpb-injury-area-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:9px 0 12px}
-.wpb-injury-area-grid button{min-height:58px;border:1px solid var(--wpb-theme-border);border-radius:16px;padding:9px 6px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);font:inherit;font-size:14px;font-weight:650;cursor:pointer}
-.wpb-injury-area-grid button[aria-pressed=true]{background:var(--wpb-theme-accent-dim);border-color:var(--wpb-theme-accent);color:var(--wpb-theme-accent-ink)}
+.wpb-injury-area-grid{margin:9px 0 12px}
 .wpb-injury-selection{font-size:12px;font-weight:700;color:var(--wpb-theme-accent-ink);margin:-3px 0 12px}
 .wpb-injury-journal input[type=date]{width:100%;min-width:0;min-height:48px;padding:10px 12px;border-radius:12px;border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-card);color:var(--wpb-theme-text);font:inherit;box-sizing:border-box}
-.wpb-injury-impact{display:grid;gap:8px}.wpb-injury-impact button{display:grid;gap:5px;min-height:65px;padding:12px;text-align:left;border:1px solid var(--wpb-theme-border);border-radius:16px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);font:inherit;cursor:pointer}
-.wpb-injury-impact strong{font-size:14px}.wpb-injury-impact span{font-size:12px;line-height:1.45;color:var(--wpb-theme-muted)}
-.wpb-injury-impact button[aria-pressed=true]{border-color:var(--wpb-theme-accent);background:var(--wpb-theme-accent-dim)}
 .wpb-injury-preview{margin:14px 0;padding:12px;border:1px solid var(--wpb-theme-border);border-radius:16px;background:var(--wpb-theme-card);font-size:14px}
 .wpb-injury-preview p{margin:6px 0}.wpb-injury-preview ul{margin:8px 0;padding-left:20px;line-height:1.7}
 .wpb-injury-save-bar{position:sticky;bottom:-25px;display:flex;gap:8px;padding:12px 0 20px;margin-top:16px;background:var(--wpb-theme-bg);border-top:1px solid var(--wpb-theme-border)}
@@ -10209,8 +10204,8 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-ui-modal-sheet-footer>.wpb-ui-action[data-action=primary]{flex-grow:2}
 #root .wpb .wpb-ui-chip-group-label,#root .wpb .wpb-ui-list-subheader{margin:0 0 var(--pi-space-2);font-size:var(--pi-type-support);font-weight:600;color:var(--pi-color-on-muted)}
 #root .wpb .wpb-ui-chip-set{display:flex;flex-wrap:wrap;gap:var(--pi-space-2)}
-#root .wpb .wpb-ui-choice[data-choice-kind=filter]{--pi-control-min:32px;position:relative;display:inline-flex;align-items:center;gap:8px;min-height:32px;margin-block:8px;padding:6px 16px;border:1px solid var(--wpb-theme-border);border-radius:8px;background:none;color:var(--wpb-theme-text);font-size:var(--pi-type-support);font-weight:600;line-height:1.2;transition:background-color .15s,border-radius .2s}
-#root .wpb .wpb-ui-choice[data-choice-kind=filter]::after{content:"";position:absolute;inset:-8px 0}
+#root .wpb .wpb-ui-choice[data-choice-kind=filter]{--pi-control-min:32px;position:relative;display:inline-flex;align-items:center;gap:8px;min-height:32px;margin-block:4px;padding:6px 16px;border:1px solid var(--wpb-theme-border);border-radius:8px;background:none;color:var(--wpb-theme-text);font-size:var(--pi-type-support);font-weight:600;line-height:1.2;transition:background-color .15s,border-radius .2s}
+#root .wpb .wpb-ui-choice[data-choice-kind=filter]::after{content:"";position:absolute;inset:-8px -4px}
 #root .wpb .wpb-ui-choice[data-choice-kind=filter]:has(.wpb-ui-chip-icon){padding-left:8px}
 #root .wpb .wpb-ui-choice[data-choice-kind=filter][aria-pressed=true]{border-color:transparent;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink)}
 #root .wpb .wpb-ui-choice[data-choice-kind=filter]:active{border-radius:16px}

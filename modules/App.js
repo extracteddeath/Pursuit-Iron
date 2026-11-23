@@ -10820,8 +10820,8 @@ function HomeInjuryJournal({ entries, onSave, onClose, upcoming = null }) {
         entry.note && _jsx('p',{className:'wpb-injury-record-note',children:entry.note}),
         entry.lastAdjustment && _jsx('div',{className:'wpb-injury-record-meta',children:'Last workout: '+(entry.lastAdjustment.action==='skip'?'affected lifts skipped':'affected work reduced')}),
         _jsxs('div',{className:'wpb-injury-record-actions',children:[
-            _jsx('button',{type:'button',className:'pressable',disabled:saving,onClick:()=>begin(entry),'aria-label':'Edit '+injuryTitle(entry,PART_LABEL),children:'Edit'}),
-            _jsx('button',{type:'button',className:'pressable',disabled:saving,onClick:async()=>{
+            _jsx(UiAction,{variant:'tonal',disabled:saving,onClick:()=>begin(entry),'aria-label':'Edit '+injuryTitle(entry,PART_LABEL),children:'Edit'}),
+            _jsx(UiAction,{variant:'tonal',disabled:saving,onClick:async()=>{
                 const next=clean.map(item=>item.id===entry.id?{...item,resolvedAt:entry.resolvedAt?undefined:Date.now(),updatedAt:Date.now()}:item);
                 if(await save(next))setStatus(entry.resolvedAt?'Injury marked active':'Injury marked resolved');
             },children:entry.resolvedAt?'Mark active':'Mark resolved'})]})]},entry.id);
@@ -10832,32 +10832,30 @@ function HomeInjuryJournal({ entries, onSave, onClose, upcoming = null }) {
         status && _jsx('div',{role:'status',className:'wpb-injury-feedback',children:status}),
         error && _jsx('div',{role:'alert',className:'wpb-injury-feedback',children:error}),
         discard && _jsxs('div',{role:'alert',className:'wpb-injury-discard',children:[_jsx('strong',{children:'Discard unsaved changes?'}),
-            _jsxs('div',{className:'wpb-injury-record-actions',children:[_jsx('button',{type:'button',className:'pressable',onClick:()=>setDiscard(false),children:'Keep editing'}),
-                _jsx('button',{type:'button',className:'pressable',onClick:onClose,children:'Discard changes'})]})]}),
+            _jsxs('div',{className:'wpb-injury-record-actions',children:[_jsx(UiAction,{variant:'tonal',onClick:()=>setDiscard(false),children:'Keep editing'}),
+                _jsx(UiAction,{variant:'tonal',onClick:onClose,children:'Discard changes'})]})]}),
         editing ? _jsxs('form',{id:'wpb-injury-entry-form',onSubmit:submit,'data-injury-editor':true,children:[
             _jsx('div',{className:'wpb-injury-intro',children:[_jsx('h3',{children:editingId?'Edit injury':'Log an injury'}),
                 _jsx('p',{children:'Choose the area, then tell Pursuit how you want to handle related lifts.'})]}),
             _jsx('div',{className:'wpb-injury-field-title',children:'Affected area'}),
-            _jsx('div',{className:'wpb-injury-tabs',role:'group','aria-label':'Body area group',children:['Upper body','Lower body','Torso'].map(value=>
-                _jsx('button',{type:'button',className:'pressable','aria-pressed':group===value,onClick:()=>setGroup(value),children:value},value))}),
-            _jsx('div',{className:'wpb-injury-area-grid',role:'group','aria-label':'Affected body area',children:INJURY_AREAS.filter(area=>area.group===group).map(area=>
-                _jsx('button',{type:'button',className:'pressable','data-injury-area':area.id,'aria-pressed':draft.region===area.id,
+            _jsx(UiSegmented,{label:'Body area group',className:'wpb-injury-tabs',value:group,onChange:setGroup,options:['Upper body','Lower body','Torso'].map(value=>[value,value])}),
+            _jsx('div',{className:'wpb-ui-chip-set wpb-injury-area-grid',role:'group','aria-label':'Affected body area',children:INJURY_AREAS.filter(area=>area.group===group).map(area=>
+                _jsx(UiChoice,{kind:'filter','data-injury-area':area.id,selected:draft.region===area.id,
                     onClick:()=>set({region:area.id,part:area.parts[0]}),children:area.label},area.id))}),
             _jsxs('label',{children:['Or choose a specific muscle',_jsx('select',{'aria-label':'Injury muscle',value:draft.region?'':draft.part,onChange:ev=>set({region:'',part:ev.target.value}),
                 children:[_jsx('option',{value:'',children:'Select a muscle…'}),...PART_ORDER.map(id=>_jsx('option',{value:id,children:PART_LABEL[id]},id))]})]}),
             draft.part && _jsx('div',{className:'wpb-injury-selection',children:injuryTitle(draft,PART_LABEL)}),
             _jsx('div',{className:'wpb-injury-field-title',children:'Which side?'}),
-            _jsx('div',{className:'wpb-injury-side',role:'group','aria-label':'Injury side',children:[['unspecified','Not specified'],['left','Left'],['right','Right'],['both','Both']].map(([value,label])=>
-                _jsx('button',{type:'button',className:'pressable','aria-pressed':draft.side===value,onClick:()=>set({side:value}),children:label},value))}),
+            _jsx(UiSegmented,{label:'Injury side',className:'wpb-injury-side',value:draft.side,onChange:side=>set({side}),options:[['unspecified','Not specified'],['left','Left'],['right','Right'],['both','Both']]}),
             _jsxs('label',{children:['Onset date',_jsx('input',{type:'date','aria-label':'Injury onset date',value:draft.onset,max:today(),onChange:ev=>set({onset:ev.target.value})})]}),
             _jsx('div',{className:'wpb-injury-field-title',children:'How did it feel? · optional'}),
-            _jsx('div',{role:'group','aria-label':'Injury severity',className:'wpb-injury-impact',children:INJURY_LEVELS.map(item=>
-                _jsxs('button',{type:'button',className:'pressable','data-injury-level':item.id,'aria-pressed':draft.level===item.id,onClick:()=>set({level:item.id,impact:item.impact}),
-                    children:[_jsx('strong',{children:item.label}),_jsx('span',{children:item.detail})]},item.id))}),
+            _jsx('div',{role:'group','aria-label':'Injury severity',className:'wpb-ui-list',children:INJURY_LEVELS.map(item=>
+                _jsx(UiListItem,{'data-injury-level':item.id,'aria-pressed':draft.level===item.id,onClick:()=>set({level:item.id,impact:item.impact}),
+                    headline:item.label,supporting:item.detail},item.id))}),
             _jsx('div',{className:'wpb-injury-field-title',children:'Your training preference'}),
-            _jsx('div',{role:'group','aria-label':'Injury training preference',className:'wpb-injury-impact',children:INJURY_IMPACTS.map(item=>
-                _jsxs('button',{type:'button',className:'pressable','data-injury-impact':item.id,'aria-pressed':draft.impact===item.id,onClick:()=>set({impact:item.id}),
-                    children:[_jsx('strong',{children:item.label}),_jsx('span',{children:item.detail})]},item.id))}),
+            _jsx('div',{role:'group','aria-label':'Injury training preference',className:'wpb-ui-list',children:INJURY_IMPACTS.map(item=>
+                _jsx(UiListItem,{'data-injury-impact':item.id,'aria-pressed':draft.impact===item.id,onClick:()=>set({impact:item.id}),
+                    headline:item.label,supporting:item.detail},item.id))}),
             _jsxs('label',{children:['Details · optional',_jsx('textarea',{'aria-label':'Injury details',rows:3,maxLength:2000,value:draft.note,
                 placeholder:'What happened? Which movements or positions are affected?',onChange:ev=>set({note:ev.target.value})})]}),
             draft.part && upcoming?.day && _jsxs('div',{className:'wpb-injury-preview',children:[_jsx('strong',{children:'Next workout · '+upcoming.day.label}),

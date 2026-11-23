@@ -52,19 +52,28 @@ internal sealed interface NativeKotlinHistoryDateSelection {
     }
 }
 
-/** Saved UI strings are hints, not history authority. A removed month or an
- * old athlete's selection cannot hide all of the current athlete's sessions. */
+/** Saved UI date strings are hints, not training authority. A removed
+ * month or training date must not hide all verified workouts after a reload,
+ * correction or changed local time zone. Keep a valid month in view even if
+ * its previously selected day no longer contains a recorded Finish. */
 internal fun nativeHistoryDateSelection(key:String,dayKey:String?,
-    available:List<NativeKotlinHistoryMonth>):NativeKotlinHistoryDateSelection = when(key) {
+    available:List<NativeKotlinHistoryMonth>,zone:ZoneId):NativeKotlinHistoryDateSelection = when(key) {
     "all" -> NativeKotlinHistoryDateSelection.All
     "undated" -> if(available.any{it.month==null})NativeKotlinHistoryDateSelection.Undated
         else NativeKotlinHistoryDateSelection.All
     else -> {
         val month=runCatching {YearMonth.parse(key)}.getOrNull()
-        if(month==null || available.none{it.month==month})NativeKotlinHistoryDateSelection.All
-        else NativeKotlinHistoryDateSelection.Month(month,
-            dayKey?.let{runCatching{LocalDate.parse(it)}.getOrNull()}
-                ?.takeIf{YearMonth.from(it)==month})
+        val section=available.singleOrNull{it.month==month}
+        if(month==null || section==null)NativeKotlinHistoryDateSelection.All
+        else {
+            val validDay=dayKey?.let{runCatching{LocalDate.parse(it)}.getOrNull()}
+                ?.takeIf{selectedDay->
+                    YearMonth.from(selectedDay)==month && section.sessions.any{entry->
+                        nativeHistoryRecordedDate(entry.manifest,zone)==selectedDay
+                    }
+                }
+            NativeKotlinHistoryDateSelection.Month(month,validDay)
+        }
     }
 }
 

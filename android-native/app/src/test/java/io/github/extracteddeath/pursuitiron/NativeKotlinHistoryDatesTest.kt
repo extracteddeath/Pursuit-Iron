@@ -4,6 +4,7 @@ import io.github.extracteddeath.pursuitiron.nativecoachstore.*
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import java.time.Instant
 import java.time.YearMonth
+import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Locale
 import org.junit.Assert.*
@@ -59,6 +60,35 @@ class NativeKotlinHistoryDatesTest {
             nativeExerciseHistorySessionTitle(entry(18).manifest,ZoneId.of("UTC"),Locale.US))
         assertNotEquals(ny,utc)
     }
+    @Test fun aRemovedSavedDayFallsBackToVerifiedMonthNotAnEmptyHistory() {
+        val zone=ZoneId.of("UTC")
+        val sessions=listOf(entry(1,"2026-11-12T14:00:00Z"),
+            entry(2,"2026-11-18T14:00:00Z"))
+        val available=nativeHistoryMonths(sessions,zone)
+        val valid=nativeHistoryDateSelection("2026-11","2026-11-12",available,zone)
+        assertEquals(NativeKotlinHistoryDateSelection.Month(
+            YearMonth.of(2026,11),LocalDate.of(2026,11,12)),valid)
+        assertEquals(1,nativeHistorySessionsInSelection(sessions,valid,zone).size)
+        val stale=nativeHistoryDateSelection("2026-11","2026-11-13",available,zone)
+        assertEquals(NativeKotlinHistoryDateSelection.Month(YearMonth.of(2026,11)),stale)
+        assertEquals(2,nativeHistorySessionsInSelection(sessions,stale,zone).size)
+        assertEquals(NativeKotlinHistoryDateSelection.All,
+            nativeHistoryDateSelection("2026-10","2026-10-15",available,zone))
+    }
+
+    @Test fun savedDayUsesActualLocalFinishDateIncludingMonthBoundaries() {
+        val zone=ZoneId.of("America/New_York")
+        val session=entry(3,"2026-11-01T00:30:00Z") // October 31 locally
+        val available=nativeHistoryMonths(listOf(session),zone)
+        assertEquals(NativeKotlinHistoryDateSelection.Month(
+            YearMonth.of(2026,10),LocalDate.of(2026,10,31)),
+            nativeHistoryDateSelection("2026-10","2026-10-31",available,zone))
+        assertEquals(NativeKotlinHistoryDateSelection.Month(YearMonth.of(2026,10)),
+            nativeHistoryDateSelection("2026-10","2026-10-30",available,zone))
+        assertEquals(NativeKotlinHistoryDateSelection.Month(YearMonth.of(2026,10)),
+            nativeHistoryDateSelection("2026-10","2026-11-01",available,zone))
+    }
+
     @Test fun displayUsesTheRequestedLocaleAndEverySessionRemainsReachable() {
         val sessions=(1L..512L).map{entry(it,"2026-11-14T17:30:00Z")}
         val section=nativeHistoryMonths(sessions,ZoneId.of("UTC")).single()

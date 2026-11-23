@@ -42,8 +42,16 @@ internal fun workoutStationLastCaption(
         is WorkoutMachineLastPreview.Completed -> {
             val amount=last.load?.stripTrailingZeros()?.toPlainString()
             val unit=last.unit?.name?.lowercase()
-            val loadText=if(amount!=null && unit!=null)"$amount $unit"
-                else if(amount==null)"bodyweight" else "$amount (unit unreported)"
+            // A physical stack reading is not interchangeable with
+            // free weight or a counterweight. Never invent this convention
+            // from the chosen machine's current default or from an earlier
+            // set. Absent provenance stays explicitly unknown.
+            val loadText=when {
+                amount==null -> "load not reported"
+                unit==null -> "$amount (unit unreported)"
+                last.loadBasis==null -> "$amount $unit · load basis not recorded"
+                else -> "$amount $unit · ${kotlinLoadBasisLabel(last.loadBasis)}"
+            }
             "Last on this machine: $loadText × ${last.reps}" +
                 (last.actualRir?.let{" · $it RIR"} ?: " · RIR unreported")
         }

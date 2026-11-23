@@ -6,6 +6,8 @@ const selector=readFileSync(root+'NativeKotlinWorkoutMachineSelector.kt','utf8')
 const labels=readFileSync(root+'NativeKotlinWorkoutStationEvidence.kt','utf8');
 const generated=readFileSync(root+'NativeKotlinWorkoutCandidateScreen.kt','utf8');
 const custom=readFileSync(root+'NativeKotlinCustomJournalScreen.kt','utf8');
+const reference=readFileSync(root+'NativeKotlinWorkoutReference.kt','utf8');
+const loadLabels=readFileSync(root+'NativeKotlinLoadBasisPresentation.kt','utf8');
 const evidence=readFileSync(
     'android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/WorkoutMachineLastPreviewDomain.kt','utf8');
 
@@ -39,6 +41,11 @@ assert.match(evidence,/actual\.actualRir,latest\.completionOrder,latest\.loadBas
 assert.match(labels,/last\.loadBasis==null -> "\$amount \$unit · load basis not recorded"/);
 assert.match(labels,/kotlinLoadBasisLabel\(last\.loadBasis\)/);
 assert.match(labels,/fun nativeSavedSetCaption\(/);
+assert.match(reference,/else kotlinLastWeightMetricLabel\(actual,load\)/);
+assert.match(loadLabels,/fun kotlinLastWeightMetricLabel\(/);
+assert.match(loadLabels,/kotlinActualLoadLabel\(it,issuedLoad\)\.substringBefore\(" · "\)/);
+assert.doesNotMatch(reference,/it\.load\?\.let\{n->/);
+
 assert.match(labels,/val observed=kotlinActualLoadLabel\(actual,issuedLoad\)/);
 assert.match(labels,/"Load not reported" -> "load not reported"/);
 assert.match(generated,/target\.load,target\.exerciseId,issuedGymId,machineRoster/);

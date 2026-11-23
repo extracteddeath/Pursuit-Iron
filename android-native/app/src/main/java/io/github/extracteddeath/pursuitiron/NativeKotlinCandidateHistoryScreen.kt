@@ -33,8 +33,10 @@ internal fun NativeKotlinCandidateHistoryScreen(
     onOpenExerciseTrend:(String)->Unit={}
 ) {
     val scope=rememberCoroutineScope()
-    var busy by remember{mutableStateOf(false)}
-    var result by remember{mutableStateOf<NativeKotlinMixedHistoryReadResult?>(null)}
+    // An in-flight read for the old host must never render as the new
+    // athlete's verified timeline while cold-start revalidation runs.
+    var busy by remember(host){mutableStateOf(false)}
+    var result by remember(host){mutableStateOf<NativeKotlinMixedHistoryReadResult?>(null)}
     var showSeparateHistoryConsent by remember{mutableStateOf(false)}
     var understandsSeparateHistory by remember{mutableStateOf(false)}
     var enrollmentMessage by remember{mutableStateOf<String?>(null)}
@@ -110,6 +112,7 @@ internal fun NativeKotlinCandidateHistoryScreen(
         }
     }
     var historyExerciseId by rememberSaveable{mutableStateOf<String?>(null)}
+    var historyExerciseAthleteId by rememberSaveable{mutableStateOf<String?>(null)}
     var exerciseSearch by rememberSaveable{mutableStateOf("")}
     fun reload() {
         if(busy)return
@@ -163,6 +166,18 @@ internal fun NativeKotlinCandidateHistoryScreen(
             }
         }.toSet()
         typed-rep
+    }
+    // A remembered sheet survives process restoration, but only an exact
+    // current-owner repetition movement may reopen it. Never confuse
+    // measured hold/distance observations with ordinary rep-based history.
+    val verifiedRepMovements=remember(searchableMovements,measuredOnlyExercises) {
+        searchableMovements.filterNot {it in measuredOnlyExercises}.toSet()
+    }
+    val admittedHistoryExerciseId=remember(historyExerciseId,
+        historyExerciseAthleteId,verified,verifiedRepMovements) {
+        NativeKotlinHistoryFocusPolicy.admitExercise(
+            historyExerciseId,historyExerciseAthleteId,
+            verified?.athleteId,verifiedRepMovements)
     }
     val filteredMovements=remember(searchableMovements,exerciseSearch) {
         val query=exerciseSearch.trim()
@@ -356,7 +371,10 @@ internal fun NativeKotlinCandidateHistoryScreen(
                                                 label={Text("Measured · ${kotlinExerciseLabel(exercise)}")}
                                             )
                                         } else Row(horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
-                                            OutlinedButton(onClick={historyExerciseId=exercise}) {
+                                            OutlinedButton(onClick={
+                                                historyExerciseId=exercise
+                                                historyExerciseAthleteId=read.timeline.athleteId
+                                            }) {
                                                 Text(kotlinExerciseLabel(exercise))
                                             }
                                             TextButton(onClick={onOpenExerciseTrend(exercise)},
@@ -489,7 +507,10 @@ internal fun NativeKotlinCandidateHistoryScreen(
                                 horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
                                 allMovements.forEach { exercise ->
                                     OutlinedButton(enabled=!busy,
-                                        onClick={historyExerciseId=exercise}) {
+                                        onClick={
+                                            historyExerciseId=exercise
+                                            historyExerciseAthleteId=read.timeline.athleteId
+                                        }) {
                                         Text(kotlinExerciseLabel(exercise))
                                     }
                                 }
@@ -605,9 +626,12 @@ internal fun NativeKotlinCandidateHistoryScreen(
             null ->if(busy)item {LinearProgressIndicator(Modifier.fillMaxWidth())}
         }
     }
-    historyExerciseId?.let { exerciseId ->
+    admittedHistoryExerciseId?.let { exerciseId ->
         NativeKotlinExerciseHistorySheet(host,exerciseId,
-            onDismiss={historyExerciseId=null})
+            onDismiss={
+                historyExerciseId=null
+                historyExerciseAthleteId=null
+            })
     }
     if(showSeparateHistoryConsent)AlertDialog(
         onDismissRequest={

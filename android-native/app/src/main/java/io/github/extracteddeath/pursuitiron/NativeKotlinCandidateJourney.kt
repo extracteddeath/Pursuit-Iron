@@ -25,6 +25,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomResumeReview
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeMeasuredInventoryResult
+import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeKotlinMixedHistoryReadResult
+import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeKotlinMixedHistoryRefusal
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeMeasuredConsentInventoryResult
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeMeasuredWorkoutStoreResult
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeJournalFileResult

@@ -828,8 +828,9 @@ assert.ok(coach.includes('preferredExerciseId?.takeIf{it in choices}') &&
   journey.includes('selectedId=generatedWorkoutId') &&
   journey.includes('minimizedGeneratedId=null') &&
   journey.includes('host.currentlyApprovedKotlinWorkoutId()') &&
-  journey.includes('if(approved==awaitingWorkoutId)'),
-  'Coach focus requires current owner-verified program; Train resume also rechecks exact owner approval without clearing a minimized workout on stale navigation');
+  journey.includes('currentUnfinishedGeneratedWorkoutId(host)==') &&
+  journey.includes('if(verifiedUnfinished)'),
+  'Coach focus requires a current owner-verified program; minimized Train resume also checks the unfinished journal, not merely its approval ID');
 assert.ok((host.match(/enableRepeatedFatigueReview=assistance.offersFatigueAdvice/g)||[]).length===2,
   'Both next-rep preview and final acceptance must preserve the athlete fatigue-advice switch');
 assert.ok(tokens.includes('const val DEFAULT_ID="amethyst"') &&

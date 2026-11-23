@@ -29,13 +29,46 @@ enum class KotlinFutureLoadRefusal {
     NO_LOWER_ASSISTED_SETTING
 }
 
+/**
+ * Physical-number evidence captured by the SAME acceptance pass that checks
+ * the proposal. This is deliberately not a second policy or a new proof of
+ * completed training. The exact neighboring settings come from the verified
+ * implement, not a unit-level guessed increment or display rounding.
+ *
+ * A return to a demonstrated lower load can skip adjacent settings, so
+ * its historical evidence must be established by the calling coach.
+ */
+enum class KotlinFutureLoadPhysicalReason {
+    EARNED_ADJACENT_HIGHER_SETTING,
+    EARNED_ADJACENT_LOWER_ASSISTANCE,
+    VERIFIED_LOWER_SETTING_HISTORY_REQUIRED
+}
+
+data class KotlinFutureLoadPhysicalProof(
+    val reason:KotlinFutureLoadPhysicalReason,
+    val verifiedIssued:BigDecimal,
+    val verifiedCandidate:BigDecimal,
+    /** Exact neighbor of the issued setting, not an independently suggested load. */
+    val nextHigher:BigDecimal?,
+    val nextLower:BigDecimal?,
+    val absoluteChange:BigDecimal
+) {
+    val requiresIndependentPerformanceEvidence:Boolean get()=true
+    val requiresPreviouslyDemonstratedLoad:Boolean get()=
+        reason==KotlinFutureLoadPhysicalReason.VERIFIED_LOWER_SETTING_HISTORY_REQUIRED
+    val mayIssueWorkout:Boolean get()=false
+    val maySaveProgram:Boolean get()=false
+}
+
 data class KotlinFutureLoadFact(
     val issuedLoad:BigDecimal,
     val proposedLoad:BigDecimal,
     val unit:LoadUnit,
     val basis:LoadBasis,
     val source:KotlinFutureLoadSource,
-    val authorizedIncrease:BigDecimal
+    val authorizedIncrease:BigDecimal,
+    /** Read-only physical receipt of the accepted number decision. */
+    val physicalProof:KotlinFutureLoadPhysicalProof
 ) {
     val mayChangeIssuedWorkout:Boolean get()=false
     val mayModifyHistory:Boolean get()=false
@@ -124,8 +157,26 @@ object KotlinFutureLoadNumberAuthorityDomain {
                 // No future weight is changed without separate athlete review.
             }
         }
+        // Capture the actual physical inspection used above. Downstream
+        // generated/custom coaches already forward this KotlinFutureLoadFact;
+        // they must not recalculate a different neighbor for "Why this load?".
+        val reason=when(source) {
+            KotlinFutureLoadSource.EARNED_NEXT_INCREMENT ->
+                KotlinFutureLoadPhysicalReason.EARNED_ADJACENT_HIGHER_SETTING
+            KotlinFutureLoadSource.EARNED_ASSISTANCE_DECREMENT ->
+                KotlinFutureLoadPhysicalReason.EARNED_ADJACENT_LOWER_ASSISTANCE
+            KotlinFutureLoadSource.RETURN_TO_DEMONSTRATED_LOAD ->
+                KotlinFutureLoadPhysicalReason.VERIFIED_LOWER_SETTING_HISTORY_REQUIRED
+        }
+        val proof=KotlinFutureLoadPhysicalProof(
+            reason=reason,
+            verifiedIssued=normalized(current.entered),
+            verifiedCandidate=normalized(candidate.entered),
+            nextHigher=current.nextAbove?.let(::normalized),
+            nextLower=current.nextBelow?.let(::normalized),
+            absoluteChange=normalized(candidateLoad.subtract(issuedLoad).abs()))
         return KotlinFutureLoadReview.Accepted(KotlinFutureLoadFact(
             normalized(issuedLoad),normalized(candidateLoad),unit,basis,
-            source,normalized(maximumAuthorizedIncrease)))
+            source,normalized(maximumAuthorizedIncrease),proof))
     }
 }

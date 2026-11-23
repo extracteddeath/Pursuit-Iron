@@ -106,8 +106,8 @@ const history=read('android-native/app/src/main/java/io/github/extracteddeath/pu
 // replay a Finish before an explicit History recovery tap.
 const coldHistory=landing.slice(landing.indexOf('val initial=withContext(Dispatchers.IO)'),
   landing.indexOf('landingChecked=true'));
-const coldPriority=landing.slice(landing.indexOf('internal fun kotlinColdLaunchDestination('),
-  landing.indexOf('private val primaryDestinations'));
+const coldPriority=journey.slice(journey.indexOf('internal fun kotlinColdLaunchDestination('),
+  journey.indexOf('private val primaryDestinations'));
 // The verified ledger is fetched exactly once before the lazy probes.
 // The pure priority policy short-circuits: prepared History recovery cannot
 // be preempted by Train; proven sessions cannot be misrouted to onboarding.

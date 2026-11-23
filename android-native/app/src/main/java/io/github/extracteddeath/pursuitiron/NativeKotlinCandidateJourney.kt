@@ -647,12 +647,6 @@ private fun NativeKotlinCandidateTrainEntry(
             onClearGeneratedWorkout()
         }
     }
-    // Both minimized and cold-resumed generated sessions verify their own
-    // signed, unfinished journal on tap. Optional inventory/time previews
-    // can fail or run slowly without blocking that independent recovery.
-    fun canVerifyGeneratedResume()=NativeKotlinTrainResumeGate.mayVerifyGenerated(
-        resumeChecking=resumeChecking,manualLookupBusy=searching,
-        anotherWorkoutOpen=selectedId!=null || customWorkoutId!=null || measuredOpen)
     fun minimizeGeneratedWorkout() {
         val openId=selectedId ?:return
         if(!controller.state.value.busy) {
@@ -680,6 +674,12 @@ private fun NativeKotlinCandidateTrainEntry(
     }
     var timePreviewBusy by remember {mutableStateOf(false)}
     var timeAcceptanceBusy by remember {mutableStateOf(false)}
+    // Both minimized and cold-resumed generated sessions verify their own
+    // signed, unfinished journal on tap. Optional inventory/time previews
+    // can fail or run slowly without blocking that independent recovery.
+    fun canVerifyGeneratedResume()=NativeKotlinTrainResumeGate.mayVerifyGenerated(
+        resumeChecking=resumeChecking,manualLookupBusy=searching,
+        anotherWorkoutOpen=selectedId!=null || customWorkoutId!=null || measuredOpen)
     var showIdEntry by rememberSaveable {mutableStateOf(false)}
     var showOtherWorkouts by rememberSaveable {mutableStateOf(false)}
     var visibleUnfinishedCount by rememberSaveable(host) {mutableIntStateOf(20)}

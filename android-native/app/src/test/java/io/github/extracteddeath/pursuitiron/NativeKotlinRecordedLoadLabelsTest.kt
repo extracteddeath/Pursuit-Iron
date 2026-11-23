@@ -63,6 +63,30 @@ class NativeKotlinRecordedLoadLabelsTest {
         assertEquals("Load not reported",kotlinActualLoadLabel(actual(null,LoadUnit.LB),issued))
         assertEquals("10 lb",kotlinActualLoadLabel(actual("10",LoadUnit.LB),issued))
     }
+    @Test fun targetLastCompactMetricNeverGuessesBodyweightOrChangesActual() {
+        val issued=target(LoadBasis.DUMBBELL_PER_HAND,"40",LoadUnit.KG)
+        assertEquals("—",kotlinLastWeightMetricLabel(null,issued))
+        assertEquals("Load not reported",
+            kotlinLastWeightMetricLabel(actual(null,null),issued))
+        assertEquals("Load not reported",
+            kotlinLastWeightMetricLabel(actual(null,LoadUnit.KG),issued))
+        assertEquals("38.125 kg",
+            kotlinLastWeightMetricLabel(actual("38.125",LoadUnit.KG),issued))
+        assertEquals("20 lb",
+            kotlinLastWeightMetricLabel(actual("20",LoadUnit.LB),issued))
+        assertEquals("20 unit unreported",
+            kotlinLastWeightMetricLabel(actual("20",null),issued))
+        assertEquals("0 lb",
+            kotlinLastWeightMetricLabel(actual("0.00",LoadUnit.LB),
+                target(LoadBasis.LANDMINE_ADDED_PLATES,"0")))
+        assertEquals("Bodyweight",
+            kotlinLastWeightMetricLabel(actual(null,null),
+                DraftSetLoad.ExplicitBodyweight))
+        assertEquals("Load not reported",
+            kotlinLastWeightMetricLabel(actual(null,LoadUnit.LB),
+                DraftSetLoad.ExplicitBodyweight))
+    }
+
     @Test fun reportedActualNeverDisplaysTheTargetLoadInstead() {
         val issued=target(LoadBasis.BARBELL_TOTAL,"135")
         val observed=actual("130.00",LoadUnit.LB)

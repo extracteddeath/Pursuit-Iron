@@ -137,10 +137,7 @@ internal fun PursuitWorkoutSetReference(
     val weight=if(target)verified?.let{
         "${it.value.stripTrailingZeros().toPlainString()} ${it.unit.name.lowercase()}"
     } ?:"Bodyweight"
-    else actual?.let{
-        it.load?.let{n->"${n.stripTrailingZeros().toPlainString()} ${it.unit?.name?.lowercase().orEmpty()}"}
-            ?:"Bodyweight"
-    } ?:"—"
+    else kotlinLastWeightMetricLabel(actual,load)
     val repText=if(target) {
         if(exactRepTarget != null) exactRepTarget.toString()
         else if(reps.minimum==reps.maximum)reps.minimum.toString()

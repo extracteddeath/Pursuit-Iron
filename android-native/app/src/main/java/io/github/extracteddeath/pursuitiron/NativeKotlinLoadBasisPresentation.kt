@@ -44,6 +44,22 @@ internal fun kotlinIssuedLoadLabel(load:DraftSetLoad):String=when(load) {
 /** An actual's value and unit always come from that observation. Never fill
  * a missing unit/load from the target. Its physical convention is disclosed
  * only when its unit agrees with the verified issued prescription. */
+/**
+ * The three-column Target/Last strip must stay compact, but its observed
+ * weight must have the SAME source/unknown/bodyweight semantics as full
+ * History and the recorded-set caption. The separate Last caption displays
+ * the historical physical load convention; this metric contains only the
+ * factual amount and original unit (or a clear missing-data label).
+ *
+ * Never fall back from an unreported performed load to an issued weight,
+ * and never promote an unreported weighted observation to bodyweight.
+ */
+internal fun kotlinLastWeightMetricLabel(
+    actual:KotlinPerformedSet?,issuedLoad:DraftSetLoad
+):String = actual?.let {
+    kotlinActualLoadLabel(it,issuedLoad).substringBefore(" · ")
+} ?: "—"
+
 internal fun kotlinActualLoadLabel(
     actual:KotlinPerformedSet,issuedLoad:DraftSetLoad
 ):String {

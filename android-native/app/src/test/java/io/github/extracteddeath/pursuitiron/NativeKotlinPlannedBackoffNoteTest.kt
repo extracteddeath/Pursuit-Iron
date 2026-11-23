@@ -228,6 +228,6 @@ class NativeKotlinPlannedBackoffNoteTest {
         assertEquals(BigDecimal("70"),
             (after.prescription.load as DraftSetLoad.Verified).value)
         assertEquals(BigDecimal("65"),
-            (before.prescription.load as DraftSetLoad.Verified).value)
+            (before.load as DraftSetLoad.Verified).value)
     }
 }

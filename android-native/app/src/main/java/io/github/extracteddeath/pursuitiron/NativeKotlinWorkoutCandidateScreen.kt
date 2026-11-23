@@ -383,10 +383,17 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             controller.reviewNextSet(selected.target.setKey,readiness,
                 movementRestricted)
     }
+    // Issued-target advice cannot describe an unsaved athlete-edited load or
+    // rep entry. Keep those editor bytes untouched and re-review after logging.
+    val hasUnsubmittedCurrentEdit=selected?.let{shown->
+        NativeKotlinLiveAdviceDraftPolicy.hasUnsubmittedChange(
+            shown.target.load,shown.target.reps,currentMachine,
+            currentEditors[levelEditorKey(shown.target.setKey,currentMachine)])
+    } ?:false
     val coach=state.liveCoach?.takeIf {
         // A pre-restriction recommendation is unsafe to keep showing while
         // a fresh owner-scoped review is in flight.
-        !movementRestricted && !state.busy &&
+        !movementRestricted && !hasUnsubmittedCurrentEdit && !state.busy &&
         machineChoices.ready && !machineChoices.busy &&
             it.journalRevision==presentation?.revision &&
             it.setKey==selected?.target?.setKey &&
@@ -642,6 +649,11 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 }
             }
             Text("Based on saved sets · no automatic weight or rep changes",
+                style=MaterialTheme.typography.labelSmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if(hasUnsubmittedCurrentEdit && !presentation.finished) {
+            Text("Unsaved set edits preserved · live advice uses recorded sets, not this draft.",
                 style=MaterialTheme.typography.labelSmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }

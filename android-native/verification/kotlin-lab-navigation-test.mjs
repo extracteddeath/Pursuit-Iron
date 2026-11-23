@@ -112,6 +112,26 @@ assert.ok(measuredFinished.includes('host.verifyFinishedMeasuredWorkoutInHistory
 
 const navigation=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinNavigationState.kt');
 const history=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHistoryScreen.kt');
+const enrollmentConsent=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinHistoryEnrollmentConsentPolicy.kt');
+// A separate local History is a NEW durable mutation. The opt-in sheet
+// cannot reuse a checked box for another athlete after a host/profile change,
+// nor accept NOT_ENROLLED from a stale read or a different owner.
+assert.ok(history.includes('var showSeparateHistoryConsent by remember(host)') &&
+  history.includes('var understandsSeparateHistory by remember(host)') &&
+  history.includes('var consentedHistoryOwner by remember(host)') &&
+  history.includes('NativeKotlinHistoryEnrollmentConsentPolicy.capture(') &&
+  history.includes('host.reviewVerifiedKotlinHistory()') &&
+  history.includes('host.currentHistoryExportOwner()') &&
+  history.includes('enabled=understandsSeparateHistory&&consentedHistoryOwner!=null&&!busy') &&
+  history.includes('host.enrollSeparateKotlinHistory(true,approvedOwner)') &&
+  !history.includes('host.enrollSeparateKotlinHistory(true)') &&
+  measuredHost.includes('expectedOwner:NativeKotlinOwnerIdentity') &&
+  measuredHost.includes('NativeKotlinHistoryEnrollmentConsentPolicy.matches(') &&
+  enrollmentConsent.includes('expected==ownerAfter') &&
+  enrollmentConsent.includes('NativeKotlinMixedHistoryRefusal.NOT_ENROLLED') &&
+  enrollmentConsent.includes('expectedOwner==currentOwner'),
+  'Separate native History enrollment requires fresh same-owner NOT_ENROLLED consent and an exact host-side owner fence');
+
 // A completed parent with an interrupted History write is no longer a
 // resumable unfinished workout. Cold process restart must surface the REAL
 // pending ledger to the athlete; it must not invent a session or silently

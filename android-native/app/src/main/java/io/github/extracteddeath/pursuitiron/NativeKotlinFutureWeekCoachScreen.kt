@@ -18,6 +18,38 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+
+/**
+ * Presentation of the *already accepted* engine evidence. Do not inspect
+ * inventory or recalculate a suggested weight from this Compose screen.
+ */
+private fun LoadBasis.futureLoadConventionLabel():String=when(this) {
+    LoadBasis.BARBELL_TOTAL -> "total barbell load"
+    LoadBasis.DUMBBELL_PER_HAND -> "load per dumbbell"
+    LoadBasis.CABLE_STACK -> "cable stack setting"
+    LoadBasis.MACHINE_STACK -> "machine stack setting"
+    LoadBasis.SMITH_TOTAL -> "total Smith load"
+    LoadBasis.EXERCISE_OVERRIDE -> "verified exercise setting"
+    LoadBasis.KETTLEBELL_EACH -> "load per kettlebell"
+    LoadBasis.LANDMINE_ADDED_PLATES -> "added landmine plates (excluding bar)"
+    LoadBasis.ASSISTANCE_COUNTERWEIGHT -> "assistance counterweight"
+}
+
+private fun KotlinFutureLoadFact.physicalReviewCaption():String {
+    fun BigDecimal.display()=stripTrailingZeros().toPlainString()
+    val unitLabel=when(unit) {LoadUnit.LB -> "lb";LoadUnit.KG -> "kg"}
+    val evidence=when(physicalProof.reason) {
+        KotlinFutureLoadPhysicalReason.EARNED_ADJACENT_HIGHER_SETTING ->
+            "Next verified higher setting: ${physicalProof.nextHigher?.display() ?: "unavailable"} $unitLabel"
+        KotlinFutureLoadPhysicalReason.EARNED_ADJACENT_LOWER_ASSISTANCE ->
+            "Next verified lower assistance setting: ${physicalProof.nextLower?.display() ?: "unavailable"} $unitLabel"
+        KotlinFutureLoadPhysicalReason.VERIFIED_LOWER_SETTING_HISTORY_REQUIRED ->
+            "Lower physical setting; previous performance must be independently verified"
+    }
+    return "Physical proof · ${basis.futureLoadConventionLabel()} · " +
+        "${physicalProof.absoluteChange.display()} $unitLabel change. $evidence."
+}
+
 /**
  * ISOLATED, Kotlin-only Future Week surface. No JS/WebView or production path.
  * Native owner-fenced stores, not this UI's state, decide every permission.
@@ -512,6 +544,8 @@ internal fun NativeKotlinFutureWeekCoachScreen(
                         style=MaterialTheme.typography.headlineSmall)
                     Text("Week ${candidate.affectedAbsoluteWeek} · ${candidate.affectedSlotId} · verified against ${candidate.comparedWorkoutIds.size} recorded workouts.",
                         style=MaterialTheme.typography.bodySmall)
+                    Text(candidate.numberFact.physicalReviewCaption(),
+                        style=MaterialTheme.typography.bodySmall)
                     Text("Only the selected future-week working sets can change. The full cycle, stock, permissions, and saved corrections were audited.",
                         style=MaterialTheme.typography.bodySmall)
                     Button(enabled=!busy&&consentPreview!=null,
@@ -576,6 +610,8 @@ internal fun NativeKotlinFutureWeekCoachScreen(
                         Text("Set ${index+1}: ${old ?: "unverified"} → ${changed ?: "unverified"} · ${pair.second.prescription.repTargetLabel()}",
                             style=MaterialTheme.typography.bodyMedium)
                     }
+                    Text(valid.numberFact.physicalReviewCaption(),
+                        style=MaterialTheme.typography.bodySmall)
                     Text("No changes to reps, RIR, warmups, other slots or the authored cycle.",
                         style=MaterialTheme.typography.bodySmall)
                     Button(enabled=!busy&&prepared==null,

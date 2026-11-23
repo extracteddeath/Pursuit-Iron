@@ -81,7 +81,10 @@ const b1011SettingsRules=css.slice(b1011Start,b1012Start);
 const b1026Start=css.indexOf('/* B1026 — prototype features: week strip, 7-day recap, pain check, routines */');
 assert.ok(b1026Start>b1012Start,'B1026 prototype-feature owner follows the B1012 template owner');
 const b1012TemplateRules=css.slice(b1012Start,b1026Start);
-assert.ok(css.slice(b1026Start).length<=uiStyleBudget.b1026CssCharacters,'B1026 prototype-feature owner must remain bounded');
+const b1027Start=css.indexOf('/* B1027 — design pass 7: one consistent, content-sized control vocabulary across screens. */');
+assert.ok(b1027Start>b1026Start,'B1027 design-pass owner follows the B1026 owner');
+assert.ok(css.slice(b1026Start,b1027Start).length<=uiStyleBudget.b1026CssCharacters,'B1026 prototype-feature owner must remain bounded');
+assert.ok(css.slice(b1027Start).length<=uiStyleBudget.b1027CssCharacters,'B1027 design-pass owner must remain bounded');
 assert.ok(b1012TemplateRules.length<=uiStyleBudget.b1012CssCharacters,'B1012 Home template owner must not grow');
 assert.ok(b1011SettingsRules.length<=uiStyleBudget.b1011CssCharacters,'B1011 Settings owner must remain bounded');
 for(const role of ['wpb-settings-feedback','wpb-settings-diagnostic-run','wpb-settings-import-sheet'])
@@ -112,7 +115,10 @@ assert.ok(app.includes('copyProgressionDiagnostics = async () =>') &&
 // B1016 adds a real accessible machine-history owner and actual-set explanation
 // while keeping all new geometry in the shared external stylesheet. Retain a
 // measured +2k bound; further uncontrolled App/CSS growth still fails.
-assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').replace(b1008SharedRules,'').replace(b1009SharedRules,'').replace(b1010SharedRules,'').replace(b1011SettingsRules,'').replace(b1012TemplateRules,'').replace(css.slice(b1026Start),'').length<=2661430,
+// B1027 (design pass 7) adds +570 for the theme-role aliases that repaired 14 unreadable
+// accent buttons, Home tile/progress-tab variable hooks and the kicker rewrite; new geometry
+// lives in the bounded B1027 stylesheet owner.
+assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').replace(b1008SharedRules,'').replace(b1009SharedRules,'').replace(b1010SharedRules,'').replace(b1011SettingsRules,'').replace(b1012TemplateRules,'').replace(css.slice(b1026Start),'').length<=2662000,
   'Combined App and stylesheet may grow at most 2k for the reviewed Machine A/B Exercise Info feature; no restored inline-style debt');
 
 // B1002: five shared type roles replace 58 repeated fixed-paint objects.

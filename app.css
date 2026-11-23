@@ -1454,7 +1454,7 @@ display:block!important;
   min-width:0;
   min-height:59px!important;
   border-radius:20px 20px 13px 20px!important;
-  padding:10px 12px!important;
+  padding:var(--pi-home-tile-pad,10px 12px)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile:first-child{
   grid-column:1/-1;
@@ -3540,7 +3540,7 @@ display:block!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs>button{
   min-height:48px!important;
-  padding-inline:5px!important;
+  padding-inline:var(--pi-progress-tab-pad,5px)!important;
   border-radius:16px!important;
 }
 /* "By cycle / By month" is deliberately visually subordinate to the
@@ -10221,3 +10221,21 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-routine-play{display:grid;flex:none;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent)}
 #root .wpb .wpb-routine-remove{flex:none;width:48px;height:48px;margin-right:4px;border:0;border-radius:50%;background:none;color:var(--pi-color-on-muted)}
 #root .wpb .wpb-routine-hint{margin:var(--pi-space-2) 0 0;font-size:var(--pi-type-support);color:var(--pi-color-on-muted)}
+/* B1027 — design pass 7: one consistent, content-sized control vocabulary across screens. */
+@media (max-width:359px){#root .wpb .wpb-progress .wpb-premium-tabs{--pi-progress-tab-pad:3px}}
+#root[data-pi-motion] .wpb .wpb-home .wpb-action-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#root[data-pi-motion] .wpb .wpb-home .wpb-action-grid>.wpb-action-tile:not(.wpb-action-tile-featured){--pi-home-tile-min:112px;--pi-control-min:112px;--pi-home-tile-pad:14px;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:10px;text-align:left}
+#root[data-pi-motion] .wpb .wpb-home .wpb-action-grid>.wpb-action-tile:last-child:nth-child(even){grid-column:1/-1}
+#root[data-pi-motion] .wpb .wpb-home .wpb-action-tile-copy{display:grid;gap:2px;width:100%}
+#root[data-pi-motion] .wpb .wpb-home .wpb-action-tile-label{overflow:hidden;font-size:var(--pi-type-body);line-height:1.3;text-overflow:ellipsis;white-space:nowrap;overflow-wrap:normal}
+#root[data-pi-motion] .wpb .wpb-home .wpb-action-tile-subtitle{display:-webkit-box;overflow:hidden;overflow-wrap:normal;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+#root[data-pi-motion] .wpb .wpb-home .wpb-home-hero .wpb-preview-kicker{color:var(--wpb-theme-accent-ink);letter-spacing:.08em}
+#root[data-pi-motion] .wpb .wpb-home-recap-title{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+#root[data-pi-motion] .wpb .wpb-home-recap-badge{padding:3px 10px;border-radius:999px;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);font-size:var(--pi-type-label);font-weight:700;letter-spacing:.02em}
+#root[data-pi-motion] .wpb :is(.wpb-profile-toolbar,.wpb-profile-card-actions){display:flex;flex-wrap:wrap;gap:8px}
+#root[data-pi-motion] .wpb :is(.wpb-profile-toolbar,.wpb-profile-card-actions)>.wpb-ui-action{flex:0 1 auto;width:auto;min-height:48px;height:auto;padding-inline:16px;border-radius:999px;white-space:nowrap}
+#root[data-pi-motion] .wpb .wpb-library-row-icon{--pi-region:#f08a5d;border-radius:50%;background:color-mix(in srgb,var(--pi-region) 20%,var(--wpb-theme-card));color:color-mix(in oklab,var(--pi-region) 55%,var(--wpb-theme-text))}
+#root[data-pi-motion] .wpb .wpb-library-row-icon:is([data-part=lats],[data-part=upper_back],[data-part=biceps],[data-part=traps],[data-part=forearms]){--pi-region:#4fa8e8}
+#root[data-pi-motion] .wpb .wpb-library-row-icon:is([data-part=quads],[data-part=hamstrings],[data-part=glutes],[data-part=calves],[data-part=adductors],[data-part=abductors]){--pi-region:#58b368}
+#root[data-pi-motion] .wpb .wpb-library-row-icon:is([data-part=abs],[data-part=lower_back],[data-part=neck]){--pi-region:#d9a520}
+#root[data-pi-motion] .wpb .wpb-library-row-part{color:inherit;font-weight:800;letter-spacing:.02em}

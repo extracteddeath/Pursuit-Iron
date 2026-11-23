@@ -3,9 +3,12 @@ package io.github.extracteddeath.pursuitiron.nativecoachstore
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import java.math.BigDecimal
 import org.junit.Assert.*
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 
 class NativeFutureWeekLoadSessionProjectionTest {
+    @get:Rule val temp=TemporaryFolder()
     private fun n(v:String)=BigDecimal(v)
     private val physical=VerifiedLoadStock.Totals(
         LoadUnit.LB,LoadBasis.MACHINE_STACK,
@@ -186,5 +189,69 @@ class NativeFutureWeekLoadSessionProjectionTest {
             as NativeFutureWeekLoadProjection.Ready
         assertEquals((run() as NativeFutureWeekLoadProjection.Ready).numberFact,
             same.numberFact)
+    }
+
+
+    @Test fun acceptedConsentColdReopenRechecksSourceAndPreservesExactNumberProof() {
+        val path=temp.newFolder("durable-week-approval").toPath()
+        val identity=NativeKotlinCurrentIdentity {
+            NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        }
+        var offer:NativeFutureWeekConsentCandidate?=NativeFutureWeekConsentCandidate(
+            "cycle-1","block-2","a".repeat(64),31,8,4,2,3,
+            n("200"),n("205"))
+        fun store()=NativeKotlinFutureWeekLoadConsentFileStore(
+            path,NativeKotlinApprovalRevisionFence(path),identity,
+            {_,_,_,_,_,_,_,_,_,_,_->offer})
+        val args=CustomCoachAuditInputs()
+        val first=store()
+        val shown=first.preview("owner-1","cycle-1","block-2",args,
+            9,1,"bench",CoachReadiness.NORMAL,false,n("5"))
+            as NativeFutureWeekConsentPreview.Ready
+        val accepted=first.accept("owner-1","cycle-1","block-2",
+            args,9,1,"bench",CoachReadiness.NORMAL,false,n("5"),
+            shown.fingerprint,shown.recordRevision,true)
+            as NativeFutureWeekConsentWrite.Accepted
+        assertFalse(accepted.receipt.mayIssueWorkout)
+
+        // A newly constructed fence and file-store instance reads the
+        // ACTUAL disk bytes and re-derives the same physical-number fact.
+        val reopened=store()
+        val durable=reopened.readCurrent("owner-1","cycle-1","block-2",
+            args,9,1,"bench") as NativeFutureWeekConsentRead.Current
+        assertEquals(accepted.receipt,durable.receipt)
+        val before=run()
+            as NativeFutureWeekLoadProjection.Ready
+        val after=run(grant=durable)
+            as NativeFutureWeekLoadProjection.Ready
+        assertEquals(before.numberFact,after.numberFact)
+        assertEquals(before.preview,after.preview)
+        assertEquals(n("205"),after.numberFact.physicalProof.nextHigher)
+        assertFalse(after.numberFact.maySaveFutureProgram)
+
+        // Reopening never licenses a changed source, consent fingerprint
+        // or now-unavailable gym step.
+        offer=offer!!.copy(historyRevision=32)
+        val stale=store().readCurrent("owner-1","cycle-1","block-2",
+            args,9,1,"bench")
+        assertEquals(NativeFutureWeekConsentRead.Rejected(
+            NativeFutureWeekConsentRefusal.STALE_REVIEW),stale)
+        assertEquals(NativeFutureWeekLoadProjection.Rejected(
+            NativeFutureWeekLoadProjectionRefusal.CONSENT_NOT_CURRENT),
+            run(grant=stale))
+        offer=offer!!.copy(historyRevision=31)
+        val recovered=store().readCurrent("owner-1","cycle-1","block-2",
+            args,9,1,"bench")
+        assertTrue(recovered is NativeFutureWeekConsentRead.Current)
+        assertEquals(NativeFutureWeekLoadProjection.Rejected(
+            NativeFutureWeekLoadProjectionRefusal.UNVERIFIED_EQUIPMENT),
+            run(grant=recovered,stock=physical.copy(
+                loads=listOf(n("195"),n("200"),n("210")))))
+
+        assertEquals(NativeFutureWeekConsentWrite.Revoked(2),
+            store().revoke("owner-1","cycle-1","block-2",9,1,"bench",1))
+        assertEquals(NativeFutureWeekConsentRead.Revoked(2),
+            store().readCurrent("owner-1","cycle-1","block-2",
+                args,9,1,"bench"))
     }
 }

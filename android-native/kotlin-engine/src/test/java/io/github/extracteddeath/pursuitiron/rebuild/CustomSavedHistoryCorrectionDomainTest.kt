@@ -13,7 +13,8 @@ class CustomSavedHistoryCorrectionDomainTest {
         skippedMain: Boolean = false,
         skippedFollow: Boolean = false,
         activationLoad: BigDecimal = BigDecimal("20"),
-        amplifier: CustomSetAmplifier? = null
+        amplifier: CustomSetAmplifier? = null,
+        failedFollow: Boolean = false
     ): CustomWorkoutJournalDraft {
         val authored = CustomAuthoredSet(
             DraftSetType.WORKING,
@@ -52,12 +53,15 @@ class CustomSavedHistoryCorrectionDomainTest {
         if (!skippedMain && activationLoad > BigDecimal("15")) accept(CustomWorkoutJournalOperation.Record(
             "follow-original", 1, follow,
             if (skippedFollow) KotlinJournalSetOutcome.SKIPPED
+            else if (failedFollow) KotlinJournalSetOutcome.FAILED_ATTEMPT
             else KotlinJournalSetOutcome.COMPLETED,
             if (skippedFollow) null
             else KotlinPerformedSet(
                 if(amplifier?.kind==CustomAmplifierKind.MYO_REPS)
                     activationLoad else BigDecimal("15"),
-                LoadUnit.LB, if(amplifier?.kind==CustomAmplifierKind.MYO_REPS)4 else 6,1)))
+                LoadUnit.LB,
+                if(failedFollow)0 else if(amplifier?.kind==CustomAmplifierKind.MYO_REPS)4 else 6,
+                if(failedFollow)null else 1)))
         accept(CustomWorkoutJournalOperation.Finish(
             "finish-original", journal.revision))
         return journal
@@ -78,6 +82,30 @@ class CustomSavedHistoryCorrectionDomainTest {
         assertTrue(r.toString(), r is CustomSavedCorrectionDecision.Proposed)
         assertFalse((r as CustomSavedCorrectionDecision.Proposed).replayed)
         return r.state
+    }
+
+    @Test fun correctedSavedActivationCannotOrphanAttemptedMyoWeight() {
+        val original=finished(
+            activationLoad=BigDecimal("47.5"),
+            amplifier=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,
+                4,20,followUpRounds=1),failedFollow=true)
+        val state=CustomSavedHistoryCorrectionDomain.begin(original)
+        assertEquals(CustomSavedCorrectionDecision.Rejected(
+            CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER),
+            CustomSavedHistoryCorrectionDomain.reduce(state,
+                correction("wrong-correction",0,main,"main-original",
+                    KotlinJournalSetOutcome.COMPLETED,
+                    KotlinPerformedSet(BigDecimal("45"),LoadUnit.LB,13,null))))
+        val unchanged=original
+        val repOnly=accept(state,
+            correction("correct-reps",0,main,"main-original",
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(BigDecimal("47.500"),LoadUnit.LB,12,null)))
+        assertEquals(unchanged,repOnly.originalFinishedJournal)
+        assertEquals(KotlinJournalSetOutcome.FAILED_ATTEMPT,
+            (CustomSavedHistoryEvidenceDomain.projectSaved(repOnly)
+                as CustomSavedHistoryProjectionResult.Candidate)
+                    .corrected.evidence.visits.last().outcome)
     }
 
     @Test fun savedMyoCorrectionsCannotTurnAnActivationIntoDropLoadedMinis() {

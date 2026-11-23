@@ -177,20 +177,19 @@ object CustomSavedHistoryCorrectionDomain {
                 // target or mistaken for another straight working set.
                 val stageTarget=AdvancedAmplifierProtocolDomain.followUpLoadForStage(
                     amplifier,target.prescription.load,operation.visit.stage)
+                if(operation.outcome!=KotlinJournalSetOutcome.SKIPPED &&
+                    AdvancedAmplifierProtocolDomain.requiresActivationLoad(
+                        amplifier.kind) &&
+                    !AdvancedAmplifierProtocolDomain.validSameLoadFollowUp(
+                        amplifier,target.prescription.load,main.performed,
+                        operation.performed,operation.outcome))
+                    return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
                 if(operation.outcome==KotlinJournalSetOutcome.COMPLETED) {
                     val completed=operation.performed
                         ?:return reject(CustomSavedCorrectionRefusal.INVALID_VALUES)
                     val activation=main.performed
                         ?:return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
-                    val sameLoadTechnique=amplifier.kind==
-                        CustomAmplifierKind.LENGTHENED_PARTIALS ||
-                        amplifier.followUpRounds>1 && amplifier.kind in setOf(
-                            CustomAmplifierKind.MYO_REPS,CustomAmplifierKind.REST_PAUSE,
-                            CustomAmplifierKind.CLUSTER)
-                    if(sameLoadTechnique &&
-                        !CustomWorkoutExecutionDomain.sameActualLoadAndStation(
-                            activation,completed))
-                        return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
+                    // Same-load techniques were validated above for BOTH completed\n                    // and failed observations, including one-stage protocols.
                     if(amplifier.kind==CustomAmplifierKind.DROP_SET) {
                         val previous=if(operation.visit.stage==1)main
                             else current(state,CustomWorkoutVisitKey(

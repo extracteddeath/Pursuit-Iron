@@ -1224,8 +1224,8 @@ assert.ok(journey.includes('workoutScreens.SaveableStateProvider("custom:$custom
   journey.includes('var minimizedGeneratedId by rememberSaveable') &&
   journey.includes('minimizedGeneratedId=openId.takeIf') &&
   journey.includes('PursuitPrimaryAction("Resume workout"') &&
-  journey.includes('host.currentlyApprovedKotlinWorkoutId()') &&
-  journey.includes('if(approved==awaitingWorkoutId)') &&
+  journey.includes('currentUnfinishedGeneratedWorkoutId(host)==') &&
+  journey.includes('if(verifiedUnfinished)') &&
   journey.includes('TextButton(enabled=!sessionState.busy,') &&
   journey.includes('onClick=::minimizeGeneratedWorkout') &&
   journey.includes('BackHandler(enabled=customWorkoutId==null && selectedId!=null)') &&

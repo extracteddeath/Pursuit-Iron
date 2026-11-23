@@ -19,7 +19,11 @@ sealed interface NativeAcceptedFutureWeekLoadHandoff {
         val projected:CustomWorkoutDaySnapshot,
         val slotId:String,
         val fingerprint:String,
-        val recordRevision:Long
+        val recordRevision:Long,
+        /** Full physical receipt accepted by BOTH independent owner reviews.
+         * This proves a current equipment step, not athlete performance,
+         * preparation, issued workout or history authorization. */
+        val numberFact:KotlinFutureLoadFact
     ):NativeAcceptedFutureWeekLoadHandoff {
         val mayIssueWorkout:Boolean get()=false
         val mayModifyTrainingCycle:Boolean get()=false
@@ -31,7 +35,8 @@ sealed interface NativeAcceptedFutureWeekLoadHandoff {
 enum class NativeAcceptedFutureWeekLoadRefusal {
     INVALID_SELECTION, NOT_AUTHORIZED, CONSENT_MISSING_OR_REVOKED,
     STALE_CONSENT_OR_REVIEW, SOURCE_CHANGED, EQUIPMENT_UNVERIFIED,
-    AUDITED_OPTION_MISMATCH, STORAGE_UNAVAILABLE
+    AUDITED_OPTION_MISMATCH, PHYSICAL_NUMBER_PROOF_DIVERGED,
+    STORAGE_UNAVAILABLE
 }
 
 class NativeKotlinAcceptedFutureWeekLoadHandoff(
@@ -131,9 +136,27 @@ class NativeKotlinAcceptedFutureWeekLoadHandoff(
                 projected.preview.slots.size!=source.slots.size)
                 return@withOwnerTransaction no(
                     NativeAcceptedFutureWeekLoadRefusal.AUDITED_OPTION_MISMATCH)
+            // The earning path and consent-backed prepared-session path
+            // independently re-evaluate current source and equipment. Only
+            // carry a physical proof if their EXACT accepted facts agree.
+            // A displayed weight alone is never sufficient provenance.
+            val fact=earned.numberFact
+            val observed=rechecked.review.observedStraightSetLoad
+            if(fact!=projected.numberFact ||
+                observed==null ||
+                !same(observed,fact.issuedLoad) ||
+                !same(accepted.previousLoad,fact.issuedLoad) ||
+                !same(accepted.proposedLoad,fact.proposedLoad) ||
+                fact.source!=KotlinFutureLoadSource.EARNED_NEXT_INCREMENT ||
+                fact.physicalProof.reason!=
+                    KotlinFutureLoadPhysicalReason.EARNED_ADJACENT_HIGHER_SETTING ||
+                fact.mayChangeIssuedWorkout || fact.maySaveFutureProgram ||
+                fact.mayModifyHistory)
+                return@withOwnerTransaction no(
+                    NativeAcceptedFutureWeekLoadRefusal.PHYSICAL_NUMBER_PROOF_DIVERGED)
             NativeAcceptedFutureWeekLoadHandoff.Ready(
                 source,projected.preview,slotId,earned.reviewFingerprint,
-                accepted.recordRevision)
+                accepted.recordRevision,fact)
         }}.getOrElse{
             no(NativeAcceptedFutureWeekLoadRefusal.STORAGE_UNAVAILABLE)
         }

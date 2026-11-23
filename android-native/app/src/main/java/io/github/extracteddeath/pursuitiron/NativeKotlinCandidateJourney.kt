@@ -695,21 +695,27 @@ private fun NativeKotlinCandidateTrainEntry(
                                 selectionMessage=null
                                 scope.launch {
                                     try {
-                                        val approved=withContext(Dispatchers.IO) {
+                                        // A current approval alone cannot prove an
+                                        // in-memory Minimize shortcut is still unfinished.
+                                        // Another process may have finished/corrected
+                                        // the underlying journal while this screen was away.
+                                        // Use the same owner-fenced read as cold resume.
+                                        val verifiedUnfinished=withContext(Dispatchers.IO) {
                                             runCatching {
-                                                host.currentlyApprovedKotlinWorkoutId()
-                                            }.getOrNull()
+                                                currentUnfinishedGeneratedWorkoutId(host)==
+                                                    awaitingWorkoutId
+                                            }.getOrDefault(false)
                                         }
                                         // Ignore a stale approval reply if the athlete
                                         // opened another workout or changed context.
                                         if(minimizedGeneratedId==awaitingWorkoutId &&
                                             selectedId==null && customWorkoutId==null) {
-                                            if(approved==awaitingWorkoutId) {
+                                            if(verifiedUnfinished) {
                                                 selectedId=awaitingWorkoutId
                                                 minimizedGeneratedId=null
                                             } else {
                                                 minimizedGeneratedId=null
-                                                selectionMessage="The previous workout is no longer your current approved workout. Review your program to continue."
+                                                selectionMessage="The minimized workout is no longer verifiably unfinished. Check History or review your current program."
                                             }
                                         }
                                     } finally {

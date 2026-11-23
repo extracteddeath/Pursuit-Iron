@@ -140,7 +140,9 @@ assert.ok(coldHistory.includes('val readHistory=runCatching {') &&
   coldPriority.includes('if(probes.unfinishedGenerated())return KotlinCandidateDestination.TRAIN') &&
   coldPriority.includes('if(probes.unfinishedMeasured())return KotlinCandidateDestination.TRAIN') &&
   coldPriority.includes('if(probes.confirmedMeasured())return KotlinCandidateDestination.TRAIN') &&
-  coldPriority.includes('return kotlinIdleColdLanding(') &&
+  coldPriority.includes('val verifiedIdle=kotlinIdleColdLanding(') &&
+  coldPriority.includes('if(verifiedIdle!=KotlinCandidateDestination.ONBOARD)return verifiedIdle') &&
+  coldPriority.includes('if(probes.historyReadNeedsRecovery())') &&
   coldPriority.includes('hasVerifiedCompletedHistory=probes.completedVerifiedHistory)'),
   'Owner-verified cold-start probes must have deterministic recovery-before-resume priority');
 // Incomplete, failed, or wrong-owner History cannot be used to infer

@@ -30,6 +30,43 @@ class NativeKotlinNavigationStateTest {
             }
     }
 
+    @Test fun coldLaunchPrioritiesShortCircuitEveryLaterOwnerStore() {
+        val stages=listOf("pending","custom","generated","measured",
+            "confirmed","program","completed")
+        val destinations=listOf(KotlinCandidateDestination.HISTORY,
+            KotlinCandidateDestination.TRAIN,KotlinCandidateDestination.TRAIN,
+            KotlinCandidateDestination.TRAIN,KotlinCandidateDestination.TRAIN,
+            KotlinCandidateDestination.PROGRAM,KotlinCandidateDestination.HISTORY)
+        for(index in stages.indices) {
+            val calls=mutableListOf<String>()
+            fun available(name:String):Boolean {
+                calls.add(name)
+                return name==stages[index]
+            }
+            val destination=kotlinColdLaunchDestination(KotlinColdLaunchProbes(
+                pendingHistory={available("pending")},
+                unfinishedCustom={available("custom")},
+                unfinishedGenerated={available("generated")},
+                unfinishedMeasured={available("measured")},
+                confirmedMeasured={available("confirmed")},
+                ownedCustomProgram={available("program")},
+                completedVerifiedHistory={available("completed")}))
+            assertEquals(stages[index],destinations[index],destination)
+            assertEquals(stages.take(index+1),calls)
+        }
+        val calls=mutableListOf<String>()
+        val empty=kotlinColdLaunchDestination(KotlinColdLaunchProbes(
+            pendingHistory={calls.add("pending");false},
+            unfinishedCustom={calls.add("custom");false},
+            unfinishedGenerated={calls.add("generated");false},
+            unfinishedMeasured={calls.add("measured");false},
+            confirmedMeasured={calls.add("confirmed");false},
+            ownedCustomProgram={calls.add("program");false},
+            completedVerifiedHistory={calls.add("completed");false}))
+        assertEquals(KotlinCandidateDestination.ONBOARD,empty)
+        assertEquals(stages,calls)
+    }
+
     @Test fun primaryTabsHaveNoSyntheticBackDestination() {
         for(origin in primary) {
             val state=root(origin)

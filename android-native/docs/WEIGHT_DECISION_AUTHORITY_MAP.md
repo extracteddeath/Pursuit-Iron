@@ -151,6 +151,38 @@ audit in its existing transaction before accepting or issuing any changed
 workout. A cryptographically durable explanation record and future
 accepted-review cold-replay proof are still open.
 
+## November 23: accepted future-week physical-number replay
+
+The **activated custom future-week load path** now uses the existing shared
+`KotlinFutureLoadNumberAuthorityDomain.review` instead of independent
+"physically next" calculations in both `NativeKotlinCustomFutureWeekLoadOptionReview`
+and `NativeFutureWeekLoadSessionProjection`.
+
+The earning reviewer retains `KotlinFutureLoadFact` in its read-only
+`NativeFutureWeekLoadOptionResult.Ready`. After durable athlete consent,
+the projection **reopens the current verified inventory** and rederives
+the same fact. The owner-fenced
+`NativeKotlinAcceptedFutureWeekLoadHandoff` refuses the projected workout
+unless both rederivations match exactly, the observed signed original and
+consented previous/proposed numbers match, and the source is an ordinary
+earned adjacent increase (not recovery or reversed assistance). Its
+`Ready.numberFact` is a read-only audit receipt, never an issuance grant.
+
+New JVM tests include numeric/basis/stock divergence, "same displayed
+weight but different physical proof" refusal, and **cold reopening** the
+existing durable athlete consent using a new file-store/fence instance.
+A changed history watermark, removed equipment step and revoked consent
+cannot turn into a successful projection after reopening.
+
+This deliberately does **not** skip the athlete's explicit review, create
+an already-issued workout, amend historical sets, persist unverified UI
+labels, or silently change a saved cycle. The durable consent retains its
+existing content-bound fingerprint and owner transaction; a later workout
+issuer must separately authenticate its prepared-snapshot provenance
+before issuance. The cold-reopen fixture uses an injected review offer
+to isolate file integrity and projection; a full real owner-source
+end-to-end issuance test remains separate.
+
 ## 5. Contract tests and continuing acceptance matrix
 
 - `EquipmentLoadDomainTest`: valid and invalid decimal envelope agreed with `KotlinSetNumberAuthorityDomain`, plus malformed selector increment refusal.

@@ -160,7 +160,7 @@ class NativeFutureWeekLoadSessionProjectionTest {
     @Test fun changedPhysicalStockOrConsentCannotAcquireAFreshAcceptedNumberFact() {
         val current=receipt()
         val incompatible=listOf(
-            physical.copy(totals=listOf(n("195"),n("200"),n("210"))),
+            physical.copy(loads=listOf(n("195"),n("200"),n("210"))),
             VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.CABLE_STACK,
                 listOf(n("200"),n("205"))),
             VerifiedLoadStock.Totals(LoadUnit.KG,LoadBasis.MACHINE_STACK,

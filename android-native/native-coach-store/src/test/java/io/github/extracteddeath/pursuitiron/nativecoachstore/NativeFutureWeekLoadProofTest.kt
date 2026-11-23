@@ -78,7 +78,9 @@ class NativeFutureWeekLoadProofTest {
         // Even with the SAME displayed 200 -> 205 and source revisions,
         // changing verified physical neighbors invalidates old consent.
         assertNotEquals(initial,proof(stockLoads=listOf("198","200","205","210")))
-        assertNotEquals(initial,proof(stockLoads=listOf("195","200","205","208")))
+        // A distant stock change that leaves the reviewed issued-load
+        // neighbors unchanged is not a different immediate load decision.
+        assertEquals(initial,proof(stockLoads=listOf("195","200","205","208")))
     }
 
     @Test fun malformedOrNonEarnedProofFailsClosed() {

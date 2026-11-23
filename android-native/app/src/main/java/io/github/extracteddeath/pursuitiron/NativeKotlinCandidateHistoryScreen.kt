@@ -198,7 +198,7 @@ internal fun NativeKotlinCandidateHistoryScreen(
     var dateSelectionAthlete by rememberSaveable{mutableStateOf<String?>(null)}
     var historyDateKey by rememberSaveable{mutableStateOf("all")}
     var historyDayKey by rememberSaveable{mutableStateOf<String?>(null)}
-    val dateSelection=remember(historyDateKey,historyDayKey,dateSelectionAthlete,verified?.athleteId,historyMonths) {
+    val dateSelection=remember(historyDateKey,historyDayKey,dateSelectionAthlete,verified?.athleteId,historyMonths,historyZone) {
         if(dateSelectionAthlete!=verified?.athleteId)NativeKotlinHistoryDateSelection.All
         else nativeHistoryDateSelection(historyDateKey,historyDayKey,historyMonths,historyZone)
     }

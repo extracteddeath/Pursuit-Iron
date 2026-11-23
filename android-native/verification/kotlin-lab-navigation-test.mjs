@@ -128,16 +128,17 @@ assert.ok(coldHistory.includes('val readHistory=runCatching {') &&
   coldPriority.includes('if(probes.unfinishedGenerated())return KotlinCandidateDestination.TRAIN') &&
   coldPriority.includes('if(probes.unfinishedMeasured())return KotlinCandidateDestination.TRAIN') &&
   coldPriority.includes('if(probes.confirmedMeasured())return KotlinCandidateDestination.TRAIN') &&
-  coldPriority.includes('return kotlinIdleColdLanding('),
+  coldPriority.includes('return kotlinIdleColdLanding(') &&
+  coldPriority.includes('hasVerifiedCompletedHistory=probes.completedVerifiedHistory)'),
   'Owner-verified cold-start probes must have deterministic recovery-before-resume priority');
 // Incomplete, failed, or wrong-owner History cannot be used to infer
 // a returning athlete. Only a successful verified timeline is eligible.
 assert.ok(coldHistory.includes('NativeKotlinMixedHistoryReadResult.Review') &&
   coldHistory.includes('?.timeline?.completions?.isNotEmpty()==true') &&
   coldPriority.includes('hasOwnedCustomCycle=probes.ownedCustomProgram()') &&
-  coldPriority.includes('hasVerifiedCompletedHistory=probes.completedVerifiedHistory()') &&
+  coldPriority.includes('hasVerifiedCompletedHistory=probes.completedVerifiedHistory') &&
   journey.includes('hasOwnedCustomCycle -> KotlinCandidateDestination.PROGRAM') &&
-  journey.includes('hasVerifiedCompletedHistory -> KotlinCandidateDestination.HISTORY') &&
+  journey.includes('hasVerifiedCompletedHistory() -> KotlinCandidateDestination.HISTORY') &&
   journey.includes('else -> KotlinCandidateDestination.ONBOARD'),
   'Owned program outranks verified completed History; unknown stays Setup');
 

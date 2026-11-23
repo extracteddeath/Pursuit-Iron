@@ -5127,4 +5127,63 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             f.prepared.open("owner-1",workoutId))
     }
 
+
+    /**
+     * A prepared 25-lb workout may not borrow an earlier coaching grant after
+     * coaching is switched off, even if the athlete restores the exact same
+     * policy before issuance. Approval is bound to the settings revision,
+     * not just the currently displayed toggle value.
+     */
+    @Test fun futurePhysicalPreparationCannotReuseConsentAfterCoachOffThenOn() {
+        weightedFixture=true
+        val f=liveFutureCoachFixture()
+        finishRealActivatedSession(f,4,15)
+        finishRealActivatedSession(f,5,15)
+        permitNextLoadAndWeekOverrides()
+        val inputs=futureInputs()
+        val reviewer=futureWeekLoadOption(f)
+        val consents=NativeKotlinFutureWeekLoadConsentFileStore(
+            temp.root.toPath(),fence,identity,reviewer)
+        val offered=consents.preview("owner-1","cycle-1","build",inputs,
+            6,1,"slot-1",CoachReadiness.NORMAL,false,n("5"))
+            as NativeFutureWeekConsentPreview.Ready
+        assertTrue(consents.accept("owner-1","cycle-1","build",inputs,
+            6,1,"slot-1",CoachReadiness.NORMAL,false,n("5"),
+            offered.fingerprint,offered.recordRevision,true)
+            is NativeFutureWeekConsentWrite.Accepted)
+        val handoff=NativeKotlinAcceptedFutureWeekLoadHandoff(
+            fence,consents,reviewer,f.coach,f.activation)
+        val workoutId="coach-toggle-future-week6"
+        val prepared=f.prepared.prepareActivated("owner-1",workoutId,
+            "cycle-1",6,1,inputs,f.signoff,f.activation,f.repApprovals,
+            futureWeek=handoff,futureWeekSlotId="slot-1")
+        assertTrue(prepared.toString(),prepared is NativeCustomPrepareResult.Prepared)
+        val saved=(prepared as NativeCustomPrepareResult.Prepared).workout
+        assertEquals(n("25"),(saved.snapshot.slots.single().sets.single()
+            .prescription.load as DraftSetLoad.Verified).value)
+
+        val original=(f.assistance.read("owner-1")
+            as NativeCoachSettingsRead.Current).settings
+        assertTrue(f.assistance.save("owner-1",original.revision,
+            CoachAssistancePolicy.MANUAL) is NativeCoachSettingsWrite.Saved)
+        fun issue()=f.issuer.issueActivated("owner-1",workoutId,"cycle-1",
+            6,1,inputs,f.signoff,f.activation,f.repApprovals,
+            futureWeek=handoff)
+        val denied=NativeCustomJournalResult.Rejected(
+            NativeCustomJournalRefusal.CONSENT_CHANGED)
+        assertEquals(denied,issue())
+
+        // Flipping back to the original policy must not resurrect a
+        // previously confirmed load, even when all physical stock is intact.
+        assertTrue(f.assistance.save("owner-1",original.revision+1,
+            original.policy) is NativeCoachSettingsWrite.Saved)
+        assertEquals(denied,issue())
+        assertFalse(consents.readCurrent("owner-1","cycle-1","build",
+            inputs,6,1,"slot-1") is NativeFutureWeekConsentRead.Current)
+        assertEquals(NativeCustomJournalResult.Rejected(
+            NativeCustomJournalRefusal.NOT_ISSUED),
+            f.issuer.open("owner-1",workoutId))
+        assertEquals(NativeCustomPreparedRead.Found(saved),
+            f.prepared.open("owner-1",workoutId))
+    }
 }

@@ -17,7 +17,7 @@ enum class KotlinSetNumberRefusal {
     MISSING_ACTUAL, SKIP_CONTAINS_ACTUAL, INVALID_MACHINE_ID,
     INVALID_ACTUAL_RIR, INVALID_COMPLETED_REPS, INVALID_FAILED_ATTEMPT,
     WEIGHT_NOT_APPLICABLE_TO_BODYWEIGHT, MISSING_OR_MISMATCHED_WEIGHT,
-    INVALID_WEIGHT_RANGE_OR_PRECISION
+    INVALID_WEIGHT_RANGE_OR_PRECISION, INVALID_ISSUED_LOAD
 }
 
 enum class KotlinSetLoadRelation {
@@ -119,6 +119,15 @@ object KotlinSetNumberAuthorityDomain {
             return KotlinSetNumberReview.Accepted(
                 KotlinSetNumberFact(issuedLoad,outcome,null,KotlinSetLoadRelation.SKIPPED))
         }
+        // An issued prescription is NOT trustworthy merely because a
+        // differently entered ACTUAL weight happens to be physically valid.
+        // Both generated and custom journals must fail closed if their
+        // immutable target is negative, over-precision, out of range, or
+        // incorrectly zero for its implement basis. Read-only pending and
+        // explicit SKIP remain available so an invalid session can be reviewed
+        // without fabricating completed work.
+        if(!validIssuedLoad(issuedLoad))
+            return rejected(KotlinSetNumberRefusal.INVALID_ISSUED_LOAD)
         val performed=actual ?:return rejected(KotlinSetNumberRefusal.MISSING_ACTUAL)
         if(performed.machineInstanceId!=null &&
             !KotlinMachineAlternativesDomain.validInstanceId(performed.machineInstanceId))

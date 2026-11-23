@@ -103,20 +103,23 @@ try{
    const priority=await page.evaluate(()=>{
      const home=document.querySelector('.wpb-home'),hero=home.querySelector('.wpb-home-hero');
      const game=home.querySelector('.wpb-home-game-plan');
+     // B1026: the weekly card is the prototype's rolling recap; the week strip leads Home above the hero.
      const weekly=[...(hero?.parentElement?.children||[])].find(el=>
-       el!==hero && el.textContent.trim().startsWith('This week') &&
-       el.textContent.includes('Workouts') && el.textContent.includes('Sets'));
+       el!==hero && el.matches('.wpb-home-week') && el.textContent.includes('Last 7 days') && el.textContent.includes('sets'));
+     const strip=home.querySelector('.wpb-home-strip');
      return {hasWeekly:!!weekly,hasGame:!!game,
        heroTop:hero?.getBoundingClientRect().top,
        weeklyTop:weekly?.getBoundingClientRect().top,
        gameTop:game?.getBoundingClientRect().top,
-       weeklyCount:weekly?.textContent.includes('Workouts'),
-       redundantMetrics:home.textContent.includes('Last 7 days')};
+       weeklyCount:/\d+ (of \d+ )?sessions?/.test(weekly?.textContent||''),
+       stripFirst:!!strip&&strip.getBoundingClientRect().top<hero.getBoundingClientRect().top,
+       recapOnce:home.textContent.split('Last 7 days').length===2};
    });
    assert.ok(priority.hasWeekly&&priority.hasGame&&priority.weeklyCount&&
      priority.heroTop<priority.weeklyTop&&priority.weeklyTop<priority.gameTop,
      'Rendered Home priority must be workout, This week, then Game Plan: '+JSON.stringify(priority));
-   assert.equal(priority.redundantMetrics,false,'Home does not repeat standalone 7-day pulse');
+   assert.ok(priority.stripFirst,'The week strip leads Home');
+   assert.ok(priority.recapOnce,'Home shows one 7-day recap');
    assert.ok(await page.$('.wpb-home-session-preview'), 'Current session outline remains visible');
    const outline=await page.$('.wpb-home-outline-toggle');
    assert.ok(outline,'Populated Home retains the expand/collapse session outline');

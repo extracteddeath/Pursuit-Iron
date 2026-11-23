@@ -65,8 +65,8 @@ async function verifyProgramSharing(browser){
           if(!button)throw new Error('Missing shared week '+week);button.click();
         },week);
         await page.$eval('button[aria-label="Share program"]',button=>button.click());
-        await page.waitForSelector('[data-testid="share-program-sheet"] textarea',{visible:true});
-        const text=await page.$eval('[data-testid="share-program-sheet"] textarea',el=>el.value);
+        await page.waitForSelector('#program-share-text',{visible:true});
+        const text=await page.$eval('#program-share-text',el=>el.value);
         const expected=sessionPrescriptionRows(p,p.days[0],week);
 
         for(const row of expected)assert.ok(text.includes(`${row.ex.name} — ${row.cell.sets} × ${row.cell.range} @ ${effortLabel(row.cell.rir,'rir')}`),
@@ -77,7 +77,7 @@ async function verifyProgramSharing(browser){
         await page.waitForSelector('[data-testid="share-program-sheet"]',{hidden:true});
       }
       await page.$eval('button[aria-label="Share program"]',button=>button.click());
-      await page.waitForSelector('[data-testid="share-program-sheet"] textarea',{visible:true});
+      await page.waitForSelector('#program-share-text',{visible:true});
       for(const width of [320,393,834,1280])for(const textSize of [16,32]){
         await page.setViewport({width,height:740,isMobile:true,hasTouch:true});
         await page.evaluate(size=>document.documentElement.style.fontSize=size+'px',textSize);
@@ -115,7 +115,7 @@ async function verifyProgramSharing(browser){
       await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{window.__sharedText=text;}}}));
       await page.click('[aria-label="Copy plain text"]');
       await page.waitForFunction(()=>document.querySelector('[aria-label="Copy plain text"]')?.textContent.includes('Copied'));
-      assert.equal(await page.evaluate(()=>window.__sharedText),await page.$eval('[data-testid="share-program-sheet"] textarea',el=>el.value),'Copy sends the exact displayed plan');
+      assert.equal(await page.evaluate(()=>window.__sharedText),await page.$eval('#program-share-text',el=>el.value),'Copy sends the exact displayed plan');
       await page.focus('[aria-label="Copy plain text"]');await page.keyboard.press('Tab');
       assert.ok(await page.$eval('[data-testid="share-program-sheet"]',el=>el.contains(document.activeElement)),'Tab stays inside sharing');
       await page.keyboard.press('Escape');

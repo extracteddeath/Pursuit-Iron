@@ -115,10 +115,9 @@ try {
         assert.match(await page.$eval('.wpb-home-hero',n=>n.textContent),/Lower Body/);
         const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history);
         const homeSets=await page.evaluate(()=>{
-            const label=[...document.querySelectorAll('.wpb-home *')].find(n=>n.children.length===0&&n.textContent==='Sets');
-            for(let n=label?.parentElement;n;n=n.parentElement){
-                const value=parseInt(n.textContent,10);if(Number.isFinite(value))return value;
-            }
+            // B1026: the Home recap is a <dl>; the value sits in the dd beside the 'sets' term.
+            const stat=[...document.querySelectorAll('.wpb-home-week .wpb-home-recap-stat')].find(n=>n.querySelector('dt')?.textContent==='sets');
+            const value=parseInt(stat?.querySelector('dd')?.textContent,10);if(Number.isFinite(value))return value;
             throw new Error('Home weekly set total missing');
         });
         assert.equal(homeSets,3);

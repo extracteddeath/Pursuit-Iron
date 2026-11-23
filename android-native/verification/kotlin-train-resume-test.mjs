@@ -95,6 +95,14 @@ const otherTools=candidate.indexOf('TextButton(onClick={showOtherWorkouts=!showO
 assert.ok(trainEntry>0 && customResume>trainEntry && customResume<primaryProgram &&
   primaryProgram<timeChoice && timeChoice<measuredTools &&
   measuredTools<otherTools,'Main workout and its time choice must not be buried behind measured workout tools');
+// Plan is a separately owner-verified destination. Optional unfinished
+// workout inventory must not block program review or first-session entry.
+// Competing workout navigation and in-flight SHORTEN acceptance still gate
+// this action so it cannot race a durable session-choice write.
+const programSection=candidate.slice(primaryProgram,timeChoice);
+assert.match(programSection,/PursuitPrimaryAction\("Open my program",\s*enabled=!searching && !resumeChecking && !timeAcceptanceBusy\)/);
+assert.match(programSection,/if\(!searching && !resumeChecking && !timeAcceptanceBusy\)\s*onReturnToProgram\(\)/);
+assert.doesNotMatch(programSection,/!reviewingResume|!timePreviewBusy/);
 assert.match(candidate,/var showMeasuredWorkouts by rememberSaveable/);
 const measuredSection=candidate.slice(measuredTools,otherTools);
 assert.match(measuredSection,/val unfinishedMeasured=/);

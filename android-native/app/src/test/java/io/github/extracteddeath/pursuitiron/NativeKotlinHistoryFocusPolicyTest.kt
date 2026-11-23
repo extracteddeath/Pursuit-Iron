@@ -59,6 +59,40 @@ class NativeKotlinHistoryFocusPolicyTest {
             "DB Press","athleteA","athleteA"))
     }
 
+    @Test fun exerciseHistoryShowsEveryRecordedMachineUntilExplicitFilter() {
+        val stations=listOf("gymA" to "machineA","gymA" to "machineB",
+            "gymB" to "machineA")
+        assertNull(NativeKotlinHistoryFocusPolicy.admitStation(
+            true,"athleteA","athleteA","gymA","machineA",stations))
+        assertNull(NativeKotlinHistoryFocusPolicy.admitStation(
+            false,null,"athleteA","gymA","machineA",stations))
+        assertNull(NativeKotlinHistoryFocusPolicy.admitStation(
+            false,"athleteA","athleteB","gymA","machineA",stations))
+        assertNull(NativeKotlinHistoryFocusPolicy.admitStation(
+            false,"athleteA",null,"gymA","machineA",stations))
+        assertEquals("gymA" to "machineB",
+            NativeKotlinHistoryFocusPolicy.admitStation(
+                false,"athleteA","athleteA","gymA","machineB",stations))
+        assertEquals("gymB" to "machineA",
+            NativeKotlinHistoryFocusPolicy.admitStation(
+                false,"athleteA","athleteA","gymB","machineA",stations))
+    }
+
+    @Test fun removedOrAmbiguousStationNeverMasksVerifiedHistory() {
+        val stations=listOf("gymA" to "machineA","gymA" to "machineB")
+        assertNull(NativeKotlinHistoryFocusPolicy.admitStation(
+            false,"athleteA","athleteA","gymA","retired",stations))
+        assertNull(NativeKotlinHistoryFocusPolicy.admitStation(
+            false,"athleteA","athleteA","","machineA",stations))
+        assertNull(NativeKotlinHistoryFocusPolicy.admitStation(
+            false,"athleteA","athleteA","gymA","",stations))
+        assertNull(NativeKotlinHistoryFocusPolicy.admitStation(
+            false,"athleteA","athleteA","gymA","machineA",
+            stations+("gymA" to "machineA")))
+        assertNull(NativeKotlinHistoryFocusPolicy.admitStation(
+            false,"athleteA","athleteA","gymA","machineA",emptyList()))
+    }
+
     @Test fun invalidOrDuplicateIdentifiersFailClosed() {
         assertNull(NativeKotlinHistoryFocusPolicy.admit(
             "workout invalid",listOf("workout invalid")))

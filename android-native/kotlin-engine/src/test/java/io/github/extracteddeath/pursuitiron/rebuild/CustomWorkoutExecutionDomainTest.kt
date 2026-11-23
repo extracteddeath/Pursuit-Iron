@@ -191,6 +191,48 @@ class CustomWorkoutExecutionDomainTest {
         assertEquals(3,j.snapshot.slots.single().sets.size)
     }
 
+    @Test fun failedMyoAttemptStillAnchorsActivationOnCorrectionAndReplay() {
+        val amp=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,20,
+            followUpRounds=3)
+        var j=initial(slot("failure",1,null,amplifier=amp))
+        j=record(j,"failure:s1",reps=13,actualWeight="47.5",
+            station="machine_A")
+        j=record(j,"failure:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+            stage=1,outcome=KotlinJournalSetOutcome.FAILED_ATTEMPT,
+            actualWeight="47.50",station="machine_A")
+        assertNull(next(j))
+        assertTrue(j.canProposeFinish)
+        val unchanged=j
+        val mainKey=visit("failure:s1")
+        val main=(j.effectiveVisits.getValue(mainKey).operation
+            as CustomWorkoutJournalOperation.Record)
+        val attempt=CustomWorkoutJournalOperation.Record(
+            "correction-changed-activation",j.revision,mainKey,
+            KotlinJournalSetOutcome.COMPLETED,
+            main.performed!!.copy(load=BigDecimal("45")),
+            main.eventId)
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.INVALID_CORRECTION),
+            CustomWorkoutJournalDomain.reduce(j,attempt))
+        assertEquals(unchanged,j)
+        val sameLoad=attempt.copy(eventId="correction-reps-only",
+            performed=main.performed.copy(load=BigDecimal("47.500"),
+                reps=14))
+        j=(CustomWorkoutJournalDomain.reduce(j,sameLoad)
+            as CustomWorkoutJournalDecision.Proposed).draft
+        assertEquals(14,(j.effectiveVisits.getValue(mainKey).operation
+            as CustomWorkoutJournalOperation.Record).performed?.reps)
+        var replay=CustomWorkoutJournalDomain.begin(j.workoutId,
+            j.originalSnapshot,j.preparedConsentFingerprint)
+        for(receipt in j.receipts)
+            replay=(CustomWorkoutJournalDomain.reduce(replay,receipt.operation)
+                as CustomWorkoutJournalDecision.Proposed).draft
+        assertEquals(j,replay)
+        assertEquals(1,replay.effectiveVisits.keys.count{
+            it.part==CustomWorkoutVisitPart.FOLLOW_UP
+        })
+    }
+
     @Test fun numericScalePreservesCorrectedActivationAndFinalSetPartials() {
         val amp=CustomSetAmplifier(CustomAmplifierKind.LENGTHENED_PARTIALS,3,0)
         var j=initial(slot("partials",1,null,amplifier=amp))

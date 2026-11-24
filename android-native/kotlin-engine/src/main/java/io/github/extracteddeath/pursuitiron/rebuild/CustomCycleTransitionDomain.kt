@@ -152,8 +152,26 @@ object CustomCycleTransitionDomain {
         // authored block; the original blocks themselves remain untouched.
         for ((index, added) in next.blocks.withIndex()) {
             if (old.blocks.any { it.blockId==added.blockId }) continue
-            val reference=old.blocks.getOrNull(index) ?: old.blocks.lastOrNull()
-                ?: continue
+            // A recovery week reduces the preceding training prescription,
+            // not the upcoming phase. Compare it against the actual final
+            // resolved week of the unchanged preceding block. Other new
+            // block types keep the existing reference policy.
+            val preceding=next.blocks.getOrNull(index-1)
+            val recoveryAnchor=preceding?.takeIf {
+                added.purpose==CustomBlockPurpose.RECOVERY &&
+                    it.purpose==CustomBlockPurpose.TRAINING &&
+                    old.blocks.singleOrNull{prior->prior.blockId==it.blockId}==it
+            }
+            val reference=if(recoveryAnchor!=null) {
+                val overrides=old.weekOverrides[recoveryAnchor.blockId].orEmpty()
+                    .filter{it.weekInBlock==recoveryAnchor.weeks}
+                    .associateBy{it.weekday to it.slotId}
+                recoveryAnchor.copy(days=recoveryAnchor.days.map{day->
+                    day.copy(slots=day.slots.map{slot->
+                        overrides[day.weekday to slot.slotId]?.let{slot.copy(sets=it.sets)} ?:slot
+                    })
+                })
+            } else (old.blocks.getOrNull(index) ?: old.blocks.lastOrNull() ?:continue)
             val location="block."+added.blockId
             if(added.phase!=reference.phase)
                 emit(CustomCycleChangeKind.PHASE,location,

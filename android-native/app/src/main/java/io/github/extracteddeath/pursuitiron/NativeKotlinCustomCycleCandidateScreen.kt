@@ -346,6 +346,9 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     var coachReadiness by remember {mutableStateOf(CoachReadiness.NORMAL)}
     var coachRestricted by rememberSaveable {mutableStateOf(false)}
     var dayCoachingVisible by remember {mutableStateOf(false)}
+    var recoveryFocusRequested by remember(draft?.athleteId,draft?.cycleId,draft?.revision,state.sourceRevision) {
+        mutableStateOf(false)
+    }
     var basicProgressionVisible by remember {mutableStateOf(false)}
     val futureWeekScope=rememberCoroutineScope()
     var futureWeekBusy by remember {mutableStateOf(false)}
@@ -834,7 +837,8 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     onAcceptMenuRecovery=if(permissionHost!=null)
                         ({controller.acceptStrengthExerciseMenu(true)}) else null
                 )
-                if(permissionHost!=null)NativeRecoveryRecipePanel(draft,state,controller,busy)
+                if(permissionHost!=null)NativeRecoveryRecipePanel(draft,state,controller,busy,
+                    focusRequested=recoveryFocusRequested,onFocusConsumed={recoveryFocusRequested=false})
                 NativeKotlinCustomCycleCalibrationPanel(
                     controller,state,onOpenIssuedWorkout)
             }
@@ -1278,7 +1282,32 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                             session.stamp.gymCatalogSourceRevision==state.sourceRevision
                     }?.let {reviewed->
                         NativeKotlinCustomDayCoachingSummary(reviewed,session.absoluteWeek)
-                        if(permissionHost!=null && maxStep!=null &&
+                        val recoverySignal=state.fatigueCoachingEnabled &&
+                            reviewed.review.repForecastPolicy==CustomRepForecastPolicy.TARGET_RIR_TREND_V3 &&
+                            reviewed.review.status==CustomNextWorkoutCoachingStatus.HOLD_MARKED_SAME_DAY_CAPACITY_DROP
+                        if(recoverySignal) {
+                            Text("Recovery review recommended before increasing this movement's targets. The matched workouts show a performance decline, not a diagnosis of chronic fatigue.",
+                                style=MaterialTheme.typography.bodyMedium,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            val finalTrainingWeek=draft.blocks.lastOrNull()?.purpose==CustomBlockPurpose.TRAINING &&
+                                session.blockId==draft.blocks.lastOrNull()?.blockId &&
+                                session.absoluteWeek==draft.blocks.sumOf{it.weeks}
+                            if(finalTrainingWeek && permissionHost!=null &&
+                                state.preparedWorkout==null && !calibrationLocked &&
+                                state.coachingAudit?.status==CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW &&
+                                state.auditSourceRevision==state.sourceRevision) {
+                                Text("You can review an additional recovery week after this final training week. This will not change the current session.",
+                                    style=MaterialTheme.typography.bodySmall)
+                                OutlinedButton(enabled=!busy && !futureWeekBusy,
+                                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
+                                    onClick={
+                                        showProgramEditor=false
+                                        recoveryFocusRequested=true
+                                    }) {Text("Review recovery week options")}
+                            } else Text("Review rest, readiness and current session demands. No mid-cycle deload or load change has been automatically scheduled.",
+                                style=MaterialTheme.typography.bodySmall)
+                        }
+                        if(!recoverySignal && permissionHost!=null && maxStep!=null &&
                             reviewed.selectedSlotId!=null && policyReady && signed &&
                             state.preparedWorkout==null && !calibrationLocked) {
                             Text("Check whether this change also works across the complete cycle.",

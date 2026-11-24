@@ -312,7 +312,7 @@ class KotlinComposerSwapReviewDomainTest {
                     KotlinJournalRefusal.SWAP_INVALID_TARGET),
                 KotlinWorkoutJournalDomain.reduce(first,invalid))
             assertEquals(KotlinJournalReplayResult.Rejected(
-                KotlinJournalReplayRefusal.INVALID_OPERATION),
+                KotlinJournalReplayRefusal.INVALID_OPERATION,receiptIndex=0),
                 KotlinWorkoutJournalReplayDomain.replay(
                     issued,identity,listOf(KotlinJournalReceipt(1,invalid)),
                     1L))

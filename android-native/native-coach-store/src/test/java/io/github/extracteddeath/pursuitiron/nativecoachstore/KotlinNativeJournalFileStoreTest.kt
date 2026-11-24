@@ -64,6 +64,42 @@ class KotlinNativeJournalFileStoreTest {
         assertEquals(6,java.nio.ByteBuffer.wrap(bytes,8,4).int)
     }
 
+    @Test fun largeNotesCannotConsumeBytesNeededForRemainingSkipsAndFinish() {
+        val writer=store()
+        var state=KotlinWorkoutJournalDomain.begin(snapshot,identity)
+        fun next(current:KotlinWorkoutJournalState,op:KotlinJournalOperation)=
+            (KotlinWorkoutJournalDomain.reduce(current,op)
+                as KotlinJournalDecision.Proposed).state
+        val note="漢".repeat(KotlinWorkoutJournalDomain.MAX_SESSION_NOTE_CHARS)
+        var refused=false
+        for(index in 0..349) {
+            val proposed=next(state,KotlinJournalOperation.SessionNote(
+                "budget-note-$index",state.revision,note))
+            if(index>=320 && !writer.canEncodeProposal("owner-1",proposed)) {
+                refused=true
+                break
+            }
+            state=proposed
+        }
+        assertTrue("The fixture must reach the encoded-byte limit",refused)
+        assertTrue(writer.canEncodeProposal("owner-1",state))
+        assertEquals(2,state.unresolvedSetCount)
+        for((index,target) in snapshot.targets.withIndex()) {
+            state=next(state,KotlinJournalOperation.RecordSet(
+                "skip-$index-"+"x".repeat(73),state.revision,target.setKey,
+                KotlinJournalSetOutcome.SKIPPED,null))
+            assertTrue(writer.canEncodeProposal("owner-1",state))
+        }
+        assertTrue(state.canProposeFinish)
+        val finished=next(state,KotlinJournalOperation.Finish(
+            "f".repeat(80),state.revision))
+        assertTrue(writer.canEncodeProposal("owner-1",finished))
+        assertEquals(0,finished.unresolvedSetCount)
+        // A preview never creates a journal or reserves History.
+        assertEquals(NativeJournalFileResult.Rejected(NativeJournalFileRefusal.NOT_ISSUED),
+            writer.open("owner-1",snapshot,identity))
+    }
+
     @Test fun machineTaggedReceiptsAreV5DurableAndColdReplayPreservesAAndB() {
         val s=store()
         ok(s.issue("owner-1",snapshot,identity))

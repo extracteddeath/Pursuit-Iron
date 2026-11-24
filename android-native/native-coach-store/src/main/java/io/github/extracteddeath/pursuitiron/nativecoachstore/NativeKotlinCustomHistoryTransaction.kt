@@ -189,6 +189,11 @@ class NativeKotlinCustomHistoryTransaction(
                 !is CustomHistoryEvidenceResult.Candidate)
             return@fenced NativeCustomFinishResult.Rejected(
                 NativeCustomFinishRefusal.FINISH_NOT_READY)
+        // Check the complete persisted envelope before reserving shared History.
+        if(!custom.canEncodeProposal((issued as NativeCustomJournalResult.Durable)
+                .issued.copy(journal=preview.draft)))
+            return@fenced NativeCustomFinishResult.Rejected(
+                NativeCustomFinishRefusal.FINISH_NOT_READY)
         val receipt=NativeCustomFinishReceipt.compute(owner,athlete,preview.draft)
         if(recovered.completions.any{it.storedReceiptId==receipt})
             return@fenced NativeCustomFinishResult.Rejected(

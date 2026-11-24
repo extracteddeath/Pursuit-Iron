@@ -599,6 +599,21 @@ class NativeKotlinTrackedWorkoutGatewayTest {
         return durable.journal.revision
     }
 
+    @Test fun fullHistoryBlocksNewGeneratedIssueButNotExistingJournalRead() {
+        val saved=issue()
+        val entries=(1..KotlinHistoryCapacityPolicy.MAX_MANIFEST_COMPLETIONS).map { i ->
+            KotlinHistoryManifestEntry(i.toLong(),"old-$i","old-storage-$i","old-finish-$i",1L,0L)
+        }
+        assertTrue(ledger().enrollVerifiedSnapshot("owner-1","athlete-1",entries){_,_->true}
+            is NativeHistoryLedgerResult.Durable)
+        assertEquals(NativeKotlinIssueResult.Rejected(NativeKotlinIssueRefusal.HISTORY_NOT_READY),
+            gateway().issue("owner-1","athlete-1","new-workout"))
+        assertEquals(NativeJournalFileResult.Rejected(NativeJournalFileRefusal.NOT_ISSUED),
+            journal().openStored("owner-1","new-workout",::allow))
+        assertEquals(saved,(gateway().open("owner-1","athlete-1","workout-1")
+            as NativeJournalFileResult.Durable).journal)
+    }
+
     @Test fun foreignAthleteApprovalIsRejectedBeforeAnyJournalIsIssued() {
         enroll()
         val foreign = source.copy(athleteId = "another-athlete")

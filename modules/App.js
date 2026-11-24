@@ -18996,8 +18996,13 @@ function App() {
                 shell.dataset.scrolled = scroller.scrollTop > 4 ? "1" : "0";
             // While a restore is still waiting for content to grow tall enough, the clamped offset is
             // not the user's position: recording it would overwrite the remembered one for good.
-            if (pending && pending.scroller === scroller)
-                return;
+            if (pending && pending.scroller === scroller) {
+                // Our own re-application lands exactly on the value we set. Anything else moved it
+                // (the lifter, or the app scrolling something into view): stop restoring and record it.
+                if (Math.abs(scroller.scrollTop - pending.set) <= 1)
+                    return;
+                settle();
+            }
             if (scroller.closest(`[data-view-frame="${view}"]`))
                 scrollMemory.current[scrollKey(scroller)] = scroller.scrollTop;
         };
@@ -19023,7 +19028,12 @@ function App() {
                 return;
             const { scroller, target } = pending;
             const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
-            scroller.scrollTop = Math.min(target, max);
+            if (Math.abs(scroller.scrollTop - pending.set) > 1) {
+                settle(); // moved by someone else since the last re-application
+                return;
+            }
+            pending.set = Math.min(target, max);
+            scroller.scrollTop = pending.set;
             if (max >= target)
                 settle();
         };
@@ -19040,7 +19050,7 @@ function App() {
                 return;
             }
             const resize = new ResizeObserver(apply);
-            pending = { scroller, target, resize, timer: setTimeout(settle, 1000) };
+            pending = { scroller, target, set: scroller.scrollTop, resize, timer: setTimeout(settle, 1000) };
             resize.observe(scroller);
             [...scroller.children].forEach(child => resize.observe(child));
         };

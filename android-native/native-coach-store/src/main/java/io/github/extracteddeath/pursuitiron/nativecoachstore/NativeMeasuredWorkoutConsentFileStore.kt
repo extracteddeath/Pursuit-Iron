@@ -234,7 +234,7 @@ class NativeMeasuredWorkoutConsentFileStore(
         val ledger=(history.open(owner,athlete) as?
             NativeHistoryLedgerResult.Durable)?.ledger
             ?:return NativeMeasuredConsentRefusal.HISTORY_NOT_READY
-        if(!ledger.readyForHistoryReads ||
+        if(!ledger.readyForHistoryReads || !ledger.hasCompletionCapacity ||
             ledger.ownerKey!=owner || ledger.athleteId!=athlete ||
             ledger.completions.any{it.workoutId==workout})
             return NativeMeasuredConsentRefusal.HISTORY_NOT_READY

@@ -77,6 +77,10 @@ data class NativeHistoryLedger(
 ) {
     /** Never show a possibly stale Last/PR/progression cache while pending. */
     val readyForHistoryReads: Boolean get() = pending == null
+    /** Admission check, not a reservation for multiple concurrent workouts. */
+    val hasCompletionCapacity: Boolean get() =
+        completions.size < NativeHistoryLedgerBinary.MAX_SESSIONS &&
+            revision < NativeHistoryLedgerBinary.MAX_REV
 }
 
 enum class NativeHistoryLedgerRefusal {

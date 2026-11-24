@@ -245,6 +245,34 @@ class CustomWorkoutHistoryEvidenceDomainTest {
         assertFalse(fact.copy(percentageIntent=intent.copy(repOut=false)).matchesIssuedMain(slot,target))
         assertEquals(intent,journal.originalSnapshot.slots.single().sets.single().prescription.percentageIntent)
         assertFalse(evidence.canApplyProgression)
+        val scope=BasicProgressionScope("athlete-1","cycle-1","gym-1",
+            "block-1","block-1:d0",slot.exerciseId,null,
+            LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND)
+        val projected=CustomTieredJournalEvidenceDomain.project(journal,1,scope,
+            "slot-1",PercentageTier.PRIMARY) as CustomTieredJournalResult.Candidate
+        assertEquals(7,projected.exposure.observations.single().actualReps)
+        assertEquals(3,projected.exposure.issuedTargets.single().minimumReps)
+        assertTrue(projected.exposure.issuedTargets.single().repOut)
+        assertFalse(projected.mayIssueWorkout)
+        assertEquals(CustomTieredJournalResult.Refused(CustomTieredJournalRefusal.INVALID_SCOPE),
+            CustomTieredJournalEvidenceDomain.project(journal,1,scope.copy(gymId="other"),
+                "slot-1",PercentageTier.PRIMARY))
+        assertEquals(CustomTieredJournalResult.Refused(CustomTieredJournalRefusal.UNVERIFIED_JOURNAL),
+            CustomTieredJournalEvidenceDomain.project(journal.copy(effectiveVisits=emptyMap()),
+                1,scope,"slot-1",PercentageTier.PRIMARY))
+        var changed=CustomWorkoutJournalDomain.begin("changed-load",snapshot,
+            base.preparedConsentFingerprint)
+        changed=accept(changed,record("changed-1",0,main,KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("15"),LoadUnit.LB,7,null)))
+        changed=accept(changed,CustomWorkoutJournalOperation.Finish("changed-finish",1))
+        assertEquals(CustomTieredJournalResult.Refused(CustomTieredJournalRefusal.INCOMPATIBLE_OBSERVATION),
+            CustomTieredJournalEvidenceDomain.project(changed,2,scope,"slot-1",PercentageTier.PRIMARY))
+        var skipped=CustomWorkoutJournalDomain.begin("skipped",snapshot,
+            base.preparedConsentFingerprint)
+        skipped=accept(skipped,record("skip-1",0,main,KotlinJournalSetOutcome.SKIPPED,null))
+        skipped=accept(skipped,CustomWorkoutJournalOperation.Finish("skip-finish",1))
+        assertEquals(CustomTieredJournalResult.Refused(CustomTieredJournalRefusal.INCOMPATIBLE_OBSERVATION),
+            CustomTieredJournalEvidenceDomain.project(skipped,3,scope,"slot-1",PercentageTier.PRIMARY))
         val coached=CustomNextWorkoutCoachingDomain.review(CustomNextWorkoutCoachingRequest(
             snapshot,"slot-1",emptyList(),null,BigDecimal("5"),CoachReadiness.NORMAL,false))
         assertEquals(CustomNextWorkoutCoachingStatus.CHANGED_PRESCRIPTION,coached.status)

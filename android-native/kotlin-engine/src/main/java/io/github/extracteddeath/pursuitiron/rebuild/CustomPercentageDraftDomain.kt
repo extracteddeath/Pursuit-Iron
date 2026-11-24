@@ -41,6 +41,61 @@ sealed interface CustomPercentageDraftResult {
     }
 }
 
+enum class CustomPercentageRecheckRefusal {
+    NOT_EXPLICITLY_ACCEPTED, REFERENCE_OR_STOCK_CHANGED, HISTORY_CHANGED,
+    SOURCE_OR_RECIPE_CHANGED, PROPOSAL_CHANGED
+}
+
+sealed interface CustomPercentageRecheckResult {
+    data class Refused(val reason:CustomPercentageRecheckRefusal):CustomPercentageRecheckResult
+    data class Reconfirmed(val proposal:CustomPercentageDraftResult.Proposed,
+        val historyRevision:Long):CustomPercentageRecheckResult {
+        val maySaveProgram:Boolean get()=false
+        val mayIssueWorkout:Boolean get()=false
+    }
+}
+
+/**
+ * Non-writing comparison used at the approval boundary. The native caller
+ * must obtain the current source, stock, reviewed reference and history
+ * revision from authenticated storage in a single owner transaction.
+ * No caller-provided receipt, flag or equality result grants consent.
+ */
+object CustomPercentageDraftRecheckDomain {
+    fun recheck(
+        displayed:CustomPercentageDraftResult.Proposed,
+        reviewedRequest:NamedPercentageRequest,
+        currentSource:CustomPercentageDraftSource,
+        currentRequest:NamedPercentageRequest,
+        reviewedHistoryRevision:Long,
+        currentHistoryRevision:Long,
+        explicitlyAccepted:Boolean
+    ):CustomPercentageRecheckResult {
+        fun no(reason:CustomPercentageRecheckRefusal)=CustomPercentageRecheckResult.Refused(reason)
+        if(!explicitlyAccepted)return no(CustomPercentageRecheckRefusal.NOT_EXPLICITLY_ACCEPTED)
+        if(reviewedHistoryRevision !in 1..9_007_199_254_740_991L ||
+            currentHistoryRevision!=reviewedHistoryRevision)
+            return no(CustomPercentageRecheckRefusal.HISTORY_CHANGED)
+        if(!currentRequest.referenceConfirmed || !reviewedRequest.referenceConfirmed ||
+            currentRequest.referenceKind!=reviewedRequest.referenceKind ||
+            currentRequest.confirmedReference!=reviewedRequest.confirmedReference ||
+            currentRequest.verifiedStock==null ||
+            currentRequest.verifiedStock!=reviewedRequest.verifiedStock)
+            return no(CustomPercentageRecheckRefusal.REFERENCE_OR_STOCK_CHANGED)
+        if(currentRequest!=reviewedRequest || currentSource.stamp!=displayed.source ||
+            currentSource.cycle!=displayed.proposal.receipt.original ||
+            currentSource.weekInBlock!=displayed.weekInBlock ||
+            ProgramProgressionSlotKey(currentSource.blockId,currentSource.weekday,
+                currentSource.slotId)!=displayed.key)
+            return no(CustomPercentageRecheckRefusal.SOURCE_OR_RECIPE_CHANGED)
+        val fresh=CustomPercentageDraftDomain.review(currentSource,currentRequest)
+            as? CustomPercentageDraftResult.Proposed
+            ?:return no(CustomPercentageRecheckRefusal.PROPOSAL_CHANGED)
+        if(fresh!=displayed)return no(CustomPercentageRecheckRefusal.PROPOSAL_CHANGED)
+        return CustomPercentageRecheckResult.Reconfirmed(fresh,currentHistoryRevision)
+    }
+}
+
 object CustomPercentageDraftDomain {
     private data class Projected(val load:BigDecimal,val reps:Int,val intent:CustomPercentageSetIntent)
     private data class Projection(val sets:List<Projected>,

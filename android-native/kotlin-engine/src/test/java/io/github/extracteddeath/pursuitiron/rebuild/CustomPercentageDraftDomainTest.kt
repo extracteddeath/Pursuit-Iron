@@ -58,6 +58,41 @@ class CustomPercentageDraftDomainTest {
             selectedPerSetDynamic=setOf(result.key)) is ProgramProgressionPlan.Refused)
     }
 
+    @Test fun namedReferenceAcceptanceRecomputesEveryDraftByteAndRefusesStaleInputs() {
+        val displayed=CustomPercentageDraftDomain.review(source,request)
+            as CustomPercentageDraftResult.Proposed
+        fun check(d:CustomPercentageDraftResult.Proposed=displayed,
+            s:CustomPercentageDraftSource=source,r:NamedPercentageRequest=request,
+            history:Long=9,accepted:Boolean=true)=CustomPercentageDraftRecheckDomain.recheck(
+                d,request,s,r,9,history,accepted)
+        val confirmed=check() as CustomPercentageRecheckResult.Reconfirmed
+        assertEquals(displayed,confirmed.proposal)
+        assertEquals(9L,confirmed.historyRevision)
+        assertFalse(confirmed.maySaveProgram)
+        assertFalse(confirmed.mayIssueWorkout)
+        assertEquals(CustomPercentageRecheckResult.Refused(
+            CustomPercentageRecheckRefusal.NOT_EXPLICITLY_ACCEPTED),check(accepted=false))
+        assertEquals(CustomPercentageRecheckResult.Refused(
+            CustomPercentageRecheckRefusal.HISTORY_CHANGED),check(history=10))
+        assertEquals(CustomPercentageRecheckResult.Refused(
+            CustomPercentageRecheckRefusal.REFERENCE_OR_STOCK_CHANGED),
+            check(r=request.copy(confirmedReference=n("205"))))
+        assertEquals(CustomPercentageRecheckResult.Refused(
+            CustomPercentageRecheckRefusal.REFERENCE_OR_STOCK_CHANGED),
+            check(r=request.copy(verifiedStock=VerifiedLoadStock.Stack(
+                LoadUnit.LB,LoadBasis.MACHINE_STACK,n("5"),n("10"),n("300")))))
+        assertEquals(CustomPercentageRecheckResult.Refused(
+            CustomPercentageRecheckRefusal.SOURCE_OR_RECIPE_CHANGED),
+            check(s=source.copy(stamp=stamp.copy(gymCatalogSourceRevision=3))))
+        assertEquals(CustomPercentageRecheckResult.Refused(
+            CustomPercentageRecheckRefusal.SOURCE_OR_RECIPE_CHANGED),
+            check(r=request.copy(weekInBlock=2)))
+        val forged=displayed.copy(proposal=displayed.proposal.copy(
+            draft=displayed.proposal.draft.copy(weekOverrides=emptyMap())))
+        assertEquals(CustomPercentageRecheckResult.Refused(
+            CustomPercentageRecheckRefusal.PROPOSAL_CHANGED),check(d=forged))
+    }
+
     @Test fun staleScopeAndUnconfirmedReferenceCannotCreateDraft() {
         fun refused(s:CustomPercentageDraftSource=source,r:NamedPercentageRequest=request,
                     reason:CustomPercentageDraftRefusal) {

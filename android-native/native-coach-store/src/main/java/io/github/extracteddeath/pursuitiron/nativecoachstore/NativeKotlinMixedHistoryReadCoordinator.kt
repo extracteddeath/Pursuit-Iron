@@ -757,8 +757,45 @@ class NativeKotlinMixedHistoryReadCoordinator(
         }
     }
 
+    /**
+     * Read only: construct a complete tier ledger from the same owner-fenced
+     * mixed History scan, including saved corrections. Never accept UI-selected
+     * successful workouts or silently discard a same-day incompatible receipt.
+     * Source and equipment approval, recovery reconciliation and future
+     * issuance remain separate review boundaries.
+     */
+    fun readTieredLedger(
+        owner: String, athlete: String, scope: BasicProgressionScope,
+        slotId: String, tier: PercentageTier, nextAbsoluteWeek: Int
+    ): NativeOwnerTieredLedgerResult {
+        fun deny(reason: NativeOwnerTieredLedgerRefusal) =
+            NativeOwnerTieredLedgerResult.Rejected(reason)
+        if (!id.matches(owner) || !id.matches(athlete) ||
+            scope.athleteId != athlete || !scope.valid() || slotId.isBlank() ||
+            nextAbsoluteWeek !in 1..104)
+            return deny(NativeOwnerTieredLedgerRefusal.INVALID_SCOPE)
+        return runCatching {
+            fence.withOwnerTransaction(owner) {
+                val sessions = mutableListOf<NativeTieredHistorySession>()
+                val history = readFenced(owner, athlete) { entry, journal, evidence ->
+                    sessions += NativeTieredHistorySession(entry, journal.originalSnapshot,
+                        journal.snapshot, evidence)
+                }
+                when (history) {
+                    is NativeKotlinMixedHistoryReadResult.Rejected ->
+                        NativeOwnerTieredLedgerResult.HistoryRejected(history.reason)
+                    is NativeKotlinMixedHistoryReadResult.Review ->
+                        NativeTieredHistoryLedgerDomain.project(history.timeline,
+                            sessions, scope, slotId, tier, nextAbsoluteWeek)
+                }
+            }
+        }.getOrElse { deny(NativeOwnerTieredLedgerRefusal.STORAGE_UNAVAILABLE) }
+    }
+
     private fun readFenced(
-        owner: String, athlete: String
+        owner: String, athlete: String,
+        onVerifiedCustom: ((KotlinHistoryManifestEntry, CustomWorkoutJournalDraft,
+            CustomWorkoutHistoricalEvidence) -> Unit)? = null
     ): NativeKotlinMixedHistoryReadResult {
         if (!authorized(owner, athlete))
             return rejected(NativeKotlinMixedHistoryRefusal.NOT_AUTHORIZED)
@@ -848,6 +885,7 @@ class NativeKotlinMixedHistoryReadCoordinator(
                 } ?: return rejected(NativeKotlinMixedHistoryRefusal.UNVERIFIED_CUSTOM)
                 values.add(NativeKotlinMixedHistoryCompletion.Custom(
                     entry,evidence,journal.originalSnapshot.stamp.gymId))
+                onVerifiedCustom?.invoke(entry, journal, evidence)
             } else {
                 val access: (String, KotlinTrainingSourceRevision) -> Boolean =
                     { who, source ->

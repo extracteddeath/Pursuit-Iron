@@ -194,7 +194,7 @@ object BasicProgressionPolicyDomain {
         if (uniformStrategy && loads.any { it.compareTo(loads.first()) != 0 })
             return reject(BasicProgressionRefusal.UNSUPPORTED_STRAIGHT_SET_SCHEME)
 
-        val assistance = request.nextScope.basis == LoadBasis.ASSISTANCE_COUNTERWEIGHT
+        val assistance = !request.nextScope.basis.higherSettingIncreasesDifficulty
         if (request.strategy != BasicProgressionStrategy.REP_TARGET_PROGRESSION &&
             assistance !=
             (request.strategy == BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION))
@@ -269,10 +269,7 @@ object BasicProgressionPolicyDomain {
         var blockedByLimit = false
         var atMaximum = false
         for (ordinal in eligible) {
-            val next = if (assistance) {
-                // Lower counterweight means LESS assistance, not a load drop.
-                inspected[ordinal].nextBelow
-            } else inspected[ordinal].nextAbove
+            val next = inspected[ordinal].nextHarder
             if (next == null) {
                 dynamicDecisions?.set(ordinal, BasicProgressionDecision.MAXIMUM_LOAD_REACHED)
                 atMaximum = true

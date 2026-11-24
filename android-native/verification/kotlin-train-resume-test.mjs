@@ -43,7 +43,16 @@ assert.doesNotMatch(coldResume,/!reviewingResume|!timePreviewBusy/);
 assert.match(coldResume,/currentUnfinishedGeneratedWorkoutId\(host\)==\s*issuedId/);
 assert.match(coldResume,/resumableGeneratedId==issuedId/);
 
-assert.match(candidate,/selectedId==null && customWorkoutId==null/);
+assert.match(candidate,/fun noCompetingWorkout\(\)=selectedId==null && currentCustomId==null/);
+assert.match(candidate,/currentGeneratedId==null && !measuredOpen/);
+assert.match(candidate,/val currentCustomId by rememberUpdatedState\(customWorkoutId\)/);
+assert.match(candidate,/val currentGeneratedId by rememberUpdatedState\(generatedWorkoutId\)/);
+assert.match(candidate,/timeAcceptanceBusy=timeAcceptanceBusy/);
+assert.match(minimizeShortcut,/noCompetingWorkout\(\)/);
+assert.match(coldResume,/noCompetingWorkout\(\)/);
+assert.match(candidate,/if\(noCompetingWorkout\(\)\)selectedId=available\.workoutId/);
+assert.match(candidate,/if\(noCompetingWorkout\(\)\)selectedId=found/);
+assert.match(candidate,/"Open workout by ID",enabled=valid && canVerifyGeneratedResume\(\)/);
 assert.match(candidate,/if\(verifiedUnfinished\) \{/);
 assert.match(candidate,/selectedId=awaitingWorkoutId\s*minimizedGeneratedId=null/);
 assert.match(candidate,/if\(generatedWorkoutId!=null && selectedId!=generatedWorkoutId\)/);

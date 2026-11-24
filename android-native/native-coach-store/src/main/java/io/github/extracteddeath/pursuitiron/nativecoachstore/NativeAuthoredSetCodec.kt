@@ -36,7 +36,8 @@ internal object NativeAuthoredSetCodec {
             enum<LoadUnit>(), enum<LoadBasis>(), BigDecimal(readUTF()))
         else -> throw IOException("Unknown custom load kind")
     }
-    fun write(output: DataOutputStream, value: CustomAuthoredSet) = with(output) {
+    fun write(output: DataOutputStream, value: CustomAuthoredSet, hasPercentageIntent:Boolean=false) = with(output) {
+        require(value.percentageIntent==null || hasPercentageIntent && value.percentageIntent.validForSet(value))
         enum(value.type)
         load(value.load)
         writeInt(value.reps.minimum)
@@ -58,8 +59,20 @@ internal object NativeAuthoredSetCodec {
             amplifier.secondDropLoad?.let { load(it) }
         }
         optionalInt(value.exactRepTarget)
+        if(hasPercentageIntent) {
+            val intent=value.percentageIntent
+            writeBoolean(intent!=null)
+            intent?.let {
+                enum(it.scheme); enum(it.tier); enum(it.dayRole)
+                writeInt(it.weekInBlock); writeInt(it.blockWeeks)
+                writeInt(it.sourceOrdinal); writeInt(it.sourceSetCount)
+                writeUTF(it.referenceLoad.toString()); writeUTF(it.sourcePercent.toString())
+                writeUTF(it.effectivePercent.toString()); optionalInt(it.tierStage)
+                writeBoolean(it.repOut); writeBoolean(it.recovery)
+            }
+        }
     }
-    fun read(input: DataInputStream, hasExactTarget:Boolean=true): CustomAuthoredSet = with(input) {
+    fun read(input: DataInputStream, hasExactTarget:Boolean=true, hasPercentageIntent:Boolean=false): CustomAuthoredSet = with(input) {
         val type = enum<DraftSetType>()
         val weight = load()
         val reps = RepBand(readInt(), readInt())
@@ -77,6 +90,13 @@ internal object NativeAuthoredSetCodec {
                 if(readBoolean())load() else null)
         } else null
         val exact=if(hasExactTarget)optionalInt() else null
-        CustomAuthoredSet(type, weight, reps, rir, active, rest, amplifier,exact)
+        val intent=if(hasPercentageIntent && readBoolean()) CustomPercentageSetIntent(
+            enum<NamedPercentageScheme>(),enum<PercentageTier>(),enum<PercentageDayRole>(),
+            readInt(),readInt(),readInt(),readInt(),
+            BigDecimal(readUTF()),BigDecimal(readUTF()),BigDecimal(readUTF()),
+            optionalInt(),readBoolean(),readBoolean()) else null
+        CustomAuthoredSet(type, weight, reps, rir, active, rest, amplifier,exact,intent).also {
+            if(intent!=null && !intent.validForSet(it))throw IOException("Invalid percentage set intent")
+        }
     }
 }

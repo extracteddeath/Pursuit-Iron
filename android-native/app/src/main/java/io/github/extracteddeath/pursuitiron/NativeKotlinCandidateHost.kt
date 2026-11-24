@@ -154,6 +154,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
         measuredParentHistoryStore)
     private val outstandingCustomInventory=NativeKotlinCustomOutstandingWorkoutInventory(
         customPreparedStore,customIssuedStore)
+    private val recoveryScheduleFence=NativeKotlinRecoveryScheduleFence(
+        revisionFence,localAthlete,mixedHistoryReader,outstandingCustomInventory)
     private val resumableCustomWorkouts=NativeKotlinCustomResumeReview(
         revisionFence,localAthlete,mixedHistoryReader,
         outstandingCustomInventory,customIssuedStore)
@@ -2691,6 +2693,16 @@ internal class NativeKotlinCandidateHost(context:Context) {
             original.athleteId!=owner.athleteId ||
             source.athleteId!=owner.athleteId || source.ownerKey!=owner.ownerKey)
             return deny("The saved program or gym changed. Review again.")
+        // An append changes the signed revision even though earlier dates
+        // do not move. Do not orphan any unfinished preparation or journal.
+        val firstChangedWeek=original.blocks.sumOf{it.weeks.toLong()}+1L
+        if(firstChangedWeek !in 1L..104L)
+            return deny("The recovery week is outside the supported calendar.")
+        val schedule=when(val verified=recoveryScheduleFence.review(
+            owner.ownerKey,request.cycleId,firstChangedWeek.toInt())) {
+            is NativeRecoveryScheduleReview.Ready -> verified
+            is NativeRecoveryScheduleReview.Rejected -> return deny(verified.explanation)
+        }
         val kinds=rights.allowedKinds
         val permissions=CustomCycleCoachPermissions(
             adaptBlocks=CustomCycleChangeKind.BLOCKS in kinds,
@@ -2735,7 +2747,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
             recovery.blockPurpose!=CustomBlockPurpose.RECOVERY)
             return deny("The audited recovery week did not match the final training week.")
         return NativeRecoveryRecipePreview.Ready(NativeRecoveryRecipeReady(
-            request,owner,rights.revision,assistance.revision,roster?.revision,candidate,baseline,recovery))
+            request,owner,rights.revision,assistance.revision,roster?.revision,
+            schedule.historyRevision,candidate,baseline,recovery))
     }
 
     fun previewRecoveryRecipe(request:NativeRecoveryRecipeRequest):NativeRecoveryRecipePreview {
@@ -2766,7 +2779,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 if(fresh !is NativeRecoveryRecipePreview.Ready || fresh.receipt!=reviewed ||
                     localAthlete.signedInIdentity()!=owner)
                     return@withOwnerTransaction NativeRecoveryRecipeDecision.Rejected(
-                        "The program, gym, permissions or coaching settings changed. Review again.")
+                        "The program, gym, history, workout inventory, permissions or coaching settings changed. Review again.")
                 when(val saved=customDraftStore.save(owner.ownerKey,
                     reviewed.request.cycleId,reviewed.request.expectedCycleRevision,
                     fresh.receipt.proposedCycle)) {

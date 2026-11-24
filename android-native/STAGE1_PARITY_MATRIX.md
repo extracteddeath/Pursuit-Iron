@@ -122,34 +122,35 @@ Web source: `modules/next-engine/percentage-protocols.js`, PCT_SCHEMES, percenta
 | PCT-JT | jt | Tiered powerbuilding heavy/volume structure | S2 / REVIEW |
 All nine schemes are active public template configurations and named code values (catalog.js/TEMPLATES and programs.js/CODE_SCHEMES). The real percentagePlanFor → percentageProtocolFor path in training-domain/prescriptions.js executes them; all remain mandatory. Require exact authored basis, per-set percentage/reps/plus targets and week/day/tier, feasible rounding, failed/successful history, max-update rules and recovery. REVIEW here means functional evidence outstanding, not inactive/optional. Cross-link S4 programming and S5 persistence.
 
-## Product coverage and web delta
-The 14 stable FeatureCatalog groups remain mandatory references. Map to E requirements rather than replacing them: adaptive-progression (E18–19/E24/E30–34), workout-logging (E17/E20–24/E36), session-adjustments (E25–28), workout-tools (E07/E09–10/E20–21/E28), program-builder (E01–02/E05/E11–16), custom-programs (E16/E32–33), adaptive-cycles (E31–35), exercise-discovery (E08–10), history-and-prs (E23/E36–37), volume-and-trends (E12–14/E38), bodyweight (E38), backup-restore (E39), gyms-and-equipment (E03–04/E07), profile (E01/E06/E40). Each group is expanded in [STAGE1_BEHAVIOR_INVENTORY.md](STAGE1_BEHAVIOR_INVENTORY.md), with 87 stable child rows, stage owners, candidate fixtures and independent expected outcomes. Source coverage of all 144 pinned web modules is recorded in [STAGE1_WEB_SOURCE_MAP.json](STAGE1_WEB_SOURCE_MAP.json).
-Build 1016 additions need separate regression trace: strength transition set continuity, actual working-set count in Info, machine/swap discoverability, old unassigned history explicitly assigned to original machine. Build 1011 physical machine/default changes and Build 1010 ULPPL/PPLUL named lift frequency and variant selection remain required. Historical draft #443–448 review by S3/S5/S6; no blind merge. No optional UI deferral removes an engine feature.
+## Detailed inventory and scope dispositions
+- [Behavior inventory](STAGE1_BEHAVIOR_INVENTORY.json): 120 required acceptance work packages across all 14 product groups, 5 policy-authorized optional/development-only deferrals; candidate fixtures, stage, parent requirement, independent expected behavior and device requirement.
+- [Effective exercise catalog](STAGE1_CATALOG_INVENTORY.json): 383 exact effective web IDs, 369 standard + 14 measured Kotlin matches; zero unmatched identities, zero fully accepted behaviors. 26 shadowed web definitions recorded separately, not counted as effective distinct IDs. Every row has the applicable detailed acceptance profile.
+- [Web shell identity and template inventory](STAGE1_WEB_SHELL_INVENTORY.json): 372 shell identities (346 exact, 22 explicit aliases, 4 name-fallback candidates), 75 actual program template definitions, 24 public split definitions. All shell identities and templates remain required review rows. Four candidate name mappings need physical/semantic verification, not silent approval.
+- [Findings and assigned dispositions](STAGE1_FINDINGS.md): material source differences and existing defect fixtures; all assigned to later stages or required review. Stage 1 is an inventory gate, not the implementation or evidence certification gate.
+- The 24 publicly defined split families are those listed in the shell inventory; `custom` and `pplul` are also live topology search families per `candidateStructures`, not simply unused enum values. Retain all 26 as required behavior rows, with separate 2–6-day support. Do not require public picker entries for internal families if the same outcome is preserved.
+- All nine percentage schemes are referenced by 10 actual template definitions in the shell inventory; `modules/training-domain/prescriptions.js:235–267` invokes `percentageProtocolFor` via `pctSetsFor` and `percentagePlanFor`, with separate GZCLP history-based path, explicit user overrides and set-budget adaptation. `modules/program-training-maxes.js` exposes training-max review. Therefore all nine are mandatory, not presumed unused. Exact execution and matched fixture verification remain S2.
+- Current web duration options s20/s40/s60/s90/s120/s120p and experience choices none/beginner/intermediate/advanced have individual behavior rows. Actual Kotlin `CoachAthleteSetupDomain.kt:183` rejects days outside 3..6; admission of two-day requests is a confirmed source gap. Its three duration buckets and three experience choices are not the full web input surface.
+- Cycle presets powerbuilding, strength_peak, foundation, hypertrophy_spec and six explicit custom phases are mapped in the behavior inventory, including custom block count/length limits. Existing endless schedule/deload functionality is required; the future more intelligent Endless Plan is a separate optional enhancement.
+- Build 1016 set continuity, actual count in Info, machine discoverability and historic-machine association, Build 1011 physical machine/default changes and Build 1010 ULPPL/PPLUL practice are assigned to stable behavior rows. Historical UI draft PRs #443–448 are comparison inputs for the relevant work packages, not current integration tasks.
 
-## Catalog, shell and template inventory
-- [STAGE1_CATALOG_INVENTORY.json](STAGE1_CATALOG_INVENTORY.json): all 383 effective web engine IDs, 369 standard and 14 typed measured Kotlin source matches; zero absent IDs. Web source priority is curated first, then extended; duplicate ID and normalized name shadowing follows the actual web owner. 26 shadowed definitions recorded separately. Each row has a source location and S3 evidence profile. Matching identity is not reviewed physical semantics.
-- [STAGE1_WEB_SHELL_INVENTORY.json](STAGE1_WEB_SHELL_INVENTORY.json): 372 public shell identifiers, 346 direct canonical matches, 22 explicit web aliases, four normalized-name candidate matches, zero unresolved names. None of the four name fallbacks is accepted until physical meaning and preserved history identity are proven. Also 75 actual template configurations including all nine percentage schemes.
-- [STAGE1_BEHAVIOR_INVENTORY.md](STAGE1_BEHAVIOR_INVENTORY.md): 87 independent outcome rows (74 MAP, 12 GAP, one REVIEW), including both generated/custom paths, all eight declared phase policies, six web duration choices, four experience choices, and core UI. Source-level gaps are assigned to the relevant execution stage.
-- [STAGE1_FINDINGS.md](STAGE1_FINDINGS.md): stage-owned findings, evidence baseline and explicit remaining verification obligations.
-- [STAGE1_WEB_SOURCE_MAP.json](STAGE1_WEB_SOURCE_MAP.json): 144 source files assigned to child requirements; route-level App.js evidence was obtained using the full pinned blob, not the empty large-file contents result.
+## Inventory denominator v1 (not a completion percentage)
+| Required leaf inventory | Count |
+|---|---:|
+| Behavior work packages | 120 |
+| Progression styles and explicit additional progression contracts | 13 |
+| Split families | 26 |
+| Percentage schemes | 9 |
+| Effective exercise identities | 383 |
+| Shell compatibility identities | 372 |
+| Program templates | 75 |
+| Total acceptance work items | 998 |
 
-## Versioned inventory denominator
-| Lane | Count | What is counted |
-|---|---:|---|
-| Original mandatory requirements | 41 | E01–E41, retained unchanged |
-| Product capability groups | 14 | Cross-reference groups, not an additional pass denominator |
-| Detailed behavior | 87 | Child acceptance requirements |
-| Progression | 13 | Seven public styles plus six explicit baseline/cross-mode requirements |
-| Topology | 26 | 24 public SPLITS plus two additional automatic families |
-| Percentage protocols | 9 | All active in public templates |
-| Canonical exercise identities | 383 | 369 standard, 14 measured |
-| Web shell exercise references | 372 | Mapping/alias preservation, not additional unique exercises |
-| Template configurations | 75 | Distinct template outcomes |
-| Web source ownership | 144 | Source files mapped, not runtime acceptance cases |
+41 inherited E requirements and 14 product groups are parent rollups, not extra leaf items. 5 optional rows and 26 shadowed definitions are excluded from the required denominator. Rows overlap in real-world behavior; the denominator measures assigned acceptance work, not unique features or functional completion. An item may be accepted only with its relevant required evidence, including device where applicable. At this source inventory checkpoint no individual leaf has been promoted to fully accepted. Later stages can expand child fixtures or split a row with explicit versioned denominator changes. No stage can use inventory counts as parity percentage.
 
-These lanes overlap; do not sum them into a product completion percentage. Inventory coverage is different from functional acceptance. The new inventory has no row independently certified merely because its source or candidate fixture exists. Execution stages fill the per-row evidence from exact source/fixture SHAs and required results. Device-only cases remain S8.
-
-## S1 exit
-- Both source pins fixed; 41 inherited requirements, 14 groups and detailed source-backed child rows assigned. All declared topology families, progression styles, active percentage protocols, exact catalog and shell identities and template configurations have stable IDs and an owner, expected outcome and candidate fixture/evidence profile.
-- Existing tests are candidate evidence locations; do not label the test's entire requirement passed from name, suite success or an older pinned comparison. Review actual assertions and matched current-web executions as part of the owning stage (S2/S3/S4/S5/S6 and final S7), with the baseline evidence documented in STAGE1_FINDINGS.
-- Findings have explicit stage dispositions and a new-finding process in the master plan. No parity gap waived. Source-only S1 inventory validation must pass; both required CI suites must pass on the final integrated revision to record formal S1 acceptance. No APK.
+## Stage 1 exit review
+1. Pinned sources and exact Stage 0 CI evidence recorded above.
+2. All 41 inherited E requirements and all 14 capability groups have assigned outcomes, candidate evidence and stages.
+3. Effective catalog and shell/template source identities enumerated with exact counts, match type, evidence profile and dispositions for unresolved semantics.
+4. Every declared split and percentage scheme has a source-supported role and required acceptance scenario; no silent scope exclusions. Source gaps have assigned owners/stages.
+5. Detailed behavioral acceptance matrix and findings ledger established. Candidate test filenames checked against actual pinned Kotlin source/test/verification directories; representative basic progression assertions inspected and recorded. Executing and reviewing the full scenario corpus is S2–S8 work, not a reason to label a row accepted during inventory.
+6. Baseline inventory is ready for integrated review; Stage 1 is not formally accepted until this revision is merged and both required CI checks are verified. Future web changes enter the versioned findings ledger; mandatory existing functionality cannot be deferred by relabeling.

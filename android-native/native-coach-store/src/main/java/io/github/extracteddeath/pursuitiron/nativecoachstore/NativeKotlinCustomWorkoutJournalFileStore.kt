@@ -749,18 +749,38 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                         NativeCustomJournalRefusal.STALE_OR_INVALID_SET,
                         if(review==null)CustomWorkoutJournalRefusal.UNKNOWN_VISIT
                         else CustomWorkoutJournalRefusal.STALE_REVISION)
-                var saved:NativeCustomJournalResult.Durable=opened
+                if(review.entries.isEmpty())return@withOwnerTransaction opened
+                val ledger=history.open(ownerKey,current.athleteId)
+                if(ledger !is NativeHistoryLedgerResult.Durable ||
+                    !ledger.ledger.readyForHistoryReads)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.HISTORY_NOT_READY)
+                // Resolve every reviewed visit using the same ordinary receipt
+                // reducer, but do not publish a partially skipped exercise.
+                var draft=opened.issued.journal
                 for(visit in review.entries) {
-                    val result=record(ownerKey,workoutId,
-                        CustomWorkoutJournalOperation.Record(
-                            "skip-"+java.util.UUID.randomUUID(),
-                            saved.issued.journal.revision,visit,
-                            KotlinJournalSetOutcome.SKIPPED,null))
-                    if(result !is NativeCustomJournalResult.Durable)
-                        return@withOwnerTransaction result
-                    saved=result
+                    val operation=CustomWorkoutJournalOperation.Record(
+                        "skip-"+java.util.UUID.randomUUID(),draft.revision,visit,
+                        KotlinJournalSetOutcome.SKIPPED,null)
+                    when(val decision=CustomWorkoutJournalDomain.reduce(draft,operation)){
+                        is CustomWorkoutJournalDecision.Rejected->
+                            return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                                NativeCustomJournalRefusal.STALE_OR_INVALID_SET,decision.reason)
+                        is CustomWorkoutJournalDecision.Proposed->{
+                            if(decision.replayed)
+                                return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                                    NativeCustomJournalRefusal.STALE_OR_INVALID_SET,
+                                    CustomWorkoutJournalRefusal.EVENT_ID_COLLISION)
+                            draft=decision.draft
+                        }
+                    }
                 }
-                saved
+                if(owner(ownerKey)!=current)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.NOT_AUTHORIZED)
+                val saved=opened.issued.copy(journal=draft)
+                atomic(path(ownerKey,workoutId),encode(saved))
+                NativeCustomJournalResult.Durable(saved,false)
             }
         }.getOrElse{NativeCustomJournalResult.Rejected(
             NativeCustomJournalRefusal.STORAGE_UNAVAILABLE)}

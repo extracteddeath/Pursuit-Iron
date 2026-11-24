@@ -43,6 +43,16 @@ assert.match(screen,/presentation\.exercises\.forEachIndexed/);
 assert.match(screen,/if\(repeated\)" · #\$occurrenceNumber"/);
 assert.doesNotMatch(screen,/val workingSets=allSets\.filter\s*\{\s*it\.target\.exerciseId==exerciseId/);
 assert.match(screen,/priorLevelingScope!=currentLevelingScope/);
+// Exercise Info and Warm-up are scoped to the exact selected set's occurrence.
+assert.match(screen,/var infoSetKey by rememberSaveable\(workoutId\)/);
+assert.match(screen,/onInfo=selected\?\.target\?\.setKey\?\.let/);
+assert.match(screen,/infoSetKey=set\.target\.setKey/);
+assert.match(screen,/val toolTargets=selectedOccurrence\?\.sets\.orEmpty\(\)\.map/);
+assert.match(screen,/onWarmup=selected\?\.target\?\.setKey\?\.takeIf/);
+assert.match(screen,/infoSetKey\?\.let \{key ->\s*val occurrence=occurrenceBySetKey\[key\]\s*val targets=occurrence\?\.sets\.orEmpty\(\)\.map/);
+assert.match(screen,/key !in occurrenceBySetKey\.keys/);
+assert.match(screen,/Occurrence #\$occurrenceNumber/);
+assert.doesNotMatch(screen,/infoExerciseId/);
 assert.match(screen,/val multipleOccurrences=presentation\?\.exercises\.orEmpty\(\)\.count/);
 assert.match(screen,/onSwapExercise=if\(!infoWarmupsOnly && !multipleOccurrences/);
 assert.match(screen,/!multipleOccurrences &&\s*infoActions\.mayRequestSkipRemaining/);

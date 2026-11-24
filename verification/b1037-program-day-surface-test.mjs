@@ -57,4 +57,6 @@ assert.ok(!app.includes('_jsx(ChevronDown, { size: 20, color: C.muted, style: { 
 assert.ok(css.includes('.wpb-program-exercise .wpb-exercise-actions>button[aria-label^="How "]{order:-1;'), 'Progression leads the exercise tool line');
 assert.ok(app.includes('label: weekChipLabel(w)') && app.includes('className: "wpb-week-dots", "aria-hidden": true') &&
     app.includes('"aria-label": weekChipName(w)') && app.includes('days done` : ""}`'), 'Week chips show and announce how many days are logged');
+assert.ok(app.includes('"aria-description": w.total ? `${w.done} of ${w.total} sessions done` : undefined') &&
+    app.includes('k < w.done ? "true" : undefined'), 'Plan week chips carry the same session dots');
 console.log('PASS B1037 program day: one surface with divided exercise rows, compact chips, plain Day focus and shared actions.');

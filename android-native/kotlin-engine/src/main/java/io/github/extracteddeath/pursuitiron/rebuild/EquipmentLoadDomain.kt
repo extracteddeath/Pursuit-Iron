@@ -24,6 +24,18 @@ enum class LoadBasis {
      * to preserve historical enum ordinal / serialized value compatibility. */
     ASSISTANCE_COUNTERWEIGHT;
 
+    /** A larger displayed number is harder only for external resistance.
+     * A counterweight offsets body mass; no unit-level conversion is implied. */
+    val higherSettingIncreasesDifficulty:Boolean
+        get()=this!=ASSISTANCE_COUNTERWEIGHT
+
+    /** Positive = harder; negative = easier; zero = same numeric setting.
+     * Compare only within the SAME independently verified implement and unit.
+     * This is direction, not authorization, calibration or load validation. */
+    fun compareDifficulty(candidate:BigDecimal,baseline:BigDecimal):Int =
+        if(higherSettingIncreasesDifficulty)candidate.compareTo(baseline)
+        else baseline.compareTo(candidate)
+
     /** Physical free bars count even when the logged convention excludes bar mass. */
     val countsTowardBarbellLimit:Boolean
         get()=this==BARBELL_TOTAL || this==LANDMINE_ADDED_PLATES
@@ -110,7 +122,12 @@ sealed interface LoadInspection {
         val atOrBelow: BigDecimal?,
         val nextAbove: BigDecimal?,
         val nextBelow: BigDecimal?
-    ) : LoadInspection
+    ) : LoadInspection {
+        val nextHarder:BigDecimal?
+            get()=if(basis.higherSettingIncreasesDifficulty)nextAbove else nextBelow
+        val nextEasier:BigDecimal?
+            get()=if(basis.higherSettingIncreasesDifficulty)nextBelow else nextAbove
+    }
 }
 
 object EquipmentLoadDomain {

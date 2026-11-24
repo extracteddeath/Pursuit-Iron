@@ -772,6 +772,20 @@ async function verifyBrowseMemory(browser,theme,width){
     assert.equal(await page.$eval('input[aria-label="Search your lifts"]',input=>input.value),'curl');
     assert.equal(await page.$$eval('.wpb-progress button.opt',buttons=>buttons.length),1,'The restored lift query retains its matching row');
     await clickText('Records','[data-lift-pane]');await assertScroll(recordsScroll,'Records returns to its own scroll position');
+    // B1036: a section whose content renders after the restore (idle insights, a slow device) still
+    // returns to its remembered offset; the clamped interim position must not overwrite it.
+    if(recordsScroll>8){
+      await clickText('Exercises','[data-lift-pane]');await assertScroll(0,'Exercises starts at its own top');
+      await page.evaluate(()=>{
+        const style=document.createElement('style');style.id='b1036-late-content';
+        style.textContent='[data-view-frame] .wpb-page-scroll .wpb-progress-lift-panes~*{display:none!important}';
+        document.head.appendChild(style);
+        [...document.querySelectorAll('[data-lift-pane]')].find(b=>b.dataset.liftPane==='records').click();
+        setTimeout(()=>style.remove(),300);
+      });
+      await new Promise(resolve=>setTimeout(resolve,700));
+      await assertScroll(recordsScroll,'Records restores its offset once late content arrives');
+    }
     await clickText('Strength','.wpb-premium-tabs button');await assertScroll(strengthScroll,'Strength restores its own exact scroll position');
     await clickText('Body','.wpb-premium-tabs button');await assertScroll(0,'Body does not inherit the Strength offset');
     await clickText('Sessions','.wpb-premium-tabs button');await assertScroll(sessionsScroll,'Switching sections restores Sessions exactly');

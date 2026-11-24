@@ -181,7 +181,13 @@ private object NativeJournalBinary {
             }
         }
         val payload=body.toByteArray()
-        require(payload.size<=MAX_BYTES-36)
+        val remaining=if(saved.finishId!=null)null else {
+            val observed=saved.receipts.mapNotNull{
+                (it.operation as? KotlinJournalOperation.RecordSet)?.setKey
+            }.toHashSet()
+            saved.snapshot.targets.count{it.setKey !in observed}
+        }
+        NativeWorkoutJournalByteBudget.requireFits(payload.size+36,MAX_BYTES,remaining)
         val digest=MessageDigest.getInstance("SHA-256").digest(payload)
         return ByteArrayOutputStream().also { bytes ->
             DataOutputStream(bytes).use { out ->
@@ -510,6 +516,16 @@ class KotlinNativeJournalFileStore(private val privateDirectory: Path) {
         }
     }
 
+    /** The exact same envelope is used by the writer and by Finish admission. */
+    private fun encodedProposal(ownerKey:String,state:KotlinWorkoutJournalState):ByteArray =
+        NativeJournalBinary.encode(SavedReceipts(ownerKey,
+            NativeJournalBinary.snapshotHash(state.originalSnapshot),
+            state.snapshot,state.storedIdentity,state.receipts,state.revision,
+            state.finishedByEventId,state.originalSnapshot))
+
+    internal fun canEncodeProposal(ownerKey:String,state:KotlinWorkoutJournalState):Boolean =
+        runCatching{encodedProposal(ownerKey,state)}.isSuccess
+
     /**
      * Append from an authenticated cold-open without receiving caller-made
      * targets, thereby avoiding any source/target drift at the UI boundary.
@@ -540,13 +556,7 @@ class KotlinNativeJournalFileStore(private val privateDirectory: Path) {
                         NativeJournalFileRefusal.JOURNAL_REJECTED,decision.reason)
                 decision as KotlinJournalDecision.Proposed
                 if(!decision.replayed) {
-                    val next=decision.state
-                    val source=next.snapshot
-                    val envelope=SavedReceipts(ownerKey,
-                        NativeJournalBinary.snapshotHash(next.originalSnapshot),
-                        source,next.storedIdentity,next.receipts,next.revision,
-                        next.finishedByEventId,next.originalSnapshot)
-                    atomicWrite(file,NativeJournalBinary.encode(envelope))
+                    atomicWrite(file,encodedProposal(ownerKey,decision.state))
                 }
                 NativeJournalFileResult.Durable(decision.state,decision.replayed)
             }

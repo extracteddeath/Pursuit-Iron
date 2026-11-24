@@ -127,6 +127,76 @@ class CustomWorkoutJournalDomainTest {
                 CustomWorkoutJournalOperation.SessionNote("after-finish",4,"no")))
     }
 
+    @Test fun myoSummaryShowsPerformedActivationWeightAndRejectsDropLikeMinis() {
+        val load=DraftSetLoad.Verified(LoadUnit.LB,
+            LoadBasis.CABLE_STACK,BigDecimal("50"))
+        val planned=makeSet(load=load,amplifier=CustomSetAmplifier(
+            CustomAmplifierKind.MYO_REPS,4,20,followUpRounds=3))
+        val start=initial(planned)
+        val set=start.snapshot.slots.single().sets.single()
+        val waiting=CustomAmplifierSetSummaryDomain.review(start,set)!!
+        assertTrue(waiting.planned.contains("same activation load"))
+        assertNull(waiting.actuals)
+        val main=accept(start,record("actual-activation",0,
+            performed=KotlinPerformedSet(BigDecimal("47.50"),
+                LoadUnit.LB,13,1)))
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.INVALID_ACTUAL),
+            CustomWorkoutJournalDomain.reduce(main,record("not-a-myo-drop",1,
+                CustomWorkoutVisitPart.FOLLOW_UP,
+                performed=KotlinPerformedSet(BigDecimal("30"),
+                    LoadUnit.LB,4,1))))
+        var current=main
+        for(stage in 1..3) {
+            val actual=KotlinPerformedSet(
+                BigDecimal(if(stage==2)"47.500" else "47.5"),
+                LoadUnit.LB,4,null)
+            val entry=record("mini-$stage",current.revision,
+                CustomWorkoutVisitPart.FOLLOW_UP,performed=actual)
+                .copy(visit=CustomWorkoutVisitKey(first,
+                    CustomWorkoutVisitPart.FOLLOW_UP,stage))
+            current=accept(current,entry)
+            val visible=CustomAmplifierSetSummaryDomain.review(current,set)!!
+            assertTrue(visible.actuals!!.contains("at 47.5 lb:"))
+            assertFalse(visible.actuals!!.contains("30 lb"))
+            assertEquals(stage,current.effectiveVisits.keys.count{
+                it.part==CustomWorkoutVisitPart.FOLLOW_UP
+            })
+        }
+        val final=CustomAmplifierSetSummaryDomain.review(current,set)!!
+        assertEquals("Performed mini-sets at 47.5 lb: 4 + 4 + 4 reps",
+            final.actuals)
+        assertTrue(final.progress.contains("Complete"))
+        assertTrue(current.canProposeFinish)
+        // The display is read-only and the earlier invalid attempt never
+        // creates a logged receipt or changes the issued set.
+        assertEquals(4,current.receipts.size)
+        assertEquals(load,set.prescription.load)
+
+        // A corrupted view-only cache is not authoritative. If it carries
+        // a forged 30 lb mini after a real 47.5 lb activation, the summary
+        // must flag the disagreement instead of hiding it behind rep totals.
+        val secondKey=CustomWorkoutVisitKey(first,
+            CustomWorkoutVisitPart.FOLLOW_UP,2)
+        val originalReceipt=current.effectiveVisits.getValue(secondKey)
+        val originalOperation=originalReceipt.operation as
+            CustomWorkoutJournalOperation.Record
+        val tamperedReceipt=originalReceipt.copy(
+            operation=originalOperation.copy(
+                performed=KotlinPerformedSet(
+                    BigDecimal("30"),LoadUnit.LB,4,null)))
+        val untrusted=current.copy(effectiveVisits=
+            current.effectiveVisits+(secondKey to tamperedReceipt))
+        val untrustedSummary=CustomAmplifierSetSummaryDomain.review(
+            untrusted,set)!!
+        assertEquals(
+            "Follow-up load/station mismatch · review recorded technique",
+            untrustedSummary.actuals)
+        assertTrue(untrustedSummary.progress.contains("mismatch"))
+        assertFalse(untrustedSummary.progress.contains("Complete"))
+        assertEquals(4,current.receipts.size)
+    }
+
     @Test fun mainAndFollowupHaveSeparateFactsAndFinishNeverAssumesAmplifier() {
         val initial=initial()
         assertEquals(1,initial.unresolvedVisitCount)

@@ -80,7 +80,13 @@ internal fun NativeRecoveryRecipePanel(
                 }
                 Text("Saving adds this week to the draft and requires renewed program approval. Issued workouts and recorded history are unchanged.",
                     style=MaterialTheme.typography.bodySmall)
-                Button(onClick={controller.acceptRecoveryRecipe(true)},enabled=ready && !busy,
+                var confirmed by remember(reviewed){mutableStateOf(false)}
+                Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+                    Checkbox(checked=confirmed,onCheckedChange={confirmed=it},enabled=!busy)
+                    Text("I reviewed this recovery week",style=MaterialTheme.typography.bodyMedium)
+                }
+                Button(onClick={controller.acceptRecoveryRecipe(confirmed)},
+                    enabled=ready && !busy && confirmed,
                     modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {Text("Save reviewed recovery week")}
             }
         }

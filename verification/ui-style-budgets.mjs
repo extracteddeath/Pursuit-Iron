@@ -10,6 +10,6 @@ export const uiStyleBudget=Object.freeze({
   b1011CssCharacters:8577,
   b1012CssCharacters:4715,
   b1026CssCharacters:3836,
-  b1027CssCharacters:3134,
+  b1027CssCharacters:3512,
   b1028CssCharacters:8802
 });

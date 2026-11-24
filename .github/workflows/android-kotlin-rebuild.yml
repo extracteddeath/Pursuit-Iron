@@ -188,6 +188,19 @@ jobs:
             android-native/kotlin-engine/build/reports/stage2-current-percentage.json
             android-native/kotlin-engine/build/reports/stage2-current-percentage-native.txt
           if-no-files-found: warn
+      - name: Compare current web and Kotlin tiered progression replay
+        run: >-
+          node android-native/kotlin-engine/verification/run-stage2-tiered-comparison.mjs
+          --web-root comparison-current-web
+      - name: Retain current tiered comparison evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage2-current-tiered-comparison
+          path: |
+            android-native/kotlin-engine/build/reports/stage2-current-tiered.json
+            android-native/kotlin-engine/build/reports/stage2-current-tiered-native.txt
+          if-no-files-found: warn
       - name: Test isolated native journal persistence and offline crash recovery
         working-directory: android-native
         run: gradle :native-coach-store:testDebugUnitTest --no-daemon --stacktrace

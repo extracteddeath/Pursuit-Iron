@@ -30,8 +30,29 @@ object CustomTieredJournalEvidenceDomain {
         slotId: String,
         tier: PercentageTier
     ): CustomTieredJournalResult {
+        val evidence = (CustomWorkoutHistoryEvidenceDomain.project(journal)
+            as? CustomHistoryEvidenceResult.Candidate)?.evidence
+            ?: return CustomTieredJournalResult.Refused(CustomTieredJournalRefusal.UNVERIFIED_JOURNAL)
+        return projectVerifiedFacts(journal.originalSnapshot, journal.snapshot,
+            journal.workoutId, evidence, completionOrder, scope, slotId, tier)
+    }
+
+    /**
+     * Shared structural adapter for the native owner-fenced mixed-history
+     * reader, including saved corrections. This function alone cannot
+     * authenticate facts or prove a complete ledger.
+     */
+    fun projectVerifiedFacts(
+        original: CustomWorkoutDaySnapshot,
+        effective: CustomWorkoutDaySnapshot,
+        workoutId: String,
+        evidence: CustomWorkoutHistoricalEvidence,
+        completionOrder: Long,
+        scope: BasicProgressionScope,
+        slotId: String,
+        tier: PercentageTier
+    ): CustomTieredJournalResult {
         fun no(reason: CustomTieredJournalRefusal) = CustomTieredJournalResult.Refused(reason)
-        val original = journal.originalSnapshot
         if (!scope.valid() || completionOrder <= 0 || slotId.isBlank() ||
             original.stamp.athleteId != scope.athleteId ||
             original.stamp.cycleId != scope.programId ||
@@ -39,11 +60,15 @@ object CustomTieredJournalEvidenceDomain {
             original.blockId != scope.blockId ||
             original.blockId + ":d" + original.weekday != scope.trainingDayId)
             return no(CustomTieredJournalRefusal.INVALID_SCOPE)
-        val evidence = (CustomWorkoutHistoryEvidenceDomain.project(journal)
-            as? CustomHistoryEvidenceResult.Candidate)?.evidence
-            ?: return no(CustomTieredJournalRefusal.UNVERIFIED_JOURNAL)
-        if (journal.snapshot != original || original.prescriptionEditedForTime ||
-            original.shortSessionLimitMinutes != null)
+        if (workoutId.isBlank() || evidence.workoutId != workoutId ||
+            evidence.athleteId != original.stamp.athleteId ||
+            evidence.cycleId != original.stamp.cycleId ||
+            evidence.cycleRevision != original.stamp.cycleRevision ||
+            evidence.finishedEventId.isBlank() || evidence.journalRevision <= 0)
+            return no(CustomTieredJournalRefusal.UNVERIFIED_JOURNAL)
+        if (effective != original || original.prescriptionEditedForTime ||
+            original.shortSessionLimitMinutes != null ||
+            evidence.prescriptionEditedForTime || evidence.shortSessionLimitMinutes != null)
             return no(CustomTieredJournalRefusal.CHANGED_OR_SHORTENED_SESSION)
         val slot = original.slots.singleOrNull { it.slotId == slotId }
             ?: return no(CustomTieredJournalRefusal.INVALID_SCOPE)
@@ -110,7 +135,7 @@ object CustomTieredJournalEvidenceDomain {
                 actual.load, actual.reps, actual.actualRir, load.value, prescription.targetRir)
         }
         return CustomTieredJournalResult.Candidate(TieredLinearExposure(
-            journal.workoutId, completionOrder, scope, tier, stage,
+            workoutId, completionOrder, scope, tier, stage,
             Collections.unmodifiableList(targets), Collections.unmodifiableList(observations),
             true, slotId))
     }

@@ -129,7 +129,7 @@ class CustomWorkoutJournalDomainTest {
 
     @Test fun myoSummaryShowsPerformedActivationWeightAndRejectsDropLikeMinis() {
         val load=DraftSetLoad.Verified(LoadUnit.LB,
-            LoadBasis.CABLE_STACK,BigDecimal("47.5"))
+            LoadBasis.CABLE_STACK,BigDecimal("50"))
         val planned=makeSet(load=load,amplifier=CustomSetAmplifier(
             CustomAmplifierKind.MYO_REPS,4,20,followUpRounds=3))
         val start=initial(planned)

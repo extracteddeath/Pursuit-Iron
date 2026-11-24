@@ -37,6 +37,37 @@ object CustomTieredJournalEvidenceDomain {
             journal.workoutId, evidence, completionOrder, scope, slotId, tier)
     }
 
+    /** Do not skip another station based only on an authored machine label.
+     * Reuse the complete factual station authority used by ordinary coaching.
+     * An unbound, swapped, partial or mixed-station exposure is not proof. */
+    fun isVerifiedOtherStation(
+        original: CustomWorkoutDaySnapshot,
+        effective: CustomWorkoutDaySnapshot,
+        evidence: CustomWorkoutHistoricalEvidence,
+        completionOrder: Long,
+        scope: BasicProgressionScope,
+        slotId: String
+    ): Boolean {
+        val requested = scope.machineInstanceId ?: return false
+        if (!scope.valid() || completionOrder <= 0 || original != effective ||
+            original.prescriptionEditedForTime || original.shortSessionLimitMinutes != null ||
+            evidence.prescriptionEditedForTime || evidence.shortSessionLimitMinutes != null ||
+            original.stamp.athleteId != scope.athleteId ||
+            original.stamp.cycleId != scope.programId ||
+            original.stamp.gymId != scope.gymId ||
+            original.blockId != scope.blockId ||
+            original.blockId + ":d" + original.weekday != scope.trainingDayId)
+            return false
+        val slot = original.slots.singleOrNull { it.slotId == slotId } ?: return false
+        val authored = slot.machineInstanceId ?: return false
+        if (slot.exerciseId != scope.exerciseId ||
+            !KotlinMachineAlternativesDomain.validInstanceId(authored) ||
+            authored == requested) return false
+        return CustomVerifiedSwappedStationEvidenceDomain.machinesForVerifiedSlot(
+            CustomCoachingHistoricalSession(completionOrder, original, evidence), slotId)
+            ?.singleOrNull() == KotlinMachineAlternativesDomain.normalizeMachineId(authored)
+    }
+
     /**
      * Shared structural adapter for the native owner-fenced mixed-history
      * reader, including saved corrections. This function alone cannot

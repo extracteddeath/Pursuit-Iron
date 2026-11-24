@@ -971,7 +971,7 @@
       "scope": "required",
       "webSource": "modules/program-code.js",
       "candidateFixtures": [
-        "NativeKotlinCustomCycleDraftFileStoreTest",
+        "NativeCustomCycleDraftFileStoreTest",
         "NativeKotlinCleanStoreRestoreTest"
       ],
       "acceptance": "Program code/file/shared template import review, validate unsupported data, avoid duplicates, no automatic application.",

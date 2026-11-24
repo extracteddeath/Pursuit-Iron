@@ -192,6 +192,22 @@ object BasicProgramProgressionPlanDomain {
             }
             val authored=sourceWeekOverrides.map {it.weekInBlock}.toSet()
             val amplifier=working.any {it.amplifier!=null}
+            // A named percentage set must never fall through to straight
+            // double progression just because its current weights are equal.
+            // Even a named override on a base ordinary slot retains ownership.
+            val hasNamedProtocol=slot.sets.any{it.percentageIntent!=null} ||
+                sourceWeekOverrides.any{edit->edit.sets.any{it.percentageIntent!=null}}
+            if(hasNamedProtocol) {
+                if(key in selectedPerSetDynamic || key in selectedStrategies ||
+                    key in selectedStyles)
+                    return no("Named percentage prescriptions require their dedicated reviewed progression path.")
+                assignments+=ProgramProgressionAssignment(
+                    key,slot.exerciseId,ProgramProgressionRoute.SPECIAL_LOAD_SCHEME,null,
+                    working.size,amplifier,Collections.unmodifiableSet(authored),
+                    "Named percentage protocol owns the prescription; no basic weight or rep override.",
+                    null,slot.progressionMethod)
+                continue
+            }
             val saved=slot.progressionMethod
             if(saved!=null && (key in selectedPerSetDynamic ||
                 key in selectedStrategies || key in selectedStyles))

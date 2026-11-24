@@ -191,6 +191,20 @@ object KotlinProgressionTimelineDomain {
             }.mapNotNull {it.actual}.map {
                 KotlinMachineAlternativesDomain.normalizeMachineId(it.machineInstanceId)
             }.toSet()
+        // A partial B exposure does not prove every working set belonged to
+        // B. As in the custom progression reader, only a fully completed,
+        // physically attributed other-station exposure can be ignored.
+        // Same-station failed/skipped work remains in the comparison and
+        // is evaluated by the ordinary progression gate below.
+        fun verifiedOtherStation(history:KotlinWorkoutHistoryEvidence):Boolean {
+            val working=history.sets.filter {
+                it.exerciseId==request.exerciseId && it.type==DraftSetType.WORKING
+            }
+            return working.isNotEmpty() && working.all {
+                KotlinSetNumberAuthorityDomain.completedPhysicalStation(
+                    it.issuedLoad,it.outcome,it.actual)!=null
+            }
+        }
         val newestMachineIds=dayApplicable.lastOrNull()?.second?.let(::physicalMachines)
             .orEmpty()
         if(newestMachineIds.size>1 && request.requestedMachineInstanceId==null)
@@ -225,7 +239,8 @@ object KotlinProgressionTimelineDomain {
             else physicalMachines(history).let {
                 it.isEmpty() || it.size>1 ||
                     (machineId!=KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID &&
-                        KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID in it)
+                        KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID in it) ||
+                    (it!=setOf(machineId) && !verifiedOtherStation(history))
             }
         }
         if(interveningUnknownMachine)

@@ -41,17 +41,9 @@ internal object CustomVerifiedSwappedStationEvidenceDomain {
         for (slot in slots) for (set in slot.sets) {
             if (set.prescription.type != DraftSetType.WORKING) continue
             val fact = byKey[set.setKey] ?: return null
-            val target = set.prescription
-            val issued = target.load as? DraftSetLoad.Verified ?: return null
-            val actual = fact.actual ?: return null
-            val machine = actual.machineInstanceId ?: return null
-            if (!fact.matchesIssuedMain(slot, set) ||
-                fact.outcome != KotlinJournalSetOutcome.COMPLETED ||
-                actual.load == null || actual.unit != issued.unit ||
-                !KotlinMachineAlternativesDomain.validInstanceId(machine) ||
-                !CustomWorkoutJournalDomain.actualValid(
-                    target.load, fact.outcome, actual))
-                return null
+            if (!fact.matchesIssuedMain(slot, set)) return null
+            val machine = KotlinSetNumberAuthorityDomain.completedPhysicalStation(
+                set.prescription.load,fact.outcome,fact.actual) ?: return null
             stations.add(machine)
         }
         return stations.takeIf { it.isNotEmpty() }

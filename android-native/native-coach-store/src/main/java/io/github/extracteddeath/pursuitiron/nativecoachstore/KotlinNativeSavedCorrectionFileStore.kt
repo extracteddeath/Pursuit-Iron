@@ -447,6 +447,23 @@ class KotlinNativeSavedCorrectionFileStore(
         }
     }
 
+    /** The same complete envelope is checked before reserving a history
+     * intent and before publishing the correction receipt. No storage writes. */
+    private fun encodedProposal(ownerKey:String,workoutId:String,
+        state:KotlinSavedHistoryCorrectionState):ByteArray {
+        val envelope=SavedCorrectionEnvelope(ownerKey,workoutId,
+            SavedCorrectionBinary.originalFingerprint(state.originalFinishedJournal,
+                SavedCorrectionBinary.CURRENT_VERSION),
+            state.correctionRevision,state.receipts,SavedCorrectionBinary.CURRENT_VERSION)
+        val bytes=SavedCorrectionBinary.encode(envelope)
+        require(SavedCorrectionBinary.decode(bytes)==envelope)
+        return bytes
+    }
+
+    internal fun canEncodeProposal(ownerKey:String,workoutId:String,
+        state:KotlinSavedHistoryCorrectionState):Boolean =
+        runCatching{encodedProposal(ownerKey,workoutId,state)}.isSuccess
+
     fun appendStored(
         ownerKey: String, workoutId: String, correction: KotlinSavedSetCorrection,
         authorizeIssued: (String, KotlinTrainingSourceRevision) -> Boolean
@@ -467,14 +484,7 @@ class KotlinNativeSavedCorrectionFileStore(
                         NativeSavedCorrectionRefusal.CORRECTION_REJECTED, reason)
                 }
                 if (!next.replayed) {
-                    val envelope = SavedCorrectionEnvelope(
-                        ownerKey, workoutId,
-                        SavedCorrectionBinary.originalFingerprint(
-                            existing.state.originalFinishedJournal,
-                            SavedCorrectionBinary.CURRENT_VERSION),
-                        next.state.correctionRevision,next.state.receipts,
-                        SavedCorrectionBinary.CURRENT_VERSION)
-                    atomicReplace(file, SavedCorrectionBinary.encode(envelope))
+                    atomicReplace(file,encodedProposal(ownerKey,workoutId,next.state))
                 }
                 NativeSavedCorrectionFileResult.Durable(next.state, next.replayed)
             }

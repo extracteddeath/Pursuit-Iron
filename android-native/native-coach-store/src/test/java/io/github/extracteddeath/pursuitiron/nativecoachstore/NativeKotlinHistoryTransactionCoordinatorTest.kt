@@ -146,6 +146,33 @@ class NativeKotlinHistoryTransactionCoordinatorTest {
         assertEquals(before,manifest().ledger)
     }
 
+    @Test fun correctionEncodingPreflightChecksTheWholeReceiptFileWithoutWriting() {
+        enroll()
+        issueResolved(1,"machine-B")
+        finished(1)
+        val original=(corrections().openStored("owner-1","workout-1",::ownedJournal)
+            as NativeSavedCorrectionFileResult.Opened).state
+        val ordinary=edit(1).copy(actual=KotlinPerformedSet(
+            BigDecimal("200.00"),LoadUnit.LB,5,1,"machine-B"))
+        val proposed=(KotlinSavedHistoryCorrectionDomain.reduce(original,ordinary)
+            as KotlinSavedCorrectionDecision.Proposed).state
+        assertTrue(corrections().canEncodeProposal("owner-1","workout-1",proposed))
+        // Every individual number is representable as UTF, but the
+        // complete five-receipt envelope exceeds the file byte budget.
+        val longActual=ordinary.actual!!.copy(load=BigDecimal("200").setScale(60000))
+        val receipts=List(5){i->KotlinSavedSetCorrectionReceipt(i.toLong()+1,
+            ordinary.copy(eventId="large-$i",expectedCorrectionRevision=i.toLong(),
+                correctsEventId=if(i==0)"event-1-1" else "large-"+(i-1),actual=longActual))}
+        val oversized=proposed.copy(correctionRevision=5,receipts=receipts)
+        assertFalse(corrections().canEncodeProposal("owner-1","workout-1",oversized))
+        assertTrue(manifest().ledger.readyForHistoryReads)
+        assertEquals(original,(corrections().openStored("owner-1","workout-1",::ownedJournal)
+            as NativeSavedCorrectionFileResult.Opened).state)
+        assertEquals(1L,accepted(coordinator().correct(
+            "owner-1","athlete-1","workout-1",ordinary))
+            .manifest.completions.single().savedCorrectionRevision)
+    }
+
     @Test fun generatedCorrectionCannotReserveAnotherJournalKindsHistory() {
         val entries=listOf(
             KotlinHistoryManifestEntry(1,"workout-1","custom-v2-"+"a".repeat(64),"finish-1",3,0),

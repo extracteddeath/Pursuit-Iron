@@ -172,8 +172,8 @@ object CoachSessionPrescriptionDomain {
         val eq=option.equipment as? ComposerEquipment.Verified ?:return null
         if(workingValue<=zero)return null
         val result=EquipmentLoadDomain.inspect(eq.inventory,
-            workingValue,eq.unit)
-        val lower=(result as? LoadInspection.Confirmed)?.nextEasier ?:return null
+            workingValue,eq.unit) as? LoadInspection.Confirmed ?:return null
+        val lower=result.nextEasier ?:return null
         if(!KotlinSetNumberAuthorityDomain.validPrescribedLoad(
                 lower,eq.inventory?.basis ?:return null) ||
             result.basis.compareDifficulty(lower,workingValue)>=0 ||

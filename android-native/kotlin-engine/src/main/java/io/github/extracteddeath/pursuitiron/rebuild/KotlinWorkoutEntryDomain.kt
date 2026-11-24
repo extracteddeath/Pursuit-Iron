@@ -45,7 +45,10 @@ object KotlinWorkoutEntryDomain {
         repsText:String,
         actualRirText:String,
         failed:Boolean=false
-    ):KotlinSetEntryResult = parse(target.load,weightText,repsText,actualRirText,failed)
+    ):KotlinSetEntryResult =
+        if(!KotlinSetNumberAuthorityDomain.validIssuedRepBand(target.reps))
+            KotlinSetEntryResult.Rejected(KotlinSetEntryRefusal.INVALID_REPS)
+        else parse(target.load,weightText,repsText,actualRirText,failed)
 
     /** Custom main/follow-up visits use the same bounded actual-entry policy. */
     fun parse(

@@ -259,6 +259,18 @@ object CustomWorkoutJournalDomain {
                             })
                             return CustomWorkoutJournalDecision.Rejected(
                                 CustomWorkoutJournalRefusal.INVALID_CORRECTION)
+                        val recorded = nextEffective.keys.filter {
+                            it.setKey == target.setKey && it.part == CustomWorkoutVisitPart.FOLLOW_UP
+                        }
+                        // Even a skipped drop must remain a reachable visit
+                        // while the corrected activation is completed.
+                        if (operation.outcome == KotlinJournalSetOutcome.COMPLETED &&
+                            recorded.isNotEmpty() &&
+                            !CustomWorkoutExecutionDomain.preservesRecordedFollowUps(
+                                target, operation, recorded, finished = false) { key ->
+                                nextEffective[key]?.operation as? CustomWorkoutJournalOperation.Record
+                            }) return CustomWorkoutJournalDecision.Rejected(
+                                CustomWorkoutJournalRefusal.INVALID_CORRECTION)
                         target.prescription.load
                     }
                     CustomWorkoutVisitPart.FOLLOW_UP -> {

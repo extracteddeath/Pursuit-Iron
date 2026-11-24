@@ -102,7 +102,18 @@ object CustomWorkoutSnapshotDomain {
         sourceRevision: Long,
         absoluteWeek: Int,
         weekday: Int
-    ): CustomWorkoutSnapshotResult {
+    ): CustomWorkoutSnapshotResult =
+        previewInternal(cycle,setup,catalog,sourceRevision,absoluteWeek,weekday,null)
+
+    private fun previewInternal(
+        cycle:CustomTrainingCycle,
+        setup:AthleteSetupReview,
+        catalog:List<CatalogMovement>,
+        sourceRevision:Long,
+        absoluteWeek:Int,
+        weekday:Int,
+        namedReview:CustomCycleReview?
+    ):CustomWorkoutSnapshotResult {
         val athlete=setup.reviewed?.takeIf {
             setup.status==AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW
         } ?:return CustomWorkoutSnapshotResult.Rejected(
@@ -126,9 +137,11 @@ object CustomWorkoutSnapshotDomain {
             return CustomWorkoutSnapshotResult.Rejected(
                 CustomWorkoutSnapshotRefusal.UNVERIFIED_CATALOG)
         val options=CustomExerciseAuthoringDomain.picker(setup,catalog)
-        val review=CustomTrainingCycleDomain.review(
+        // A named review can only originate from the private caller below
+        // after recomputing the complete named numerical and coach audit.
+        val review=namedReview ?:CustomTrainingCycleDomain.review(
             cycle,options.map{it.availability})
-        if(review.verifiedDraft==null ||
+        if(review.verifiedDraft!=cycle ||
             review.status!=CustomCycleReviewStatus.READY_FOR_COACH_REVIEW)
             return CustomWorkoutSnapshotResult.Rejected(
                 CustomWorkoutSnapshotRefusal.INVALID_CYCLE)
@@ -256,6 +269,47 @@ object CustomWorkoutSnapshotDomain {
                 CustomWorkoutSnapshotRefusal.COACHING_REVIEW_REQUIRED)
         return day.copy(snapshot=day.snapshot.copy(
             declaredNonSetSeconds=overhead))
+    }
+
+    /**
+     * Dedicated read-only specialist session projection. Recomputes the
+     * WHOLE exact named numerical/coach audit using separately reviewed
+     * evidence; callers cannot inject an already-approved structural review.
+     * The ordinary preview and reviewForConsent remain unchanged in authority.
+     * Native preparation/issuance must independently authenticate the durable
+     * consent and physical station, protect selected weeks and workout IDs.
+     */
+    fun reviewNamedForConsent(
+        cycle:CustomTrainingCycle,
+        setup:AthleteSetupReview,
+        catalog:List<CatalogMovement>,
+        sourceRevision:Long,
+        inputs:CustomCoachAuditInputs,
+        evidence:List<CustomNamedPercentageWeekEvidence>,
+        absoluteWeek:Int,
+        weekday:Int
+    ):CustomWorkoutSnapshotResult {
+        val athlete=setup.reviewed
+            ?:return CustomWorkoutSnapshotResult.Rejected(
+                CustomWorkoutSnapshotRefusal.UNREVIEWED_ATHLETE)
+        if(evidence.isEmpty())return CustomWorkoutSnapshotResult.Rejected(
+            CustomWorkoutSnapshotRefusal.COACHING_REVIEW_REQUIRED)
+        val stamp=CustomWorkoutSourceStamp(athlete.athleteProfileId,athlete.profileRevision,
+            cycle.cycleId,cycle.revision,athlete.gym.gymId,sourceRevision)
+        val audit=CustomCycleCoachAuditDomain.reviewNamedForReview(
+            cycle,setup,catalog,inputs,stamp,evidence)
+        val structural=audit.structuralReview
+        if(audit.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW ||
+            audit.issues.isNotEmpty() || audit.auditedCycleRevision!=cycle.revision ||
+            structural?.verifiedDraft!=cycle)
+            return CustomWorkoutSnapshotResult.Rejected(
+                CustomWorkoutSnapshotRefusal.COACHING_REVIEW_REQUIRED)
+        val result=previewInternal(cycle,setup,catalog,sourceRevision,absoluteWeek,weekday,structural)
+        if(result !is CustomWorkoutSnapshotResult.Preview)return result
+        val overhead=inputs.nonSetSecondsByWeekday[weekday]
+            ?:return CustomWorkoutSnapshotResult.Rejected(
+                CustomWorkoutSnapshotRefusal.COACHING_REVIEW_REQUIRED)
+        return result.copy(snapshot=result.snapshot.copy(declaredNonSetSeconds=overhead))
     }
 
     /**

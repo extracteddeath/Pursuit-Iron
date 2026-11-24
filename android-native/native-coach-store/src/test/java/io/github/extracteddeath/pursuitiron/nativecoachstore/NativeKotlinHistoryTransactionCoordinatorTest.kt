@@ -86,6 +86,66 @@ class NativeKotlinHistoryTransactionCoordinatorTest {
             "workout-$id", finish(id))).manifest.completions.size)
     }
 
+    private fun ledgerFormat():Int {
+        val file=Files.list(root).use { stream ->
+            stream.filter { it.fileName.toString().startsWith("history-") &&
+                it.fileName.toString().endsWith(".bin") }.toList().single()
+        }
+        return java.nio.ByteBuffer.wrap(Files.readAllBytes(file)).getInt(8)
+    }
+
+    @Test fun exactCorrectionIntentSurvivesColdReopenForGeneratedAndCustomHistory() {
+        val generated=KotlinHistoryManifestEntry(1,"workout-1","storage-1","finish-1",3,0)
+        val custom=KotlinHistoryManifestEntry(2,"workout-2","custom-v2-"+"a".repeat(64),"finish-2",3,0)
+        val measured=KotlinHistoryManifestEntry(3,"workout-3","measured-v1-"+"b".repeat(64),"finish-3",3,0)
+        assertTrue(ledger().enrollVerifiedSnapshot("owner-1","athlete-1",
+            listOf(generated,custom,measured)){_,_->true} is NativeHistoryLedgerResult.Durable)
+        assertEquals(4,ledgerFormat())
+        fun roundTrip(intent:NativeHistoryWriteIntent,entry:KotlinHistoryManifestEntry,
+            expectedFormat:Int) {
+            val revision=manifest().ledger.revision
+            assertTrue(ledger().prepare("owner-1","athlete-1",revision,intent)
+                is NativeHistoryLedgerResult.Durable)
+            assertEquals(expectedFormat,ledgerFormat())
+            assertEquals(intent,manifest().ledger.pending)
+            assertFalse(manifest().ledger.readyForHistoryReads)
+            assertTrue(ledger().finalize("owner-1","athlete-1",intent,
+                entry.copy(savedCorrectionRevision=entry.savedCorrectionRevision+1))
+                is NativeHistoryLedgerResult.Durable)
+            assertEquals(4,ledgerFormat())
+            assertTrue(manifest().ledger.readyForHistoryReads)
+        }
+        val physical=KotlinPerformedSet(BigDecimal("200.00"),LoadUnit.LB,5,1,"machine-B")
+        roundTrip(NativeHistoryWriteIntent.Correct("workout-1",edit(1).copy(actual=physical)),generated,5)
+        // Exact decimal scale also matters for redo equality with the correction file.
+        val exponent=physical.copy(load=BigDecimal("2E+2"),machineInstanceId=null)
+        roundTrip(NativeHistoryWriteIntent.Correct("workout-1",
+            edit(1,"edit-scale",1,"edit-1").copy(actual=exponent)),
+            generated.copy(savedCorrectionRevision=1),5)
+        val stage=CustomSavedVisitCorrection("edit-stage",0,
+            CustomWorkoutVisitKey("set-2",CustomWorkoutVisitPart.FOLLOW_UP,3),
+            "old-stage",KotlinJournalSetOutcome.COMPLETED,physical.copy(reps=3))
+        roundTrip(NativeHistoryWriteIntent.CustomCorrect("workout-2",stage),custom,5)
+        // A skipped later visit has no actual load or station, but still owns its ordinal.
+        val skipped=stage.copy(eventId="skip-stage",expectedCorrectionRevision=1,
+            correctsEventId="edit-stage",outcome=KotlinJournalSetOutcome.SKIPPED,performed=null)
+        roundTrip(NativeHistoryWriteIntent.CustomCorrect("workout-2",skipped),
+            custom.copy(savedCorrectionRevision=1),5)
+        val legacy=stage.copy(eventId="edit-main",expectedCorrectionRevision=2,
+            visit=CustomWorkoutVisitKey("set-2",CustomWorkoutVisitPart.MAIN),
+            performed=physical.copy(machineInstanceId=null))
+        roundTrip(NativeHistoryWriteIntent.CustomCorrect("workout-2",legacy),
+            custom.copy(savedCorrectionRevision=2),4)
+        val before=manifest().ledger
+        val invalid=legacy.copy(expectedCorrectionRevision=3,
+            visit=legacy.visit.copy(stage=2))
+        assertEquals(NativeHistoryLedgerResult.Rejected(
+            NativeHistoryLedgerRefusal.INVALID_MANIFEST_TRANSITION),
+            ledger().prepare("owner-1","athlete-1",before.revision,
+                NativeHistoryWriteIntent.CustomCorrect("workout-2",invalid)))
+        assertEquals(before,manifest().ledger)
+    }
+
     @Test fun generatedCorrectionCannotReserveAnotherJournalKindsHistory() {
         val entries=listOf(
             KotlinHistoryManifestEntry(1,"workout-1","custom-v2-"+"a".repeat(64),"finish-1",3,0),

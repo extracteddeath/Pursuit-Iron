@@ -2698,11 +2698,24 @@ internal class NativeKotlinCandidateHost(context:Context) {
             adaptRir=CustomCycleChangeKind.RIR in kinds,
             adaptAmplifiers=CustomCycleChangeKind.AMPLIFIERS in kinds,
             adaptLoads=CustomCycleChangeKind.LOADS in kinds)
+        val gym=source.setup.reviewed?.gym
+            ?:return deny("The reviewed gym is unavailable.")
+        if((request.maximumEasierStep==null)!=(request.stepUnit==null) ||
+            (request.stepUnit!=null && request.stepUnit!=gym.unit))
+            return deny("The load adjustment unit does not match the current gym.")
+        val roster=if(request.maximumEasierStep!=null) {
+            if(!permissions.adaptLoads)
+                return deny("Authorize load adaptation before adjusting recovery weights.")
+            (machineRosters.read(owner.ownerKey) as? NativeMachineRosterResult.Saved)?.snapshot
+                ?:return deny("Verify the current machine inventory before adjusting recovery weights.")
+        } else null
         val generated=ReviewedRecoveryBlockRecipeDomain.propose(
             ReviewedRecoveryBlockRecipeRequest(
                 AdaptiveCycleOptionRequest(original,request.anchorBlockId,
                     source.setup,source.catalog,request.coaching,permissions,emptyList()),
                 request.maximumWorkingSetsPerSlot,request.minimumTargetRir,
+                maximumEasierStep=request.maximumEasierStep,
+                verifiedMachineConfigurations=roster?.configurations,
                 appendRecoveryBlockId="recovery-"+(original.revision+1)))
         val candidate=generated.candidate?.proposedCycle
         val audit=generated.comparison?.evaluated?.singleOrNull()?.coachingAudit
@@ -2722,7 +2735,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
             recovery.blockPurpose!=CustomBlockPurpose.RECOVERY)
             return deny("The audited recovery week did not match the final training week.")
         return NativeRecoveryRecipePreview.Ready(NativeRecoveryRecipeReady(
-            request,owner,rights.revision,assistance.revision,candidate,baseline,recovery))
+            request,owner,rights.revision,assistance.revision,roster?.revision,candidate,baseline,recovery))
     }
 
     fun previewRecoveryRecipe(request:NativeRecoveryRecipeRequest):NativeRecoveryRecipePreview {

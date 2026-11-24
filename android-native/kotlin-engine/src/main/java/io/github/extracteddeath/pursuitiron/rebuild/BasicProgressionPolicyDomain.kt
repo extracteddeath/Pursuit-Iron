@@ -123,6 +123,8 @@ object BasicProgressionPolicyDomain {
         fun reject(reason: BasicProgressionRefusal) = BasicProgressionResult.Refused(reason)
         val loads = request.issuedWorkingLoads
         if (request.nextWorkoutId.isBlank() || !request.nextScope.valid() ||
+            KotlinSetNumberAuthorityDomain.machineTagContradictsFreeBarbell(
+                request.nextScope.basis,request.nextScope.machineInstanceId) ||
             loads.size !in 1..32 || loads.any {
                 !KotlinSetNumberAuthorityDomain.validPrescribedLoad(it,request.nextScope.basis)
             })

@@ -1248,7 +1248,6 @@ function StyleTag({ theme } = {}) {
 
       @media(max-width:420px){
         .wpb-home .wpb-action-tile{min-height:var(--pi-home-tile-min,52px)!important;}
-        .wpb-progress [data-progress-glance]>div{padding-left:6px!important;padding-right:6px!important;}
       }
 
       /* M121 UI-ONLY PREMIUM PASS — presentation and interaction hierarchy only.
@@ -1912,11 +1911,6 @@ function StyleTag({ theme } = {}) {
 
       /* Progress: glance metrics are status, not badges. Use sentence case and restrained annotation,
          then let charts/history own the visual weight below them. */
-      .wpb-progress-glance-item{background:transparent!important;border:0!important;border-radius:0!important;}
-      .wpb-progress-glance-label{
-        margin-top:5px!important;font-size:11px!important;font-weight:650!important;letter-spacing:0!important;
-        text-transform:none!important;color:${C.muted}!important;
-      }
       .wpb-progress-panel{
         padding:14px 0!important;margin-bottom:14px!important;background:transparent!important;border-radius:0!important;
         border-top:0!important;border-bottom:1px solid var(--section-rule)!important;

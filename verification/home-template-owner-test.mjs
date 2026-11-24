@@ -8,7 +8,7 @@ const home=app.slice(app.indexOf('function Home('),app.indexOf('function UiNotic
 assert.ok(report.appInlineStyleObjects<=uiStyleBudget.appInlineObjects,'Template migration must not regain inline paint');
 assert.equal(uiStyleBudget.appInlineObjects,793,'Budget must reflect retired inline styles');
 assert.equal((home.match(/style:\s*\{/g)||[]).length,16,'Home template inline owners stay retired');
-assert.equal(report.shared.Card.appCalls,28,'Three template actions must use UiCard with native button semantics (B1026 moved the recap card out; B1028 made the Strength Score a UiCard)');
+assert.equal(report.shared.Card.appCalls,29,'Three template actions must use UiCard with native button semantics (B1026 moved the recap card out; B1028 made the Strength Score a UiCard; B1040 groups Plan\'s program routes in one UiCard)');
 for(const owner of ['wpb-template-card','wpb-template-featured','wpb-template-row','wpb-template-sheet','wpb-template-search-input','wpb-template-filter','wpb-template-gym-choice','wpb-template-filter-clear','wpb-template-browse-link'])
  assert.ok(home.includes(owner)&&css.includes('.'+owner),'Missing shared template owner '+owner);
 assert.ok(home.includes('as: "button", type: "button", onClick: () => onTemplate(t)'),

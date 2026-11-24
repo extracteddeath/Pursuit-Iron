@@ -902,7 +902,8 @@ assert.ok(!css.includes('padding-top:11px!important;\n  padding-bottom:8px!impor
 
 // M278: Profile's active three-score comparison has one responsive owner;
 // the editable share-card uses the same 4/8/12/16px spacing vocabulary.
-assert.ok(css.includes('.wpb-profile-card-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--pi-space-2) var(--pi-space-3);margin:var(--pi-space-4) 0 0}'),
+// B1039: the two metrics are figures divided by a rule, so the column gap is the divider's inset.
+assert.ok(css.includes('.wpb-profile-card-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--pi-space-2) 0;margin:var(--pi-space-4) 0 0;overflow:hidden}'),
     'Share-card metric groups keep shared spacing instead of one-off margins');
 assert.ok(css.includes('.wpb-profile-card-metrics>div{min-width:0;padding:var(--pi-space-2) var(--pi-space-1);'),
     'Share-card metric rows keep the shared internal rhythm');

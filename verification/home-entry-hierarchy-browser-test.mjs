@@ -184,7 +184,7 @@ try{
     'Home is today: the program list and creation routes are not repeated there');
    await page.click('[data-tab="plan"]');
    await page.waitForSelector('.wpb-plan-programs .wpb-home-programs');
-   assert.ok(await page.$('.wpb-plan-programs .wpb-action-grid .wpb-home-templates'),'Plan owns program creation routes');
+   assert.ok(await page.$('.wpb-plan-programs .wpb-program-create-list .wpb-home-templates'),'Plan owns program creation routes, as one grouped list');
   }
   assert.deepEqual(errors,[], 'No Home route/runtime errors '+width+' '+theme);
   await ctx.close();

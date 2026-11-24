@@ -723,19 +723,17 @@ try {
                 }), 'M378 retains stable navigation hit geometry and one measured indicator');
             }
             if (tab === 'plan') {
+                // B1040: the overview figures are a flat stat row; the selected week is the one tonal card.
                 const tonal = await tonalSurfaceReport({
-                    featured:'.wpb-plan-glance-tile[data-featured="true"]',
-                    secondary:'.wpb-plan-glance-tile:not([data-featured="true"])',
+                    figure:'.wpb-plan-glance .wpb-ui-stat',
                     // B1030: Plan no longer repeats Home's Up next; the selected week card marks the next session.
                     next:'.wpb-plan-selected-week .wpb-plan-week-card'
                 });
-                const {featured,secondary,next}=tonal.output;
-                assert.ok(featured && secondary && next,
+                const {figure,next}=tonal.output;
+                assert.ok(figure && next,
                     'R11 Plan retains measured real summary and next-day cards: '+JSON.stringify(tonal));
-                if (tonal.dark) assert.ok(featured.bg !== secondary.bg &&
-                    featured.image === 'none' && secondary.image === 'none' &&
-                    next.image === 'none' && featured.width > 0 &&
-                    next.height >= 70,
+                if (tonal.dark) assert.ok(/rgba\(0, 0, 0, 0\)|transparent/.test(figure.bg) &&
+                    next.image === 'none' && figure.width > 0 && next.height >= 70,
                     'R11 Plan features a single flat tonal week without extra space: '+JSON.stringify(tonal));
             }
             if (tab === 'progress') {
@@ -1011,31 +1009,31 @@ try {
             }
             if (tab === 'plan') {
                 const state = await page.$eval('.wpb-plan-view', el => {
-                    const metrics = [...el.querySelectorAll('.wpb-plan-glance-tile')];
+                    const metrics = [...el.querySelectorAll('.wpb-plan-glance .wpb-ui-stat')];
                     const first = metrics[0];
                     const group = el.querySelector('.wpb-plan-panes[data-pi-m3-track]');
                     const title = el.closest('.wpb-plan').querySelector('.wpb-root-header h1');
                     return {
                         count:metrics.length,
                         size:parseFloat(getComputedStyle(title).fontSize),
-                        firstRadius:first ? parseFloat(getComputedStyle(first).borderTopLeftRadius) : 0,
-                        firstSize:first ? parseFloat(getComputedStyle(first.lastElementChild).fontSize) : 0,
+                        firstFlat:first ? getComputedStyle(first).backgroundColor === 'rgba(0, 0, 0, 0)' : false,
+                        firstSize:first ? parseFloat(getComputedStyle(first.querySelector('.wpb-ui-stat-value')).fontSize) : 0,
                         buttons:group?.querySelectorAll('button').length,
                         selected:group?.querySelectorAll('[aria-pressed="true"]').length,
                         trackFill:group?.style.getPropertyValue('--pi-m3-track-fill'),
                         overflow:el.scrollWidth>el.clientWidth+1
                     };
                 });
-                assert.ok(state.count===3 && state.size>=28 && state.size<=34 && state.firstRadius>=26 &&
-                    state.firstSize>=24 && state.buttons===4 && state.selected===1 &&
+                assert.ok(state.count===3 && state.size>=28 && state.size<=34 && state.firstFlat &&
+                    state.firstSize>=16 && state.buttons===4 && state.selected===1 &&
                     state.trackFill?.length>3 && !state.overflow,
                     'Plan has a real featured week and elastic four-pane navigator: '+JSON.stringify(state));
                 // R43 uses solid and distinct low/raised/hero surfaces on
                 // the real Plan dashboard, not merely declared theme tokens.
                 const r43Plan = await page.$eval('.wpb-plan-view', root => {
                     const el=selector=>root.querySelector(selector);
-                    const first=el('.wpb-plan-glance-tile[data-featured="true"]');
-                    const second=el('.wpb-plan-glance-tile:not([data-featured="true"])');
+                    const first=el('.wpb-plan-selected-week .wpb-plan-week-card');
+                    const second=el('.wpb-plan-glance');
                     const next=el('.wpb-plan-selected-week .wpb-plan-week-card');
                     const choices=el('.wpb-plan-panes');
                     const buttons=[...(choices?.querySelectorAll('button')||[])];
@@ -1047,11 +1045,13 @@ try {
                         ctx.fillRect(0,0,1,1);
                         return ctx.getImageData(0,0,1,1).data[3]===255;
                     };
+                    // B1040: the summary row is flat on the page; the week card and the pane control are
+                    // the two distinct opaque surfaces.
                     return {featured:cs(first)?.backgroundColor,
                         quiet:cs(second)?.backgroundColor,
                         raised:cs(choices)?.backgroundColor,
                         hero:cs(next)?.backgroundColor,
-                        opaque:[first,second,choices,next].every(x=>x&&opaque(x)),
+                        opaque:[first,choices,next].every(x=>x&&opaque(x)),
                         images:[first,second,choices,next].map(x=>cs(x)?.backgroundImage),
                         featuredHeight:box(first)?.height||0,
                         choiceHeight:box(choices)?.height||0,
@@ -1059,8 +1059,7 @@ try {
                         overflow:root.scrollWidth>root.clientWidth+1};
                 });
                 assert.ok(r43Plan.opaque &&
-                    r43Plan.featured!==r43Plan.quiet &&
-                    r43Plan.quiet!==r43Plan.raised &&
+                    r43Plan.featured!==r43Plan.raised &&
                     r43Plan.images.every(x=>x==='none') &&
                     r43Plan.featuredHeight>=80 && r43Plan.choiceHeight>=52 &&
                     r43Plan.buttonHeights.length===4 &&
@@ -1191,10 +1190,11 @@ try {
                 const profileType = await page.$eval('.wpb-profile', el => {
                     const title = getComputedStyle(el.querySelector('.wpb-profile-title'));
                     const stat = el.querySelector('.wpb-profile-card-metrics>div:first-child');
+                    // B1039: the card metrics are flat figures divided by a rule, not tiles.
                     return { title: parseFloat(title.fontSize),
-                        radius: stat ? parseFloat(getComputedStyle(stat).borderTopLeftRadius) : null };
+                        flat: stat ? getComputedStyle(stat).backgroundColor === 'rgba(0, 0, 0, 0)' : null };
                 });
-                assert.ok(profileType.title >= 26 && profileType.radius >= 11,
+                assert.ok(profileType.title >= 26 && profileType.flat,
                     'Profile uses the shared title scale and consistent stat geometry');
                 // R17: actual profile dashboard geometry, not the old
                 // R5 full-width Push tile with its orphaned last row.
@@ -2957,7 +2957,7 @@ try {
                     truncatedLabels:labels.filter(el=>el.scrollWidth>el.clientWidth+1).map(el=>el.textContent),
                     profileIdentity:text('.wpb-profile-card-caption'),
                     progressLabel:text('.wpb-progress-glance-label'),
-                    planLabel:text('.wpb-plan-glance-tile>div:first-child')};
+                    planLabel:text('.wpb-plan-glance .wpb-ui-stat-label')};
             },tab);
             assert.ok(!r40.screenOverflow&&!r40.navOverflow&&
                 r40.selectedHeight>=56&&r40.labelInside&&r40.labelGap>=7&&

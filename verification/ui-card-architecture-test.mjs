@@ -9,7 +9,8 @@ const css=fs.readFileSync('app.css','utf8');
 assert.equal(report.unownedStandardCardCallSites,0,'Standard cards must render through UiCard');
 // B1026: the weekly recap card moved to modules/home-week.js, which still renders UiCard.
 // B1028: the Home Strength Score button became a UiCard (as: "button").
-assert.equal(report.shared.Card.appCalls,28,'Card adoption must cover all 18 audited call sites');
+// B1040: Plan's program routes are one grouped UiCard list.
+assert.equal(report.shared.Card.appCalls,29,'Card adoption must cover all audited call sites');
 assert.equal(report.screens.Settings.sharedCardCalls,14,'Settings has eight grouped cards plus plates inventory');
 assert.ok(app.includes('_jsxs(UiCard, { as: "section", className: "wpb-profile-share-card"'),
  'Profile share card must remain a semantic section');

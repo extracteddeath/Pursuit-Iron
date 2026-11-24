@@ -11,7 +11,8 @@ assert.ok(start>0 && end>start,'Plan has one screen owner');
 assert.equal((plan.match(/style:\s*\{/g)||[]).length,12,'Plan utility adoption and owner retirement must not regress');
 assert.ok(plan.includes('className: "mono pi-t-muted wpb-s956-fontsize-14 wpb-s956-margintop-2"'),
   'Week set/time metadata must use the shared muted text utilities');
-assert.ok(plan.includes('className: "wpb-plan-glance", children:'),
+// B1040: the overview is the shared flat stat row; the plan-glance owner still sets its geometry.
+assert.ok(plan.includes('className: "wpb-ui-stat-row wpb-plan-glance", children:'),
   'The Plan metric grid must defer its geometry to the existing expressive CSS owner');
 assert.ok(css.includes('.wpb-plan-view .wpb-plan-glance{'),
   'The already established responsive metric-grid owner must remain available');

@@ -110,6 +110,7 @@ export const contractGroups = Object.freeze({
         'b998-ui-controls-test.mjs',
         'b999-plan-review-m3-test.mjs',
         'b1000-workout-controls-test.mjs',
+        'b1033-motion-batching-test.mjs',
         'b1001-root-font-owner-test.mjs',
         'b1011-m3e-foundation-test.mjs',
         'b1012-exercise-variant-browse-test.mjs',

@@ -518,12 +518,14 @@ function disclosure(el, initial = false) {
         // each callback. Current selection is resolved at flush, not enqueue.
         const groups = [...pendingTracks];
         pendingTracks.clear();
+        const measured = [];
         for (const group of groups) {
             const selected = choiceStates.get(group);
             if (observedTracks.has(group) && root.contains(group) &&
                 Number.isInteger(selected) && selected >= 0)
-                positionTrack(group, [...group.children].filter(el => el.matches('button')), selected, true);
+                measured.push([group, measureTrack(group, [...group.children].filter(el => el.matches('button')), selected)]);
         }
+        for (const [group, m] of measured) applyTrack(group, m, true);
     };
     const trackResize = typeof ResizeObserver === 'function' ? new ResizeObserver(entries => {
         for (const entry of entries) {
@@ -548,38 +550,38 @@ function disclosure(el, initial = false) {
         if (tracked) group.dataset.piM3Track = '1';
         return fill;
     }
-    function positionTrack(group, buttons, selected, instant = false) {
-        if (!group.matches(trackSelector) || selected < 0 || !buttons[selected]) return;
+    /* PERFORMANCE (B1033): selection tracks are measured and painted in two passes.
+       The old single pass read a group's geometry, wrote its CSS variables, then read the
+       next group's — every read after a write forced a full style recalculation against the
+       app's whole stylesheet. On a 4x-throttled phone a Settings mount spent ~370 ms there.
+       The selected fill is sampled once per group (it is a property of the group's theme
+       role, not of which button is selected); refreshTrackTheme re-samples on theme change. */
+    function measureTrack(group, buttons, selected) {
+        if (!group.matches(trackSelector) || selected < 0 || !buttons[selected]) return null;
         const button = buttons[selected];
+        const nav = group.matches('.wpb-tabbar');
+        const fill = selectionTracks.has(group) ? null : nav ? navSurface(button) : selectedSurface(group, button);
+        const width = nav ? Math.min(60, button.offsetWidth * .78) : button.offsetWidth;
+        return { fill, target: {
+            '--pi-m3-track-x': button.offsetLeft + (nav ? (button.offsetWidth - width) / 2 : 0),
+            '--pi-m3-track-y': button.offsetTop + (nav ? 3 : 0),
+            '--pi-m3-track-width': width,
+            '--pi-m3-track-height': nav ? 27 : button.offsetHeight
+        } };
+    }
+    function applyTrack(group, m, instant = false) {
+        if (!m) return;
         let state = selectionTracks.get(group);
         if (!state) {
-            // Sample the real selected surface BEFORE overriding it with the moving track.
-            // Settings derives its active fill from the saved theme; Progress uses its card tone.
-            const fill = group.matches('.wpb-tabbar') ? navSurface(button) : selectedSurface(group, button);
-            state = { fill }; selectionTracks.set(group, state);
-            group.style.setProperty('--pi-m3-track-fill', fill);
+            state = { fill: m.fill }; selectionTracks.set(group, state);
+            group.style.setProperty('--pi-m3-track-fill', m.fill);
             group.dataset.piM3Track = '1';
         }
         if (trackResize && !observedTracks.has(group)) {
             trackResize.observe(group);
             observedTracks.add(group);
         }
-        const computedFill = group.matches('.wpb-tabbar') ? navSurface(button) : selectedSurface(group, button);
-        if (computedFill && computedFill !== 'transparent' && computedFill !== state.fill) {
-            state.fill = computedFill;
-            group.style.setProperty('--pi-m3-track-fill', state.fill);
-        }
-        const nav = group.matches('.wpb-tabbar');
-        // Expressive selection grows into the surrounding whitespace while
-        // retaining all five original tab widths and labels.
-        const width = nav ? Math.min(60, button.offsetWidth * .78) : button.offsetWidth;
-        const target = {
-            '--pi-m3-track-x': button.offsetLeft + (nav ? (button.offsetWidth - width) / 2 : 0),
-            '--pi-m3-track-y': button.offsetTop + (nav ? 3 : 0),
-            '--pi-m3-track-width': width,
-            '--pi-m3-track-height': nav ? 27 : button.offsetHeight
-        };
-        for (const [key, value] of Object.entries(target)) {
+        for (const [key, value] of Object.entries(m.target)) {
             // ResizeObserver may fire for a parent resize with no change in
             // this indicator's bounds. Don't repaint identical CSS variables
             // or interrupt a valid spring still travelling to that target.
@@ -621,20 +623,40 @@ function disclosure(el, initial = false) {
         if (e.target?.matches?.('.wpb-context-menu')) positionContextMenu(e.target);
     };
     const clearInk = () => root.querySelectorAll('[data-pi-ink]').forEach(el => delete el.dataset.piInk);
+    // Corner radii are read for every queued control first, then written, so a screen with
+    // forty segmented buttons costs one style/layout pass instead of forty.
+    const controlQueue = [];
     function control(el) {
         if (controls.has(el)) return;
-        const css = getComputedStyle(el), box = el.getBoundingClientRect();
-        ['TopLeft','TopRight','BottomRight','BottomLeft'].forEach((corner, i) => {
-            const radius = parseFloat(css[`border${corner}Radius`]) || 0;
-            el.style.setProperty(`--pi-corner-${i}`, `${Math.min(radius, box.height / 2, box.width / 2)}px`);
+        controls.set(el, true); controlQueue.push(el);
+    }
+    function flushControls() {
+        if (!controlQueue.length) return;
+        const reads = controlQueue.splice(0).filter(el => el.isConnected).map(el => {
+            const css = getComputedStyle(el), box = el.getBoundingClientRect();
+            return [el, ['TopLeft','TopRight','BottomRight','BottomLeft'].map(corner =>
+                Math.min(parseFloat(css[`border${corner}Radius`]) || 0, box.height / 2, box.width / 2))];
         });
-        el.dataset.piControl = '1'; controls.set(el, true);
+        for (const [el, radii] of reads) {
+            radii.forEach((radius, i) => el.style.setProperty(`--pi-corner-${i}`, `${radius}px`));
+            el.dataset.piControl = '1';
+        }
     }
     const disabled = el => !el || el.disabled || el.getAttribute('aria-disabled') === 'true' || el.closest('[inert],.wpb-closing');
+    // A control that has just mounted takes its selected shape instantly: only a change the
+    // lifter makes morphs. Springing every pre-selected chip on mount repainted ~100 controls
+    // for ~20 frames on each screen entry (each frame a full style recalculation).
+    const shapedOnce = new WeakSet();
     function shape(el, held = false) {
         const selected = el.dataset.piChoice === 'selected';
         const expressive = el.matches('.wpb-wizard-option,.wpb-wizard-choice,.wpb-wizard-preset,.wpb-filter-chip,.wpb-library-flag,.wpb-home-create');
         const change = selected ? (expressive ? 11 : 7) : 0;
+        if (!held && !shapedOnce.has(el)) {
+            shapedOnce.add(el);
+            setMotionValue(el, '--pi-control-shape', change, pixels(el, '--pi-control-shape'));
+            return;
+        }
+        shapedOnce.add(el);
         spring(el, '--pi-control-shape', change - (held ? expressive ? 5 : 3 : 0),
             { from: 0, write: pixels(el, '--pi-control-shape'),
                 stiffness: expressive ? 680 : 850, damping: expressive ? .81 : .9 });
@@ -650,7 +672,7 @@ function disclosure(el, initial = false) {
         if (disabled(el) || protectedWorkoutPress(el)) return;
         // A second pointer/keyboard press may supersede an interrupted first one.
         if (pressed.has(id)) release(id);
-        control(el); pressed.set(id, { el, x, y });
+        control(el); flushControls(); pressed.set(id, { el, x, y });
         ink(el, x, y);
         const expressiveAction = el.matches('.wpb-home .wpb-action-tile,.wpb-home .wpb-primary-action,.wpb-home-create,.wpb-wizard .wpb-wizard-option,.wpb-wizard .wpb-wizard-next-action');
         spring(el, '--pi-control-scale', expressiveAction ? .956 : .97,
@@ -757,46 +779,80 @@ function disclosure(el, initial = false) {
             press(button(e), 'keyboard');
     };
     const keyup = e => { if (e.key === ' ' || e.key === 'Enter') release('keyboard'); };
+    const selectionQueue = new Map();
     function selection(group, initial = false) {
-        const buttons = [...group.children].filter(el => el.matches('button'));
-        const selected = buttons.findIndex(b => b.getAttribute('aria-pressed') === 'true' || b.getAttribute('aria-selected') === 'true' || b.getAttribute('aria-current') === 'page');
-        const previous = choiceStates.get(group); choiceStates.set(group, selected);
-        if (previous === selected && !initial) {
-            // DOM moves can detach and reattach the same group without
-            // changing selection. Rejoin observation without replaying motion.
-            if (trackResize && selectionTracks.has(group) && !observedTracks.has(group)) {
-                trackResize.observe(group);
-                observedTracks.add(group);
-            }
-            return;
-        }
-        positionTrack(group, buttons, selected, initial);
-        // The measured indicator already supplies selection continuity. Avoid
-        // springing its width/shape separately: this created two competing
-        // movements on every tab or segment change.
-        const rir = group.matches('.wpb-effort-scale');
-        // Only the effort scale uses intentional proportional button growth.
-        // Plan, Progress and Library tab widths remain native; shifting
-        // neighboring hit targets during selection breaks spatial continuity.
-        // The existing measured track moves without altering those targets.
-        delete group.dataset.piM3Fluid;
-        buttons.forEach((b, i) => {
-            if (!rir && !b.hasAttribute('aria-selected') && !b.hasAttribute('aria-pressed') && !b.hasAttribute('aria-current') && !group.matches('.wpb-tabbar')) return;
-            control(b); b.dataset.piChoice = i === selected ? 'selected' : 'unselected';
-            if (rir) {
-                const neighbor = selected >= 0 && Math.abs(i - selected) === 1;
-                const grow = i === selected ? 1.18 : neighbor ? .91 : 1;
-                spring(b, '--pi-choice-grow', grow, {
-                    from: initial ? grow : 1, damping: .9,
-                    stiffness: 850, precision: .001
-                });
-            } else {
-                stopMotion(b, '--pi-choice-grow');
-                b.style.removeProperty('--pi-choice-grow');
-            }
-            shape(b);
-        });
+        selectionQueue.set(group, selectionQueue.get(group) || initial);
     }
+    function flushSelections() {
+        if (!selectionQueue.size) return [];
+        const work = [];
+        for (const [group, initial] of selectionQueue) {
+            if (!group.isConnected) continue;
+            const buttons = [...group.children].filter(el => el.matches('button'));
+            const selected = buttons.findIndex(b => b.getAttribute('aria-pressed') === 'true' || b.getAttribute('aria-selected') === 'true' || b.getAttribute('aria-current') === 'page');
+            const previous = choiceStates.get(group); choiceStates.set(group, selected);
+            if (previous === selected && !initial) {
+                // DOM moves can detach and reattach the same group without
+                // changing selection. Rejoin observation without replaying motion.
+                if (trackResize && selectionTracks.has(group) && !observedTracks.has(group)) {
+                    trackResize.observe(group);
+                    observedTracks.add(group);
+                }
+                continue;
+            }
+            work.push({ group, buttons, selected, initial });
+        }
+        selectionQueue.clear();
+        return work;
+    }
+    function paintSelections(work) {
+        for (const { group, buttons, selected, initial, track } of work) {
+            applyTrack(group, track, initial);
+            // The measured indicator already supplies selection continuity. Avoid
+            // springing its width/shape separately: this created two competing
+            // movements on every tab or segment change.
+            const rir = group.matches('.wpb-effort-scale');
+            // Only the effort scale uses intentional proportional button growth.
+            // Plan, Progress and Library tab widths remain native; shifting
+            // neighboring hit targets during selection breaks spatial continuity.
+            // The existing measured track moves without altering those targets.
+            delete group.dataset.piM3Fluid;
+            buttons.forEach((b, i) => {
+                if (!rir && !b.hasAttribute('aria-selected') && !b.hasAttribute('aria-pressed') && !b.hasAttribute('aria-current') && !group.matches('.wpb-tabbar')) return;
+                control(b); b.dataset.piChoice = i === selected ? 'selected' : 'unselected';
+                if (rir) {
+                    const neighbor = selected >= 0 && Math.abs(i - selected) === 1;
+                    const grow = i === selected ? 1.18 : neighbor ? .91 : 1;
+                    spring(b, '--pi-choice-grow', grow, {
+                        from: initial ? grow : 1, damping: .9,
+                        stiffness: 850, precision: .001
+                    });
+                } else {
+                    stopMotion(b, '--pi-choice-grow');
+                    b.style.removeProperty('--pi-choice-grow');
+                }
+                shape(b);
+            });
+        }
+    }
+    // One read pass, then one write pass, for everything a DOM change queued: selection tracks,
+    // filled-action contrast and control corner radii.
+    const flushMotionWork = () => {
+        const work = flushSelections() || [];
+        const filled = filledQueue.splice(0).filter(el => el.isConnected);
+        for (const el of filled) if (el.dataset.piContrastCorrected === '1') {
+            el.style.removeProperty('color');
+            delete el.dataset.piContrastCorrected;
+        }
+        for (const w of work) w.track = measureTrack(w.group, w.buttons, w.selected);
+        const contrast = filled.map(el => [el, filledActionCorrection(el)]);
+        paintSelections(work);
+        for (const [el, on] of contrast) if (on) {
+            el.style.setProperty('color', on, 'important');
+            el.dataset.piContrastCorrected = '1';
+        }
+        flushControls();
+    };
     // R35: resolve 'on' colors from the ACTUAL filled surface, not the
     // accent hue. Most saved themes already pair correctly; on the rare
     // noncompliant pair (e.g. Lime), choose the higher-contrast neutral.
@@ -820,24 +876,24 @@ function disclosure(el, initial = false) {
     };
     const contrastRatio = (a, b) =>
         a === null || b === null ? 0 : (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
-    function correctFilledAction(el) {
-        if (!el || !el.isConnected) return;
-        if (el.dataset.piContrastCorrected === '1') {
-            el.style.removeProperty('color');
-            delete el.dataset.piContrastCorrected;
-        }
+    // Read-only: the 'on' color a failing pair needs, or null. Painted by flushMotionWork.
+    function filledActionCorrection(el) {
         const css = getComputedStyle(el);
-        if (css.visibility === 'hidden' || css.display === 'none') return;
+        if (css.visibility === 'hidden' || css.display === 'none') return null;
         const bg = colorLuminance(css.backgroundColor);
-        if (bg === null || contrastRatio(bg, colorLuminance(css.color)) >= 4.5) return;
+        if (bg === null || contrastRatio(bg, colorLuminance(css.color)) >= 4.5) return null;
         // White and black are always a compliant pair with an opaque sRGB
         // surface; only failing theme pairings receive an explicit override.
-        const on = contrastRatio(bg, 0) >= contrastRatio(bg, 1) ? '#000000' : '#ffffff';
-        el.style.setProperty('color', on, 'important');
-        el.dataset.piContrastCorrected = '1';
+        return contrastRatio(bg, 0) >= contrastRatio(bg, 1) ? '#000000' : '#ffffff';
     }
-    const refreshFilledActionContrast = () =>
+    const filledQueue = [];
+    function correctFilledAction(el) {
+        if (el && el.isConnected && !filledQueue.includes(el)) filledQueue.push(el);
+    }
+    const refreshFilledActionContrast = () => {
         root.querySelectorAll(filledActionSelector).forEach(correctFilledAction);
+        flushMotionWork();
+    };
     function refreshTrackTheme() {
         // ThemePicker updates the same React buttons in place. The active ink fill
         // must follow its new inline token even if the selected index did not change.
@@ -916,6 +972,7 @@ function disclosure(el, initial = false) {
         });
     }
     scan(root, true);
+    flushMotionWork();
     const observer = new MutationObserver(records => {
         const groups = new Set(), disclosures = new Set();
         records.forEach(record => {
@@ -955,6 +1012,7 @@ function disclosure(el, initial = false) {
             }
         });
         groups.forEach(group => selection(group));
+        flushMotionWork();
         disclosures.forEach(el => disclosure(el));
         returnLibraryFocusAfterExit();
     });

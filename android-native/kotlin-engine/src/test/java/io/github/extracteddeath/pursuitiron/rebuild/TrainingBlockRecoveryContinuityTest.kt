@@ -130,6 +130,40 @@ class TrainingBlockRecoveryContinuityTest {
         assertFalse(audited.mayIssueWorkout)
     }
 
+    @Test fun recoveryLabelCannotHideHigherWeeklyVolumeOrConcentratedMuscleDose() {
+        val limit=CustomCoachVolumeContinuityPolicy(n("0.25"),n("0.25"))
+        val source=fixedStrength(cycle())
+        fun recoveryWith(counts:Map<String,Int>)=source.copy(
+            blocks=source.blocks.map {block->
+                if(block.purpose!=CustomBlockPurpose.RECOVERY)block
+                else block.copy(days=block.days.map{day->modifiedDay(day,counts)})
+            })
+        fun audit(candidate:CustomTrainingCycle)=CustomCycleCoachAuditDomain.review(
+            candidate,fixture.athlete(),fixture.movements,coaching(limit))
+        val normal=audit(source)
+        assertEquals(listOf(30,9,27),normal.weeks.map{it.workingSets})
+        assertFalse(normal.issues.any{
+            it.kind==CustomCoachIssueKind.RECOVERY_MUSCLE_DOSE_INCREASE})
+        val concentrated=audit(recoveryWith(mapOf("bench" to 1,"row" to 4,"squat" to 1)))
+        assertEquals(listOf(30,18,27),concentrated.weeks.map{it.workingSets})
+        assertTrue(concentrated.issues.any{
+            it.kind==CustomCoachIssueKind.RECOVERY_MUSCLE_DOSE_INCREASE &&
+                it.location=="week.2.LATS"})
+        assertEquals(CustomCoachAuditStatus.UNRESOLVED,concentrated.status)
+        val inflated=audit(recoveryWith(mapOf("bench" to 4,"row" to 4,"squat" to 4)))
+        assertEquals(listOf(30,36,27),inflated.weeks.map{it.workingSets})
+        assertTrue(inflated.issues.any{
+            it.kind==CustomCoachIssueKind.UNJUSTIFIED_TRAINING_VOLUME_SPIKE &&
+                it.location=="week.2.block.recovery"})
+        assertEquals(CustomCoachAuditStatus.UNRESOLVED,inflated.status)
+        assertFalse(inflated.mayIssueWorkout)
+        // Recovery never resets the baseline used by the subsequent strength
+        // week, even when recovery itself is invalid.
+        assertFalse(inflated.issues.any{
+            it.kind==CustomCoachIssueKind.UNJUSTIFIED_TRAINING_VOLUME_SPIKE &&
+                it.location=="week.3.block.strength"})
+    }
+
     @Test fun missingContinuityPolicyStillBlocksReturnAfterRecovery() {
         val audited=review()
         assertEquals(CustomCoachAuditStatus.COACHING_POLICY_REQUIRED,

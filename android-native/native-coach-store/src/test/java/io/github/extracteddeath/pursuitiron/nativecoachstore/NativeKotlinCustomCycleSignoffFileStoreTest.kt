@@ -2758,6 +2758,48 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             reader,issuer,history,corrections,prepared)
     }
 
+    @Test fun namedPercentageReferenceReviewUsesRealOwnerSourcesAndNeverIssues() {
+        val f=authoredCoachFixture(initializeHistory=false,phaseTransition=true)
+        initialize()
+        approved()
+        assertTrue(f.history.enroll("owner-1","athlete-1"){owner,athlete->
+            active==NativeKotlinOwnerIdentity(owner,athlete)
+        } is NativeHistoryLedgerResult.Durable)
+        val preflight=NativeKotlinCustomWorkoutPreflight(fence,identity,drafts,sources,store())
+        val service=NativeKotlinNamedPercentageDraftReview(fence,identity,drafts,sources,
+            store(),preflight,f.reader,NativeKotlinCustomOutstandingWorkoutInventory(
+                f.prepared,f.issuer))
+        val selection=NativeNamedPercentageSelection("owner-1","cycle-1",1,0,"slot-0",
+            NamedPercentageScheme.FIVE_THREE_ONE,PercentageTier.PRIMARY,
+            PercentageDayRole.STANDARD,PercentageReferenceKind.TRAINING_MAX,n("30"))
+        val initial=service.preview(selection)
+        assertTrue(initial.toString(),initial is NativeNamedPercentageReview.Ready)
+        val ready=initial as NativeNamedPercentageReview.Ready
+        val set=ready.proposal.proposal.draft.weekOverrides.getValue("base").single().sets.single()
+        assertEquals(0,n("25").compareTo((set.load as DraftSetLoad.Verified).value))
+        assertEquals(5,set.exactRepTarget)
+        assertTrue(set.percentageIntent!!.repOut)
+        assertEquals(n("30"),set.percentageIntent!!.referenceLoad)
+        assertFalse(ready.mayIssueWorkout)
+        assertFalse(ready.maySaveProgram)
+        assertEquals(ready,service.reconfirm(selection,ready,true))
+        assertEquals(NativeNamedPercentageReview.Rejected(
+            NativeNamedPercentageRefusal.CONFIRMATION_REQUIRED),
+            service.reconfirm(selection,ready,false))
+        assertEquals(NativeNamedPercentageReview.Rejected(
+            NativeNamedPercentageRefusal.REVIEW_CHANGED),
+            service.reconfirm(selection.copy(reference=n("35")),ready,true))
+        assertEquals(1L,(drafts.read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft.revision)
+        assertTrue(f.prepared.prepare("owner-1","named-protected","cycle-1",1,0,inputs())
+            is NativeCustomPrepareResult.Prepared)
+        assertEquals(NativeNamedPercentageReview.Rejected(NativeNamedPercentageRefusal.PROTECTED_WEEK),
+            service.reconfirm(selection,ready,true))
+        active=NativeKotlinOwnerIdentity("other-owner","other-athlete")
+        assertEquals(NativeNamedPercentageReview.Rejected(NativeNamedPercentageRefusal.NOT_AUTHORIZED),
+            service.preview(selection))
+    }
+
     private fun calibrationStore(f:AuthoredCoachFixture)=NativeKotlinBlockCalibrationConsentStore(
         temp.root.toPath(),fence,identity,f.coach,drafts,sources,permissionStore,f.reader,
         NativeKotlinCustomOutstandingWorkoutInventory(f.prepared,f.issuer),

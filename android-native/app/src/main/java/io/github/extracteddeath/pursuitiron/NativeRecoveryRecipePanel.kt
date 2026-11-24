@@ -19,7 +19,7 @@ internal fun NativeRecoveryRecipePanel(
         state.auditSourceRevision==state.sourceRevision &&
         state.reviewedCoachInputs!=null &&
         state.coachingAudit?.status==CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW &&
-        state.coachingAudit.structuralReview?.verifiedDraft==cycle
+        state.coachingAudit?.structuralReview?.verifiedDraft==cycle
     var expanded by rememberSaveable(cycle.cycleId,cycle.revision){mutableStateOf(false)}
     var cap by rememberSaveable(cycle.cycleId,cycle.revision){mutableIntStateOf(2)}
     var rir by rememberSaveable(cycle.cycleId,cycle.revision){mutableIntStateOf(4)}
@@ -63,13 +63,18 @@ internal fun NativeRecoveryRecipePanel(
                     Text(day.label,style=MaterialTheme.typography.labelLarge)
                     for(slot in day.slots) {
                         val work=slot.sets.filter{it.type==DraftSetType.WORKING}
-                        Text(kotlinExerciseLabel(slot.exerciseId)+" · "+work.joinToString("; "){set->
+                        Text(kotlinExerciseLabel(slot.exerciseId)+
+                            (slot.machineInstanceId?.let{" · bound station "+it} ?: "")+
+                            " · "+work.joinToString("; "){set->
                             val load=when(val value=set.load) {
-                                is DraftSetLoad.Verified -> value.value.stripTrailingZeros().toPlainString()+" "+value.unit.name.lowercase()
+                                is DraftSetLoad.Verified -> value.value.stripTrailingZeros().toPlainString()+" "+
+                                    value.unit.name.lowercase()+" "+kotlinLoadBasisLabel(value.basis)
                                 DraftSetLoad.ExplicitBodyweight -> "bodyweight"
                                 else -> "unresolved"
                             }
-                            "$load × ${set.reps.minimum}–${set.reps.maximum} · RIR ${set.targetRir}"
+                            val reps=set.exactRepTarget?.toString()
+                                ?: "${set.reps.minimum}–${set.reps.maximum}"
+                            "$load × $reps · RIR ${set.targetRir}"
                         },style=MaterialTheme.typography.bodySmall)
                     }
                 }

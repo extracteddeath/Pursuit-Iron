@@ -395,7 +395,7 @@ class WorkoutLastReferenceDomainTest {
     }
 
     @Test fun realNativeSwapOnBDoesNotEraseAWhileSameStationSwapBlocksOldLast() {
-        val original=session(custom(1),1).let {previous ->
+        val original=session(custom(1,basis=LoadBasis.SMITH_TOTAL),1).let {previous ->
             previous.copy(evidence=previous.evidence.copy(visits=
                 previous.evidence.visits.map { fact ->
                     fact.copy(actual=fact.actual?.copy(
@@ -404,7 +404,7 @@ class WorkoutLastReferenceDomainTest {
         }
         fun swapped(machine:String?,skip:Boolean=false):
             CustomCoachingHistoricalSession {
-            val source=custom(2)
+            val source=custom(2,basis=LoadBasis.SMITH_TOTAL)
             var journal=CustomWorkoutJournalDomain.begin(
                 "swap-${machine ?: "unknown"}-${if(skip)"skip" else "done"}",
                 source,"a".repeat(64))
@@ -443,7 +443,7 @@ class WorkoutLastReferenceDomainTest {
             return CustomCoachingHistoricalSession(2,journal.snapshot,evidence)
         }
 
-        val upcoming=custom(3)
+        val upcoming=custom(3,basis=LoadBasis.SMITH_TOTAL)
         val key=WorkoutReferenceKey(upcoming.slots.single().sets[1].setKey)
         val machineA=WorkoutMachineReferenceKey(key,"A")
         val afterB=WorkoutLastReferenceDomain.custom(
@@ -471,18 +471,18 @@ class WorkoutLastReferenceDomainTest {
     }
 
     @Test fun changedExerciseInTheSameSlotAlsoHonorsActualStationEvidence() {
-        val old=session(custom(1),1).let {record ->
+        val old=session(custom(1,basis=LoadBasis.SMITH_TOTAL),1).let {record ->
             record.copy(evidence=record.evidence.copy(visits=
                 record.evidence.visits.map{fact ->
                     fact.copy(actual=fact.actual?.copy(machineInstanceId="A"))
                 }))
         }
-        fun substituted(machine:String)=session(custom(2,exercise="paused_bench"),2)
+        fun substituted(machine:String)=session(custom(2,exercise="paused_bench",basis=LoadBasis.SMITH_TOTAL),2)
             .let {record ->record.copy(evidence=record.evidence.copy(visits=
                 record.evidence.visits.map{fact ->
                     fact.copy(actual=fact.actual?.copy(machineInstanceId=machine))
                 })) }
-        val next=custom(3)
+        val next=custom(3,basis=LoadBasis.SMITH_TOTAL)
         val key=WorkoutMachineReferenceKey(
             WorkoutReferenceKey(next.slots.single().sets[1].setKey),"A")
         val b=WorkoutLastReferenceDomain.custom(
@@ -504,9 +504,9 @@ class WorkoutLastReferenceDomainTest {
                 session.evidence.visits.map { fact ->
                     fact.copy(actual=fact.actual?.copy(machineInstanceId=machine))
                 }))
-        val oldA=at(session(custom(1),1),"A")
-        val completeB=at(session(custom(2,exercise="paused_bench"),2),"B")
-        val next=custom(3)
+        val oldA=at(session(custom(1,basis=LoadBasis.SMITH_TOTAL),1),"A")
+        val completeB=at(session(custom(2,exercise="paused_bench",basis=LoadBasis.SMITH_TOTAL),2),"B")
+        val next=custom(3,basis=LoadBasis.SMITH_TOTAL)
         val key=WorkoutMachineReferenceKey(
             WorkoutReferenceKey(next.slots.single().sets[1].setKey),"A")
         fun last(s:CustomCoachingHistoricalSession)=
@@ -546,12 +546,12 @@ class WorkoutLastReferenceDomainTest {
     }
 
     @Test fun partialRealSwapReplacementNeverKeepsOldStationLast() {
-        val oldA=session(custom(1),1).let {s->
+        val oldA=session(custom(1,basis=LoadBasis.SMITH_TOTAL),1).let {s->
             s.copy(evidence=s.evidence.copy(visits=s.evidence.visits.map{
                 it.copy(actual=it.actual?.copy(machineInstanceId="A"))
             }))
         }
-        val issued=custom(2)
+        val issued=custom(2,basis=LoadBasis.SMITH_TOTAL)
         var journal=CustomWorkoutJournalDomain.begin("real-swap",issued,"a".repeat(64))
         val original=issued.slots.single()
         val swappedId="swapped-bench"
@@ -582,7 +582,7 @@ class WorkoutLastReferenceDomainTest {
         val verified=(CustomWorkoutHistoryEvidenceDomain.project(journal)
             as CustomHistoryEvidenceResult.Candidate).evidence
         val full=CustomCoachingHistoricalSession(2,journal.snapshot,verified)
-        val next=custom(3)
+        val next=custom(3,basis=LoadBasis.SMITH_TOTAL)
         fun last(session:CustomCoachingHistoricalSession)=
             WorkoutLastReferenceDomain.custom("current",next,listOf(oldA,session))
                 as WorkoutLastReferenceResult.Ready

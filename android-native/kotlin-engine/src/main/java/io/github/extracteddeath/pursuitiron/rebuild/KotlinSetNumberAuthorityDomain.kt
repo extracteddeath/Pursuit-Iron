@@ -185,7 +185,11 @@ object KotlinSetNumberAuthorityDomain {
         if(issuedLoad !is DraftSetLoad.Verified ||
             outcome!=KotlinJournalSetOutcome.COMPLETED ||
             !valid(issuedLoad,outcome,actual))return null
-        return actual?.machineInstanceId
+        val station=actual?.machineInstanceId ?:return null
+        // The raw observation remains factual, but a tagged free barbell
+        // cannot prove an independent physical station in either engine.
+        if(machineTagContradictsFreeBarbell(issuedLoad.basis,station))return null
+        return station
     }
 
     /** Same accepted/rejected policy for generated, custom and saved replay. */

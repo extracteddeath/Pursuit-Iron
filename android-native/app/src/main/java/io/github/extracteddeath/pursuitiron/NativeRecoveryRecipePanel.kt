@@ -1,6 +1,8 @@
 package io.github.extracteddeath.pursuitiron
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import java.math.BigDecimal
@@ -14,7 +16,8 @@ import io.github.extracteddeath.pursuitiron.rebuild.*
 @Composable
 internal fun NativeRecoveryRecipePanel(
     cycle:CustomTrainingCycle,state:NativeKotlinCustomCycleState,
-    controller:NativeKotlinCustomCycleController,busy:Boolean
+    controller:NativeKotlinCustomCycleController,busy:Boolean,
+    focusRequested:Boolean=false,onFocusConsumed:()->Unit={}
 ) {
     val anchor=cycle.blocks.lastOrNull()?.takeIf{it.purpose==CustomBlockPurpose.TRAINING}
         ?:return
@@ -24,6 +27,15 @@ internal fun NativeRecoveryRecipePanel(
         state.coachingAudit?.status==CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW &&
         state.coachingAudit?.structuralReview?.verifiedDraft==cycle
     var expanded by rememberSaveable(cycle.cycleId,cycle.revision){mutableStateOf(false)}
+    val focusAnchor=remember {BringIntoViewRequester()}
+    LaunchedEffect(focusRequested) {
+        if(focusRequested) {
+            expanded=true
+            withFrameNanos { }
+            focusAnchor.bringIntoView()
+            onFocusConsumed()
+        }
+    }
     var cap by rememberSaveable(cycle.cycleId,cycle.revision){mutableIntStateOf(2)}
     var rir by rememberSaveable(cycle.cycleId,cycle.revision){mutableIntStateOf(4)}
     val unit=state.reviewedSourceSetup?.reviewed?.gym?.unit
@@ -43,6 +55,7 @@ internal fun NativeRecoveryRecipePanel(
             it.request.maximumEasierStep==(if(adjustLoad)budget else null) &&
             it.request.stepUnit==(if(adjustLoad)unit else null)
     }
+    Column(Modifier.fillMaxWidth().bringIntoViewRequester(focusAnchor)) {
     PursuitCard {
         PursuitDisclosureRow(title="Plan a recovery week",
             subtitle="Append after ${anchor.label} · no existing weeks move",
@@ -118,5 +131,6 @@ internal fun NativeRecoveryRecipePanel(
                     modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {Text("Save reviewed recovery week")}
             }
         }
+    }
     }
 }

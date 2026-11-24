@@ -148,7 +148,7 @@ for(const needle of ['!assistance.policy.offersFatigueAdvice','rights.allowedKin
 assert.ok(preview.indexOf('fresh.receipt!=reviewed')<preview.indexOf('customDraftStore.save(owner.ownerKey'));
 assert.doesNotMatch(preview,/issueWorkout\(|recordWorkingSet\(|updateHistory\(|journalStore\.save\(/);
 assert.match(recoveryModel,/mayIssueWorkout:Boolean get\(\)=false/);
-assert.match(plan,/NativeRecoveryRecipePanel\(draft,state,controller,busy\)/);
+assert.match(plan,/NativeRecoveryRecipePanel\(draft,state,controller,busy,/);
 assert.match(recoveryPanel,/remember\(reviewed\)\{mutableStateOf\(false\)\}/);
 assert.match(recoveryPanel,/controller\.acceptRecoveryRecipe\(confirmed\)/);
 assert.match(recoveryPanel,/enabled=ready && !busy && confirmed/);
@@ -168,6 +168,18 @@ assert.match(recoveryPanel,/it\.request\.maximumEasierStep==\(if\(adjustLoad\)bu
 assert.match(recoveryPanel,/it\.request\.stepUnit==\(if\(adjustLoad\)unit else null\)/);
 assert.match(recoveryPanel,/enabled=ready && !busy && confirmed && validBudget/);
 console.log('PASS optional recovery equipment-step preview requires exact unit, current machine roster and fresh reviewed budget.');
+
+const fatigueHandoff=plan.slice(plan.indexOf('val recoverySignal=state.fatigueCoachingEnabled'),
+  plan.indexOf('if(!recoverySignal && permissionHost!=null'));
+assert.match(fatigueHandoff,/CustomRepForecastPolicy\.TARGET_RIR_TREND_V3/);
+assert.match(fatigueHandoff,/CustomNextWorkoutCoachingStatus\.HOLD_MARKED_SAME_DAY_CAPACITY_DROP/);
+assert.match(fatigueHandoff,/session\.absoluteWeek==draft\.blocks\.sumOf\{it\.weeks\}/);
+assert.match(fatigueHandoff,/recoveryFocusRequested=true/);
+assert.doesNotMatch(fatigueHandoff,/acceptRecoveryRecipe|saveCustomCycleDraft|reviewRecoveryRecipe\(/);
+assert.match(recoveryPanel,/LaunchedEffect\(focusRequested\)/);
+assert.match(recoveryPanel,/focusAnchor\.bringIntoView\(\)/);
+assert.match(recoveryPanel,/onFocusConsumed\(\)/);
+console.log('PASS same-day fatigue hold hands off to an explicit recovery review only; no automatic save, load or scheduling action.');
 
 const recoveryFence=readFileSync(root+'native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinRecoveryScheduleFence.kt','utf8');
 assert.match(recoveryModel,/expectedHistoryRevision:Long/);

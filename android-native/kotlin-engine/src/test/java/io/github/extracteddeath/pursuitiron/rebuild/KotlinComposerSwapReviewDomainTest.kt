@@ -242,6 +242,46 @@ class KotlinComposerSwapReviewDomainTest {
             is KotlinHistoryProjectionResult.Candidate)
     }
 
+    @Test fun reviewedSwapNeverOffersStockSelectorZeroAsWeightedWork() {
+        // A stock list is evidence of *selectable hardware*, not evidence
+        // that a zero-weight working prescription is meaningful for a basis.
+        for(basis in listOf(
+            LoadBasis.DUMBBELL_PER_HAND,LoadBasis.MACHINE_STACK,
+            LoadBasis.CABLE_STACK,LoadBasis.SMITH_TOTAL,
+            LoadBasis.EXERCISE_OVERRIDE,LoadBasis.ASSISTANCE_COUNTERWEIGHT,
+            LoadBasis.KETTLEBELL_EACH)) {
+            val verified=VerifiedLoadStock.Totals(LoadUnit.LB,basis,
+                listOf(n("0"),n("5"),n("10")))
+            val option=same.copy(equipment=ComposerEquipment.Verified(
+                LoadUnit.LB,n("5"),verified))
+            val intents=(0..1).map{index->
+                intent(index).copy(load=DraftSetLoad.Verified(
+                    LoadUnit.LB,basis,n("0.00")))
+            }
+            assertTrue("Invalid zero $basis must not be marked Ready",
+                reviewed(start(),option=option,sets=intents)
+                    is KotlinComposerSwapReview.Rejected)
+        }
+        // A landmine convention counts only ADDED plates. Zero added
+        // plates is still a real loaded bar exercise, when stock is verified.
+        val landmine=VerifiedLoadStock.Totals(
+            LoadUnit.LB,LoadBasis.LANDMINE_ADDED_PLATES,
+            listOf(n("0"),n("5"),n("10")))
+        val option=same.copy(exerciseId="landmine-press",
+            equipment=ComposerEquipment.Verified(
+                LoadUnit.LB,n("0"),landmine))
+        val intents=(0..1).map{index->
+            intent(index).copy(load=DraftSetLoad.Verified(
+                LoadUnit.LB,LoadBasis.LANDMINE_ADDED_PLATES,n("0.000")))
+        }
+        val reviewed=reviewed(start(),option=option,sets=intents)
+        assertTrue(reviewed.toString(),
+            reviewed is KotlinComposerSwapReview.Ready)
+        val submitted=(reviewed as KotlinComposerSwapReview.Ready).operation
+        assertTrue(KotlinWorkoutJournalDomain.reduce(start(),submitted)
+            is KotlinJournalDecision.Proposed)
+    }
+
     @Test fun rawSwapAndColdReplayCannotInjectImpossibleIssuedWeights() {
         // The higher-level swap reviewer ordinarily supplies physical stock
         // evidence. The lower-level journal is also a durable receipt/replay

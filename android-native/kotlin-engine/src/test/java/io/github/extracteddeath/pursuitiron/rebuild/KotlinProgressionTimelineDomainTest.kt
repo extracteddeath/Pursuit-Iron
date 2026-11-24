@@ -143,6 +143,46 @@ class KotlinProgressionTimelineDomainTest {
             review(listOf(a1,a2,mixed,a3)).status)
     }
 
+    @Test fun partiallyAttributedOtherMachineCannotHideSkippedOrFailedWork() {
+        val a1=workout(321,machineId="A")
+        val a2=workout(322,machineId="A")
+        val b=workout(323,machineId="B")
+        val a3=workout(324,machineId="A")
+        val a4=workout(325,machineId="A")
+        val failedB=workout(326,machineId="B",failedAt=2)
+        fun review(sessions:List<KotlinWorkoutJournalState>)=
+            KotlinProgressionTimelineDomain.review(
+                request(sessions).copy(requestedMachineInstanceId="A"))
+        assertEquals(KotlinTimelineReviewStatus.VERIFIED_REVIEW,
+            review(listOf(a1,a2,b,a3)).status)
+        assertEquals(KotlinTimelineReviewStatus.UNRESOLVED_PHYSICAL_MACHINE,
+            review(listOf(a1,a2,failedB,a3)).status)
+        val target=b.snapshot.targets.last()
+        val receipt=b.effectiveSets.getValue(target.setKey)
+            .operation as KotlinJournalOperation.RecordSet
+        val initial=KotlinSavedHistoryCorrectionDomain.begin(b)
+        val correction=KotlinSavedSetCorrection("partial-b-skip",
+            initial.correctionRevision,target.setKey,receipt.eventId,
+            KotlinJournalSetOutcome.SKIPPED,null)
+        val corrected=(KotlinSavedHistoryCorrectionDomain.reduce(
+            initial,correction) as KotlinSavedCorrectionDecision.Proposed).state
+        val partial=KotlinChronologicalWorkout(3,b,corrected)
+        val timeline=listOf(KotlinChronologicalWorkout(1,a1),
+            KotlinChronologicalWorkout(2,a2),partial,
+            KotlinChronologicalWorkout(4,a3))
+        val requestWithCorrection=request(listOf(a1,a2,b,a3)).copy(
+            requestedMachineInstanceId="A",completedWorkouts=timeline)
+        val blocked=KotlinProgressionTimelineDomain.review(requestWithCorrection)
+        assertEquals(KotlinTimelineReviewStatus.UNRESOLVED_PHYSICAL_MACHINE,
+            blocked.status)
+        assertNull(blocked.progression)
+        val recovered=KotlinProgressionTimelineDomain.review(
+            requestWithCorrection.copy(completedWorkouts=
+                timeline+KotlinChronologicalWorkout(5,a4)))
+        assertEquals(KotlinTimelineReviewStatus.VERIFIED_REVIEW,recovered.status)
+        assertEquals(listOf("workout-324","workout-325"),recovered.comparedWorkoutIds)
+    }
+
     @Test fun savedPostFinishSkipRemainsAProgressionContinuityBarrier() {
         val a1=workout(311,machineId="A")
         val a2=workout(312,machineId="A")

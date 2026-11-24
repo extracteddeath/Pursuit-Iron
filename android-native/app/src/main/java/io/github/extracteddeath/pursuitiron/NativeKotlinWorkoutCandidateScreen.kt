@@ -982,6 +982,18 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         "The correction was not saved. Review the saved set and retry."
                     } ?:state.unavailableReason?.let(::humanStatus),
                     machineInstanceId=recordedMachineId,
+                    attemptAllowed=!needsMachineSelection,
+                    loadStep=if(!set.isResolved && !presentation.finished &&
+                        !needsMachineSelection && set.target.load is DraftSetLoad.Verified) {
+                        {text,direction,count->
+                            withContext(Dispatchers.IO) {
+                                val target=set.target.load as DraftSetLoad.Verified
+                                val stock=host.reviewIssuedLevelingStock(workoutId,
+                                    set.target.exerciseId,recordedMachineId,set.target.setKey)
+                                KotlinSetDraftStepDomain.stepLoad(text,direction,count,target,stock)
+                            }
+                        }
+                    } else null,
                     athleteId=journal?.snapshot?.source?.athleteId.orEmpty(),
                     workoutId=workoutId,
                     issuedGymId=issuedGymId,machineRoster=machineRoster,
@@ -1384,6 +1396,7 @@ private fun NativeKotlinSetCard(
     busy:Boolean,
     saveError:String?,
     machineInstanceId:String?,
+    attemptAllowed:Boolean,
     athleteId:String,
     workoutId:String,
     issuedGymId:String?,
@@ -1396,6 +1409,7 @@ private fun NativeKotlinSetCard(
     previousWorking:KotlinWorkoutSetPresentation?,
     setCount:Int,
     plannedBackoffNote:String?,
+    loadStep:(suspend (String,Int,Int)->String?)?,
     showExerciseHeading:Boolean,
     onHistory:()->Unit,
     onInfo:()->Unit,
@@ -1506,6 +1520,7 @@ private fun NativeKotlinSetCard(
             onRir={draftEditor.update(rir=it)},
             showLoad=verifiedLoad!=null,
             allowFailedAttempt=existing?.reps==0,
+            loadStep=loadStep,
             showFieldHelp=false
         )
         if(verifiedLoad!=null && KotlinVerifiedPlateLayoutDomain.supportsBasis(verifiedLoad.basis)) {
@@ -1525,15 +1540,16 @@ private fun NativeKotlinSetCard(
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.error)
         }
-        PursuitPrimaryAction(
-            if(set.isResolved)"Save corrected set" else "Complete set",
-            enabled=!busy && actual!=null
-        ) {onRecord(KotlinJournalSetOutcome.COMPLETED,actual)}
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
-            TextButton(onClick=onSkip,enabled=!busy){Text("Skip")}
-            TextButton(onClick={failedActual?.let(onFail)},
-                enabled=!busy && failedActual!=null){Text("Failed attempt")}
-        }
+        PursuitSetEntryActions(
+            completeLabel=if(set.isResolved)"Save correction" else "Complete",
+            skipLabel="Skip",
+            canComplete=!busy && attemptAllowed && actual!=null,
+            canSkip=!busy,
+            canFail=!busy && attemptAllowed && failedActual!=null,
+            onComplete={onRecord(KotlinJournalSetOutcome.COMPLETED,actual)},
+            onSkip=onSkip,
+            onFail={failedActual?.let(onFail)}
+        )
     }
     PursuitCard(highlighted=!set.isResolved && !finished) {
         if(showExerciseHeading)PursuitExerciseHeading(target.exerciseId,

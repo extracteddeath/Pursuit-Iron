@@ -1226,7 +1226,20 @@ internal fun NativeKotlinCustomJournalScreen(
                                 } else null,
                                 existing=observed,locked=busy||finished||!machineChoices.ready||machineChoices.busy,
                                 saving=busy,saveError=error,
+                                attemptAllowed=previouslyAttempted!=null || !requiresNewMachineChoice,
                                 machineInstanceId=mainMachineId,
+                                loadStep=if(observed==null && !finished &&
+                                    !requiresNewMachineChoice &&
+                                    set.prescription.load is DraftSetLoad.Verified) {
+                                    {text,direction,count->
+                                        withContext(Dispatchers.IO) {
+                                            val target=set.prescription.load as DraftSetLoad.Verified
+                                            val stock=host.reviewIssuedCustomLevelingStock(workoutId,
+                                                slot.slotId,mainMachineId,set.setKey)
+                                            KotlinSetDraftStepDomain.stepLoad(text,direction,count,target,stock)
+                                        }
+                                    }
+                                } else null,
                                 workoutId=workoutId,
                                 athleteId=current.originalSnapshot.stamp.athleteId,
                                 exerciseId=slot.exerciseId,
@@ -1797,7 +1810,9 @@ private fun NativeKotlinCustomVisitEditor(
     precedingDropReceiptRevision:Long?=null,
     amplifierSummary:CustomAmplifierSetSummary?=null,
     plannedLoadNote:String?=null,
-    previousWorking:CustomWorkoutJournalOperation.Record?=null
+    previousWorking:CustomWorkoutJournalOperation.Record?=null,
+    attemptAllowed:Boolean=true,
+    loadStep:(suspend (String,Int,Int)->String?)?=null
 ) {
     val prescription=set.prescription
     val follower=prescription.amplifier
@@ -1996,6 +2011,7 @@ private fun NativeKotlinCustomVisitEditor(
                     KotlinSetEntryRefusal.MISSING_REPS,KotlinSetEntryRefusal.INVALID_REPS),
                 rirError=invalid==KotlinSetEntryRefusal.INVALID_RIR,
                 allowFailedAttempt=saved?.outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT,
+                loadStep=loadStep,
                 showFieldHelp=false
             )
             if(verified!=null && KotlinVerifiedPlateLayoutDomain.supportsBasis(verified.basis)) {
@@ -2021,49 +2037,18 @@ private fun NativeKotlinCustomVisitEditor(
                     "entry or skip the optional stage; nothing was changed.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.error)
-            val completeButton:@Composable (Modifier)->Unit={buttonModifier->
-                Button(enabled=!locked && actual!=null &&
+            PursuitSetEntryActions(
+                completeLabel=if(saved!=null)"Save correction" else "Complete",
+                skipLabel=if(isStagedShortRestStop)"End sequence" else "Skip",
+                canComplete=!locked && attemptAllowed && actual!=null &&
                     !sameLoadInvalidCompletion && !invalidDropCompletion,
-                    modifier=buttonModifier,
-                    onClick={
-                        onRecord(KotlinJournalSetOutcome.COMPLETED,
-                            actual)
-                    }){Text(if(saved!=null)"Save correction" else "Complete")}
-            }
-            val skipButton:@Composable (Modifier)->Unit={buttonModifier->
-                OutlinedButton(enabled=!locked,modifier=buttonModifier,onClick={
-                    pendingExceptionalOutcome=KotlinJournalSetOutcome.SKIPPED
-                }){Text(if(isStagedShortRestStop)
-                    "End sequence" else "Skip")}
-            }
-            val failedButton:@Composable (Modifier)->Unit={buttonModifier->
-                OutlinedButton(enabled=!locked && failedActual!=null &&
+                canSkip=!locked,
+                canFail=!locked && attemptAllowed && failedActual!=null &&
                     !sameLoadInvalidFailure && !invalidDropFailure,
-                    modifier=buttonModifier,
-                    onClick={pendingExceptionalOutcome=KotlinJournalSetOutcome.FAILED_ATTEMPT}) {
-                    Text("Failed")
-                }
-            }
-            val largeText=LocalDensity.current.fontScale>=1.35f
-            BoxWithConstraints(Modifier.fillMaxWidth()) {
-                if(largeText || maxWidth<350.dp) {
-                    Column(verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-                        completeButton(Modifier.fillMaxWidth())
-                        Row(Modifier.fillMaxWidth(),
-                            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-                            skipButton(Modifier.weight(1f))
-                            failedButton(Modifier.weight(1f))
-                        }
-                    }
-                } else {
-                    Row(Modifier.fillMaxWidth(),
-                        horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-                        skipButton(Modifier.weight(1f))
-                        failedButton(Modifier.weight(1f))
-                        completeButton(Modifier.weight(1f))
-                    }
-                }
-            }
+                onComplete={onRecord(KotlinJournalSetOutcome.COMPLETED,actual)},
+                onSkip={pendingExceptionalOutcome=KotlinJournalSetOutcome.SKIPPED},
+                onFail={pendingExceptionalOutcome=KotlinJournalSetOutcome.FAILED_ATTEMPT}
+            )
             TextButton(enabled=!saving,onClick={editing=false}) {
                 Text(if(saved!=null)"Cancel correction" else "Collapse set")
             }
@@ -2229,7 +2214,9 @@ private fun NativeKotlinCustomVisitEditor(
         else
             "A failed attempt records zero completed reps at your entered attempted load. It does not count as successful work or earned progression.")},
         confirmButton={
-            Button(enabled=!locked && (pending==KotlinJournalSetOutcome.SKIPPED||failedActual!=null),
+            Button(enabled=!locked && (pending==KotlinJournalSetOutcome.SKIPPED ||
+                (attemptAllowed && failedActual!=null &&
+                    !sameLoadInvalidFailure && !invalidDropFailure)),
                 onClick={
                     pendingExceptionalOutcome=null
                     when(pending) {

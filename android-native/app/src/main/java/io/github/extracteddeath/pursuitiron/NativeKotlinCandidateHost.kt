@@ -3365,7 +3365,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
      * newly edited gym. Call on Dispatchers.IO, not the Compose main thread.
      */
     fun reviewIssuedLevelingStock(
-        workoutId:String,exerciseId:String,selectedMachineId:String?
+        workoutId:String,exerciseId:String,selectedMachineId:String?,
+        setKey:String?=null
     ):VerifiedLoadStock? {
         val owner=localAthlete.signedInIdentity()?:return null
         return runCatching {
@@ -3382,9 +3383,10 @@ internal class NativeKotlinCandidateHost(context:Context) {
                         journal.snapshot.source.gymId)
                     return@withOwnerTransaction null
                 val working=journal.snapshot.targets.filter {
-                    it.exerciseId==exerciseId && it.type==DraftSetType.WORKING
+                    it.exerciseId==exerciseId &&
+                        (if(setKey==null)it.type==DraftSetType.WORKING else it.setKey==setKey)
                 }
-                if(working.size<2 || working.any {
+                if((if(setKey==null)working.size<2 else working.size!=1) || working.any {
                     it.load !is DraftSetLoad.Verified
                 }) return@withOwnerTransaction null
                 val source=gymCoherentAuthority.currentApprovedWorkout(
@@ -3436,7 +3438,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
      * cycle, all issued prescriptions and journal receipts remain unchanged.
      */
     fun reviewIssuedCustomLevelingStock(
-        workoutId:String,slotId:String,selectedMachineId:String?
+        workoutId:String,slotId:String,selectedMachineId:String?,
+        setKey:String?=null
     ):VerifiedLoadStock? {
         val owner=localAthlete.signedInIdentity()?:return null
         return runCatching {
@@ -3455,9 +3458,9 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 val slot=snapshot.slots.singleOrNull{it.slotId==slotId}
                     ?:return@withOwnerTransaction null
                 val working=slot.sets.filter {
-                    it.prescription.type==DraftSetType.WORKING
+                    if(setKey==null)it.prescription.type==DraftSetType.WORKING else it.setKey==setKey
                 }
-                if(working.size<2 || working.any {
+                if((if(setKey==null)working.size<2 else working.size!=1) || working.any {
                     it.prescription.load !is DraftSetLoad.Verified
                 })return@withOwnerTransaction null
                 val source=(authoringSourceStore.read(owner.ownerKey)

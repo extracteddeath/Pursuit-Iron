@@ -1902,6 +1902,8 @@ private fun NativeKotlinCustomVisitEditor(
     // Invalid input cannot bypass the common precision, format or RIR bounds.
     val entry=KotlinWorkoutEntryDomain.parse(target,actualLoad,actualReps,actualRir)
     val actual=(entry as? KotlinSetEntryResult.Accepted)?.performed
+    val invalidIssuedRepBand=
+        !KotlinSetNumberAuthorityDomain.validIssuedRepBand(prescription.reps)
     val failedEntry=KotlinWorkoutEntryDomain.parse(
         target,actualLoad,actualReps,actualRir,failed=true)
     val failedActual=(failedEntry as? KotlinSetEntryResult.Accepted)?.performed
@@ -1998,6 +2000,12 @@ private fun NativeKotlinCustomVisitEditor(
                     Text("View plates for entered weight")
                 }
             }
+            if(invalidIssuedRepBand)
+                Text("The issued rep range is invalid. This set cannot be " +
+                    "completed or failed until its program is corrected. " +
+                    "You can skip the set without inventing a workout result.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.error)
             if(sameLoadInvalidCompletion || sameLoadInvalidFailure)
                 Text("This technique must use the exact weight and physical " +
                     "machine logged on its activation set. A lower weight is " +
@@ -2014,7 +2022,8 @@ private fun NativeKotlinCustomVisitEditor(
                     color=MaterialTheme.colorScheme.error)
             val completeButton:@Composable (Modifier)->Unit={buttonModifier->
                 Button(enabled=!locked && actual!=null &&
-                    !sameLoadInvalidCompletion && !invalidDropCompletion,
+                    !sameLoadInvalidCompletion && !invalidDropCompletion &&
+                    !invalidIssuedRepBand,
                     modifier=buttonModifier,
                     onClick={
                         onRecord(KotlinJournalSetOutcome.COMPLETED,
@@ -2029,7 +2038,8 @@ private fun NativeKotlinCustomVisitEditor(
             }
             val failedButton:@Composable (Modifier)->Unit={buttonModifier->
                 OutlinedButton(enabled=!locked && failedActual!=null &&
-                    !sameLoadInvalidFailure && !invalidDropFailure,
+                    !sameLoadInvalidFailure && !invalidDropFailure &&
+                    !invalidIssuedRepBand,
                     modifier=buttonModifier,
                     onClick={pendingExceptionalOutcome=KotlinJournalSetOutcome.FAILED_ATTEMPT}) {
                     Text("Failed")

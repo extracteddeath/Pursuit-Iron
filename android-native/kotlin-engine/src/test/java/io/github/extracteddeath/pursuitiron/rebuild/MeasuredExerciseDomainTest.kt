@@ -152,6 +152,36 @@ class MeasuredExerciseDomainTest {
                 as MeasurementPlanResult.Rejected).reason)
     }
 
+    @Test fun physicalZeroSelectorCannotBecomeAnIssuedMeasuredLoad() {
+        // A stock selector proves attainability, not the right to issue an
+        // unloaded weighted-plank, plate-pinch, or physical carry.
+        for(id in listOf("plate-pinch","weighted-plank",
+                "farmers","suitcase-carry")) {
+            val original=plan(id)
+            val def=checkNotNull(MeasuredExerciseCatalogDomain.find(id))
+            val stock=VerifiedLoadStock.Totals(LoadUnit.LB,
+                checkNotNull(def.expectedBasis),
+                listOf(n("0"),n("20")))
+            val zero=original.copy(physicalStock=stock,
+                intendedExternalLoad=n("0.000"))
+            val proof=EquipmentLoadDomain.inspect(stock,n("0"),LoadUnit.LB)
+            assertTrue(id,proof is LoadInspection.Confirmed && proof.exact)
+            assertEquals(id,MeasurementRefusal.UNVERIFIED_STOCK,
+                (MeasuredExerciseDomain.inspect(zero)
+                    as MeasurementPlanResult.Rejected).reason)
+            assertNull(id,MeasuredExerciseJournalDomain.begin(zero))
+            // A corrected athlete-observed zero is a separate physical fact:
+            // it cannot turn the ORIGINAL positive prescribed load into zero.
+            val positive=zero.copy(intendedExternalLoad=n("20"))
+            assertTrue(id,MeasuredExerciseDomain.inspect(positive)
+                is MeasurementPlanResult.Candidate)
+            assertTrue(id,MeasuredExerciseDomain.validActual(positive,
+                MeasuredSetOutcome.COMPLETED,
+                actual(positive,weight="0.0")))
+            assertEquals(n("20"),positive.intendedExternalLoad)
+        }
+    }
+
     @Test fun bandAssistedRepsHaveNoFictitiousWeightEquivalent() {
         val p=plan("band-pushup")
         assertTrue(MeasuredExerciseDomain.validActual(p,

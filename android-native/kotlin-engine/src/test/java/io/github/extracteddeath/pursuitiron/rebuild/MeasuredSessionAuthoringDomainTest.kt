@@ -79,6 +79,31 @@ class MeasuredSessionAuthoringDomainTest {
         assertFalse(checkNotNull(initial).mayPublishHistory)
     }
 
+    @Test fun measuredSessionBuilderDoesNotPromoteZeroSelectorToIssuedWeight() {
+        val reviewed=profile()
+        val stockWithZero=reviewed.gym.confirmedStock.toMutableMap()
+        stockWithZero["dumbbell-rack"]=VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.DUMBBELL_PER_HAND,listOf(n("0"),n("20"),n("25")))
+        stockWithZero["single-weight-plate"]=VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.EXERCISE_OVERRIDE,listOf(n("0"),n("10"),n("20")))
+        val athlete=reviewed.copy(gym=reviewed.gym.copy(
+            confirmedStock=stockWithZero))
+        for(id in listOf("farmers","suitcase-carry","plate-pinch",
+                "weighted-plank")) {
+            val side=if(id=="plate-pinch" || id=="suitcase-carry")
+                MeasuredSide.RIGHT else null
+            val selection=MeasuredSessionSelection(
+                id,if(id.endsWith("carry") || id=="farmers")2000 else 30,1,
+                singleSide=side,targetExternalLoad=n("0.000"),
+                matchedPairConfirmed=id=="farmers")
+            assertNull(id,MeasuredSessionAuthoringDomain.compose(
+                "zero-source-$id",6,athlete,listOf(selection)))
+            val positive=selection.copy(targetExternalLoad=n("20"))
+            assertNotNull(id,MeasuredSessionAuthoringDomain.compose(
+                "positive-source-$id",6,athlete,listOf(positive)))
+        }
+    }
+
     @Test fun mixedWorkoutRecordsExactFactsAndCanColdReplayOneFinish() {
         val plan=checkNotNull(MeasuredSessionAuthoringDomain.compose(
             "measured-mixed-1",3,profile(),selections()))

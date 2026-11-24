@@ -49,7 +49,9 @@ data class CustomAuthoredSet(
     val restSeconds: Int,
     val amplifier: CustomSetAmplifier? = null,
     /** Exact saved working-set target; distinct from the permitted rep range. */
-    val exactRepTarget: Int? = null
+    val exactRepTarget: Int? = null,
+    /** Durable named protocol intent; never inferred from an ordinary rep range. */
+    val percentageIntent: CustomPercentageSetIntent? = null
 )
 
 /**
@@ -292,6 +294,13 @@ object CustomTrainingCycleDomain {
             val lastWorkingSet=sets.indexOfLast { it.type==DraftSetType.WORKING }
             for ((setIndex, set) in sets.withIndex()) {
                 val here = "$at.set.$setIndex"
+                // Transport can retain future named protocol intent, but
+                // until the owner-fenced issuance path replays its source
+                // recipe and displays rep-out semantics it must not execute
+                // as an ordinary custom set.
+                if(set.percentageIntent!=null)
+                    issue(CustomCycleIssueKind.INVALID_SET, here,
+                        "Named percentage protocol requires its dedicated reviewed issuance path.")
                 // Beyond-failure lengthened partials are an optional
                 // same-load extension of ONE final working set. Never place
                 // them on warmups, earlier work, or every set by default.

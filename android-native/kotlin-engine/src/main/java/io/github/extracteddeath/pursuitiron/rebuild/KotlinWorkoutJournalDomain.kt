@@ -120,7 +120,6 @@ sealed interface KotlinJournalDecision {
 object KotlinWorkoutJournalDomain {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val zero=BigDecimal.ZERO
-    private val max=BigDecimal("100000")
     // Preserve every legacy receipt. Once ordinary edits reach their limit,
     // the remaining bounded slots are for unresolved work and Finish only.
     internal const val EDIT_LIMIT = 2048
@@ -136,7 +135,10 @@ object KotlinWorkoutJournalDomain {
         target: KotlinWorkoutTarget,
         outcome: KotlinJournalSetOutcome,
         performed: KotlinPerformedSet?
-    ): Boolean = KotlinSetNumberAuthorityDomain.valid(target.load,outcome,performed)
+    ): Boolean =
+        (outcome==KotlinJournalSetOutcome.SKIPPED ||
+            KotlinSetNumberAuthorityDomain.validIssuedRepBand(target.reps)) &&
+        KotlinSetNumberAuthorityDomain.valid(target.load,outcome,performed)
 
     /**
      * Reconstructs a reducer state ONLY from the storage-owner's committed
@@ -247,18 +249,12 @@ object KotlinWorkoutJournalDomain {
                         (target.type to target.ordinal) !in oldOrdinals ||
                         target.setKey!="swap:${operation.eventId}:${target.type.name.lowercase()}:${target.ordinal}" ||
                         target.setKey.length !in 1..100 ||
-                        target.reps.minimum !in 1..100 ||
-                        target.reps.maximum !in target.reps.minimum..100 ||
+                        !KotlinSetNumberAuthorityDomain.validIssuedRepBand(
+                            target.reps) ||
                         target.targetRir?.let{it !in 0..10}==true ||
                         target.activeSeconds !in 1..3600 ||
                         target.restSeconds !in 0..3600 ||
-                        when(val load=target.load){
-                            DraftSetLoad.ExplicitBodyweight->false
-                            is DraftSetLoad.Verified ->
-                                load.value<BigDecimal.ZERO ||
-                                load.value>max ||
-                                load.value.stripTrailingZeros().scale()>3
-                        }
+                        !KotlinSetNumberAuthorityDomain.validIssuedLoad(target.load)
                     })return KotlinJournalDecision.Rejected(
                         KotlinJournalRefusal.SWAP_INVALID_TARGET)
                 val start=journal.snapshot.targets.indexOfFirst{

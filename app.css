@@ -8883,9 +8883,9 @@ background:var(--pi-color-card)!important;
 
 .wpb-profile-share-card h2{margin:0 0 var(--pi-space-1);font-size:clamp(1.5rem,5vw,2rem);line-height:1.16;letter-spacing:-.035em;overflow-wrap:anywhere}
 .wpb-profile-card-caption{margin:0;color:var(--wpb-theme-muted);font-size:.875rem;line-height:1.5}
-.wpb-profile-card-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--pi-space-2) var(--pi-space-3);margin:var(--pi-space-4) 0 0}
+.wpb-profile-card-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--pi-space-2) 0;margin:var(--pi-space-4) 0 0;overflow:hidden}
 .wpb-profile-card-metrics>div{min-width:0;padding:var(--pi-space-2) var(--pi-space-1);border:0;overflow-wrap:break-word}
-.wpb-profile-card-metrics>div:nth-child(-n+2){padding:var(--pi-space-3);border-radius:var(--pi-shape-action);background:var(--pi-color-control,var(--wpb-theme-card-high))}
+.wpb-profile-card-metrics>div:nth-child(-n+2){padding:var(--pi-space-1) var(--pi-space-3);border-radius:0;background:transparent;box-shadow:-1px 0 0 var(--pi-color-divider)}
 .wpb-profile-card-metrics dt{font-size:.75rem;font-weight:650;color:var(--wpb-theme-muted)}
 .wpb-profile-card-metrics dd{margin:var(--pi-space-1) 0;font-size:var(--pi-type-body);font-weight:750;line-height:1.35;overflow-wrap:break-word;font-variant-numeric:tabular-nums}
 .wpb-profile-card-metrics>div:nth-child(-n+2) dd{font-size:clamp(1.0625rem,2.6vw,1.375rem);letter-spacing:-.025em}
@@ -10243,8 +10243,10 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-ui-list-headline{font-size:var(--pi-type-body);font-weight:600;line-height:1.3}
 #root .wpb .wpb-ui-list-supporting{display:-webkit-box;overflow:hidden;font-size:var(--pi-type-support);line-height:1.4;color:var(--pi-color-on-muted);-webkit-box-orient:vertical;-webkit-line-clamp:2}
 #root .wpb .wpb-ui-list-trailing{flex:none;font-size:var(--pi-type-support);color:var(--pi-color-on-muted)}
-#root .wpb .wpb-ui-stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(5.5rem,1fr));gap:var(--pi-space-2);margin:0}
-#root .wpb .wpb-ui-stat{display:flex;flex-direction:column-reverse;align-items:center;justify-content:flex-end;gap:4px;min-width:0;padding:10px 4px;border-radius:var(--pi-radius-md);background:var(--pi-color-control);text-align:center}
+/* B1039: stat tiles are figures on their card, not cards inside it. A 1px divider sits at each
+   tile's leading edge; the row clips it at whichever tile starts a line (wrapping included). */
+#root .wpb .wpb-ui-stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(4.75rem,1fr));gap:var(--pi-space-2) 0;margin:0;overflow:hidden}
+#root .wpb .wpb-ui-stat{display:flex;flex-direction:column-reverse;align-items:center;justify-content:flex-end;gap:4px;min-width:0;padding:6px 4px;border-radius:0;background:transparent;box-shadow:-1px 0 0 var(--pi-color-divider);text-align:center}
 #root .wpb .wpb-ui-stat-label{font-size:var(--pi-type-caption);font-weight:600;color:var(--pi-color-on-muted)}
 #root .wpb .wpb-ui-stat-value{margin:0;font-size:var(--pi-type-body);font-weight:700;line-height:1.2;color:var(--pi-color-on-control);overflow-wrap:break-word}
 #root .wpb .wpb-ui-stat-delta{display:block;font-size:var(--pi-type-caption);font-weight:600;color:var(--pi-color-warning)}

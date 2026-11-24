@@ -32,4 +32,8 @@ assert.ok(rule('#root[data-pi-motion="expressive"] .wpb-program .wpb-schedule-da
 assert.ok(rule('#root .wpb .wpb-ui-action[data-action="tonal"]').includes('border:1px solid transparent;'), 'Tonal actions have no outline');
 assert.ok(app.includes('_jsx("span", { className: "wpb-progression-auto", children: "Auto \\u00B7 " })'), 'Auto prefix is its own span');
 assert.ok(css.includes('@container pi-exercise-actions (max-width:260px){#root .wpb .wpb-program .wpb-progression-auto{display:none;}}'), 'Auto prefix yields on narrow rows');
+// B1039: stat tiles (Home's week recap, Profile's card metrics) are figures divided by a rule,
+// not filled tiles inside their card.
+assert.ok(css.includes('border-radius:0;background:transparent;box-shadow:-1px 0 0 var(--pi-color-divider);text-align:center}'), 'Home stat tiles are flat');
+assert.ok(css.includes('.wpb-profile-card-metrics>div:nth-child(-n+2){padding:var(--pi-space-1) var(--pi-space-3);border-radius:0;background:transparent;box-shadow:-1px 0 0 var(--pi-color-divider)}'), 'Profile metrics are flat');
 console.log('PASS B1037 program day: one surface with divided exercise rows, compact chips, plain Day focus and shared actions.');

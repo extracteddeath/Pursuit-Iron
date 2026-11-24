@@ -32,7 +32,7 @@ internal data class NativeCustomSavedCorrectionEnvelope(
 
 internal object NativeCustomSavedCorrectionCodec {
     private const val MAGIC = 0x50494353 // PICS
-    private const val VERSION = 3
+    private const val VERSION = 4
     const val MAX_BYTES = 256_000
     private const val MAX_RECEIPTS = 512
     private val id = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
@@ -51,7 +51,7 @@ internal object NativeCustomSavedCorrectionCodec {
     private fun DataOutputStream.performed(value: KotlinPerformedSet?,version:Int) {
         writeBoolean(value != null)
         if (value == null) return
-        optional(value.load?.toPlainString())
+        optional(value.load?.let{if(version>=4)it.toString() else it.toPlainString()})
         optional(value.unit?.name)
         writeInt(value.reps)
         writeBoolean(value.actualRir != null)
@@ -84,12 +84,14 @@ internal object NativeCustomSavedCorrectionCodec {
         require(receiptId.matches(value.originalReceiptId))
         require(value.receipts.size <= MAX_RECEIPTS &&
             value.revision == value.receipts.size.toLong())
-        // Keep the complete historical V1 bytes unchanged when no
-        // machine-tagged correction exists. Only physical A/B corrections
-        // require the new V2 payload; otherwise manifest digests could
-        // turn an old, authentic saved correction into a false mismatch.
-        val version=if(value.receipts.any{it.correction.visit.stage>1})
-            VERSION else if(value.receipts.any {
+        // Keep historical V1/V2/V3 bytes stable. Those formats preserved
+        // nonnegative scale via plain decimal text, but would silently lose
+        // a negative scale (200 vs 2E+2), breaking exact redo equality.
+        // Only a new negative-scale observation requires V4.
+        val version=if(value.receipts.any{
+                (it.correction.performed?.load?.scale() ?: 0)<0
+            }) VERSION else if(value.receipts.any{it.correction.visit.stage>1})
+            3 else if(value.receipts.any {
                 it.correction.performed?.machineInstanceId!=null
             }) 2 else 1
         val body = ByteArrayOutputStream()

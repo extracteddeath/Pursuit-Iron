@@ -307,9 +307,14 @@ class CustomBlockTransitionLoadDomainTest {
                         DraftSetLoad.Verified(LoadUnit.LB,basis,n(value)),
                         RepBand(10,10),null,30,60))
             )+slot.sets)})
+        // The helper's default two-item RIR/rep observations only cover
+        // ordinary working sets. Supply the warmup's own third fact rather
+        // than accidentally indexing beyond the historical observation list.
+        fun completedWarmup(day:CustomWorkoutDaySnapshot)=completed(day,
+            rirs=listOf(null,2,2),performed=listOf(10,8,8))
         fun check(value:Int,inventory:VerifiedLoadStock=stock)=
             review(withWarmup(snapshot(true,listOf(215,215)),value),
-                listOf(completed(withWarmup(snapshot(),value))),
+                listOf(completedWarmup(withWarmup(snapshot(),value))),
                 physical=inventory)
         // A genuine lighter warmup remains a factual part of the proposal.
         val okay=check(195)
@@ -345,7 +350,7 @@ class CustomBlockTransitionLoadDomainTest {
             listOf(n(0),n(195),n(200),n(205),n(215)))
         val former=landmine(withWarmup(snapshot(),0))
         val future=landmine(withWarmup(snapshot(true,listOf(215,215)),0))
-        val allowed=review(future,listOf(completed(former)),physical=landmineStock)
+        val allowed=review(future,listOf(completedWarmup(former)),physical=landmineStock)
         assertEquals(CustomBlockTransitionLoadStatus.READY_FOR_REVIEW,allowed.status)
         assertEquals(n(0),(allowed.proposedWorkout!!.slots.single().sets.first()
             .prescription.load as DraftSetLoad.Verified).value)

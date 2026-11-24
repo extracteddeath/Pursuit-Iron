@@ -760,6 +760,20 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
             reopened.issued.journal.finishedByEventId)
     }
 
+    @Test fun fullHistoryRejectsNewCustomIssueWithoutWritingJournal() {
+        initialize();approve();prepareWeek()
+        val entries=(1..KotlinHistoryCapacityPolicy.MAX_MANIFEST_COMPLETIONS).map { i ->
+            KotlinHistoryManifestEntry(i.toLong(),"old-$i","old-storage-$i","old-finish-$i",1L,0L)
+        }
+        assertTrue(history.enrollVerifiedSnapshot("owner-1","athlete-1",entries){_,_->true}
+            is NativeHistoryLedgerResult.Durable)
+        val result=issued.issue("owner-1","workout-2","cycle-1",2,0,input())
+        assertEquals(NativeCustomJournalRefusal.HISTORY_NOT_READY,
+            (result as NativeCustomJournalResult.Rejected).reason)
+        assertEquals(NativeCustomJournalRefusal.NOT_ISSUED,
+            (issued.open("owner-1","workout-2") as NativeCustomJournalResult.Rejected).reason)
+    }
+
     @Test fun preparationAndConsentAloneNeverIssueUntilHistoryIsEnrolled() {
         initialize();approve();prepareWeek()
         assertEquals(NativeCustomJournalResult.Rejected(

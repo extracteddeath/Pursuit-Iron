@@ -1510,6 +1510,11 @@ private fun NativeKotlinSetCard(
                 target.load,target.exerciseId,issuedGymId,machineRoster),
                 color=MaterialTheme.colorScheme.onSurfaceVariant,
                 style=MaterialTheme.typography.bodyMedium)
+            // A first log is not an edit. Only receipt-derived correction
+            // ancestry may label the current effective observation as edited.
+            if(set.correctsEventId!=null)
+                Text("Edited result",style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if(finished) return@PursuitCard
         if(set.isResolved) {

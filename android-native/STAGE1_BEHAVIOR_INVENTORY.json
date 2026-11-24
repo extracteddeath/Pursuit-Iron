@@ -4,7 +4,7 @@
   "kotlinCommit": "05c02ff2362736439ca1fcabfd7d477b2fa366",
   "notes": "Required rows are acceptance work packages, not assertions of functional completion. Kotlin fixture candidates are domain/test/source-contract names; source file candidates are not tests and require a dedicated test. No behavior marked accepted until actual evidence recorded. Optional exclusions apply only within launch scope.",
   "counts": {
-    "required": 99,
+    "required": 120,
     "optional": 5,
     "accepted": 0
   },
@@ -178,7 +178,39 @@
       "acceptance": "All seven styles plus manual override and equipment-appropriate auto selection; save/issue method not merely label.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "inspectedAssertions": [
+        {
+          "file": "BasicProgressionPolicyDomainTest",
+          "method": "strictDoubleNeedsAllWorkingSetsAtCeilingBeforeAllAdvance",
+          "asserted": "100/100/100 stays if not all ceiling; 105/105/105 when all earn.",
+          "scope": "source assertion inspected; domain only; no row-level end-to-end acceptance"
+        },
+        {
+          "file": "BasicProgressionPolicyDomainTest",
+          "method": "dynamicOnlyIncreasesSetPositionsThatHitTheirOwnCeiling",
+          "asserted": "105/100/105, increased ordinals 0 and 2.",
+          "scope": "source assertion inspected; domain only; no row-level end-to-end acceptance"
+        },
+        {
+          "file": "BasicProgressionExtendedCoverageTest",
+          "method": "linearProgressionRequiresEverySetToMeetRepFloor",
+          "asserted": "All 105 after required floor; otherwise all 100.",
+          "scope": "source assertion inspected; domain only; no row-level end-to-end acceptance"
+        },
+        {
+          "file": "BasicProgressionExtendedCoverageTest",
+          "method": "repLadderBuildsTargetsThenResetsOnlyAfterAnEarnedVerifiedLoadStep",
+          "asserted": "Targets advance separately; reset reps only after verified increase.",
+          "scope": "source assertion inspected; domain only; no row-level end-to-end acceptance"
+        },
+        {
+          "file": "BasicProgressionExtendedCoverageTest",
+          "method": "assistanceUsesExactNextLowerCounterweightOnlyAfterAllCeilingSets",
+          "asserted": "All 40 holds until ceiling, then 30; inverse assistance.",
+          "scope": "source assertion inspected; domain only; no row-level end-to-end acceptance"
+        }
+      ]
     },
     {
       "id": "NUM-LOAD",
@@ -198,7 +230,15 @@
       "acceptance": "All pathways exact physical load, per-hand/total/counterweight, no 38.5 or 159.5 when impossible, no silent rounding upward.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "inspectedAssertions": [
+        {
+          "file": "BasicProgressionPolicyDomainTest",
+          "method": "allLoadIncreasesUseVerifiedAdjacentStockAndAuthorizedLimit",
+          "asserted": "No increase beyond authorized limit; exact adjacent stock.",
+          "scope": "source assertion inspected; domain only; no row-level end-to-end acceptance"
+        }
+      ]
     },
     {
       "id": "NUM-FIRST",
@@ -257,7 +297,15 @@
       "acceptance": "Same exercise repeated across days and gym/machine A/B has independent earned history; no cross-day borrowing.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "inspectedAssertions": [
+        {
+          "file": "BasicProgressionPolicyDomainTest",
+          "method": "physicalStationDayAndBlockNeverBorrowAnotherProgressionThread",
+          "asserted": "Refuses evidence from another physical station, day or block.",
+          "scope": "source assertion inspected; domain only; no row-level end-to-end acceptance"
+        }
+      ]
     },
     {
       "id": "NUM-CORRECTION",
@@ -336,7 +384,21 @@
       "acceptance": "Global and individual opt-out; manual logging and basic progression independent of fatigue/adaptive coach.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "inspectedAssertions": [
+        {
+          "file": "BasicProgressionPolicyDomainTest",
+          "method": "manualLoggingKeepsApprovedNumbersWithoutHistoryStockOrCoaching",
+          "asserted": "Approved 100/105/100 stays unchanged, zero increments, MANUAL_REPEAT.",
+          "scope": "source assertion inspected; domain only; no row-level end-to-end acceptance"
+        },
+        {
+          "file": "BasicProgressionPolicyDomainTest",
+          "method": "explicitRirZeroDoesNotInvokeCoachingForBasicProgression",
+          "asserted": "Actual zero RIR retained; basic progression does not invoke coach.",
+          "scope": "source assertion inspected; domain only; no row-level end-to-end acceptance"
+        }
+      ]
     },
     {
       "id": "LIVE-FATIGUE",
@@ -1997,6 +2059,416 @@
       "state": "DEFERRED_OPTIONAL",
       "evidence": "Existing beta scope policy; no change to mandatory engine parity",
       "deviceRequired": false
+    },
+    {
+      "id": "TIME-S20",
+      "group": "program-builder",
+      "parents": [
+        "E02",
+        "E14"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/training-domain/catalog.js:547-554",
+      "candidateFixtures": [
+        "CoachAthleteSetupDomainTest",
+        "GeneratedProgramQualityMatrixTest"
+      ],
+      "acceptance": "Generate, review, save and issue up to 20 minutes sessions; verified work/rest/warmup budget and explicit infeasibility, no silent substitution. Shorter-session action is separate.",
+      "state": "GAP",
+      "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
+      "deviceRequired": true
+    },
+    {
+      "id": "TIME-S40",
+      "group": "program-builder",
+      "parents": [
+        "E02",
+        "E14"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/training-domain/catalog.js:547-554",
+      "candidateFixtures": [
+        "CoachAthleteSetupDomainTest",
+        "GeneratedProgramQualityMatrixTest"
+      ],
+      "acceptance": "Generate, review, save and issue 20–40 minutes sessions; verified work/rest/warmup budget and explicit infeasibility, no silent substitution. Shorter-session action is separate.",
+      "state": "GAP",
+      "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
+      "deviceRequired": true
+    },
+    {
+      "id": "TIME-S60",
+      "group": "program-builder",
+      "parents": [
+        "E02",
+        "E14"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/training-domain/catalog.js:547-554",
+      "candidateFixtures": [
+        "CoachAthleteSetupDomainTest",
+        "GeneratedProgramQualityMatrixTest"
+      ],
+      "acceptance": "Generate, review, save and issue 40–60 minutes sessions; verified work/rest/warmup budget and explicit infeasibility, no silent substitution. Shorter-session action is separate.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
+      "deviceRequired": true
+    },
+    {
+      "id": "TIME-S90",
+      "group": "program-builder",
+      "parents": [
+        "E02",
+        "E14"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/training-domain/catalog.js:547-554",
+      "candidateFixtures": [
+        "CoachAthleteSetupDomainTest",
+        "GeneratedProgramQualityMatrixTest"
+      ],
+      "acceptance": "Generate, review, save and issue 60–90 minutes sessions; verified work/rest/warmup budget and explicit infeasibility, no silent substitution. Shorter-session action is separate.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
+      "deviceRequired": true
+    },
+    {
+      "id": "TIME-S120",
+      "group": "program-builder",
+      "parents": [
+        "E02",
+        "E14"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/training-domain/catalog.js:547-554",
+      "candidateFixtures": [
+        "CoachAthleteSetupDomainTest",
+        "GeneratedProgramQualityMatrixTest"
+      ],
+      "acceptance": "Generate, review, save and issue 90–120 minutes sessions; verified work/rest/warmup budget and explicit infeasibility, no silent substitution. Shorter-session action is separate.",
+      "state": "GAP",
+      "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
+      "deviceRequired": true
+    },
+    {
+      "id": "TIME-S120P",
+      "group": "program-builder",
+      "parents": [
+        "E02",
+        "E14"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/training-domain/catalog.js:547-554",
+      "candidateFixtures": [
+        "CoachAthleteSetupDomainTest",
+        "GeneratedProgramQualityMatrixTest"
+      ],
+      "acceptance": "Generate, review, save and issue over 120 minutes sessions; verified work/rest/warmup budget and explicit infeasibility, no silent substitution. Shorter-session action is separate.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
+      "deviceRequired": true
+    },
+    {
+      "id": "EXP-NONE",
+      "group": "program-builder",
+      "parents": [
+        "E01",
+        "E11",
+        "E12"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/training-domain/catalog.js:556-561",
+      "candidateFixtures": [
+        "CoachAthleteSetupDomainTest",
+        "GeneratedProgramQualityMatrixTest"
+      ],
+      "acceptance": "Preserve brand-new profile intent and experience-appropriate dose, technique, progression and fatigue; reviewed equivalence permitted, no silent coercion.",
+      "state": "GAP",
+      "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
+      "deviceRequired": true
+    },
+    {
+      "id": "EXP-BEGINNER",
+      "group": "program-builder",
+      "parents": [
+        "E01",
+        "E11",
+        "E12"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/training-domain/catalog.js:556-561",
+      "candidateFixtures": [
+        "CoachAthleteSetupDomainTest",
+        "GeneratedProgramQualityMatrixTest"
+      ],
+      "acceptance": "Preserve beginner profile intent and experience-appropriate dose, technique, progression and fatigue; reviewed equivalence permitted, no silent coercion.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
+      "deviceRequired": true
+    },
+    {
+      "id": "EXP-INTERMEDIATE",
+      "group": "program-builder",
+      "parents": [
+        "E01",
+        "E11",
+        "E12"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/training-domain/catalog.js:556-561",
+      "candidateFixtures": [
+        "CoachAthleteSetupDomainTest",
+        "GeneratedProgramQualityMatrixTest"
+      ],
+      "acceptance": "Preserve intermediate profile intent and experience-appropriate dose, technique, progression and fatigue; reviewed equivalence permitted, no silent coercion.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
+      "deviceRequired": true
+    },
+    {
+      "id": "EXP-ADVANCED",
+      "group": "program-builder",
+      "parents": [
+        "E01",
+        "E11",
+        "E12"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/training-domain/catalog.js:556-561",
+      "candidateFixtures": [
+        "CoachAthleteSetupDomainTest",
+        "GeneratedProgramQualityMatrixTest"
+      ],
+      "acceptance": "Preserve advanced profile intent and experience-appropriate dose, technique, progression and fatigue; reviewed equivalence permitted, no silent coercion.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
+      "deviceRequired": true
+    },
+    {
+      "id": "CYCLE-PRESET-POWERBUILDING",
+      "group": "adaptive-cycles",
+      "parents": [
+        "E32",
+        "E35"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/simulation.js:14-34",
+      "candidateFixtures": [
+        "GeneratedAdaptiveBlockSafetyTest",
+        "CoachReviewedWholeCycleDomainTest"
+      ],
+      "acceptance": "Generate and issue the complete 6 hypertrophy / 5 strength / 3 peak weeks preset; phase, duration, dose and transition preserved.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
+      "deviceRequired": true
+    },
+    {
+      "id": "CYCLE-PRESET-STRENGTH_PEAK",
+      "group": "adaptive-cycles",
+      "parents": [
+        "E32",
+        "E35"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/simulation.js:14-34",
+      "candidateFixtures": [
+        "GeneratedAdaptiveBlockSafetyTest",
+        "CoachReviewedWholeCycleDomainTest"
+      ],
+      "acceptance": "Generate and issue the complete 4 mixed accumulation / 4 intensification / 2 peak preset; phase, duration, dose and transition preserved.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
+      "deviceRequired": true
+    },
+    {
+      "id": "CYCLE-PRESET-FOUNDATION",
+      "group": "adaptive-cycles",
+      "parents": [
+        "E32",
+        "E35"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/simulation.js:14-34",
+      "candidateFixtures": [
+        "GeneratedAdaptiveBlockSafetyTest",
+        "CoachReviewedWholeCycleDomainTest"
+      ],
+      "acceptance": "Generate and issue the complete 4 foundation / 5 hypertrophy / 4 mixed accumulation preset; phase, duration, dose and transition preserved.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
+      "deviceRequired": true
+    },
+    {
+      "id": "CYCLE-PRESET-HYPERTROPHY_SPEC",
+      "group": "adaptive-cycles",
+      "parents": [
+        "E32",
+        "E35"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/simulation.js:14-34",
+      "candidateFixtures": [
+        "GeneratedAdaptiveBlockSafetyTest",
+        "CoachReviewedWholeCycleDomainTest"
+      ],
+      "acceptance": "Generate and issue the complete two 5-week hypertrophy waves preset; phase, duration, dose and transition preserved.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
+      "deviceRequired": true
+    },
+    {
+      "id": "PHASE-HYPERTROPHY_ACCUMULATION",
+      "group": "adaptive-cycles",
+      "parents": [
+        "E13",
+        "E32",
+        "E33"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/cycle-runtime-adapter.js",
+      "candidateFixtures": [
+        "CustomCycleTransitionDomainTest",
+        "CustomCycleCoachAuditDomainTest"
+      ],
+      "acceptance": "Author and execute hypertrophy_accumulation; correct duration, exercise/sets/rep/RIR/rest and phase-specific dose, preservation and approved transition.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
+      "deviceRequired": true
+    },
+    {
+      "id": "PHASE-STRENGTH_ACCUMULATION",
+      "group": "adaptive-cycles",
+      "parents": [
+        "E13",
+        "E32",
+        "E33"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/cycle-runtime-adapter.js",
+      "candidateFixtures": [
+        "CustomCycleTransitionDomainTest",
+        "CustomCycleCoachAuditDomainTest"
+      ],
+      "acceptance": "Author and execute strength_accumulation; correct duration, exercise/sets/rep/RIR/rest and phase-specific dose, preservation and approved transition.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
+      "deviceRequired": true
+    },
+    {
+      "id": "PHASE-MIXED_ACCUMULATION",
+      "group": "adaptive-cycles",
+      "parents": [
+        "E13",
+        "E32",
+        "E33"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/cycle-runtime-adapter.js",
+      "candidateFixtures": [
+        "CustomCycleTransitionDomainTest",
+        "CustomCycleCoachAuditDomainTest"
+      ],
+      "acceptance": "Author and execute mixed_accumulation; correct duration, exercise/sets/rep/RIR/rest and phase-specific dose, preservation and approved transition.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
+      "deviceRequired": true
+    },
+    {
+      "id": "PHASE-INTENSIFICATION",
+      "group": "adaptive-cycles",
+      "parents": [
+        "E13",
+        "E32",
+        "E33"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/cycle-runtime-adapter.js",
+      "candidateFixtures": [
+        "CustomCycleTransitionDomainTest",
+        "CustomCycleCoachAuditDomainTest"
+      ],
+      "acceptance": "Author and execute intensification; correct duration, exercise/sets/rep/RIR/rest and phase-specific dose, preservation and approved transition.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
+      "deviceRequired": true
+    },
+    {
+      "id": "PHASE-PEAK",
+      "group": "adaptive-cycles",
+      "parents": [
+        "E13",
+        "E32",
+        "E33"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/cycle-runtime-adapter.js",
+      "candidateFixtures": [
+        "CustomCycleTransitionDomainTest",
+        "CustomCycleCoachAuditDomainTest"
+      ],
+      "acceptance": "Author and execute peak; correct duration, exercise/sets/rep/RIR/rest and phase-specific dose, preservation and approved transition.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
+      "deviceRequired": true
+    },
+    {
+      "id": "PHASE-FOUNDATION",
+      "group": "adaptive-cycles",
+      "parents": [
+        "E13",
+        "E32",
+        "E33"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/cycle-runtime-adapter.js",
+      "candidateFixtures": [
+        "CustomCycleTransitionDomainTest",
+        "CustomCycleCoachAuditDomainTest"
+      ],
+      "acceptance": "Author and execute foundation; correct duration, exercise/sets/rep/RIR/rest and phase-specific dose, preservation and approved transition.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
+      "deviceRequired": true
+    },
+    {
+      "id": "CYCLE-CUSTOM-BOUNDS",
+      "group": "adaptive-cycles",
+      "parents": [
+        "E16",
+        "E32",
+        "E35"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/cycle-runtime-adapter.js:customCycleSpecs",
+      "candidateFixtures": [
+        "CustomCycleBuilderDomainTest",
+        "CustomTrainingCycleDomainTest"
+      ],
+      "acceptance": "Support active custom cycle bounds 2–8 blocks, 1–24 whole weeks/block, max 104 weeks, per-block optional split/days and safe refusal of invalid combinations.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
+      "deviceRequired": true
     }
   ]
 }

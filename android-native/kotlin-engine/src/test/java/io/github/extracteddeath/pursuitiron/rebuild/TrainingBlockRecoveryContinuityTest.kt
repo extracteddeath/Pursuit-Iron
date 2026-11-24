@@ -189,6 +189,13 @@ class TrainingBlockRecoveryContinuityTest {
             it.kind==CustomCoachIssueKind.RECOVERY_EFFORT_INCREASE &&
                 it.explanation.contains("fewer reps in reserve")})
         assertEquals(CustomCoachAuditStatus.UNRESOLVED,harderRir.status)
+        val amplified=audit(set.copy(amplifier=CustomSetAmplifier(
+            CustomAmplifierKind.MYO_REPS,4,20,followUpActiveSeconds=60,
+            followUpRounds=3)))
+        assertTrue(amplified.issues.toString(),amplified.issues.any{
+            it.kind==CustomCoachIssueKind.RECOVERY_EFFORT_INCREASE &&
+                it.explanation.contains("introduces or changes an amplifier")})
+        assertFalse(amplified.mayIssueWorkout)
         val easier=audit(set.copy(targetRir=5))
         assertFalse(easier.issues.any{
             it.kind==CustomCoachIssueKind.RECOVERY_EFFORT_INCREASE})

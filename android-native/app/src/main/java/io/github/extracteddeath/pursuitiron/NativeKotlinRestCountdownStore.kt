@@ -29,8 +29,10 @@ internal object NativeRestCountdownPolicy {
         if(checkpoint.startedElapsed<=0L || checkpoint.startedWall<=0L ||
             elapsed<checkpoint.startedElapsed || wall<checkpoint.startedWall ||
             checkpoint.activeSeconds !in 1..MAX_SECONDS)return false
+        if(checkpoint.deadlineElapsed<=checkpoint.startedElapsed)return false
         val duration=checkpoint.deadlineElapsed-checkpoint.startedElapsed
-        if(duration<=0L || duration>MAX_SECONDS*1000L)return false
+        if(duration>MAX_SECONDS*1000L ||
+            checkpoint.activeSeconds.toLong()!=(duration+999L)/1000L)return false
         val elapsedAge=elapsed-checkpoint.startedElapsed
         val wallAge=wall-checkpoint.startedWall
         // Never resurrect an ancient 'Rest complete' from a past session.
@@ -45,7 +47,8 @@ internal object NativeRestCountdownPolicy {
     }
 
     fun begin(seconds:Int,elapsed:Long,wall:Long):NativeRestCountdownCheckpoint? {
-        if(seconds !in 1..MAX_SECONDS || elapsed<=0L || wall<=0L)return null
+        if(seconds !in 1..MAX_SECONDS || elapsed<=0L || wall<=0L ||
+            elapsed>Long.MAX_VALUE-seconds*1000L)return null
         return NativeRestCountdownCheckpoint(elapsed,wall,
             elapsed+seconds*1000L,seconds)
     }
@@ -86,7 +89,8 @@ internal object NativeRestCountdownPolicy {
         val result=NativeRestCountdownCheckpoint(elapsed,wall,deadline,seconds)
         // A decoded timestamp has to be structurally valid before restoring.
         if(elapsed<=0L || wall<=0L || seconds !in 1..MAX_SECONDS ||
-            deadline<=elapsed || deadline-elapsed>MAX_SECONDS*1000L)return null
+            deadline<=elapsed || deadline-elapsed>MAX_SECONDS*1000L ||
+            seconds.toLong()!=(deadline-elapsed+999L)/1000L)return null
         return result
     }
 }

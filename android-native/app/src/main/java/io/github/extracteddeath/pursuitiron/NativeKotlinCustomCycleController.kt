@@ -1918,13 +1918,15 @@ internal class NativeKotlinCustomCycleController(
     }
 
     fun reviewRecoveryRecipe(maxSets:Int,minimumRir:Int,
-        maximumEasierStep:java.math.BigDecimal?=null,stepUnit:LoadUnit?=null)=run {
+        maximumEasierStep:java.math.BigDecimal?=null,stepUnit:LoadUnit?=null,
+        anchorBlockId:String?=null,insertAfterAnchor:Boolean=false)=run {
         val shown=current.value
         val draft=shown.draft
         val sourceRevision=shown.sourceRevision
         val inputs=shown.reviewedCoachInputs
         val audited=shown.coachingAudit
-        val anchor=draft?.blocks?.lastOrNull()
+        val anchor=if(anchorBlockId==null)draft?.blocks?.lastOrNull()
+            else draft?.blocks?.singleOrNull{it.blockId==anchorBlockId}
         if(draft==null || sourceRevision==null || inputs==null ||
             anchor?.purpose!=CustomBlockPurpose.TRAINING ||
             shown.auditSourceRevision!=sourceRevision ||
@@ -1937,10 +1939,10 @@ internal class NativeKotlinCustomCycleController(
         }
         when(val preview=host.previewRecoveryRecipe(NativeRecoveryRecipeRequest(
             draft.cycleId,anchor.blockId,draft.revision,sourceRevision,inputs,maxSets,minimumRir,
-            maximumEasierStep,stepUnit))) {
+            maximumEasierStep,stepUnit,insertAfterAnchor))) {
             is NativeRecoveryRecipePreview.Ready ->
                 current.value=current.value.copy(recoveryRecipeReview=preview.receipt,
-                    message="Review the appended recovery week before saving.")
+                    message="Review the recovery week and any shifted future weeks before saving.")
             is NativeRecoveryRecipePreview.Rejected ->
                 current.value=current.value.copy(recoveryRecipeReview=null,
                     message=preview.explanation)

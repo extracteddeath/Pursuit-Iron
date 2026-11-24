@@ -141,7 +141,8 @@ object CustomWorkoutSnapshotDomain {
         // after recomputing the complete named numerical and coach audit.
         val review=namedReview ?:CustomTrainingCycleDomain.review(
             cycle,options.map{it.availability})
-        if(review.verifiedDraft!=cycle ||
+        if(review.verifiedDraft==null ||
+            (namedReview!=null && review.verifiedDraft!=cycle) ||
             review.status!=CustomCycleReviewStatus.READY_FOR_COACH_REVIEW)
             return CustomWorkoutSnapshotResult.Rejected(
                 CustomWorkoutSnapshotRefusal.INVALID_CYCLE)

@@ -19,7 +19,10 @@ data class FirstProgramDraftReview(
     val reason:String,
     /** Complete reviewed per-slot baseline/specialist progression assignments.
      * Not persisted or activated until a separate native owner handoff. */
-    val progressionPlan:ProgramProgressionPlan.Ready?=null
+    val progressionPlan:ProgramProgressionPlan.Ready?=null,
+    /** Full-cycle audited optional-finisher estimates keyed by the original
+     * generated day index. Empty when no optional full-cycle review ran. */
+    val auditedMinutesByDayIndex:Map<Int,Long> = emptyMap()
 ) {
     val mayIssueWorkout:Boolean get()=false
     val mayApproveProgram:Boolean get()=false
@@ -63,6 +66,26 @@ object CoachFirstProgramDraftConversionDomain {
         return CustomCoachAuditInputs(
             policiesByPhase=mapOf(policy.phase to policy),
             nonSetSecondsByWeekday=Collections.unmodifiableMap(time))
+    }
+
+    /** Present the EXISTING full-cycle audit, never independently add mini-set
+     * or rest estimates in Compose. A missing audited day is not a zero. */
+    internal fun auditedFirstWeekMinutes(
+        audit:CustomCoachAudit,dayIndexToWeekday:Map<Int,Int>
+    ):Map<Int,Long>? {
+        if(audit.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW ||
+            audit.issues.isNotEmpty() || dayIndexToWeekday.isEmpty() ||
+            dayIndexToWeekday.keys.any{it<0} ||
+            dayIndexToWeekday.values.toSet().size!=dayIndexToWeekday.size)return null
+        val week=audit.weeks.singleOrNull{it.absoluteWeek==1} ?:return null
+        if(week.estimatedSecondsByDay.keys!=dayIndexToWeekday.values.toSet())return null
+        val result=linkedMapOf<Int,Long>()
+        for((index,weekday) in dayIndexToWeekday) {
+            val seconds=week.estimatedSecondsByDay[weekday] ?:return null
+            if(seconds !in 1..10_000_000L)return null
+            result[index]=(seconds+59L)/60L
+        }
+        return Collections.unmodifiableMap(result)
     }
 
     fun propose(
@@ -171,7 +194,7 @@ object CoachFirstProgramDraftConversionDomain {
         if(complete?.verifiedDraft==null)
             return reject(FirstProgramDraftStatus.CYCLE_REVIEW_FAILED,
                 "The generated week did not pass the independent native custom-cycle inventory/structure review.")
-        if(includeMyoFinisher) {
+        val auditedMinutes=if(includeMyoFinisher) {
             val inputs=policyForInitialFullCycleReview(reviewed,setup)
                 ?:return reject(FirstProgramDraftStatus.CYCLE_REVIEW_FAILED,
                     "The original first-program coaching policy is unavailable.")
@@ -179,10 +202,14 @@ object CoachFirstProgramDraftConversionDomain {
                 CustomCycleCoachAuditDomain.review(next,setup,curatedCatalog,inputs)
             }.getOrNull()
             if(audit?.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW ||
-                audit?.issues?.isNotEmpty()!=false)
+                audit.issues.isNotEmpty())
                 return reject(FirstProgramDraftStatus.CYCLE_REVIEW_FAILED,
                     "Optional myo-reps exceed the current full-cycle coaching, fatigue or session-time review; use straight sets instead.")
-        }
+            auditedFirstWeekMinutes(audit,prescribed.sessions.associate {
+                it.dayIndex to composed.days[it.dayIndex].calendarDay
+            }) ?:return reject(FirstProgramDraftStatus.CYCLE_REVIEW_FAILED,
+                "The optional finisher's complete reviewed day durations are unavailable.")
+        } else emptyMap()
         // A generator must account for the progression route of EVERY saved
         // slot. Do this only after the fully-authored cycle passed inventory
         // and source review; never guess a weight from an unreviewed draft.
@@ -266,6 +293,6 @@ object CoachFirstProgramDraftConversionDomain {
             if(includeMyoFinisher)
                 "Optional myo-reps on one reviewed accessory have passed the full-cycle audit. Explicit program approval and workout issuance are still required."
             else "Reviewed native draft; still requires full-cycle coaching audit, athlete consent and separate workout approval.",
-            replay)
+            replay,auditedMinutes)
     }
 }

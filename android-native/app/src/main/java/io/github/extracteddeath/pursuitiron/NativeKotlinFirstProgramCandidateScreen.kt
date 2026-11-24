@@ -44,7 +44,8 @@ internal data class NativeFirstProgramState(
     val extraFocuses:List<ComposerFocus> =emptyList(),
     val setupMinutes:Int=15,
     /** No automatic advanced techniques; consent is for one exact review. */
-    val includeMyoFinisher:Boolean=false
+    val includeMyoFinisher:Boolean=false,
+    val auditedMinutesByDayIndex:Map<Int,Long> = emptyMap()
 )
 internal class NativeKotlinFirstProgramController(
     private val host:NativeKotlinCandidateHost
@@ -91,7 +92,7 @@ internal class NativeKotlinFirstProgramController(
                         else emptySet(),
                     extraFocuses=if(retained)before.extraFocuses else emptyList(),
                     preview=null,reviewedInput=null,canSaveDraft=false,
-                    includeMyoFinisher=false,
+                    includeMyoFinisher=false,auditedMinutesByDayIndex=emptyMap(),
                     savedProgramId=null,eligibleMovements=emptyList(),
                     message="Verified setup loaded. Choose your own initial working weights; equipment inventory is not a strength test.")
                 val first=CoachFirstProgramStartDomain.review(
@@ -112,7 +113,7 @@ internal class NativeKotlinFirstProgramController(
             enteredLoads=if(raw.isBlank())s.enteredLoads-id
                 else s.enteredLoads+(id to raw),
             preview=null,reviewedInput=null,canSaveDraft=false,
-            savedProgramId=null,includeMyoFinisher=false,message=null)
+            savedProgramId=null,includeMyoFinisher=false,auditedMinutesByDayIndex=emptyMap(),message=null)
     }
     fun toggleBodyweight(id:String) {
         val s=current.value
@@ -121,32 +122,32 @@ internal class NativeKotlinFirstProgramController(
             selectedBodyweightIds=if(id in s.selectedBodyweightIds)
                 s.selectedBodyweightIds-id else s.selectedBodyweightIds+id,
             preview=null,reviewedInput=null,canSaveDraft=false,
-            savedProgramId=null,includeMyoFinisher=false,message=null)
+            savedProgramId=null,includeMyoFinisher=false,auditedMinutesByDayIndex=emptyMap(),message=null)
     }
     fun choosePhase(value:TrainingPhase) {
         val s=current.value
         if(!s.busy)current.value=s.copy(phase=value,preview=null,
-            reviewedInput=null,canSaveDraft=false,savedProgramId=null,includeMyoFinisher=false,message=null)
+            reviewedInput=null,canSaveDraft=false,savedProgramId=null,includeMyoFinisher=false,auditedMinutesByDayIndex=emptyMap(),message=null)
     }
     fun chooseSetupMinutes(value:Int) {
         val s=current.value
         if(!s.busy && value in setOf(10,15,20,30))
             current.value=s.copy(setupMinutes=value,preview=null,reviewedInput=null,
-                canSaveDraft=false,savedProgramId=null,includeMyoFinisher=false,message=null)
+                canSaveDraft=false,savedProgramId=null,includeMyoFinisher=false,auditedMinutesByDayIndex=emptyMap(),message=null)
     }
     fun addFocus(value:ComposerFocus) {
         val s=current.value
         if(!s.busy && s.extraFocuses.size<2)
             current.value=s.copy(extraFocuses=s.extraFocuses+value,
                 preview=null,reviewedInput=null,canSaveDraft=false,
-                savedProgramId=null,includeMyoFinisher=false,message=null)
+                savedProgramId=null,includeMyoFinisher=false,auditedMinutesByDayIndex=emptyMap(),message=null)
     }
     fun removeLastFocus() {
         val s=current.value
         if(!s.busy && s.extraFocuses.isNotEmpty())
             current.value=s.copy(extraFocuses=s.extraFocuses.dropLast(1),
                 preview=null,reviewedInput=null,canSaveDraft=false,
-                savedProgramId=null,includeMyoFinisher=false,message=null)
+                savedProgramId=null,includeMyoFinisher=false,auditedMinutesByDayIndex=emptyMap(),message=null)
     }
     fun preview()=run {
         val initial=current.value
@@ -189,6 +190,7 @@ internal class NativeKotlinFirstProgramController(
         }
         current.value=initial.copy(preview=result,
             reviewedInput=input,
+            auditedMinutesByDayIndex=conversion?.auditedMinutesByDayIndex.orEmpty(),
             canSaveDraft=conversion?.status==
                 FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT,
             message=if(initial.includeMyoFinisher &&
@@ -217,7 +219,7 @@ internal class NativeKotlinFirstProgramController(
             as? NativeAuthoringSourceRead.Found)?.source
         if(live!=source) {
             current.value=original.copy(source=null,preview=null,
-                canSaveDraft=false,includeMyoFinisher=false,
+                canSaveDraft=false,includeMyoFinisher=false,auditedMinutesByDayIndex=emptyMap(),
                 message="Your saved gym or athlete changed. Reload the program review.")
             return@run
         }
@@ -227,6 +229,7 @@ internal class NativeKotlinFirstProgramController(
             includeMyoFinisher=enabled)
         current.value=original.copy(
             includeMyoFinisher=enabled,
+            auditedMinutesByDayIndex=conversion.auditedMinutesByDayIndex,
             canSaveDraft=conversion.status==
                 FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT,
             message=if(conversion.status==FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT)
@@ -599,7 +602,13 @@ internal fun NativeKotlinFirstProgramCandidateScreen(
                         }
                     }
                     review.prescription?.sessions?.forEach {session ->
-                        Text("Day ${session.dayIndex+1} · estimated ${session.estimatedMinutes ?: "?"} min",
+                        val auditedMinutes=state.auditedMinutesByDayIndex[session.dayIndex]
+                            .takeIf{state.includeMyoFinisher &&
+                                (state.canSaveDraft || state.savedProgramId!=null)}
+                        val estimate=auditedMinutes ?:session.estimatedMinutes
+                        val qualifier=if(auditedMinutes!=null)"reviewed estimate"
+                            else if(state.includeMyoFinisher)"base estimate" else "estimated"
+                        Text("Day ${session.dayIndex+1} · $qualifier ${estimate ?: "?"} min",
                             style=MaterialTheme.typography.titleSmall)
                         session.exercises.forEachIndexed {exerciseIndex,exercise ->
                             val working=exercise.sets.filter {
@@ -614,7 +623,8 @@ internal fun NativeKotlinFirstProgramCandidateScreen(
                             // The opted-in technique belongs to ONE exact final
                             // working set; do not advertise it on every exercise
                             // or before the full cycle passes native review.
-                            if(state.includeMyoFinisher && state.canSaveDraft &&
+                            if(state.includeMyoFinisher &&
+                                (state.canSaveDraft || state.savedProgramId!=null) &&
                                 myoChoice?.dayIndex==session.dayIndex &&
                                 myoChoice?.exerciseId==exercise.exerciseId &&
                                 myoChoice?.exerciseIndex==exerciseIndex &&

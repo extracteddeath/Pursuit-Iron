@@ -153,6 +153,8 @@ object CustomBasicHistoryProgressionDomain {
                 return no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE)
             return CustomBasicHistoryResult.ManualBodyweight(selected.slotId)
         }
+        if(working.any {it.prescription.percentageIntent!=null})
+            return no(CustomBasicHistoryRefusal.AUTHORED_OR_SPECIALIST_OWNS_LOAD)
         if(!manual && (working.any {it.prescription.amplifier!=null} ||
             working.map {it.prescription.reps}.distinct().size!=1))
             return no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE)
@@ -340,7 +342,7 @@ object CustomBasicHistoryProgressionDomain {
             it.setType==DraftSetType.WORKING
         }
         if(expected.size!=working.size || observations.size!=expected.size ||
-            expected.any{it.prescription.amplifier!=null} ||
+            expected.any{it.prescription.amplifier!=null || it.prescription.percentageIntent!=null} ||
             expected.map{it.setKey}.distinct().size!=expected.size ||
             observations.map{it.setKey}.toSet()!=expected.map{it.setKey}.toSet() ||
             observations.map{it.setKey}.distinct().size!=observations.size)

@@ -17,7 +17,9 @@ data class CustomHistoricalVisitFact(
     val actual: KotlinPerformedSet?,
     val effectiveEventId: String,
     /** Distinct saved mini-set, never a new ordinary working set. */
-    val stage: Int = 1
+    val stage: Int = 1,
+    /** Exact issued protocol identity, never reconstructed from actual reps. */
+    val percentageIntent: CustomPercentageSetIntent? = null
 ) {
     internal fun matchesIssuedMain(slot: CustomWorkoutSlotSnapshot, set: CustomWorkoutSetSnapshot): Boolean {
         val target = set.prescription
@@ -25,6 +27,7 @@ data class CustomHistoricalVisitFact(
             set.slotId == slot.slotId && slotId == slot.slotId && exerciseId == slot.exerciseId &&
             setKey == set.setKey && setType == target.type && prescribedReps == target.reps &&
             prescribedRir == target.targetRir && amplifierKind == target.amplifier?.kind &&
+            percentageIntent == target.percentageIntent &&
             KotlinSetNumberAuthorityDomain.sameIssuedTarget(prescribedLoad, target.load)
     }
 }
@@ -116,7 +119,8 @@ object CustomWorkoutHistoryEvidenceDomain {
                 CustomWorkoutVisitPart.MAIN,set.prescription.type,
                 set.prescription.load,set.prescription.reps,
                 set.prescription.targetRir,set.prescription.amplifier?.kind,
-                main.outcome,main.performed,main.eventId)
+                main.outcome,main.performed,main.eventId,
+                percentageIntent=set.prescription.percentageIntent)
             if(main.outcome==KotlinJournalSetOutcome.COMPLETED) {
                 val amp=set.prescription.amplifier ?:continue
                 val stageKeys=CustomWorkoutExecutionDomain.followUpVisits(

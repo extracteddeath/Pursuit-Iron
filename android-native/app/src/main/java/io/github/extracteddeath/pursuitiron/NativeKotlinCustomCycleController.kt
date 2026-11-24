@@ -1917,7 +1917,8 @@ internal class NativeKotlinCustomCycleController(
         }
     }
 
-    fun reviewRecoveryRecipe(maxSets:Int,minimumRir:Int)=run {
+    fun reviewRecoveryRecipe(maxSets:Int,minimumRir:Int,
+        maximumEasierStep:java.math.BigDecimal?=null,stepUnit:LoadUnit?=null)=run {
         val shown=current.value
         val draft=shown.draft
         val sourceRevision=shown.sourceRevision
@@ -1935,7 +1936,8 @@ internal class NativeKotlinCustomCycleController(
             return@run
         }
         when(val preview=host.previewRecoveryRecipe(NativeRecoveryRecipeRequest(
-            draft.cycleId,anchor.blockId,draft.revision,sourceRevision,inputs,maxSets,minimumRir))) {
+            draft.cycleId,anchor.blockId,draft.revision,sourceRevision,inputs,maxSets,minimumRir,
+            maximumEasierStep,stepUnit))) {
             is NativeRecoveryRecipePreview.Ready ->
                 current.value=current.value.copy(recoveryRecipeReview=preview.receipt,
                     message="Review the appended recovery week before saving.")

@@ -163,3 +163,16 @@ assert.match(restore,/Confirm restore Full/);
 assert.match(restore,/Inspect every original set target/);
 assert.match(customController,/fun dismissCustomTimeUndoReview\(\)/);
 console.log('PASS custom Full-restoration preview, explicit confirmation and stale-view fences');
+
+for(const needle of ['visibleMeasuredCount','visibleApprovedMeasuredCount']) {
+  assert.ok(candidate.includes('var '+needle+' by rememberSaveable(host)'));
+  assert.ok(candidate.includes(needle+'=20'));
+}
+assert.match(candidate,/review\.workouts\.take\(visibleMeasuredCount\)/);
+assert.match(candidate,/confirmed\.confirmed\.take\(visibleApprovedMeasuredCount\)/);
+assert.match(candidate,/visibleMeasuredCount\+=minOf\(20,remaining\)/);
+assert.match(candidate,/visibleApprovedMeasuredCount\+=minOf\(20,remaining\)/);
+assert.doesNotMatch(candidate,/review\.workouts\.take\(20\)|confirmed\.confirmed\.take\(20\)/);
+assert.match(candidate,/host\.openMeasuredWorkout\(item\.workoutId\)/);
+assert.match(candidate,/host\.issueMeasuredWorkout\(item\.workoutId\)/);
+console.log('PASS all verified unfinished and approved measured sessions are independently pageable; resume and issuance owner gates preserved.');

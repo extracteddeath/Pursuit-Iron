@@ -172,6 +172,25 @@ class CustomWorkoutJournalDomainTest {
         // creates a logged receipt or changes the issued set.
         assertEquals(4,current.receipts.size)
         assertEquals(load,set.prescription.load)
+
+        // A corrupted view-only cache is not authoritative. If it carries
+        // a forged 30 lb mini after a real 47.5 lb activation, the summary
+        // must flag the disagreement instead of hiding it behind rep totals.
+        val secondKey=CustomWorkoutVisitKey(first,
+            CustomWorkoutVisitPart.FOLLOW_UP,2)
+        val originalReceipt=current.effectiveVisits.getValue(secondKey)
+        val originalOperation=originalReceipt.operation as
+            CustomWorkoutJournalOperation.Record
+        val tamperedReceipt=originalReceipt.copy(
+            operation=originalOperation.copy(
+                performed=KotlinPerformedSet(
+                    BigDecimal("30"),LoadUnit.LB,4,null)))
+        val untrusted=current.copy(effectiveVisits=
+            current.effectiveVisits+(secondKey to tamperedReceipt))
+        assertEquals(
+            "Follow-up load/station mismatch · review recorded technique",
+            CustomAmplifierSetSummaryDomain.review(untrusted,set)?.actuals)
+        assertEquals(4,current.receipts.size)
     }
 
     @Test fun mainAndFollowupHaveSeparateFactsAndFinishNeverAssumesAmplifier() {

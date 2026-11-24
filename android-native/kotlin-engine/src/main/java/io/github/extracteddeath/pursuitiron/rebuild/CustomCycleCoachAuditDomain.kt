@@ -27,7 +27,9 @@ enum class CustomCoachIssueKind {
     CONTINUITY_POLICY_MISSING, CONTINUITY_POLICY_INVALID,
     UNJUSTIFIED_BLOCK_VOLUME_DROP, UNJUSTIFIED_TRAINING_VOLUME_SPIKE,
     DIRECT_MUSCLE_DROP, DIRECT_MUSCLE_SPIKE, REVIEW_CAP_EXCEEDED,
-    PROSPECTIVE_CONTEXT_INVALID
+    PROSPECTIVE_CONTEXT_INVALID,
+    RECOVERY_MUSCLE_DOSE_INCREASE,
+    RECOVERY_EFFORT_INCREASE
 }
 
 data class CustomCoachIssue(
@@ -398,6 +400,84 @@ object CustomCycleCoachAuditDomain {
                 }
             }
         }
+        // A recovery label is not permission to increase training dose.
+        // Compare each recovery week with the last real training week,
+        // never with another recovery or performance-test bridge. Equal
+        // set counts are allowed (a deload may reduce load or effort instead);
+        // this is a volume ceiling, NOT proof of a complete deload.
+        var lastTraining:CustomCoachWeekMeasurement?=null
+        for(week in measurements) {
+            if(week.blockPurpose==CustomBlockPurpose.TRAINING) {
+                lastTraining=week
+                continue
+            }
+            if(week.blockPurpose!=CustomBlockPurpose.RECOVERY)continue
+            val baseline=lastTraining ?:continue
+            if(week.workingSets>baseline.workingSets)
+                add(CustomCoachIssueKind.UNJUSTIFIED_TRAINING_VOLUME_SPIKE,
+                    "week.${week.absoluteWeek}.block.${week.blockId}",
+                    "Recovery week increases working sets from ${baseline.workingSets} to ${week.workingSets} compared with training week ${baseline.absoluteWeek}. Review recovery volume before approval.")
+            // Resolve week overrides before comparing exact same-day slot recipes.
+            val priorRecipe=CustomTrainingCycleDomain.week(structural,baseline.absoluteWeek)
+            val recoveryRecipe=CustomTrainingCycleDomain.week(structural,week.absoluteWeek)
+            if(priorRecipe!=null && recoveryRecipe!=null) {
+                for(day in recoveryRecipe.days) {
+                    val priorDay=priorRecipe.days.singleOrNull{it.weekday==day.weekday}
+                    for(slot in day.slots) {
+                        val priorSlot=priorDay?.slots?.singleOrNull {
+                            it.slotId==slot.slotId && it.exerciseId==slot.exerciseId &&
+                                it.attachmentId==slot.attachmentId &&
+                                it.machineInstanceId==slot.machineInstanceId
+                        }
+                        val before=priorSlot?.sets.orEmpty().filter{it.type==DraftSetType.WORKING}
+                        val after=slot.sets.filter{it.type==DraftSetType.WORKING}
+                        for((ordinal,set) in after.withIndex()) {
+                            val prior=before.getOrNull(ordinal)
+                            val where="week.${week.absoluteWeek}.day.${day.weekday}.slot.${slot.slotId}.working.${ordinal+1}"
+                            if(set.amplifier!=null && set.amplifier!=prior?.amplifier)
+                                add(CustomCoachIssueKind.RECOVERY_EFFORT_INCREASE,where,
+                                    "Recovery introduces or changes an amplifier without a matching preceding training prescription.")
+                            if(prior==null)continue
+                            val oldRir=prior.targetRir
+                            val newRir=set.targetRir
+                            if(oldRir!=null && newRir!=null && newRir<oldRir)
+                                add(CustomCoachIssueKind.RECOVERY_EFFORT_INCREASE,where,
+                                    "Recovery prescribes fewer reps in reserve than the matching training set.")
+                            // Compare only the same implement, basis and unit.
+                            // The canonical authority knows assistance runs
+                            // opposite to external resistance.
+                            val previousLoad=prior.load as? DraftSetLoad.Verified
+                            val currentLoad=set.load as? DraftSetLoad.Verified
+                            if(previousLoad!=null && currentLoad!=null &&
+                                previousLoad.unit==currentLoad.unit &&
+                                previousLoad.basis==currentLoad.basis &&
+                                currentLoad.basis.compareDifficulty(
+                                    currentLoad.value,previousLoad.value)>0)
+                                add(CustomCoachIssueKind.RECOVERY_EFFORT_INCREASE,where,
+                                    "Recovery prescribes a harder physical load setting than the matching training set.")
+                            // Reps at equal issued load are directly comparable.
+                            // Changed weights require a separate demand review.
+                            if(KotlinSetNumberAuthorityDomain.sameIssuedTarget(set.load,prior.load) &&
+                                (set.reps.minimum>prior.reps.minimum ||
+                                    set.reps.maximum>prior.reps.maximum ||
+                                    (set.exactRepTarget!=null && prior.exactRepTarget!=null &&
+                                        set.exactRepTarget>prior.exactRepTarget)))
+                                add(CustomCoachIssueKind.RECOVERY_EFFORT_INCREASE,where,
+                                    "Recovery increases prescribed reps at the same issued load.")
+                        }
+                    }
+                }
+            }
+            for(muscle in baseline.totalSetCredits.keys.intersect(week.totalSetCredits.keys)) {
+                val prior=baseline.totalSetCredits.getValue(muscle)
+                val next=week.totalSetCredits.getValue(muscle)
+                if(next>prior)
+                    add(CustomCoachIssueKind.RECOVERY_MUSCLE_DOSE_INCREASE,
+                        "week.${week.absoluteWeek}.${muscle.name}",
+                        "Recovery week increases total muscle-credit dose above the last training week, including indirect work.")
+            }
+        }
+
         // Compare successive NORMAL training weeks, including overrides
         // and different phases. A RECOVERY or PERFORMANCE_TEST block is an
         // intentional short-lived workload change, not a new long-term

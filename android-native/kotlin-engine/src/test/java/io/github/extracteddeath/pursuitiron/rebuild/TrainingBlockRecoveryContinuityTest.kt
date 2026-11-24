@@ -130,6 +130,86 @@ class TrainingBlockRecoveryContinuityTest {
         assertFalse(audited.mayIssueWorkout)
     }
 
+    @Test fun recoveryLabelCannotHideHigherWeeklyVolumeOrConcentratedMuscleDose() {
+        val limit=CustomCoachVolumeContinuityPolicy(n("0.25"),n("0.25"))
+        val source=fixedStrength(cycle())
+        fun recoveryWith(counts:Map<String,Int>)=source.copy(
+            blocks=source.blocks.map {block->
+                if(block.purpose!=CustomBlockPurpose.RECOVERY)block
+                else block.copy(days=block.days.map{day->modifiedDay(day,counts)})
+            })
+        fun audit(candidate:CustomTrainingCycle)=CustomCycleCoachAuditDomain.review(
+            candidate,fixture.athlete(),fixture.movements,coaching(limit))
+        val normal=audit(source)
+        assertEquals(listOf(30,9,27),normal.weeks.map{it.workingSets})
+        assertFalse(normal.issues.any{
+            it.kind==CustomCoachIssueKind.RECOVERY_MUSCLE_DOSE_INCREASE})
+        val concentrated=audit(recoveryWith(mapOf("bench" to 1,"row" to 4,"squat" to 1)))
+        assertEquals(listOf(30,18,27),concentrated.weeks.map{it.workingSets})
+        assertTrue(concentrated.issues.any{
+            it.kind==CustomCoachIssueKind.RECOVERY_MUSCLE_DOSE_INCREASE &&
+                it.location=="week.2.LATS"})
+        assertEquals(CustomCoachAuditStatus.UNRESOLVED,concentrated.status)
+        val inflated=audit(recoveryWith(mapOf("bench" to 4,"row" to 4,"squat" to 4)))
+        assertEquals(listOf(30,36,27),inflated.weeks.map{it.workingSets})
+        assertTrue(inflated.issues.any{
+            it.kind==CustomCoachIssueKind.UNJUSTIFIED_TRAINING_VOLUME_SPIKE &&
+                it.location=="week.2.block.recovery"})
+        assertEquals(CustomCoachAuditStatus.UNRESOLVED,inflated.status)
+        assertFalse(inflated.mayIssueWorkout)
+        // Recovery never resets the baseline used by the subsequent strength
+        // week, even when recovery itself is invalid.
+        assertFalse(inflated.issues.any{
+            it.kind==CustomCoachIssueKind.UNJUSTIFIED_TRAINING_VOLUME_SPIKE &&
+                it.location=="week.3.block.strength"})
+    }
+
+    @Test fun recoveryOverridesCannotIncreaseSameLoadRepsOrReduceGoalRir() {
+        val source=fixedStrength(cycle())
+        val recovery=source.blocks.single{it.purpose==CustomBlockPurpose.RECOVERY}
+        val day=recovery.days.first()
+        val slot=day.slots.first()
+        val set=slot.sets.single()
+        val limit=CustomCoachVolumeContinuityPolicy(n("0.25"),n("0.25"))
+        fun audit(changed:CustomAuthoredSet)=CustomCycleCoachAuditDomain.review(
+            source.copy(weekOverrides=source.weekOverrides+
+                (recovery.blockId to listOf(CustomWeekSlotOverride(
+                    1,day.weekday,slot.slotId,listOf(changed))))),
+            fixture.athlete(),fixture.movements,coaching(limit))
+        val normal=audit(set)
+        assertFalse(normal.issues.any{
+            it.kind==CustomCoachIssueKind.RECOVERY_EFFORT_INCREASE})
+        val higherReps=audit(set.copy(reps=RepBand(
+            set.reps.minimum+1,set.reps.maximum+1)))
+        assertTrue(higherReps.issues.toString(),higherReps.issues.any{
+            it.kind==CustomCoachIssueKind.RECOVERY_EFFORT_INCREASE &&
+                it.explanation.contains("prescribed reps")})
+        val harderRir=audit(set.copy(targetRir=0))
+        assertTrue(harderRir.issues.toString(),harderRir.issues.any{
+            it.kind==CustomCoachIssueKind.RECOVERY_EFFORT_INCREASE &&
+                it.explanation.contains("fewer reps in reserve")})
+        assertEquals(CustomCoachAuditStatus.UNRESOLVED,harderRir.status)
+        val amplified=audit(set.copy(amplifier=CustomSetAmplifier(
+            CustomAmplifierKind.MYO_REPS,4,20,followUpActiveSeconds=60,
+            followUpRounds=3)))
+        assertTrue(amplified.issues.toString(),amplified.issues.any{
+            it.kind==CustomCoachIssueKind.RECOVERY_EFFORT_INCREASE &&
+                it.explanation.contains("introduces or changes an amplifier")})
+        assertFalse(amplified.mayIssueWorkout)
+        val load=set.load as DraftSetLoad.Verified
+        val harderLoad=audit(set.copy(load=load.copy(value=n("30"))))
+        assertTrue(harderLoad.issues.toString(),harderLoad.issues.any{
+            it.kind==CustomCoachIssueKind.RECOVERY_EFFORT_INCREASE &&
+                it.explanation.contains("harder physical load")})
+        val easierLoad=audit(set.copy(load=load.copy(value=n("20"))))
+        assertFalse(easierLoad.issues.any{
+            it.kind==CustomCoachIssueKind.RECOVERY_EFFORT_INCREASE})
+        val easier=audit(set.copy(targetRir=5))
+        assertFalse(easier.issues.any{
+            it.kind==CustomCoachIssueKind.RECOVERY_EFFORT_INCREASE})
+        assertFalse(easier.mayIssueWorkout)
+    }
+
     @Test fun missingContinuityPolicyStillBlocksReturnAfterRecovery() {
         val audited=review()
         assertEquals(CustomCoachAuditStatus.COACHING_POLICY_REQUIRED,

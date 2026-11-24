@@ -2802,6 +2802,46 @@ internal class NativeKotlinCandidateHost(context:Context) {
             "The reviewed proposal could not be saved. Reload the program.")}
     }
 
+    /** Removing an accepted recovery week shifts later dates too. Undo
+     * must pass the SAME owner/history/calendar fence, not the generic
+     * source-only exercise edit path. Never trust a caller's boundary. */
+    fun undoRecoveryRecipe(receipt:CustomCycleDraftReceipt,
+        expectedSourceRevision:Long):NativeCustomDraftWriteResult {
+        fun stale()=NativeCustomDraftWriteResult.Rejected(NativeCustomDraftRefusal.STALE_REVISION)
+        val owner=localAthlete.signedInIdentity() ?:return stale()
+        if(receipt.operation!="recovery-recipe")return stale()
+        return runCatching {
+            revisionFence.withOwnerTransaction(owner.ownerKey) {
+                val current=(customDraftStore.read(owner.ownerKey,receipt.proposed.cycleId)
+                    as? NativeCustomDraftReadResult.Found)?.draft
+                    ?:return@withOwnerTransaction stale()
+                if(current!=receipt.proposed || current.athleteId!=owner.athleteId)
+                    return@withOwnerTransaction stale()
+                val original=receipt.original
+                val index=current.blocks.indexOfFirst{block->
+                    original.blocks.none{it.blockId==block.blockId}
+                }
+                if(index<0 || current.blocks[index].purpose!=CustomBlockPurpose.RECOVERY ||
+                    current.blocks[index].weeks!=1 ||
+                    current.blocks.size!=original.blocks.size+1 ||
+                    current.blocks.take(index)+current.blocks.drop(index+1)!=original.blocks ||
+                    current.weekOverrides!=original.weekOverrides ||
+                    current.copy(revision=original.revision,blocks=original.blocks)!=original)
+                    return@withOwnerTransaction stale()
+                val firstChanged=current.blocks.take(index).sumOf{it.weeks.toLong()}+1
+                if(firstChanged !in 1L..104L ||
+                    recoveryScheduleFence.review(owner.ownerKey,current.cycleId,
+                        firstChanged.toInt()) !is NativeRecoveryScheduleReview.Ready)
+                    return@withOwnerTransaction stale()
+                val proposed=CustomCycleBuilderDomain.undo(current,receipt)
+                    as? CustomCycleBuilderResult.Proposed ?:return@withOwnerTransaction stale()
+                if(localAthlete.signedInIdentity()!=owner)return@withOwnerTransaction stale()
+                customAuthoringCoordinator.saveVerifiedExerciseEdit(
+                    owner.ownerKey,proposed.draft,current.revision,expectedSourceRevision)
+            }
+        }.getOrElse{stale()}
+    }
+
     fun readAdaptiveCyclePermissions(cycleId:String):NativeAdaptivePermissionRead {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeAdaptivePermissionRead.Rejected(

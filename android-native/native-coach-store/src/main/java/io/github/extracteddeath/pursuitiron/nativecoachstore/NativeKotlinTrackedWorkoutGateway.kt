@@ -67,6 +67,18 @@ class NativeKotlinTrackedWorkoutGateway(
         if (!verifyHistory(owner, athlete))
             NativeKotlinIssueResult.Rejected(NativeKotlinIssueRefusal.HISTORY_NOT_READY)
         else {
+            val current=(ledger.open(owner,athlete) as? NativeHistoryLedgerResult.Durable)
+                ?.ledger ?:return@fenced NativeKotlinIssueResult.Rejected(
+                    NativeKotlinIssueRefusal.HISTORY_NOT_READY)
+            // Do not reject an exact existing issuance replay at capacity;
+            // only a new workout would require an additional history entry.
+            if(!current.hasCompletionCapacity) {
+                val existing=workout.open(owner,workoutId)
+                if(existing !is NativeJournalFileResult.Durable ||
+                    !authorized(owner,athlete,existing.journal))
+                    return@fenced NativeKotlinIssueResult.Rejected(
+                        NativeKotlinIssueRefusal.HISTORY_NOT_READY)
+            }
             // The authenticated caller's athlete must match the currently
             // stored approval BEFORE the issuer can write a journal. Checking
             // only the returned journal would reject too late.

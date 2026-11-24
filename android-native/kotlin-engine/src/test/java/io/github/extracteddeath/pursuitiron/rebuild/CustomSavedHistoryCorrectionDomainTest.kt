@@ -232,6 +232,24 @@ class CustomSavedHistoryCorrectionDomainTest {
                     KotlinPerformedSet(BigDecimal("20"), LoadUnit.LB, 14, 11))))
     }
 
+    @Test fun savedCompletedActivationCannotHideAnExplicitlySkippedDrop() {
+        val original=finished(skippedFollow=true)
+        val state=CustomSavedHistoryCorrectionDomain.begin(original)
+        val edit=correction("fix-main",0,main,"main-original",
+            KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(
+                BigDecimal("15"),LoadUnit.LB,12,1))
+        assertEquals(CustomSavedCorrectionDecision.Rejected(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER),
+            CustomSavedHistoryCorrectionDomain.reduce(state,edit))
+        val valid=accept(state,edit.copy(performed=KotlinPerformedSet(
+            BigDecimal("17.5"),LoadUnit.LB,12,1)))
+        val facts=(CustomSavedHistoryEvidenceDomain.projectSaved(valid)
+            as CustomSavedHistoryProjectionResult.Candidate).corrected.evidence.visits
+        assertEquals(2,facts.size)
+        assertEquals(KotlinJournalSetOutcome.SKIPPED,facts.last().outcome)
+        assertEquals("follow-original",facts.last().effectiveEventId)
+        assertEquals(original,valid.originalFinishedJournal)
+    }
+
     @Test fun correctingFinishedActivationKeepsItsSuppressedDropAbsent() {
         val state = CustomSavedHistoryCorrectionDomain.begin(finished(activationLoad=BigDecimal("15")))
         val update = correction("correct-reps", 0, main, "main-original",

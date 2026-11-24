@@ -288,6 +288,28 @@ class CustomWorkoutJournalDomainTest {
         assertEquals(5,complete.revision)
     }
 
+    @Test fun completedActivationCorrectionCannotHideAnExplicitlySkippedDrop() {
+        val start=initial(makeSet(
+            load=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,BigDecimal("20")),
+            amplifier=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,25,
+                DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,BigDecimal("15")))))
+        val main=accept(start,record("main",0,performed=KotlinPerformedSet(
+            BigDecimal("20"),LoadUnit.LB,10,null)))
+        val skipped=accept(main,record("skip-drop",1,CustomWorkoutVisitPart.FOLLOW_UP,
+            KotlinJournalSetOutcome.SKIPPED,null))
+        val edit=record("fix-main",2,performed=KotlinPerformedSet(
+            BigDecimal("15"),LoadUnit.LB,10,null),correction="main")
+        assertEquals(CustomWorkoutJournalDecision.Rejected(CustomWorkoutJournalRefusal.INVALID_CORRECTION),
+            CustomWorkoutJournalDomain.reduce(skipped,edit))
+        val accepted=accept(skipped,edit.copy(performed=KotlinPerformedSet(
+            BigDecimal("17.5"),LoadUnit.LB,10,null)))
+        assertEquals(skipped.effectiveVisits[key(CustomWorkoutVisitPart.FOLLOW_UP)],
+            accepted.effectiveVisits[key(CustomWorkoutVisitPart.FOLLOW_UP)])
+        val done=accept(accepted,CustomWorkoutJournalOperation.Finish("finish",3))
+        assertEquals(2,(CustomWorkoutHistoryEvidenceDomain.project(done)
+            as CustomHistoryEvidenceResult.Candidate).evidence.visits.size)
+    }
+
     @Test fun followupLoadFactsAreSeparateFromTargetAndReportedRirNotPresumed() {
         val initial=initial(makeSet(
             load=DraftSetLoad.Verified(

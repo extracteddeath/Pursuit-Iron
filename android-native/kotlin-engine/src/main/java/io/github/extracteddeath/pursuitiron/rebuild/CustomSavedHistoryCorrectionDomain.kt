@@ -164,6 +164,13 @@ object CustomSavedHistoryCorrectionDomain {
                     } && !CustomWorkoutExecutionDomain.sameActualLoadAndStation(
                         main.performed,operation.performed))
                     return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
+                if (operation.outcome == KotlinJournalSetOutcome.COMPLETED &&
+                    savedFollowKeys.isNotEmpty() &&
+                    !CustomWorkoutExecutionDomain.preservesRecordedFollowUps(
+                        target, effective.copy(outcome = operation.outcome,
+                            performed = operation.performed), savedFollowKeys, finished = true
+                    ) { key -> current(state, key) })
+                    return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
                 target.prescription.load
             }
             CustomWorkoutVisitPart.FOLLOW_UP -> {

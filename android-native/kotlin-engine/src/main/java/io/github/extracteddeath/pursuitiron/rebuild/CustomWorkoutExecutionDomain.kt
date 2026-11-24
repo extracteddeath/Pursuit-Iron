@@ -161,7 +161,8 @@ object CustomWorkoutExecutionDomain {
         recordFor: (CustomWorkoutVisitKey) -> CustomWorkoutJournalOperation.Record?
     ): Boolean {
         val visit = replacement.visit
-        if (recorded.any { it.stage > visit.stage } &&
+        if (visit.part == CustomWorkoutVisitPart.FOLLOW_UP &&
+            recorded.any { it.stage > visit.stage } &&
             !sameActualLoadAndStation(recordFor(visit)?.performed, replacement.performed)) return false
         val reachable = followUpVisits(set) { key ->
             if (key == visit) replacement else recordFor(key)

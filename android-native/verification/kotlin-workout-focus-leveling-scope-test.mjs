@@ -43,6 +43,10 @@ assert.match(screen,/presentation\.exercises\.forEachIndexed/);
 assert.match(screen,/if\(repeated\)" · #\$occurrenceNumber"/);
 assert.doesNotMatch(screen,/val workingSets=allSets\.filter\s*\{\s*it\.target\.exerciseId==exerciseId/);
 assert.match(screen,/priorLevelingScope!=currentLevelingScope/);
+assert.match(screen,/val multipleOccurrences=presentation\?\.exercises\.orEmpty\(\)\.count/);
+assert.match(screen,/onSwapExercise=if\(!infoWarmupsOnly && !multipleOccurrences/);
+assert.match(screen,/!multipleOccurrences &&\s*infoActions\.mayRequestSkipRemaining/);
+assert.match(screen,/bulk skip and workout-only/);
 assert.match(screen,/if\(priorLevelingScope==currentLevelingScope/,
   'previous-workout Leveling dialog must be scoped to exact exercise and machine');
 assert.match(screen,/onDismiss=\{priorLevelingScope=null\}/);

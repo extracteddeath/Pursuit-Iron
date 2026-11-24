@@ -52,6 +52,17 @@ class KotlinWorkoutPresentationDomainTest {
             mixed.targets,"press:later"))
         assertEquals(-1,KotlinWorkoutPresentationDomain.occurrenceIndex(
             mixed.targets,"missing"))
+        // A global exerciseId cannot safely identify which Press the athlete
+        // meant to swap or skip; a single Row occurrence stays safe.
+        assertFalse(KotlinWorkoutPresentationDomain.hasSingleOccurrence(
+            mixed.targets,"press"))
+        assertTrue(KotlinWorkoutPresentationDomain.hasSingleOccurrence(
+            mixed.targets,"chinup"))
+        assertFalse(KotlinWorkoutPresentationDomain.hasSingleOccurrence(
+            mixed.targets,"missing"))
+        assertNull(WorkoutRemainingExerciseDomain.generated(journal,"press"))
+        assertEquals(listOf("chin:s1"),
+            WorkoutRemainingExerciseDomain.generated(journal,"chinup")?.entries)
         journal=step(journal,recorded("later-done",0,"press:later",
             KotlinJournalSetOutcome.COMPLETED,
             KotlinPerformedSet(BigDecimal("25"),LoadUnit.LB,9,null)))
@@ -84,6 +95,10 @@ class KotlinWorkoutPresentationDomainTest {
         assertEquals(listOf(0,1,2),extra.targets.map{
             KotlinWorkoutPresentationDomain.occurrenceIndex(extra.targets,it.setKey)})
         assertEquals(3,groups.size)
+        assertFalse(KotlinWorkoutPresentationDomain.hasSingleOccurrence(
+            extra.targets,"press"))
+        assertNull(WorkoutRemainingExerciseDomain.generated(
+            KotlinWorkoutJournalDomain.begin(extra,identity),"press"))
     }
 
     @Test fun showsExactSequenceAndNoInventedActuals() {

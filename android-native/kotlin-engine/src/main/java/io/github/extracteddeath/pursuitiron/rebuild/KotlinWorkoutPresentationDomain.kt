@@ -65,6 +65,21 @@ object KotlinWorkoutPresentationDomain {
         return -1
     }
 
+    /** Bulk exercise-ID actions can only be interpreted unambiguously when
+     * that ID occupies ONE contiguous issued occurrence. Multi-occurrence
+     * swaps/skips need a future exact set-key action, never a guessed ID-wide
+     * change. This check is read-only and does NOT change old journal replay. */
+    fun hasSingleOccurrence(targets:List<KotlinWorkoutTarget>,exerciseId:String):Boolean {
+        var occurrences=0
+        var previous:KotlinWorkoutTarget?=null
+        for(target in targets) {
+            if((previous==null || !sameOccurrence(previous,target)) &&
+                target.exerciseId==exerciseId)occurrences++
+            previous=target
+        }
+        return occurrences==1
+    }
+
     fun inspect(journal:KotlinWorkoutJournalState):KotlinWorkoutPresentation {
         val snapshot=journal.snapshot
         val finished=journal.finishedByEventId!=null

@@ -19,7 +19,9 @@ object WorkoutRemainingExerciseDomain {
     fun generated(
         journal:KotlinWorkoutJournalState,exerciseId:String
     ):RemainingExerciseReview<String>? {
-        if(journal.finishedByEventId!=null)return null
+        if(journal.finishedByEventId!=null ||
+            !KotlinWorkoutPresentationDomain.hasSingleOccurrence(
+                journal.snapshot.targets,exerciseId))return null
         val targets=journal.snapshot.targets.filter{it.exerciseId==exerciseId}
         if(targets.isEmpty())return null
         val remaining=targets.filter{it.setKey !in journal.effectiveSets}

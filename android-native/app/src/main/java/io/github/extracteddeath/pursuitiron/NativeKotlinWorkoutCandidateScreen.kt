@@ -1174,6 +1174,9 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 else null
             }
             val infoMachine=workoutMachineChoice(machineChoices.encoded,exerciseId,null)
+            val multipleOccurrences=presentation?.exercises.orEmpty().count {
+                it.exerciseId==exerciseId
+            }>1
             val infoOptions=NativeKotlinEquipmentRecoveryPolicy.review(
                 activeWorkout=presentation?.finished==false && !state.busy && !swapLoading,
                 hasPhysicalMachineConfig=infoConfig!=null &&
@@ -1223,12 +1226,14 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         infoExerciseId=null
                         openPhysicalMachineFor=exerciseId
                     }) else null,
-                onSwapExercise=if(!infoWarmupsOnly && infoOptions.canReplaceExercise)
+                onSwapExercise=if(!infoWarmupsOnly && !multipleOccurrences &&
+                    infoOptions.canReplaceExercise)
                     ({
                         infoExerciseId=null
                         reviewSwap(exerciseId)
                     }) else null,
                 onSkipRemainingExercise=if(!infoWarmupsOnly &&
+                    !multipleOccurrences &&
                     infoActions.mayRequestSkipRemaining)journal?.revision?.let{revision->
                     ({
                         infoExerciseId=null
@@ -1243,7 +1248,11 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         undoConfirm=event.eventId
                     })
                 }else null,
-                unavailableReason=if(!infoWarmupsOnly &&
+                unavailableReason=if(multipleOccurrences && !infoWarmupsOnly)
+                    "This movement appears more than once in the issued workout. "+
+                    "Use each set's Skip control; bulk skip and workout-only "+
+                    "swap are unavailable until occurrence-specific review is supported."
+                else if(!infoWarmupsOnly &&
                     presentation?.finished==false)infoOptions.reason else null,
                 outcomes=journal?.effectiveSets.orEmpty().mapNotNull { (key,receipt)->
                     (receipt.operation as? KotlinJournalOperation.RecordSet)?.let{key to it.outcome}

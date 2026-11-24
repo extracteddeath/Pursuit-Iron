@@ -73,6 +73,50 @@ class NativeTieredHistoryLedgerDomainTest {
             read(listOf(session(1,2),session(2,1))))
     }
 
+    @Test fun recoveryReceiptKeepsReferenceAndCannotBeConfusedWithTraining() {
+        val base=session(1,1)
+        val original=base.original.slots.single()
+        val set=original.sets.single()
+        val intent=set.prescription.percentageIntent!!.copy(
+            referenceLoad=BigDecimal("20"),effectivePercent=BigDecimal("60"),
+            recovery=true,repOut=false)
+        val target=set.prescription.copy(percentageIntent=intent,
+            load=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,BigDecimal("10")))
+        val snapshot=base.original.copy(slots=listOf(original.copy(
+            sets=listOf(set.copy(prescription=target)))))
+        val evidence=base.evidence.copy(visits=base.evidence.visits.map{
+            it.copy(percentageIntent=intent,prescribedLoad=target.load,
+                actual=it.actual?.copy(load=BigDecimal("10")))
+        })
+        val recovery=base.copy(original=snapshot,effective=snapshot,evidence=evidence)
+        val reviewed=read(listOf(recovery)) as NativeOwnerTieredLedgerResult.Review
+        val exposure=reviewed.exposures.single()
+        assertFalse(exposure.comparableTraining)
+        assertEquals(BigDecimal("20"),exposure.recoveryReference)
+        assertFalse(exposure.issuedTargets.single().repOut)
+    }
+
+    @Test fun onlyFullyAttributedOtherStationCanBeExcluded() {
+        val base=session(1,1)
+        val slot=base.original.slots.single()
+        val set=slot.sets.single()
+        val load=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.MACHINE_STACK,BigDecimal("20"))
+        val snapshot=base.original.copy(slots=listOf(slot.copy(machineInstanceId="B",
+            sets=listOf(set.copy(prescription=set.prescription.copy(load=load))))))
+        val evidence=base.evidence.copy(visits=base.evidence.visits.map{
+            it.copy(prescribedLoad=load,actual=it.actual?.copy(machineInstanceId="B"))
+        })
+        val station=scope.copy(machineInstanceId="A",basis=LoadBasis.MACHINE_STACK)
+        val other=base.copy(original=snapshot,effective=snapshot,evidence=evidence)
+        fun review(value:NativeTieredHistorySession)=NativeTieredHistoryLedgerDomain.project(
+            timeline(listOf(value)),listOf(value),station,"slot-1",PercentageTier.PRIMARY,4)
+        assertTrue((review(other) as NativeOwnerTieredLedgerResult.Review).exposures.isEmpty())
+        val unknown=other.copy(evidence=evidence.copy(visits=evidence.visits.map{
+            it.copy(actual=it.actual?.copy(machineInstanceId=null))
+        }))
+        assertTrue(review(unknown) is NativeOwnerTieredLedgerResult.Rejected)
+    }
+
     @Test fun incompatibleLaterVisitCannotDisappearFromLedger() {
         val first = session(1,1)
         val second = session(2,2)

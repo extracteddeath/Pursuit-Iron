@@ -86,6 +86,45 @@ class NativeKotlinHistoryTransactionCoordinatorTest {
             "workout-$id", finish(id))).manifest.completions.size)
     }
 
+    @Test fun historyCapacityReservesLastCompletionAndRefusesAllNewFinishKindsWithoutPending() {
+        val limit=KotlinHistoryCapacityPolicy.MAX_MANIFEST_COMPLETIONS
+        val entries=(1 until limit).map { i ->
+            KotlinHistoryManifestEntry(i.toLong(),"workout-$i","storage-$i",
+                "finish-$i",3L,0L)
+        }
+        assertTrue(ledger().enrollVerifiedSnapshot("owner-1","athlete-1",entries) { _,_->true }
+            is NativeHistoryLedgerResult.Durable)
+        val last=NativeHistoryWriteIntent.Finish("workout-$limit",finish(limit))
+        assertTrue(ledger().prepare("owner-1","athlete-1",1,last)
+            is NativeHistoryLedgerResult.Durable)
+        val final=KotlinHistoryManifestEntry(limit.toLong(),"workout-$limit",
+            "storage-$limit","finish-$limit",3L,0L)
+        assertTrue(ledger().finalize("owner-1","athlete-1",last,final)
+            is NativeHistoryLedgerResult.Durable)
+        val full=manifest().ledger
+        assertEquals(limit,full.completions.size)
+        assertTrue(full.readyForHistoryReads)
+        val attempts=listOf(
+            NativeHistoryWriteIntent.Finish("overflow",KotlinJournalOperation.Finish("overflow-finish",0)),
+            NativeHistoryWriteIntent.CustomFinish("overflow",CustomWorkoutJournalOperation.Finish("overflow-finish",0)),
+            NativeHistoryWriteIntent.MeasuredFinish("overflow",MeasuredWorkoutOperation.Finish("overflow-finish",0)))
+        for(intent in attempts){
+            assertEquals(NativeHistoryLedgerResult.Rejected(
+                NativeHistoryLedgerRefusal.INVALID_MANIFEST_TRANSITION),
+                ledger().prepare("owner-1","athlete-1",full.revision,intent))
+            assertEquals(full,manifest().ledger)
+        }
+        val correction=NativeHistoryWriteIntent.Correct("workout-1",edit(1))
+        assertTrue(ledger().prepare("owner-1","athlete-1",full.revision,correction)
+            is NativeHistoryLedgerResult.Durable)
+        assertTrue(ledger().finalize("owner-1","athlete-1",correction,
+            entries.first().copy(savedCorrectionRevision=1L))
+            is NativeHistoryLedgerResult.Durable)
+        assertEquals(limit,manifest().ledger.completions.size)
+        assertEquals(1L,manifest().ledger.completions.first().savedCorrectionRevision)
+        assertNull(manifest().ledger.pending)
+    }
+
     @Test fun recordedCompletionSurvivesAColdRetryWithoutReadingANewClockValue() {
         enroll();issueResolved(1)
         var now=1794690000000L

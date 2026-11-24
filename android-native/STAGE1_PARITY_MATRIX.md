@@ -123,7 +123,7 @@ Web source: `modules/next-engine/percentage-protocols.js`, PCT_SCHEMES, percenta
 All nine schemes are active public template configurations and named code values (catalog.js/TEMPLATES and programs.js/CODE_SCHEMES). The real percentagePlanFor → percentageProtocolFor path in training-domain/prescriptions.js executes them; all remain mandatory. Require exact authored basis, per-set percentage/reps/plus targets and week/day/tier, feasible rounding, failed/successful history, max-update rules and recovery. REVIEW here means functional evidence outstanding, not inactive/optional. Cross-link S4 programming and S5 persistence.
 
 ## Detailed inventory and scope dispositions
-- [Behavior inventory](STAGE1_BEHAVIOR_INVENTORY.json): 120 required acceptance work packages across all 14 product groups, 5 policy-authorized optional/development-only deferrals; candidate fixtures, stage, parent requirement, independent expected behavior and device requirement.
+- [Canonical behavior inventory](STAGE1_BEHAVIOR_INVENTORY.md): 87 stable required/review behavioral acceptance work packages across the 14 product groups. [Supplemental fixture detail](STAGE1_BEHAVIOR_INVENTORY.json): 120 required checks and 5 optional-scope review candidates subordinate to those same IDs, not additional denominator items. [Web module source map](STAGE1_WEB_SOURCE_MAP.json) assigns all 144 pinned web module files to the canonical requirements.
 - [Effective exercise catalog](STAGE1_CATALOG_INVENTORY.json): 383 exact effective web IDs, 369 standard + 14 measured Kotlin matches; zero unmatched identities, zero fully accepted behaviors. 26 shadowed web definitions recorded separately, not counted as effective distinct IDs. Every row has the applicable detailed acceptance profile.
 - [Web shell identity and template inventory](STAGE1_WEB_SHELL_INVENTORY.json): 372 shell identities (346 exact, 22 explicit aliases, 4 name-fallback candidates), 75 actual program template definitions, 24 public split definitions. All shell identities and templates remain required review rows. Four candidate name mappings need physical/semantic verification, not silent approval.
 - [Findings and assigned dispositions](STAGE1_FINDINGS.md): material source differences and existing defect fixtures; all assigned to later stages or required review. Stage 1 is an inventory gate, not the implementation or evidence certification gate.
@@ -136,21 +136,21 @@ All nine schemes are active public template configurations and named code values
 ## Inventory denominator v1 (not a completion percentage)
 | Required leaf inventory | Count |
 |---|---:|
-| Behavior work packages | 120 |
+| Canonical behavior work packages (including pending optional UI scope review) | 87 |
 | Progression styles and explicit additional progression contracts | 13 |
 | Split families | 26 |
 | Percentage schemes | 9 |
 | Effective exercise identities | 383 |
 | Shell compatibility identities | 372 |
 | Program templates | 75 |
-| Total acceptance work items | 998 |
+| Total acceptance work items | 965 |
 
-41 inherited E requirements and 14 product groups are parent rollups, not extra leaf items. 5 optional rows and 26 shadowed definitions are excluded from the required denominator. Rows overlap in real-world behavior; the denominator measures assigned acceptance work, not unique features or functional completion. An item may be accepted only with its relevant required evidence, including device where applicable. At this source inventory checkpoint no individual leaf has been promoted to fully accepted. Later stages can expand child fixtures or split a row with explicit versioned denominator changes. No stage can use inventory counts as parity percentage.
+41 inherited E requirements and 14 product groups are parent rollups, not extra leaf items. The 125 supplemental checks are subordinate to existing rows; they are not separately counted. Five optional-scope candidates do not waive the mandatory parent row; 26 shadowed definitions are excluded from the required denominator. Rows overlap in real-world behavior; the denominator measures assigned acceptance work, not unique features or functional completion. An item may be accepted only with its relevant required evidence, including device where applicable. At this source inventory checkpoint no individual leaf has been promoted to fully accepted. Later stages can expand child fixtures or split a row with explicit versioned denominator changes. No stage can use inventory counts as parity percentage.
 
 ## Stage 1 exit review
 1. Pinned sources and exact Stage 0 CI evidence recorded above.
 2. All 41 inherited E requirements and all 14 capability groups have assigned outcomes, candidate evidence and stages.
 3. Effective catalog and shell/template source identities enumerated with exact counts, match type, evidence profile and dispositions for unresolved semantics.
 4. Every declared split and percentage scheme has a source-supported role and required acceptance scenario; no silent scope exclusions. Source gaps have assigned owners/stages.
-5. Detailed behavioral acceptance matrix and findings ledger established. Candidate test filenames checked against actual pinned Kotlin source/test/verification directories; representative basic progression assertions inspected and recorded. Executing and reviewing the full scenario corpus is S2–S8 work, not a reason to label a row accepted during inventory.
+5. Detailed canonical behavioral acceptance matrix, subordinate fixture checks, 144-file web source map and findings ledger established. Candidate test filenames checked against actual pinned Kotlin source/test/verification directories; representative basic progression assertions inspected and recorded. Executing and reviewing the full scenario corpus is S2–S8 work, not a reason to label a row accepted during inventory.
 6. Baseline inventory is ready for integrated review; Stage 1 is not formally accepted until this revision is merged and both required CI checks are verified. Future web changes enter the versioned findings ledger; mandatory existing functionality cannot be deferred by relabeling.

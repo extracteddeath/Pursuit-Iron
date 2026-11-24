@@ -2662,6 +2662,112 @@ internal class NativeKotlinCandidateHost(context:Context) {
             "The atomic native save failed. History and existing workouts are unchanged.")}
     }
 
+    /** Append-only Plan proposal; all authority is read inside the owner fence. */
+    private fun deriveRecoveryRecipe(
+        request:NativeRecoveryRecipeRequest
+    ):NativeRecoveryRecipePreview {
+        fun deny(why:String)=NativeRecoveryRecipePreview.Rejected(why)
+        val owner=localAthlete.signedInIdentity()
+            ?:return deny("Sign in to review this saved program.")
+        val assistance=(coachSettings.read(owner.ownerKey)
+            as? NativeCoachSettingsRead.Current)?.settings
+            ?:return deny("Verify current coaching preferences.")
+        if(assistance.athleteId!=owner.athleteId ||
+            !assistance.policy.offersFatigueAdvice)
+            return deny("Recovery coaching is disabled for this athlete.")
+        val rights=(adaptiveCyclePermissions.read(owner.ownerKey,request.cycleId)
+            as? NativeAdaptivePermissionRead.Found)?.receipt
+            ?:return deny("Authorize block, set-count and effort adaptations in Plan first.")
+        if(rights.athleteId!=owner.athleteId)
+            return deny("The adaptation grant belongs to a different athlete.")
+        val original=(customDraftStore.read(owner.ownerKey,request.cycleId)
+            as? NativeCustomDraftReadResult.Found)?.draft
+            ?:return deny("Reopen the verified saved program.")
+        val source=(authoringSourceStore.read(owner.ownerKey)
+            as? NativeAuthoringSourceRead.Found)?.source
+            ?:return deny("The reviewed gym and exercise source is unavailable.")
+        if(original.revision!=request.expectedCycleRevision ||
+            source.revision!=request.expectedSourceRevision ||
+            original.athleteId!=owner.athleteId ||
+            source.athleteId!=owner.athleteId || source.ownerKey!=owner.ownerKey)
+            return deny("The saved program or gym changed. Review again.")
+        val kinds=rights.allowedKinds
+        val permissions=CustomCycleCoachPermissions(
+            adaptBlocks=CustomCycleChangeKind.BLOCKS in kinds,
+            adaptSetCount=CustomCycleChangeKind.SET_COUNT in kinds,
+            adaptRir=CustomCycleChangeKind.RIR in kinds,
+            adaptAmplifiers=CustomCycleChangeKind.AMPLIFIERS in kinds,
+            adaptLoads=CustomCycleChangeKind.LOADS in kinds)
+        val generated=ReviewedRecoveryBlockRecipeDomain.propose(
+            ReviewedRecoveryBlockRecipeRequest(
+                AdaptiveCycleOptionRequest(original,request.anchorBlockId,
+                    source.setup,source.catalog,request.coaching,permissions,emptyList()),
+                request.maximumWorkingSetsPerSlot,request.minimumTargetRir,
+                appendRecoveryBlockId="recovery-"+(original.revision+1)))
+        val candidate=generated.candidate?.proposedCycle
+        val audit=generated.comparison?.evaluated?.singleOrNull()?.coachingAudit
+        if(generated.status!=ReviewedRecoveryBlockRecipeStatus.READY_FOR_REVIEW ||
+            candidate==null || audit==null ||
+            candidate.blocks.dropLast(1)!=original.blocks ||
+            candidate.weekOverrides!=original.weekOverrides ||
+            candidate.revision!=original.revision+1)
+            return deny(generated.explanation)
+        val baseline=generated.comparison?.sourceAudit?.weeks?.lastOrNull()
+            ?:return deny("The final training week was not verified.")
+        val recovery=audit.weeks.lastOrNull()
+            ?:return deny("The proposed recovery week was not verified.")
+        if(baseline.blockId!=request.anchorBlockId ||
+            baseline.blockPurpose!=CustomBlockPurpose.TRAINING ||
+            recovery.absoluteWeek!=baseline.absoluteWeek+1 ||
+            recovery.blockPurpose!=CustomBlockPurpose.RECOVERY)
+            return deny("The audited recovery week did not match the final training week.")
+        return NativeRecoveryRecipePreview.Ready(NativeRecoveryRecipeReady(
+            request,owner,rights.revision,assistance.revision,candidate,baseline,recovery))
+    }
+
+    fun previewRecoveryRecipe(request:NativeRecoveryRecipeRequest):NativeRecoveryRecipePreview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeRecoveryRecipePreview.Rejected("Current athlete is unavailable.")
+        return runCatching {
+            revisionFence.withOwnerTransaction(owner.ownerKey) {
+                if(localAthlete.signedInIdentity()!=owner)
+                    NativeRecoveryRecipePreview.Rejected("The signed-in athlete changed.")
+                else deriveRecoveryRecipe(request)
+            }
+        }.getOrElse {NativeRecoveryRecipePreview.Rejected(
+            "Unable to verify the current recovery proposal.")}
+    }
+
+    fun acceptRecoveryRecipe(
+        reviewed:NativeRecoveryRecipeReady,athleteConfirmed:Boolean
+    ):NativeRecoveryRecipeDecision {
+        if(!athleteConfirmed)return NativeRecoveryRecipeDecision.Rejected(
+            "Confirm the reviewed recovery week before saving.")
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeRecoveryRecipeDecision.Rejected("Current athlete is unavailable.")
+        if(owner!=reviewed.owner)return NativeRecoveryRecipeDecision.Rejected(
+            "The signed-in athlete changed.")
+        return runCatching {
+            revisionFence.withOwnerTransaction(owner.ownerKey) {
+                val fresh=deriveRecoveryRecipe(reviewed.request)
+                if(fresh !is NativeRecoveryRecipePreview.Ready || fresh.receipt!=reviewed ||
+                    localAthlete.signedInIdentity()!=owner)
+                    return@withOwnerTransaction NativeRecoveryRecipeDecision.Rejected(
+                        "The program, gym, permissions or coaching settings changed. Review again.")
+                when(val saved=customDraftStore.save(owner.ownerKey,
+                    reviewed.request.cycleId,reviewed.request.expectedCycleRevision,
+                    fresh.receipt.proposedCycle)) {
+                    is NativeCustomDraftWriteResult.Committed ->
+                        NativeRecoveryRecipeDecision.Saved(saved.revision)
+                    is NativeCustomDraftWriteResult.Rejected ->
+                        NativeRecoveryRecipeDecision.Rejected(
+                            "The saved draft changed or storage refused the edit.")
+                }
+            }
+        }.getOrElse {NativeRecoveryRecipeDecision.Rejected(
+            "The reviewed proposal could not be saved. Reload the program.")}
+    }
+
     fun readAdaptiveCyclePermissions(cycleId:String):NativeAdaptivePermissionRead {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeAdaptivePermissionRead.Rejected(

@@ -106,6 +106,8 @@ class NativeKotlinHistoryTransactionCoordinator(
             val verified = (journal as? NativeJournalFileResult.Durable)?.journal
             return@fenced if (verified != null &&
                 verified.finishedByEventId == operation.eventId &&
+                existing.finishEventId == operation.eventId &&
+                existing.storedReceiptId == verified.storedIdentity.storageReceiptId &&
                 existing.originalJournalRevision == verified.revision &&
                 operation.expectedJournalRevision + 1 == verified.revision)
                 NativeHistoryTransactionResult.Durable(manifest(base.ledger), true)
@@ -121,6 +123,18 @@ class NativeKotlinHistoryTransactionCoordinator(
         if (journal.revision != operation.expectedJournalRevision ||
             !journal.canProposeFinish)
             return@fenced denied(NativeHistoryTransactionRefusal.OPERATION_REJECTED)
+        // Validate the exact operation and resulting history evidence BEFORE
+        // publishing a redo intent. A reused set event ID must not poison
+        // the shared ledger with a Finish the reducer can never accept.
+        val preview = KotlinWorkoutJournalDomain.reduce(journal, operation)
+        if (preview !is KotlinJournalDecision.Proposed || preview.replayed ||
+            KotlinWorkoutHistoryEvidenceDomain.project(preview.state)
+                !is KotlinHistoryProjectionResult.Candidate)
+            return@fenced denied(NativeHistoryTransactionRefusal.OPERATION_REJECTED)
+        if (base.ledger.completions.any {
+                it.storedReceiptId == journal.storedIdentity.storageReceiptId
+            })
+            return@fenced denied(NativeHistoryTransactionRefusal.HISTORY_RECEIPT_MISMATCH)
         val edits = correctionStore.openStored(owner, workoutId) { o, source ->
             eligible(o, athlete, source)
         }
@@ -176,7 +190,9 @@ class NativeKotlinHistoryTransactionCoordinator(
         if (operation.expectedCorrectionRevision != previous.correctionRevision)
             return@fenced denied(NativeHistoryTransactionRefusal.OPERATION_REJECTED)
         val preview = KotlinSavedHistoryCorrectionDomain.reduce(previous, operation)
-        if (preview !is KotlinSavedCorrectionDecision.Proposed || preview.replayed)
+        if (preview !is KotlinSavedCorrectionDecision.Proposed || preview.replayed ||
+            KotlinWorkoutHistoryEvidenceDomain.projectSaved(preview.state)
+                !is KotlinHistoryProjectionResult.Candidate)
             return@fenced denied(NativeHistoryTransactionRefusal.OPERATION_REJECTED)
         val intent = NativeHistoryWriteIntent.Correct(workoutId, operation)
         val prepared = ledgerStore.prepare(

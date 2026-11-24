@@ -204,6 +204,13 @@ class NativeMeasuredWorkoutParentFileStore(
                 if(prior !is NativeMeasuredWorkoutStoreResult.Rejected ||
                     prior.reason!=NativeMeasuredWorkoutStoreRefusal.NOT_ISSUED)
                     return@withOwnerTransaction prior
+                if(history!=null) {
+                    val ledger=(history.open(ownerKey,athlete.athleteId)
+                        as? NativeHistoryLedgerResult.Durable)?.ledger
+                    if(ledger?.hasCompletionCapacity!=true)
+                        return@withOwnerTransaction NativeMeasuredWorkoutStoreResult.Rejected(
+                            NativeMeasuredWorkoutStoreRefusal.HISTORY_TRANSACTION_REQUIRED)
+                }
                 val ordinary=composer?.openStored(ownerKey,workoutId){o,source->
                     o==ownerKey && source.athleteId==athlete.athleteId}
                 if(composer!=null && (ordinary !is NativeJournalFileResult.Rejected ||

@@ -203,6 +203,10 @@ object AdvancedAmplifierProtocolDomain {
             amp.followUpRounds !in 1..2)return false
         val before=main as? DraftSetLoad.Verified ?:return false
         val first=amp.followUpLoad as? DraftSetLoad.Verified ?:return false
+        // This protocol owns descending external-resistance settings.
+        // Lowering assistance makes the exercise harder, not easier.
+        // Assistance needs a separately reviewed reverse-direction protocol.
+        if(!before.basis.higherSettingIncreasesDifficulty)return false
         if(before.unit!=first.unit || before.basis!=first.basis ||
             !KotlinSetNumberAuthorityDomain.validPrescribedLoad(
                 before.value,before.basis) ||

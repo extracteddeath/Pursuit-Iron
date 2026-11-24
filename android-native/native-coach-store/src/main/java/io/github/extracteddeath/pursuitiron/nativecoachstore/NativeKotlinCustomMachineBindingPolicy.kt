@@ -53,12 +53,15 @@ object NativeKotlinCustomMachineBindingPolicy {
             // The actual A/B station must support EVERY authored weight
             // including warmups and amplifier follow-ups, not only top sets.
             val loads=slot.sets.flatMap{set->
-                listOfNotNull(set.prescription.load,
-                    set.prescription.amplifier?.followUpLoad)
+                val prescription=set.prescription
+                listOfNotNull(prescription.load,
+                    prescription.amplifier?.followUpLoad,
+                    prescription.amplifier?.secondDropLoad)
             }
             if(loads.isEmpty() || loads.any{load->
                 load !is DraftSetLoad.Verified ||
                     load.basis!=basis ||
+                    !KotlinSetNumberAuthorityDomain.validIssuedLoad(load) ||
                     (EquipmentLoadDomain.inspect(stock,load.value,load.unit)
                         as? LoadInspection.Confirmed)?.let{
                             it.exact && it.basis==basis

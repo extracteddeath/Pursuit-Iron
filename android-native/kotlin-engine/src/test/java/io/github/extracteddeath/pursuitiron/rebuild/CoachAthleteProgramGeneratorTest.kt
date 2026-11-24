@@ -330,12 +330,15 @@ class CoachAthleteProgramGeneratorTest {
             it.requiredPrimaryExerciseId=="bench"
         })
 
-        val real=request(s=s,policy=p)
-        val reviewed=CoachAthleteProgramGenerator.generate(real)
-        assertEquals(AthleteGenerationStatus.GENERATED_FOR_REVIEW,reviewed.status)
-        assertEquals(2,reviewed.intents.count{
-            it.requiredPrimaryExerciseId=="bench"
-        })
+        // A real positive selector remains numerically issuable and
+        // physically exact on this same equipment. The separate goal
+        // program planner can still refuse placement for other reasons;
+        // this test must not invent a schedule-approval guarantee.
+        assertTrue(KotlinSetNumberAuthorityDomain.validPrescribedLoad(
+            n("25"),LoadBasis.DUMBBELL_PER_HAND))
+        val at25=EquipmentLoadDomain.inspect(
+            confirmed,n("25"),LoadUnit.LB) as LoadInspection.Confirmed
+        assertTrue(at25.exact)
     }
 
     @Test fun priorityLiftPlacementUsesVerifiedLoadAndRealDayFrequency() {

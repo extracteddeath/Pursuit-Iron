@@ -51,4 +51,10 @@ assert.ok(app.includes('className: "wpb-program-day-picker-label", children: ope
 assert.ok(app.includes('background: !day.exercises.length ? C.border : isNext ? C.accent : C.accentDim'), 'Only the next day Start is filled');
 assert.ok(app.includes('"wpb-program-day-picker-short"') && css.includes('@container pi-program-actions (max-width:300px)'),
     'The day picker falls back to its day number on the narrowest action row');
+// B1044: day headers have two trailing controls; exercise tools are one quiet line; week chips carry day dots.
+assert.ok(!app.includes('_jsx(ChevronDown, { size: 20, color: C.muted, style: { transform: open ? "rotate(180deg)"') &&
+    app.includes('className: "pressable wpb-day-toggle", "aria-expanded": open'), 'The day header is the disclosure, without a trailing chevron');
+assert.ok(css.includes('.wpb-program-exercise .wpb-exercise-actions>button[aria-label^="How "]{order:-1;'), 'Progression leads the exercise tool line');
+assert.ok(app.includes('label: weekChipLabel(w)') && app.includes('className: "wpb-week-dots", "aria-hidden": true') &&
+    app.includes('"aria-label": weekChipName(w)') && app.includes('days done` : ""}`'), 'Week chips show and announce how many days are logged');
 console.log('PASS B1037 program day: one surface with divided exercise rows, compact chips, plain Day focus and shared actions.');

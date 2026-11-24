@@ -10237,3 +10237,12 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-program-create-list>.wpb-ui-list-item+.wpb-ui-list-item{border-top:1px solid var(--pi-color-divider);}
 #root .wpb .wpb-program-create-list .wpb-ui-list-leading{color:var(--wpb-theme-accent-ink);}
 #root .wpb .wpb-plan-glance .wpb-ui-stat-label{font-size:var(--pi-type-label);}
+/* The day picker names the open day; on the narrowest rows it falls back to "D1" so Reroll,
+   Settings, the picker and Details stay on one line. */
+#root .wpb .wpb-program-actions{container:pi-program-actions/inline-size;}
+#root .wpb .wpb-program-day-picker-label{max-width:7em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#root .wpb .wpb-program-day-picker-short{display:none;}
+@container pi-program-actions (max-width:300px){
+  #root .wpb .wpb-program-day-picker-label:has(+.wpb-program-day-picker-short){display:none;}
+  #root .wpb .wpb-program-day-picker-short{display:inline;}
+}

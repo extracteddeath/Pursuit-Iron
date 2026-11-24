@@ -1068,7 +1068,32 @@ private fun NativeKotlinCandidateTrainEntry(
                         if(!canVerifyGeneratedResume())return@PursuitPrimaryAction
                         if(available.alreadyIssued ||
                             selection==available.currentLimitMinutes) {
-                            selectedId=available.workoutId
+                            // Even a no-change time selection is only a
+                            // preview. Recheck the exact current approval,
+                            // and the unfinished receipt for a Resume.
+                            resumeChecking=true
+                            selectionMessage=null
+                            scope.launch {
+                                try {
+                                    val verified=withContext(Dispatchers.IO) {
+                                        host.currentlyApprovedKotlinWorkoutId()==available.workoutId &&
+                                            host.reviewCurrentKotlinShortSession(
+                                                available.workoutId,
+                                                NativeKotlinTimeBudgetPolicy.previewMinutes(selection))==available &&
+                                            (!available.alreadyIssued ||
+                                                currentUnfinishedGeneratedWorkoutId(host)==available.workoutId)
+                                    }
+                                    if(verified && noCompetingWorkout() &&
+                                        selectedTimeBudget==selection && timePreview==available) {
+                                        selectedId=available.workoutId
+                                    } else {
+                                        selectionMessage="The approved session changed or is no longer unfinished. Refresh to review it again."
+                                        timePreview=null
+                                    }
+                                } catch(_:Exception) {
+                                    selectionMessage="Could not verify the approved session."
+                                } finally {resumeChecking=false}
+                            }
                         } else {
                             timeAcceptanceBusy=true
                             selectionMessage=null

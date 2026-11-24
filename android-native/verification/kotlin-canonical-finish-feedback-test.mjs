@@ -25,3 +25,12 @@ assert.match(tests,/canonicalHistoryPerformanceIsAttachedOnlyWhenCountsReconcile
 assert.match(tests,/contradictoryHistoryMetricsRefusePublishingARecap/);
 assert.match(ci,/node android-native\/verification\/kotlin-canonical-finish-feedback-test\.mjs/);
 console.log('PASS Kotlin History + Finish share factual performance projection without second progression authority');
+
+const customCorrection=history.slice(history.indexOf('private fun NativeKotlinSavedCustomHistoryVisitRow('));
+assert.match(customCorrection,/currentFact\.effectiveEventId!=fact\.effectiveEventId/);
+assert.match(customCorrection,/currentFact\.prescribedLoad!=fact\.prescribedLoad/);
+assert.match(customCorrection,/currentFact\.prescribedReps!=fact\.prescribedReps/);
+assert.match(customCorrection,/currentFact\.prescribedRir!=fact\.prescribedRir/);
+assert.match(customCorrection,/current\?\.manifest\?\.savedCorrectionRevision!=\s*entry\.manifest\.savedCorrectionRevision/);
+assert.match(customCorrection,/correction\.state\.correctionRevision!=\s*entry\.manifest\.savedCorrectionRevision/);
+assert.match(customCorrection,/entry\.manifest\.savedCorrectionRevision,\s*CustomWorkoutVisitKey\(fact\.setKey,fact\.part,fact\.stage\)/);

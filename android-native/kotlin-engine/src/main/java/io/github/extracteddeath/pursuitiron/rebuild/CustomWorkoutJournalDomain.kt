@@ -325,7 +325,10 @@ object CustomWorkoutJournalDomain {
                             amp,target.prescription.load,operation.visit.stage)
                     }
                 }
-                if(!actualValid(plan,operation.outcome,operation.performed))
+                if((operation.outcome!=KotlinJournalSetOutcome.SKIPPED &&
+                        !KotlinSetNumberAuthorityDomain.validIssuedRepBand(
+                            target.prescription.reps)) ||
+                    !actualValid(plan,operation.outcome,operation.performed))
                     return CustomWorkoutJournalDecision.Rejected(
                         CustomWorkoutJournalRefusal.INVALID_ACTUAL)
                 val old=nextEffective[operation.visit]
@@ -384,8 +387,8 @@ object CustomWorkoutJournalDomain {
                             "${prior.snapshot.stamp.cycleId}:w${prior.snapshot.absoluteWeek}:d${prior.snapshot.weekday}:${next.slotId}:s${set.ordinalInSlot}" ||
                         !KotlinSetNumberAuthorityDomain.validIssuedLoad(
                             set.prescription.load) ||
-                        set.prescription.reps.minimum !in 1..100 ||
-                        set.prescription.reps.maximum !in set.prescription.reps.minimum..100 ||
+                        !KotlinSetNumberAuthorityDomain.validIssuedRepBand(
+                            set.prescription.reps) ||
                         set.prescription.targetRir?.let{it !in 0..10}==true ||
                         set.prescription.activeSeconds !in 1..3600 ||
                         set.prescription.restSeconds !in 0..3600 ||

@@ -208,3 +208,11 @@ assert.match(recoveryUndo,/recoveryScheduleFence\.review\(owner\.ownerKey,curren
 assert.ok(recoveryUndo.indexOf('recoveryScheduleFence.review(')<recoveryUndo.indexOf('customAuthoringCoordinator.saveVerifiedExerciseEdit('));
 assert.match(recoveryTests,/insertionPreservesEarlierWeeksAndAllLaterBlockRelativeOverrides/);
 console.log('PASS mid-cycle recovery boundary, shifted-week consent, verified activation/calendar fences and protected Undo.');
+
+assert.match(preview,/val roster=if\(hasBoundStation\)/);
+assert.match(preview,/NativeKotlinRecoveryWorkoutPreflight\.review\(/);
+const recoveryMachine=readFileSync(root+'native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinRecoveryWorkoutPreflight.kt','utf8');
+assert.match(recoveryMachine,/for\(day in block\.days\)/);
+assert.match(recoveryMachine,/CustomWorkoutSnapshotDomain\.preview\(/);
+assert.match(recoveryMachine,/NativeKotlinCustomMachineBindingPolicy\.review\(/);
+console.log('PASS recovery preflight checks every proposed session on its exact bound equipment even with no load adjustment.');

@@ -66,7 +66,7 @@ for(const required of [
   'NativeCustomDraftRefusal.STALE_REVISION'
 ])assert.ok(controller.includes(required),'Missing controller review/save: '+required);
 // Both revisioned Strength repairs must take the source-fenced Undo path.
-assert.match(controller,/if\(receipt\.operation in setOf\("strength-dose-repair",\s*"strength-menu-recovery"\)\)/,
+assert.match(controller,/if\(receipt\.operation in setOf\("strength-dose-repair",\s*"strength-menu-recovery","recovery-recipe"\)\)/,
   'Dose and menu recovery Undo must use a current reviewed gym source');
 for(const required of [
   'repairReview=state.strengthRepairReview',
@@ -127,3 +127,44 @@ for(const name of [
   'generatedRepairCoversEveryWeekOfAnUnchangedStrengthTemplate'
 ])assert.ok(tests.includes(name),'Missing full-cycle JVM fixture '+name);
 console.log('PASS native strength repair: athlete preview, same-owner proposal replay, revision-CAS approval, independent Kotlin dose audit and no history writes.');
+
+const recoveryPanel=readFileSync(pkg+'NativeRecoveryRecipePanel.kt','utf8');
+const recoveryModel=readFileSync(pkg+'NativeRecoveryRecipeReview.kt','utf8');
+const recoveryEngine=readFileSync(root+'kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/ReviewedRecoveryBlockRecipeDomain.kt','utf8');
+const recoveryTests=readFileSync(root+'kotlin-engine/src/test/java/io/github/extracteddeath/pursuitiron/rebuild/ReviewedRecoveryBlockRecipeDomainTest.kt','utf8');
+for(const file of ['NativeRecoveryRecipeReview.kt','NativeRecoveryRecipePanel.kt'])
+  assert.ok(gradle.includes('"**/'+file+'"'));
+const preview=host.slice(host.indexOf('private fun deriveRecoveryRecipe('),
+  host.indexOf('fun readAdaptiveCyclePermissions('));
+for(const needle of ['!assistance.policy.offersFatigueAdvice','rights.allowedKinds',
+  'original.revision!=request.expectedCycleRevision','source.revision!=request.expectedSourceRevision',
+  'candidate.blocks.dropLast(1)!=original.blocks',
+  'candidate.weekOverrides!=original.weekOverrides',
+  'ReviewedRecoveryBlockRecipeDomain.propose(',
+  'revisionFence.withOwnerTransaction(owner.ownerKey)',
+  'if(owner!=reviewed.owner)','fresh.receipt!=reviewed',
+  'reviewed.request.expectedCycleRevision','customDraftStore.save(owner.ownerKey'])
+  assert.ok(preview.includes(needle),'Recovery owner/approval contract: '+needle);
+assert.ok(preview.indexOf('fresh.receipt!=reviewed')<preview.indexOf('customDraftStore.save(owner.ownerKey'));
+assert.doesNotMatch(preview,/issueWorkout\(|recordWorkingSet\(|updateHistory\(|journalStore\.save\(/);
+assert.match(recoveryModel,/mayIssueWorkout:Boolean get\(\)=false/);
+assert.match(plan,/NativeRecoveryRecipePanel\(draft,state,controller,busy\)/);
+assert.match(recoveryPanel,/remember\(reviewed\)\{mutableStateOf\(false\)\}/);
+assert.match(recoveryPanel,/controller\.acceptRecoveryRecipe\(confirmed\)/);
+assert.match(recoveryPanel,/enabled=ready && !busy && confirmed/);
+assert.match(controller,/CustomCycleDraftReceipt\("recovery-recipe",prior,reviewed\.proposedCycle\)/);
+assert.match(recoveryEngine,/AdaptiveCycleOptionReviewDomain\.review/);
+assert.match(recoveryTests,/appendRecoveryUsesFinalResolvedWeekAndNeverShiftsExistingWeeks/);
+assert.match(recoveryTests,/optionalLoadReductionRequiresPermissionAndAnExactEasierStepWithinBudget/);
+console.log('PASS native append-only recovery preview and explicit owner-fenced CAS save; no workout issuance or History writes.');
+
+assert.match(recoveryModel,/val maximumEasierStep:BigDecimal\?=null/);
+assert.match(recoveryModel,/val expectedRosterRevision:Long\?/);
+assert.match(preview,/request\.stepUnit!=gym\.unit/);
+assert.match(preview,/machineRosters\.read\(owner\.ownerKey\)/);
+assert.match(preview,/verifiedMachineConfigurations=roster\?\.configurations/);
+assert.match(preview,/assistance\.revision,roster\?\.revision,candidate/);
+assert.match(recoveryPanel,/it\.request\.maximumEasierStep==\(if\(adjustLoad\)budget else null\)/);
+assert.match(recoveryPanel,/it\.request\.stepUnit==\(if\(adjustLoad\)unit else null\)/);
+assert.match(recoveryPanel,/enabled=ready && !busy && confirmed && validBudget/);
+console.log('PASS optional recovery equipment-step preview requires exact unit, current machine roster and fresh reviewed budget.');

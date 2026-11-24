@@ -130,6 +130,8 @@ val stageKotlinBetaSources=tasks.register<StageKotlinBetaSources>(
             "**/NativeMeasuredExerciseSetEditor.kt",
             // Explicitly admitted owner-fenced, non-issuable strength review.
             "**/NativeStrengthVolumeRepairReview.kt",
+                    "**/NativeRecoveryRecipeReview.kt",
+                    "**/NativeRecoveryRecipePanel.kt",
             "**/NativeStrengthMenuRecoveryReview.kt",
             // Exercise Info skip/undo eligibility is read-only; journal
             // confirmation and ownership remain in the existing host.

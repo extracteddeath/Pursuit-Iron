@@ -834,6 +834,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     onAcceptMenuRecovery=if(permissionHost!=null)
                         ({controller.acceptStrengthExerciseMenu(true)}) else null
                 )
+                if(permissionHost!=null)NativeRecoveryRecipePanel(draft,state,controller,busy)
                 NativeKotlinCustomCycleCalibrationPanel(
                     controller,state,onOpenIssuedWorkout)
             }

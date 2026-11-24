@@ -25,7 +25,8 @@ assert.ok(!css.includes('.wpb-plan-up-next'),'No orphaned Plan Up next owner');
 assert.ok(!css.includes('.wpb-home-health{margin:10px 0 18px}'),
   'Dead Home card margin must not reappear');
 // B1028: the Home health card is a shared UiBanner; the feature class keeps only its spacing.
-assert.ok(css.includes('.wpb-home-health{margin:12px 0 18px}') && css.includes('#root .wpb .wpb-ui-banner{display:flex;align-items:center;'),
+// B1036: it sits on Home's one 12px card rhythm.
+assert.ok(css.includes('.wpb-home-health{margin:0 0 var(--pi-space-3)}') && css.includes('#root .wpb .wpb-ui-banner{display:flex;align-items:center;'),
   'The Home health card uses the shared banner geometry');
 assert.ok(css.includes('.wpb-injury-journal .wpb-session-dialog-heading{position:static'),
   'Injury modal header uses its final nonsticky owner');

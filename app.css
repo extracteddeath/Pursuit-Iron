@@ -493,7 +493,6 @@ display:block!important;
   line-height:1.38!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs>button{
-  font-size:13.5px!important;
   font-weight:650!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs>button[aria-selected="true"]{
@@ -1711,11 +1710,6 @@ display:block!important;
   opacity:.46!important;
 }
 
-@media(max-width:350px){
-  #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs>button{
-    font-size:12px!important;
-  }
-}
 @media(prefers-reduced-motion:reduce),(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb-program .wpb-week-rail>button{
     transition:none!important;
@@ -2427,7 +2421,7 @@ display:block!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item>.mono,
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child>.mono{
-  font-size:clamp(22px,5.7vw,27px)!important;
+  font-size:var(--pi-type-heading)!important;
   line-height:1.12!important;
   font-weight:790!important;
   letter-spacing:-.035em!important;
@@ -3450,7 +3444,7 @@ display:block!important;
   text-align:center;
 }
 #root[data-pi-motion="expressive"] .wpb-progress [data-progress-glance]{
-  margin:0 0 var(--pi-space-4)!important;
+  margin:0 0 var(--pi-space-3)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
   min-width:0!important;
@@ -3466,7 +3460,7 @@ display:block!important;
    periods with giant, decorative cards. Semantic search/filters untouched. */
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filters{
   min-width:0;
-  margin-bottom:10px!important;
+  margin-bottom:var(--pi-space-2)!important;
   padding-bottom:10px!important;
   gap:7px!important;
 }
@@ -3531,19 +3525,19 @@ display:block!important;
   min-height:max(80px,5rem)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
-  font-size:max(11.5px,.72rem)!important;
+  font-size:var(--pi-type-label)!important;
   line-height:1.34!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item>div:last-child{
-  font-size:max(10.5px,.67rem)!important;
+  font-size:var(--pi-type-caption)!important;
   line-height:1.32!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filter-help{
-  font-size:max(11.5px,.72rem)!important;
+  font-size:var(--pi-type-label)!important;
   line-height:1.47!important;
 }
 #root[data-pi-motion="expressive"] .wpb-plan-view .wpb-plan-glance-tile>div:first-child{
-  font-size:max(11px,.7rem)!important;
+  font-size:var(--pi-type-label)!important;
   line-height:1.3!important;
   min-height:0;
 }
@@ -3623,7 +3617,7 @@ display:block!important;
   box-sizing:border-box;
   width:max-content;
   max-width:100%;
-  margin:var(--pi-space-2) 0 var(--pi-space-4)!important;
+  margin:0 0 var(--pi-space-3)!important;
   min-height:48px!important;
   padding:3px!important;
   gap:var(--pi-space-1)!important;
@@ -3736,7 +3730,7 @@ display:block!important;
 
 /* Cohesion 20 — Settings groups and stable row composition. */
 .wpb .wpb-settings-card.wpb-ui-card{padding:0;margin:0 0 var(--pi-space-4);overflow:visible;container-type:inline-size;}
-.wpb .wpb-settings-title{margin:var(--pi-space-5) var(--pi-space-1) var(--pi-space-2);font-size:var(--pi-type-support);line-height:1.4;font-weight:720;letter-spacing:.005em;color:var(--pi-color-on-muted);text-transform:none;}
+.wpb .wpb-settings-title{margin:var(--pi-space-5) 0 var(--pi-space-2);font-size:var(--pi-type-support);line-height:1.4;font-weight:720;letter-spacing:.005em;color:var(--pi-color-on-muted);text-transform:none;}
 .wpb .wpb-settings-row,.wpb .wpb-settings-navigation{box-sizing:border-box;display:flex;align-items:center;gap:var(--pi-space-3);min-width:0;min-height:var(--pi-control-min);padding:var(--pi-space-3);border:0;background:transparent;color:inherit;}
 .wpb .wpb-settings-row{flex-wrap:wrap;}
 .wpb .wpb-settings-row-copy{flex:1 1 8rem;min-width:0;overflow-wrap:anywhere;}
@@ -4160,7 +4154,9 @@ display:block!important;
   --pi-r48-divider:var(--pi-r11-edge);
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home .wpb-home-hero{
-  padding:var(--pi-space-3) var(--pi-space-3) var(--pi-space-2)!important;
+  /* B1036: the same 16px inset as every other Home card, so hero text lines up with the week,
+     game-plan and score cards; the trailing text actions carry their own 48px targets. */
+  padding:var(--pi-space-4) var(--pi-space-4) var(--pi-space-3)!important;
   margin-top:0!important;
   margin-bottom:var(--pi-space-3)!important;
   border-color:var(--pi-r48-divider)!important;
@@ -4447,15 +4443,16 @@ display:block!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-experience-segmented>button{
   min-width:0;
-  padding-inline:3px!important;
+  padding-inline:var(--pi-space-3)!important;
   font-size:.875rem!important;
   white-space:nowrap!important;
   overflow-wrap:normal!important;
   word-break:normal!important;
   letter-spacing:-.01em!important;
 }
-/* Container em follows text-only enlargement as well as root text scaling. */
-@container pi-settings-body (max-width:22em){
+/* Container em follows text-only enlargement as well as root text scaling. The four labels need
+   ~24em with 12px insets, so phones use a 2x2 grid instead of squeezing the text to the pill edge. */
+@container pi-settings-body (max-width:26em){
   #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-experience-segmented{
     grid-template-columns:repeat(2,minmax(0,1fr))!important;
   }
@@ -7445,7 +7442,7 @@ background:var(--pi-color-card)!important;
 .wpb-injury-record-title strong{font-size:16px;overflow-wrap:anywhere}.wpb-injury-status{font-size:11px;font-weight:700;color:var(--wpb-theme-accent-ink);background:var(--wpb-theme-accent-dim);padding:4px 8px;border-radius:8px;flex-shrink:0}
 .wpb-injury-record-meta{font-size:12px;color:var(--wpb-theme-muted);margin-top:6px;line-height:1.5}.wpb-injury-record-note{white-space:pre-wrap}.wpb-injury-record-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.wpb-injury-record-actions button{flex:1}
 .wpb-injury-resolved{margin:20px 0}.wpb-injury-resolved summary{font-size:14px;font-weight:700;color:var(--wpb-theme-muted);cursor:pointer;min-height:48px;padding:12px 0}
-.wpb-home-health{margin:12px 0 18px}
+.wpb-home-health{margin:0 0 var(--pi-space-3)}
 @media(min-width:700px){.wpb-injury-journal{max-width:600px}.wpb-injury-area-grid{gap:10px}}
 
 .wpb-injury-journal{display:flex;flex-direction:column;overflow:hidden}
@@ -7535,7 +7532,7 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-progress .wpb-progress-consistency-last{font-size:12px;color:var(--wpb-theme-faint);}
 #root .wpb .wpb-progress .wpb-consistency-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px;}
 #root .wpb .wpb-progress .wpb-progress-minwidth{min-width:0;}
-#root .wpb .wpb-progress .wpb-progress-consistency-value{display:block;font-size:19px;font-weight:750;color:var(--wpb-theme-text);}
+#root .wpb .wpb-progress .wpb-progress-consistency-value{display:block;font-size:1.25rem;font-weight:750;color:var(--wpb-theme-text);}
 #root .wpb .wpb-progress .wpb-progress-consistency-label{display:block;font-size:12px;color:var(--wpb-theme-muted);}
 #root .wpb .wpb-progress .wpb-progress-search-label{display:block;font-size:14px;font-weight:700;margin-bottom:6px;}
 #root .wpb .wpb-progress .wpb-progress-session-search{width:100%;padding:var(--pi-space-3);border-radius:12px;background:var(--wpb-theme-card);font-size:16px;}
@@ -7545,7 +7542,7 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-progress .wpb-history-filter-meta{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px;margin-top:var(--pi-space-2);}
 #root .wpb .wpb-progress .wpb-progress-clear-filters{border:none;background:none;color:var(--wpb-theme-accent-ink);padding:var(--pi-space-2) 0;font-weight:700;}
 #root .wpb .wpb-progress .wpb-history-filter-help{font-size:12px;color:var(--wpb-theme-muted);line-height:1.5;}
-#root .wpb .wpb-progress .wpb-training-history{margin-bottom:14px;min-width:0;}
+#root .wpb .wpb-progress .wpb-training-history{margin-bottom:var(--pi-space-3);min-width:0;}
 #root .wpb .wpb-progress .wpb-progress-no-matches{padding:var(--pi-space-5) 0;font-size:14px;color:var(--wpb-theme-muted);}
 #root .wpb .wpb-progress .wpb-progress-grouping{display:flex;gap:2px;background:var(--wpb-theme-bg-tint);border-radius:12px;padding:2px;margin-bottom:var(--pi-space-2);align-self:flex-start;width:fit-content;}
 #root .wpb .wpb-progress .wpb-progress-group-choice{border:none;cursor:pointer;border-radius:8px;padding:5px 11px;font-size:14px;font-weight:700;background:transparent;color:var(--wpb-theme-faint);}
@@ -7555,7 +7552,7 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-progress .wpb-progress-phase-head{display:flex;align-items:baseline;gap:var(--pi-space-2);padding:6px 2px 6px 10px;margin-bottom:2px;border-left:2px solid var(--wpb-theme-accent-edge);}
 #root .wpb .wpb-progress .wpb-progress-phase-title{font-size:14px;font-weight:700;color:var(--wpb-theme-accent-ink);}
 #root .wpb .wpb-progress .wpb-history-session-head{display:flex;align-items:center;gap:var(--pi-space-3);padding:var(--pi-space-3);}
-#root .wpb .wpb-progress .wpb-history-session-toggle{flex:1;min-width:0;display:flex;align-items:center;gap:var(--pi-space-3);background:none;border:none;padding:0;cursor:pointer;text-align:left;}
+#root .wpb .wpb-progress .wpb-history-session-toggle{flex:1;min-width:0;min-height:48px;display:flex;align-items:center;gap:var(--pi-space-3);background:none;border:none;padding:0;cursor:pointer;text-align:left;}
 #root .wpb .wpb-progress .wpb-history-date{width:44px;height:44px;border-radius:12px;background:var(--wpb-theme-accent-dim);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;}
 #root .wpb .wpb-progress .wpb-history-date-day{font-size:16px;font-weight:600;color:var(--wpb-theme-accent-ink);line-height:1;}
 #root .wpb .wpb-progress .wpb-history-date-month{font-size:11px;color:var(--wpb-theme-accent-ink);text-transform:uppercase;}
@@ -7869,7 +7866,7 @@ background:var(--pi-color-card)!important;
 .wpb-profile-level-progress{margin-top:var(--pi-space-2)}
 @media(max-width:420px){.wpb-profile .wpb-profile-hero{padding-top:2px}}
 #root .wpb .wpb-profile .wpb-profile-section{
-  padding:14px 0;margin-bottom:14px;background:transparent;border-radius:0;border:0;border-bottom:1px solid var(--section-rule);
+  padding:14px 0;margin-bottom:var(--pi-space-3);background:transparent;border-radius:0;border:0;border-bottom:1px solid var(--section-rule);
 }
 
 /* B892 / UI polish pass 02 — Profile controls share Material-inspired tonal states.
@@ -8343,7 +8340,7 @@ background:var(--pi-color-card)!important;
   border-radius:var(--pi-shape-card);
   background:var(--pi-color-card);border:1px solid var(--pi-color-divider);
 }
-#root .wpb .wpb-home-game-plan,#root .wpb .wpb-home-week,#root .wpb .wpb-home-recovery{margin:0 0 var(--pi-space-5);min-width:0}
+#root .wpb .wpb-home-game-plan,#root .wpb .wpb-home-week,#root .wpb .wpb-home-recovery{margin:0 0 var(--pi-space-3);min-width:0}
 #root .wpb .wpb-game-plan-heading{min-height:32px;margin:0 0 var(--pi-space-2);font-size:var(--pi-type-section);gap:var(--pi-space-2)}
 .wpb-game-plan-count{margin-left:auto;font-size:var(--pi-type-label);color:var(--pi-color-on-muted);font-weight:700}
 #root .wpb .wpb-session-game-plan .wpb-game-plan-exercise{
@@ -8824,7 +8821,7 @@ background:var(--pi-color-card)!important;
   background:var(--wpb-theme-accent-dim)!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-level-mark .mono{
-  font-size:29px!important;line-height:1!important;
+  font-size:1.75rem!important;line-height:1!important;
 }
 /* M288 — Lifetime summary has one Expressive owner. Preserve the effective
    grouped surface, number wrapping and large-text reflow; retire R17/R39/R40
@@ -8854,7 +8851,7 @@ background:var(--pi-color-card)!important;
 .wpb-profile-card-metrics>div:nth-child(-n+2){padding:var(--pi-space-3);border-radius:var(--pi-shape-action);background:var(--pi-color-control,var(--wpb-theme-card-high))}
 .wpb-profile-card-metrics dt{font-size:.75rem;font-weight:650;color:var(--wpb-theme-muted)}
 .wpb-profile-card-metrics dd{margin:var(--pi-space-1) 0;font-size:var(--pi-type-body);font-weight:750;line-height:1.35;overflow-wrap:break-word;font-variant-numeric:tabular-nums}
-.wpb-profile-card-metrics>div:nth-child(-n+2) dd{font-size:clamp(1.0625rem,2.6vw,1.375rem);letter-spacing:-.025em}
+.wpb-profile-card-metrics>div:nth-child(-n+2) dd{font-size:clamp(1.125rem,2.6vw,1.375rem);letter-spacing:-.025em}
 .wpb-profile-card-metrics dd>span{display:block}
 .wpb-profile-card-metrics p{margin:0;font-size:.6875rem;line-height:1.5;color:var(--wpb-theme-muted)}
 .wpb-profile-card-actions{margin-top:var(--pi-space-2)}
@@ -10120,12 +10117,13 @@ background:var(--pi-color-card)!important;
 @media(forced-colors:active){#root .wpb .wpb-template-card,#root .wpb .wpb-template-filter,#root .wpb .wpb-template-gym-choice,#root .wpb .wpb-template-search{border-color:CanvasText}#root .wpb .wpb-template-filter[aria-pressed="true"],#root .wpb .wpb-template-gym-choice[aria-pressed="true"]{background:Highlight;color:HighlightText}}
 /* B1026 — prototype features: week strip, 7-day recap, pain check, routines */
 #root .wpb .wpb-home-content>.wpb-home-strip{grid-column:1/-1}
-#root .wpb .wpb-home-strip{margin:0 0 var(--pi-space-5);padding:var(--pi-space-3) var(--pi-space-4);min-width:0}
+#root .wpb .wpb-home-content>.wpb-home-context{margin-bottom:var(--pi-space-3)}
+#root .wpb .wpb-home-strip{margin:0 0 var(--pi-space-3);padding:var(--pi-space-3) var(--pi-space-4);min-width:0}
 #root .wpb .wpb-home-strip-title{margin:0 0 var(--pi-space-2);font-size:var(--pi-type-support);font-weight:700;color:var(--pi-color-on-muted)}
 #root .wpb .wpb-home-strip-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:var(--pi-space-1);margin:0;padding:0;list-style:none}
 #root .wpb .wpb-home-strip-day{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
 #root .wpb .wpb-home-strip-weekday{font-size:var(--pi-type-caption);font-weight:600;color:var(--pi-color-on-muted)}
-#root .wpb .wpb-home-strip-date{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--pi-color-control);color:var(--pi-color-on-control);font-size:var(--pi-type-support);font-weight:600;font-variant-numeric:tabular-nums}
+#root .wpb .wpb-home-strip-date{display:grid;place-items:center;width:min(36px,calc(100% - 4px));height:auto;aspect-ratio:1;border-radius:50%;background:var(--pi-color-control);color:var(--pi-color-on-control);font-size:var(--pi-type-support);font-weight:600;font-variant-numeric:tabular-nums}
 #root .wpb .wpb-home-strip-day[data-future=true] .wpb-home-strip-date{background:none;box-shadow:inset 0 0 0 1px var(--pi-color-divider)}
 #root .wpb .wpb-home-strip-day[data-trained=true] .wpb-home-strip-date{background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent)}
 #root .wpb .wpb-home-strip-day[data-today=true] .wpb-home-strip-date{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
@@ -10153,8 +10151,13 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-routine-remove{flex:none;width:48px;height:48px;margin-right:4px;border:0;border-radius:50%;background:none;color:var(--pi-color-on-muted)}
 #root .wpb .wpb-routine-hint{margin:var(--pi-space-2) 0 0;font-size:var(--pi-type-support);color:var(--pi-color-on-muted)}
 /* B1027 — design pass 7: one consistent, content-sized control vocabulary across screens. */
-#root .wpb .wpb-progress .wpb-premium-tabs{--pi-segment-min:48px}
-@media (max-width:359px){#root .wpb .wpb-progress .wpb-premium-tabs{--pi-progress-tab-pad:2px;--pi-segment-gap:1px}}
+/* B1036: segments size to their labels (Lifts and Body need less room than Sessions and Strength)
+   so every label keeps a visible inset; equal widths pressed the longer labels into one another
+   at 320px. */
+#root .wpb .wpb-progress .wpb-premium-tabs{--pi-segment-min:48px;--pi-progress-tab-pad:8px}
+#root .wpb .wpb-progress .wpb-premium-tabs>button{flex:1 1 auto}
+@media (max-width:379px){#root .wpb .wpb-progress .wpb-premium-tabs{--pi-progress-tab-pad:6px;--pi-segment-gap:2px;--pi-segment-min:0px}}
+@media (max-width:339px){#root .wpb .wpb-progress .wpb-premium-tabs{--pi-progress-tab-pad:4px}}
 #root[data-pi-motion] .wpb .wpb-home .wpb-action-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 #root[data-pi-motion] .wpb .wpb-home .wpb-action-grid>.wpb-action-tile:not(.wpb-action-tile-featured){--pi-home-tile-min:112px;--pi-control-min:112px;--pi-home-tile-pad:14px;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:10px;text-align:left}
 #root[data-pi-motion] .wpb .wpb-home .wpb-action-grid>.wpb-action-tile:last-child:nth-child(even){grid-column:1/-1}
@@ -10219,7 +10222,7 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-home-score-progress[data-next=true]{margin-bottom:12px}
 #root .wpb .wpb-home-score-progress[data-elite=true]{--wpb-theme-accent:var(--pi-color-warning)}
 #root .wpb .wpb-ui-modal-sheet .wpb-ui-action{gap:8px}
-#root .wpb .wpb-home-score-card{display:block;width:100%;margin:0 0 12px;padding:14px 16px;color:var(--wpb-theme-text);font:inherit;text-align:left;cursor:pointer}
+#root .wpb .wpb-home-score-card{display:block;width:100%;margin:0 0 var(--pi-space-3);padding:var(--pi-space-4);color:var(--wpb-theme-text);font:inherit;text-align:left;cursor:pointer}
 #root .wpb .wpb-ui-banner{display:flex;align-items:center;gap:12px;padding:12px 12px 12px 16px;border:1px solid var(--wpb-theme-border-soft);border-radius:var(--pi-shape-card);background:var(--pi-color-card,var(--wpb-theme-card));color:var(--wpb-theme-text)}
 #root .wpb .wpb-ui-banner-icon{display:grid;flex:none;place-items:center;width:36px;height:36px;border-radius:12px;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink)}
 #root .wpb .wpb-ui-banner-copy{display:grid;flex:1;gap:2px;min-width:0}

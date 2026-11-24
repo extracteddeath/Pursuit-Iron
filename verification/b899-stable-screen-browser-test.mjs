@@ -259,6 +259,9 @@ try{
    'Inspecting the created session must not save an unsaved program or replace another program');
   if(cycle){
    await click('View full program');await page.waitForSelector('.wpb-program');
+   // Program opens by smooth-scrolling its next-due day into place; act once that scroll settles,
+   // or the menu press lands on content still moving under the pointer.
+   await page.evaluate(()=>new Promise(resolve=>{let last=-1,still=0;const tick=()=>{const s=[...document.querySelectorAll('.wpb-program .wpb-scroll')].reduce((n,e)=>n+e.scrollTop,0);still=s===last?still+1:0;last=s;still>=6?resolve():requestAnimationFrame(tick);};requestAnimationFrame(tick);setTimeout(resolve,3000);}));
    const menu=await page.$(`[aria-label="More options for ${expectedPreview.day}"]`);
    await menu.evaluate(n=>n.scrollIntoView({block:'center'}));await menu.click();await click('Delete day');
    // Confirm inside the dialog: the day menu's own "Delete day" item can still be in the DOM

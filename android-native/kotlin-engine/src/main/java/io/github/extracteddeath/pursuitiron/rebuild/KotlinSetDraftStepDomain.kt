@@ -1,5 +1,7 @@
 package io.github.extracteddeath.pursuitiron.rebuild
 
+import java.math.BigDecimal
+
 /**
  * Presentation-only numeric draft stepping for the Kotlin workout editors.
  * This does not validate a performed journal receipt, set a workout load,
@@ -10,6 +12,34 @@ package io.github.extracteddeath.pursuitiron.rebuild
  * the first official native beta. A long press performs one bounded edit.
  */
 object KotlinSetDraftStepDomain {
+    /**
+     * Explicit +/- gesture on a weight draft only. Stock must be confirmed
+     * for the exact issued basis and unit by the caller. Typed off-grid
+     * values remain untouched until the athlete chooses a direction.
+     * Never invent a fixed increment or silently round an actual.
+     */
+    fun stepLoad(text:String,direction:Int,count:Int,
+        target:DraftSetLoad.Verified,stock:VerifiedLoadStock?):String? {
+        if(direction !in listOf(-1,1) || count !in 1..3 ||
+            stock==null || stock.unit!=target.unit || stock.basis!=target.basis ||
+            !text.matches(Regex("^[0-9]+(?:[.][0-9]+)?$")))return null
+        val start=text.toBigDecimalOrNull() ?:return null
+        if(!KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(start))return null
+        var current=start
+        repeat(count) {
+            val inspection=EquipmentLoadDomain.inspect(stock,current,target.unit)
+                as? LoadInspection.Confirmed ?:return null
+            val next=if(direction==1)inspection.nextAbove else inspection.nextBelow
+            if(next==null || !KotlinSetNumberAuthorityDomain.validPrescribedLoad(
+                    next,target.basis))
+                return current.takeIf{it.compareTo(start)!=0}
+                    ?.stripTrailingZeros()?.toPlainString()
+            current=next
+        }
+        return current.takeIf{it.compareTo(start)!=0}
+            ?.stripTrailingZeros()?.toPlainString()
+    }
+
     fun stepReps(text:String,direction:Int,allowFailedAttempt:Boolean):String? {
         if(direction != 1 && direction != -1)return null
         val minimum=if(allowFailedAttempt)0 else 1

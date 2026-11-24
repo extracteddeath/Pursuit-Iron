@@ -178,6 +178,8 @@ object BasicProgramProgressionPlanDomain {
             }))
                 return no("The working set has mixed units, load bases or invalid weights.")
             val bands=working.map{it.reps}.distinct()
+            if(bands.any{!KotlinSetNumberAuthorityDomain.validIssuedRepBand(it)})
+                return no("Every progression requires a valid issued 1–100 rep band.")
             val sameWeights=bodyweight || values.all{it.compareTo(values.first())==0}
             val assistance=loaded && unitBasis.single().second==
                 LoadBasis.ASSISTANCE_COUNTERWEIGHT

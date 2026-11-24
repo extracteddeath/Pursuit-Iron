@@ -1,6 +1,5 @@
 package io.github.extracteddeath.pursuitiron.rebuild
 
-import java.math.BigDecimal
 import java.util.Collections
 
 /** Fresh, athlete-reviewed replacement prescription. No prior lift loads,
@@ -102,7 +101,6 @@ sealed interface KotlinComposerSwapReview {
  * This cannot authorize itself or select a different athlete, gym or cycle.
  */
 object KotlinComposerSwapReviewDomain {
-    private val limit=BigDecimal("100000")
     fun review(
         state:KotlinWorkoutJournalState,
         eventId:String,expectedRevision:Long,
@@ -153,9 +151,11 @@ object KotlinComposerSwapReviewDomain {
                     val weighted=target.load as? DraftSetLoad.Verified
                     weighted!=null && weighted.unit==gear.unit &&
                         weighted.basis==gear.inventory?.basis &&
-                        weighted.value>=BigDecimal.ZERO &&
-                        weighted.value<=limit &&
-                        weighted.value.stripTrailingZeros().scale()<=3 &&
+                        // One identical physical number envelope from
+                        // reviewed swap through raw journal and cold replay.
+                        // Inventory may contain zero, but issued machine
+                        // weight cannot use it merely because it exists.
+                        KotlinSetNumberAuthorityDomain.validIssuedLoad(weighted) &&
                         EquipmentLoadDomain.inspect(
                             gear.inventory,weighted.value,gear.unit
                         ).let{it is LoadInspection.Confirmed && it.exact}

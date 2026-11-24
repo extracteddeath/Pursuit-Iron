@@ -157,3 +157,14 @@ assert.match(recoveryEngine,/AdaptiveCycleOptionReviewDomain\.review/);
 assert.match(recoveryTests,/appendRecoveryUsesFinalResolvedWeekAndNeverShiftsExistingWeeks/);
 assert.match(recoveryTests,/optionalLoadReductionRequiresPermissionAndAnExactEasierStepWithinBudget/);
 console.log('PASS native append-only recovery preview and explicit owner-fenced CAS save; no workout issuance or History writes.');
+
+assert.match(recoveryModel,/val maximumEasierStep:BigDecimal\?=null/);
+assert.match(recoveryModel,/val expectedRosterRevision:Long\?/);
+assert.match(preview,/request\.stepUnit!=gym\.unit/);
+assert.match(preview,/machineRosters\.read\(owner\.ownerKey\)/);
+assert.match(preview,/verifiedMachineConfigurations=roster\?\.configurations/);
+assert.match(preview,/assistance\.revision,roster\?\.revision,candidate/);
+assert.match(recoveryPanel,/it\.request\.maximumEasierStep==\(if\(adjustLoad\)budget else null\)/);
+assert.match(recoveryPanel,/it\.request\.stepUnit==\(if\(adjustLoad\)unit else null\)/);
+assert.match(recoveryPanel,/enabled=ready && !busy && confirmed && validBudget/);
+console.log('PASS optional recovery equipment-step preview requires exact unit, current machine roster and fresh reviewed budget.');

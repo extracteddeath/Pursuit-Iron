@@ -62,6 +62,10 @@ object CustomTieredJournalEvidenceDomain {
         val expectedReps = if (tier == PercentageTier.PRIMARY) listOf(3,2,1)[stage]
             else listOf(10,8,6)[stage]
         val expectedCount = if (tier == PercentageTier.PRIMARY) listOf(5,6,10)[stage] else 3
+        val indexes = if (sets.size > expectedCount)
+            List(sets.size - expectedCount) { 0 } + (0 until expectedCount).toList()
+        else NamedPercentageProtocolDomain.trimmedSourceIndexes(expectedCount, sets.size,
+            expectedCount - 1, listOf(expectedCount - 1))
         val facts = evidence.visits.filter {
             it.slotId == slotId && it.part == CustomWorkoutVisitPart.MAIN &&
                 it.setType == DraftSetType.WORKING
@@ -84,6 +88,7 @@ object CustomTieredJournalEvidenceDomain {
                 intent.weekInBlock != original.weekInBlock ||
                 intent.blockWeeks != first.blockWeeks ||
                 intent.sourceSetCount != expectedCount ||
+                intent.sourceOrdinal != indexes[index] + 1 ||
                 intent.referenceLoad.compareTo(first.referenceLoad) != 0 ||
                 intent.repOut != (index == sets.lastIndex) ||
                 prescription.exactRepTarget != expectedReps ||

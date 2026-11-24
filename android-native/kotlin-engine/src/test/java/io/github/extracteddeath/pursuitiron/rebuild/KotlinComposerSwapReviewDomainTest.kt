@@ -242,6 +242,67 @@ class KotlinComposerSwapReviewDomainTest {
             is KotlinHistoryProjectionResult.Candidate)
     }
 
+    @Test fun rawSwapAndColdReplayCannotInjectImpossibleIssuedWeights() {
+        // The higher-level swap reviewer ordinarily supplies physical stock
+        // evidence. The lower-level journal is also a durable receipt/replay
+        // boundary: a forged or stale caller must not bypass its number rules.
+        val first=start()
+        val event="forged-swap"
+        fun operation(load:DraftSetLoad):KotlinJournalOperation.SwapExercise =
+            KotlinJournalOperation.SwapExercise(event,0L,"db-press",listOf(
+                target("chest-machine","swap:$event:working:0",0,load=load),
+                target("chest-machine","swap:$event:working:1",1,load=load)))
+        val impossible=listOf(
+            LoadBasis.DUMBBELL_PER_HAND to "-1",
+            LoadBasis.MACHINE_STACK to "100000.001",
+            LoadBasis.CABLE_STACK to "20.0001",
+            LoadBasis.SMITH_TOTAL to "0",
+            LoadBasis.DUMBBELL_PER_HAND to "0.000",
+            LoadBasis.MACHINE_STACK to "0",
+            LoadBasis.CABLE_STACK to "0",
+            LoadBasis.EXERCISE_OVERRIDE to "0",
+            LoadBasis.ASSISTANCE_COUNTERWEIGHT to "0",
+            LoadBasis.KETTLEBELL_EACH to "0"
+        )
+        for((basis,number) in impossible) {
+            val invalid=operation(DraftSetLoad.Verified(LoadUnit.LB,
+                basis,n(number)))
+            assertEquals("$basis at $number",
+                KotlinJournalDecision.Rejected(
+                    KotlinJournalRefusal.SWAP_INVALID_TARGET),
+                KotlinWorkoutJournalDomain.reduce(first,invalid))
+            assertEquals(KotlinJournalReplayResult.Rejected(
+                KotlinJournalReplayRefusal.INVALID_OPERATION),
+                KotlinWorkoutJournalReplayDomain.replay(
+                    issued,identity,listOf(KotlinJournalReceipt(1,invalid)),
+                    1L))
+            assertEquals(0L,first.revision)
+            assertTrue(first.receipts.isEmpty())
+            assertEquals(issued,first.snapshot)
+        }
+
+        // Physical zero added plates is a legitimate load number for a
+        // landmine. This low-level acceptance does NOT provide the host's
+        // necessary inventory, exercise or athlete consent checks.
+        val unloadedLandmine=operation(DraftSetLoad.Verified(
+            LoadUnit.LB,LoadBasis.LANDMINE_ADDED_PLATES,n("0.000")))
+        val valid=accept(first,unloadedLandmine)
+        assertEquals(issued,valid.originalSnapshot)
+        assertEquals(List(2){n("0.000")},valid.snapshot.targets.take(2).map{
+            (it.load as DraftSetLoad.Verified).value
+        })
+        assertEquals(KotlinJournalReplayResult.Recovered(valid),
+            KotlinWorkoutJournalReplayDomain.replay(
+                issued,identity,valid.receipts,valid.revision))
+        // The generated/composed replacement remains a valid independent
+        // path, not a casualty of the new raw-reducer guard.
+        val composed=(reviewed(start()) as KotlinComposerSwapReview.Ready).operation
+        val reviewedState=accept(start(),composed)
+        assertEquals(KotlinJournalReplayResult.Recovered(reviewedState),
+            KotlinWorkoutJournalReplayDomain.replay(
+                issued,identity,reviewedState.receipts,reviewedState.revision))
+    }
+
     @Test fun swapRefusesRecordedNewOrOldAndUnverifiedReplacementWeights() {
         val firstState=start()
         assertTrue(reviewed(firstState,sets=listOf(intent(0,"27"),

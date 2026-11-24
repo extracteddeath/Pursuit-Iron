@@ -135,6 +135,11 @@ class KotlinSetNumberAuthorityDomainTest {
             actual(reps=0,rir=null)))
         assertNull(authority.completedPhysicalStation(
             issued,KotlinJournalSetOutcome.SKIPPED,null))
+        val freeBar=issued.copy(basis=LoadBasis.BARBELL_TOTAL)
+        val contradictory=actual(machine="machine-B")
+        // Historical actuals remain factual; only station evidence is refused.
+        assertTrue(authority.valid(freeBar,completed,contradictory))
+        assertNull(authority.completedPhysicalStation(freeBar,completed,contradictory))
         assertNull(authority.completedPhysicalStation(
             DraftSetLoad.ExplicitBodyweight,completed,
             actual(weight=null,unit=null,machine="machine-A")))

@@ -505,6 +505,36 @@ class KotlinProgressionTimelineDomainTest {
     }
 
 
+    @Test fun newerOtherStationOrPurposeCannotHideChangedSourceAfterMatchedPair() {
+        val a1=workout(401,machineId="A")
+        val a2=workout(402,machineId="A")
+        val sameSourceB=workout(403,machineId="B")
+        val changedSource=baseSource.copy(gymRevision=2)
+        val changedB=workout(404,machineId="B",source=changedSource)
+        val changedPurpose=workout(405,machineId="A",
+            purpose=ComposerSessionPurpose.STRENGTH_SKILL,
+            source=changedSource,repBand=RepBand(3,5),reps=listOf(3,3,3,3))
+        fun review(sessions:List<KotlinWorkoutJournalState>)=
+            KotlinProgressionTimelineDomain.review(request(sessions).copy(
+                requestedMachineInstanceId="A",
+                requestedPurpose=ComposerSessionPurpose.HYPERTROPHY,
+                requestedDayIndex=0))
+        val independent=review(listOf(a1,a2,sameSourceB))
+        assertEquals(KotlinTimelineReviewStatus.VERIFIED_REVIEW,independent.status)
+        for(tail in listOf(changedB,changedPurpose)) {
+            val held=review(listOf(a1,a2,tail))
+            assertEquals(KotlinTimelineReviewStatus.CHANGED_INTERVENING_SOURCE,held.status)
+            assertEquals(listOf("workout-401","workout-402"),held.comparedWorkoutIds)
+            assertNull(held.progression)
+            assertFalse(held.canIssueTargets)
+        }
+        val freshA1=workout(406,machineId="A",source=changedSource)
+        val freshA2=workout(407,machineId="A",source=changedSource)
+        val recovered=review(listOf(a1,a2,changedB,freshA1,freshA2))
+        assertEquals(KotlinTimelineReviewStatus.VERIFIED_REVIEW,recovered.status)
+        assertEquals(listOf("workout-406","workout-407"),recovered.comparedWorkoutIds)
+    }
+
     @Test fun matchingPurposeDifferentDaysHaveIndependentProgression() {
         // Both days are HYPERTROPHY. Partition by authenticated approved
         // day index, not by the exercise ID or broad coaching purpose alone.

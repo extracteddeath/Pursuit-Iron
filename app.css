@@ -4867,6 +4867,11 @@ background:var(--pi-color-card)!important;
   font-size:12px!important;
   line-height:1.2!important;
 }
+/* B1036: at the narrowest phones the five labels drop to the caption size so every segment stays
+   a 44px target with an inset, rather than one of them shrinking below a usable width. */
+@media (max-width:339px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-premium-tabs>button{font-size:var(--pi-type-caption)!important}
+}
 /* M335 — semantic Settings section chooser. The native select is navigation,
    not search. Fixed geometry/paint belongs to this single Settings owner. */
 #root .wpb .wpb-settings .wpb-settings-jump{
@@ -8821,7 +8826,7 @@ background:var(--pi-color-card)!important;
   background:var(--wpb-theme-accent-dim)!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-level-mark .mono{
-  font-size:1.75rem!important;line-height:1!important;
+  font-size:28px!important;line-height:1!important;
 }
 /* M288 — Lifetime summary has one Expressive owner. Preserve the effective
    grouped surface, number wrapping and large-text reflow; retire R17/R39/R40
@@ -8851,7 +8856,7 @@ background:var(--pi-color-card)!important;
 .wpb-profile-card-metrics>div:nth-child(-n+2){padding:var(--pi-space-3);border-radius:var(--pi-shape-action);background:var(--pi-color-control,var(--wpb-theme-card-high))}
 .wpb-profile-card-metrics dt{font-size:.75rem;font-weight:650;color:var(--wpb-theme-muted)}
 .wpb-profile-card-metrics dd{margin:var(--pi-space-1) 0;font-size:var(--pi-type-body);font-weight:750;line-height:1.35;overflow-wrap:break-word;font-variant-numeric:tabular-nums}
-.wpb-profile-card-metrics>div:nth-child(-n+2) dd{font-size:clamp(1.125rem,2.6vw,1.375rem);letter-spacing:-.025em}
+.wpb-profile-card-metrics>div:nth-child(-n+2) dd{font-size:clamp(1.0625rem,2.6vw,1.375rem);letter-spacing:-.025em}
 .wpb-profile-card-metrics dd>span{display:block}
 .wpb-profile-card-metrics p{margin:0;font-size:.6875rem;line-height:1.5;color:var(--wpb-theme-muted)}
 .wpb-profile-card-actions{margin-top:var(--pi-space-2)}
@@ -10156,7 +10161,7 @@ background:var(--pi-color-card)!important;
    at 320px. */
 #root .wpb .wpb-progress .wpb-premium-tabs{--pi-segment-min:48px;--pi-progress-tab-pad:8px}
 #root .wpb .wpb-progress .wpb-premium-tabs>button{flex:1 1 auto}
-@media (max-width:379px){#root .wpb .wpb-progress .wpb-premium-tabs{--pi-progress-tab-pad:6px;--pi-segment-gap:2px;--pi-segment-min:0px}}
+@media (max-width:379px){#root .wpb .wpb-progress .wpb-premium-tabs{--pi-progress-tab-pad:6px;--pi-segment-gap:2px;--pi-segment-min:44px}}
 @media (max-width:339px){#root .wpb .wpb-progress .wpb-premium-tabs{--pi-progress-tab-pad:4px}}
 #root[data-pi-motion] .wpb .wpb-home .wpb-action-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 #root[data-pi-motion] .wpb .wpb-home .wpb-action-grid>.wpb-action-tile:not(.wpb-action-tile-featured){--pi-home-tile-min:112px;--pi-control-min:112px;--pi-home-tile-pad:14px;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:10px;text-align:left}

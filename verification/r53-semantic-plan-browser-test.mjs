@@ -668,7 +668,8 @@ try{
           assert.ok(!geometry.overflow&&geometry.controls.length===4&&geometry.controls.every(b=>
             b.width>=48&&b.height>=48&&!b.clipped&&b.fragments===1&&b.font>=font*.875-.1),
             'Whole Settings experience labels and 48px targets fit '+JSON.stringify({width,font,geometry}));
-          assert.equal(geometry.columns,width===393&&font===16?4:width===320&&font===20?1:2,
+          // B1036: phones use a 2x2 grid so each label keeps a 12px inset; 320px at 125% text stacks.
+          assert.equal(geometry.columns,width===320&&font===20?1:2,
             'Experience controls make room for text instead of splitting words');
           await page.click('.wpb-experience-segmented>button:nth-child(4)');
           await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:v1')).experience==='advanced');

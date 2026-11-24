@@ -1,5 +1,6 @@
 package io.github.extracteddeath.pursuitiron.nativecoachstore
 
+import io.github.extracteddeath.pursuitiron.rebuild.*
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
@@ -16,7 +17,7 @@ import java.security.MessageDigest
 
 enum class NativeAuthoringSourceRefusal {
     NOT_AUTHORIZED, INVALID_SOURCE, STALE_REVISION, CORRUPT_RECORD,
-    STORAGE_UNAVAILABLE
+    STORAGE_UNAVAILABLE, CONFIRMATION_REQUIRED
 }
 sealed interface NativeAuthoringSourceRead {
     data class Found(val source: NativeCustomAuthoringSnapshot) :
@@ -32,9 +33,18 @@ sealed interface NativeAuthoringSourceWrite {
         NativeAuthoringSourceWrite
 }
 
+sealed interface NativeSavedGymRead {
+    data class Ready(val sourceRevision:Long,val active:ReviewedGymProfile,
+        val inactive:List<ReviewedGymProfile>):NativeSavedGymRead {
+        val mayIssueWorkout:Boolean get()=false
+    }
+    data class Rejected(val reason:NativeAuthoringSourceRefusal):NativeSavedGymRead
+}
+
 private data class AuthoringFileRecord(
     val ownerKey: String, val athleteId: String,
-    val revision: Long, val snapshot: NativeCustomAuthoringSnapshot?
+    val revision: Long, val snapshot: NativeCustomAuthoringSnapshot?,
+    val inactiveGyms:List<ReviewedGymProfile> = emptyList()
 )
 
 /**
@@ -55,6 +65,7 @@ class NativeKotlinCustomAuthoringSourceFileStore(
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val magic=0x50494347 // PICG
     private val version=1
+    private val maxInactiveGyms=15
     private val maxFileBytes=NativeKotlinCustomAuthoringSourceCodec.MAX_BYTES+4096
 
     private fun active(ownerKey: String): NativeKotlinOwnerIdentity? {
@@ -75,7 +86,7 @@ class NativeKotlinCustomAuthoringSourceFileStore(
     private fun encode(record: AuthoringFileRecord):ByteArray {
         val output=ByteArrayOutputStream()
         DataOutputStream(output).use { o ->
-            o.writeInt(magic);o.writeInt(version)
+            o.writeInt(magic);o.writeInt(if(record.inactiveGyms.isEmpty())version else 2)
             o.writeUTF(record.ownerKey);o.writeUTF(record.athleteId)
             o.writeLong(record.revision)
             o.writeBoolean(record.snapshot != null)
@@ -85,6 +96,19 @@ class NativeKotlinCustomAuthoringSourceFileStore(
                 // Caller-supplied "READY" cannot forge accepted stock.
                 require(NativeKotlinCustomAuthoringSourceCodec.decode(bytes)==it)
                 o.writeInt(bytes.size);o.write(bytes)
+            }
+            if(record.inactiveGyms.isNotEmpty()) {
+                val snapshot=checkNotNull(record.snapshot)
+                val active=checkNotNull(snapshot.setup.reviewed).gym
+                require(record.inactiveGyms.size<=maxInactiveGyms &&
+                    record.inactiveGyms.map{it.gymId}.distinct().size==record.inactiveGyms.size &&
+                    record.inactiveGyms.none{it.gymId==active.gymId})
+                o.writeInt(record.inactiveGyms.size)
+                record.inactiveGyms.sortedBy{it.gymId}.forEach{gym->
+                    require(NativeKotlinGymCatalogEditingDomain.reviewedGym(snapshot,
+                        NativeKotlinGymCatalogEditingDomain.asGymDraft(gym))==gym)
+                    NativeKotlinCustomAuthoringSourceCodec.writeSavedGym(o,gym)
+                }
             }
         }
         val payload=output.toByteArray()
@@ -115,7 +139,7 @@ class NativeKotlinCustomAuthoringSourceFileStore(
         return try {
             DataInputStream(ByteArrayInputStream(payload)).use { data ->
                 val magicRead=data.readInt();val versionRead=data.readInt()
-                if (magicRead!=magic || versionRead!=version)
+                if (magicRead!=magic || versionRead !in 1..2)
                     throw IOException("Unknown authoring file version")
                 val owner=data.readUTF();val athlete=data.readUTF()
                 val revision=data.readLong()
@@ -131,12 +155,25 @@ class NativeKotlinCustomAuthoringSourceFileStore(
                     data.readFully(content)
                     NativeKotlinCustomAuthoringSourceCodec.decode(content)
                 } else null
+                val inactive=if(versionRead==2) {
+                    val current=checkNotNull(snapshot)
+                    val active=checkNotNull(current.setup.reviewed).gym
+                    val count=data.readInt()
+                    require(count in 1..maxInactiveGyms)
+                    val gyms=List(count) {
+                        val gym=NativeKotlinCustomAuthoringSourceCodec.readSavedGym(data)
+                        checkNotNull(NativeKotlinGymCatalogEditingDomain.reviewedGym(current,gym))
+                    }
+                    require(gyms.map{it.gymId}.distinct().size==gyms.size &&
+                        gyms.none{it.gymId==active.gymId})
+                    java.util.Collections.unmodifiableList(gyms)
+                } else emptyList()
                 if (data.available()!=0 ||
                     (snapshot!=null && (snapshot.ownerKey!=owner ||
                         snapshot.athleteId!=athlete ||
                         snapshot.revision!=revision)))
                     throw IOException("Authoring identity or revision mismatch")
-                AuthoringFileRecord(owner,athlete,revision,snapshot)
+                AuthoringFileRecord(owner,athlete,revision,snapshot,inactive)
             }
         } catch(ex:Exception) {
             throw IOException("Unreadable authoring source",ex)
@@ -199,6 +236,64 @@ class NativeKotlinCustomAuthoringSourceFileStore(
         }
     }
 
+    fun readSavedGyms(ownerKey:String):NativeSavedGymRead {
+        fun deny(reason:NativeAuthoringSourceRefusal)=NativeSavedGymRead.Rejected(reason)
+        val signed=active(ownerKey)?:return deny(NativeAuthoringSourceRefusal.NOT_AUTHORIZED)
+        return runCatching{fence.withOwnerTransaction(ownerKey){
+            if(active(ownerKey)!=signed)return@withOwnerTransaction deny(NativeAuthoringSourceRefusal.NOT_AUTHORIZED)
+            val record=try{decode(path(ownerKey))}catch(_:Exception){
+                return@withOwnerTransaction deny(NativeAuthoringSourceRefusal.CORRUPT_RECORD)
+            }?:return@withOwnerTransaction deny(NativeAuthoringSourceRefusal.INVALID_SOURCE)
+            if(record.ownerKey!=ownerKey || record.athleteId!=signed.athleteId ||
+                active(ownerKey)!=signed)
+                return@withOwnerTransaction deny(NativeAuthoringSourceRefusal.NOT_AUTHORIZED)
+            val gym=record.snapshot?.setup?.reviewed?.gym
+                ?:return@withOwnerTransaction deny(NativeAuthoringSourceRefusal.INVALID_SOURCE)
+            NativeSavedGymRead.Ready(record.revision,gym,record.inactiveGyms)
+        }}.getOrElse{deny(NativeAuthoringSourceRefusal.STORAGE_UNAVAILABLE)}
+    }
+
+    /** Explicit creation+selection, or selection of an already confirmed gym.
+     * Both operations reopen the current athlete/catalog and preserve all
+     * unrelated facts. No unit conversion, stock copying or workout mutation. */
+    fun addAndSelectGym(ownerKey:String,expectedRevision:Long,gym:GymProfileDraft,
+        athleteConfirmed:Boolean):NativeAuthoringSourceWrite =
+        changeGym(ownerKey,expectedRevision,gym.gymId,gym,athleteConfirmed)
+
+    fun selectSavedGym(ownerKey:String,expectedRevision:Long,gymId:String,
+        athleteConfirmed:Boolean):NativeAuthoringSourceWrite =
+        changeGym(ownerKey,expectedRevision,gymId,null,athleteConfirmed)
+
+    private fun changeGym(ownerKey:String,expectedRevision:Long,gymId:String,
+        newGym:GymProfileDraft?,athleteConfirmed:Boolean):NativeAuthoringSourceWrite {
+        fun deny(reason:NativeAuthoringSourceRefusal)=NativeAuthoringSourceWrite.Rejected(reason)
+        if(!athleteConfirmed)return deny(NativeAuthoringSourceRefusal.CONFIRMATION_REQUIRED)
+        if(!id.matches(gymId))return deny(NativeAuthoringSourceRefusal.INVALID_SOURCE)
+        val signed=active(ownerKey)?:return deny(NativeAuthoringSourceRefusal.NOT_AUTHORIZED)
+        return runCatching{fence.withOwnerTransaction(ownerKey){
+            if(active(ownerKey)!=signed)return@withOwnerTransaction deny(NativeAuthoringSourceRefusal.NOT_AUTHORIZED)
+            val record=try{decode(path(ownerKey))}catch(_:Exception){
+                return@withOwnerTransaction deny(NativeAuthoringSourceRefusal.CORRUPT_RECORD)
+            }?:return@withOwnerTransaction deny(NativeAuthoringSourceRefusal.INVALID_SOURCE)
+            if(record.ownerKey!=ownerKey || record.athleteId!=signed.athleteId)
+                return@withOwnerTransaction deny(NativeAuthoringSourceRefusal.NOT_AUTHORIZED)
+            if(record.revision!=expectedRevision)return@withOwnerTransaction deny(NativeAuthoringSourceRefusal.STALE_REVISION)
+            val current=record.snapshot
+                ?:return@withOwnerTransaction deny(NativeAuthoringSourceRefusal.INVALID_SOURCE)
+            val activeGym=checkNotNull(current.setup.reviewed).gym
+            val existing=record.inactiveGyms.singleOrNull{it.gymId==gymId}
+            if(activeGym.gymId==gymId || (newGym!=null && existing!=null))
+                return@withOwnerTransaction deny(NativeAuthoringSourceRefusal.INVALID_SOURCE)
+            val target=newGym ?:existing?.let(NativeKotlinGymCatalogEditingDomain::asGymDraft)
+                ?:return@withOwnerTransaction deny(NativeAuthoringSourceRefusal.INVALID_SOURCE)
+            val proposal=NativeKotlinGymCatalogEditingDomain.switchGym(current,expectedRevision,target)
+                as? NativeGymCatalogEdit.Proposed
+                ?:return@withOwnerTransaction deny(NativeAuthoringSourceRefusal.INVALID_SOURCE)
+            if(active(ownerKey)!=signed)return@withOwnerTransaction deny(NativeAuthoringSourceRefusal.NOT_AUTHORIZED)
+            publish(ownerKey,expectedRevision,proposal.source)
+        }}.getOrElse{deny(NativeAuthoringSourceRefusal.STORAGE_UNAVAILABLE)}
+    }
+
     fun publish(
         ownerKey:String, expectedRevision:Long,
         snapshot:NativeCustomAuthoringSnapshot
@@ -241,8 +336,21 @@ class NativeKotlinCustomAuthoringSourceFileStore(
                     (deleting && previous==null))
                     return@withOwnerTransaction NativeAuthoringSourceWrite.Rejected(
                         NativeAuthoringSourceRefusal.STALE_REVISION)
+                // Preserve the prior physical gym whenever an explicit
+                // reviewed source publication changes the active identity.
+                // The single atomic source envelope owns both active and
+                // inactive stock; a stale edit can never resurrect either.
+                val inactive=if(snapshot==null)emptyList() else {
+                    val newGym=snapshot.setup.reviewed?.gym
+                        ?:return@withOwnerTransaction NativeAuthoringSourceWrite.Rejected(
+                            NativeAuthoringSourceRefusal.INVALID_SOURCE)
+                    val priorGym=previous?.snapshot?.setup?.reviewed?.gym
+                    val retained=previous?.inactiveGyms.orEmpty().filter{it.gymId!=newGym.gymId}
+                    (retained+listOfNotNull(priorGym?.takeIf{it.gymId!=newGym.gymId}))
+                        .sortedBy{it.gymId}
+                }
                 val next=AuthoringFileRecord(
-                    ownerKey,owner.athleteId,expectedRevision+1,snapshot)
+                    ownerKey,owner.athleteId,expectedRevision+1,snapshot,inactive)
                 val bytes=try {encode(next)} catch(_:Exception) {
                     return@withOwnerTransaction NativeAuthoringSourceWrite.Rejected(
                         NativeAuthoringSourceRefusal.INVALID_SOURCE)

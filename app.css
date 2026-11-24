@@ -10256,4 +10256,3 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-week-dots{display:inline-flex;gap:3px;margin-inline-start:6px;vertical-align:middle;}
 #root .wpb .wpb-week-dots>i{width:6px;height:6px;border-radius:50%;background:var(--pi-color-divider);}
 #root .wpb .wpb-week-dots>i[data-done]{background:var(--wpb-theme-accent);}
-#root .wpb .wpb-week-dots-text{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;}

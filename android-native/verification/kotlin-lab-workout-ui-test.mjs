@@ -1071,10 +1071,14 @@ assert.match(sharedSetFields,/if\(largeText \|\| maxWidth<400\.dp\)/);
 assert.match(sharedSetFields,/complete\(Modifier\.weight\(1\.5f\)\)/);
 assert.match(composer,/PursuitSetEntryActions\(/);
 assert.match(journal,/PursuitSetEntryActions\(/);
-assert.match(journal,/canComplete=!locked && actual!=null &&\s*!sameLoadInvalidCompletion && !invalidDropCompletion/);
+assert.match(journal,/canComplete=!locked && attemptAllowed && actual!=null &&\s*!sameLoadInvalidCompletion && !invalidDropCompletion/);
 assert.match(journal,/onSkip=\{pendingExceptionalOutcome=KotlinJournalSetOutcome\.SKIPPED\}/);
 assert.match(journal,/onFail=\{pendingExceptionalOutcome=KotlinJournalSetOutcome\.FAILED_ATTEMPT\}/);
 assert.match(composer,/onFail=\{failedActual\?\.let\(onFail\)\}/);
+assert.match(composer,/attemptAllowed=!needsMachineSelection/);
+assert.match(composer,/canComplete=!busy && attemptAllowed && actual!=null/);
+assert.match(journal,/attemptAllowed=previouslyAttempted!=null \|\| !requiresNewMachineChoice/);
+assert.match(journal,/attemptAllowed && failedActual!=null &&\s*!sameLoadInvalidFailure && !invalidDropFailure/);
 const infoSheet=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutExerciseInfoSheet.kt')+
   read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutInfoPresentation.kt');
 const infoPolicy=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeWorkoutInfoActionPolicy.kt');

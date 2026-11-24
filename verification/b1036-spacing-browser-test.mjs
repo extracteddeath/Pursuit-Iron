@@ -1,5 +1,5 @@
 // B1036: spacing and sizing are measured, not eyeballed. One 12px rhythm between root cards,
-// one 16px card inset, labels never pressed against their control's edge, aligned set rows,
+// one 16px card inset, labels never pressed against their control's edge, one-line set rows under one header,
 // section titles on the card edge, and 48px secondary actions.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -76,10 +76,25 @@ try{
     await tab('home');
     await page.evaluate(()=>document.querySelector('.wpb-home-hero .wpb-primary-action').click());await wait(1500);
     await page.evaluate(()=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Skip');b&&b.click();});await wait(900);
-    const set=await page.evaluate(()=>[...document.querySelectorAll('[data-testid^="set-0-"]')].map(r=>Math.round(r.querySelector('.wpb-set-stepper').getBoundingClientRect().left)));
-    assert.ok(set.length>=2&&set.every(x=>x===set[0]),'Set rows keep one left edge, active or not '+JSON.stringify({width,set}));
+    const set=await page.evaluate(()=>{
+      const rows=[...document.querySelectorAll('[data-testid^="set-0-"]')].filter(r=>r.getClientRects().length);
+      const box=n=>n.getBoundingClientRect();
+      const head=document.querySelector('.wpb-set-head'),labels=[...head.querySelectorAll(':scope>span')];
+      const center=b=>b.left+b.width/2;
+      const first=rows[0].querySelector('input[aria-label="weight"]'),reps=rows[0].querySelector('input[aria-label="reps"]');
+      return {left:rows.map(r=>Math.round(box(r.querySelector('input[aria-label="weight"]')).left)),
+        idle:rows.filter(r=>r.dataset.active!=='1'&&r.dataset.done!=='1').map(r=>{
+          const i=box(r.querySelector('.wpb-set-index')),w=box(r.querySelector('input[aria-label="weight"]')),c=box(r.querySelector('.wpb-set-complete'));
+          return {h:Math.round(box(r).height),line:Math.abs(i.top-w.top)<=1&&Math.abs(c.top-w.top)<=1,steppers:r.querySelectorAll('.wpb-set-stepper').length};}),
+        activeSteppers:rows[0].querySelectorAll('.wpb-set-stepper').length,
+        loadHead:Math.abs(center(box(labels[1]))-center(box(first))),repsHead:Math.abs(center(box(labels[2]))-center(box(reps)))};
+    });
+    assert.ok(set.left.length>=2&&set.left.every(x=>x===set.left[0]),'Set rows keep one left edge, active or not '+JSON.stringify({width,set}));
+    assert.ok(set.idle.length&&set.idle.every(r=>r.line&&r.h<=56&&r.steppers===0),'Waiting sets are one line with no steppers '+JSON.stringify({width,set}));
+    assert.equal(set.activeSteppers,4,'The working set carries the -/+ tier '+ctx);
+    assert.ok(set.loadHead<=2&&set.repsHead<=2,'Column labels sit once over their fields '+JSON.stringify({width,set}));
     assert.deepEqual(errors,[],'No page errors '+ctx);
     await page.close();
   }
-  console.log('PASS B1036 spacing: 12px root rhythm, 16px card insets, aligned set rows and section titles, inset labels, 48px secondary actions at 320 and 393px.');
+  console.log('PASS B1036 spacing: 12px root rhythm, 16px card insets, one-line set rows under one header, aligned section titles, inset labels, 48px secondary actions at 320 and 393px.');
 }finally{await browser?.close();server.close();}

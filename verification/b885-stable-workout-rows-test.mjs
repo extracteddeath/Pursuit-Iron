@@ -15,9 +15,10 @@ assert.ok(workout.includes('className: "wpb-b965-layout-19"') &&
   workout.includes('className: "wpb-set-reps wpb-layout-flex-one wpb-s956-minwidth-0"') &&
   css.includes('.wpb-layout-flex-one,') && css.includes('.wpb-s956-minwidth-0,'),
   'Weight and reps share a balanced track through the single CSS owner');
-assert.ok(css.includes('B885 — Stable, thumb-safe set rows') && css.includes('column-gap:8px!important;') &&
-  css.includes('gap:5px!important;'), 'Set tracks and steppers have deliberate touch separation');
-assert.ok(css.includes('@media(max-width:380px)') && css.includes('width:auto!important;'), 'Compact stacked row fallback preserved');
-assert.ok(css.includes('grid-template-columns:minmax(0,1fr) minmax(0,1fr) 36px!important') && css.includes('content:"REPS"'), 'Small-screen fields are balanced and labelled');
-assert.ok(css.includes('[data-testid^="set-"][data-done="1"] .wpb-set-controls') && css.includes('display:flex!important;align-items:flex-start!important;gap:6px!important;'), 'Logged rows remain compact on narrow phones');
+assert.ok(css.includes('B885 — Stable, thumb-safe set rows') && css.includes('column-gap:8px!important;'), 'Set tracks and steppers have deliberate touch separation');
+// B1043 superseded the narrow-phone two-tier row: every set is one grid line under a single header.
+const grid='grid-template-columns:32px minmax(56px,.95fr) minmax(0,1.15fr) minmax(0,1fr) 40px!important;';
+assert.ok(css.includes('B1043 — One line per set') && css.includes(grid), 'Set rows and their header share one grid');
+assert.ok(!css.includes('content:"REPS"') && !css.includes('content:"LOAD"') && !app.includes('content:"Load"'), 'Column labels are not repeated on every row');
+assert.equal((workout.match(/!s\.done && isActive && _jsx\(StepButton/g)||[]).length, 4, 'Only the working set carries steppers');
 console.log('PASS B885 stable set-row contract: one reference, even fields, separated controls.');

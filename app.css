@@ -7206,102 +7206,53 @@ background:var(--pi-color-card)!important;
   line-height:1.25!important;
 }
 
-@media(max-width:420px){
-  #root .wpb-workout .wpb-set-controls{column-gap:7px!important;}
+/* B1043 — One line per set, as in Hevy and Strong. SET · TARGET/LAST · LOAD · REPS · done share
+   one grid with the column labels, which are printed once in .wpb-set-head instead of on every row.
+   Only the set being worked grows a −/+ tier under its fields; every other row is a single 52px line. */
+#root .wpb-workout[data-focus-mode="false"] .wpb-set-head,
+#root .wpb-workout[data-focus-mode="false"] .wpb-set-controls{
+  display:grid!important;grid-template-columns:32px minmax(56px,.95fr) minmax(0,1.15fr) minmax(0,1fr) 40px!important;
+  column-gap:8px!important;align-items:start!important;
 }
-/* Below 380px, the established two-line adaptation gives each field a
-   full-width track. Don't force inline columns and make the inputs microscopic. */
-@media(max-width:380px){
-  #root .wpb-workout .wpb-set-controls>div:nth-child(3),
-  #root .wpb-workout .wpb-set-controls>div:nth-child(4){width:auto!important;}
-  #root .wpb-workout .wpb-set-controls [data-reference-action]{min-height:32px;}
+#root .wpb-workout[data-focus-mode="false"] .wpb-set-head{align-items:center!important;gap:0 8px!important;}
+#root .wpb-workout[data-focus-mode="false"] .wpb-set-head>*{width:auto!important;flex:none!important;min-width:0;}
+#root .wpb-workout[data-focus-mode="false"] .wpb-set-head>span{display:block!important;text-align:center;}
+#root .wpb-workout[data-focus-mode="false"] .wpb-set-head>span:first-child{text-align:left;}
+#root .wpb-workout[data-focus-mode="false"] .wpb-set-controls{padding:4px 0!important;row-gap:0!important;}
+#root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>*{grid-row:1;width:auto!important;margin:0!important;min-width:0!important;flex:none!important;}
+#root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>.wpb-set-index{
+  grid-column:1;width:32px!important;min-width:32px!important;height:44px;min-height:44px!important;padding:0!important;
 }
-
-/* B885 narrow-phone polish: the one-line grid below 420px would leave
-   ~25px numeric edit boxes once the four stepper buttons were accounted for.
-   Use a steady two-tier row instead of shrinking inputs or overlapping taps.
-   The reference moves to the top-right; equal load/rep tracks share the lower
-   tier with the separate completion button. */
-@media(max-width:420px){
-  #root .wpb-workout[data-focus-mode="false"] .wpb-set-head{
-    justify-content:flex-start!important;gap:9px!important;
-  }
-  #root .wpb-workout[data-focus-mode="false"] .wpb-set-head>span:nth-child(3),
-  #root .wpb-workout[data-focus-mode="false"] .wpb-set-head>span:nth-child(4){display:none!important;}
+#root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(2){
+  grid-column:2;min-height:44px;display:flex;align-items:center;padding:0!important;text-align:left!important;
+}
+#root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(2) [data-reference-action]{min-height:44px;padding:0!important;}
+#root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(3){grid-column:3;padding:0!important;}
+#root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(4){grid-column:4;padding:0!important;}
+#root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>.wpb-set-actions{grid-column:5;width:40px!important;}
+#root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div::before,
+#root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>.wpb-set-index::before{content:none!important;display:none!important;}
+#root .wpb-workout[data-focus-mode="false"] .wpb-set-controls .wpb-set-complete{width:40px!important;min-width:40px!important;height:44px!important;}
+#root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(3)>div:first-child,
+#root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(4)>div:first-child{
+  flex-wrap:wrap;justify-content:space-between;gap:4px!important;
+}
+#root .wpb-workout[data-focus-mode="false"] .wpb-set-controls .wpb-num-input{order:-1;flex:1 1 100%!important;width:100%;}
+#root .wpb-workout[data-focus-mode="false"] .wpb-set-controls .wpb-set-stepper{
+  width:40px!important;min-width:40px!important;flex:0 0 40px!important;height:32px!important;min-height:32px!important;
+  border-radius:16px!important;border-color:transparent!important;background:var(--pi-m3e-secondary-container,var(--pi-color-control))!important;
+  color:var(--wpb-theme-text)!important;font-size:18px;line-height:1;
+}
+#root .wpb-workout[data-focus-mode="false"] .wpb-set-controls .wpb-set-stepper::after{top:0;transform:none;height:40px;}
+#root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls>.wpb-set-index,
+#root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls>div:nth-child(2),
+#root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls .wpb-set-complete{height:36px!important;min-height:36px!important;}
+@media(max-width:360px){
+  #root .wpb-workout[data-focus-mode="false"] .wpb-set-head,
   #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls{
-    display:grid!important;
-    grid-template-columns:minmax(0,1fr) minmax(0,1fr) 36px!important;
-    column-gap:8px!important;row-gap:3px!important;
-    align-items:start!important;padding:5px 2px 7px!important;
+    grid-template-columns:28px minmax(52px,.95fr) minmax(0,1.15fr) minmax(0,1fr) 40px!important;column-gap:6px!important;
   }
-  #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>.wpb-set-index{
-    padding-top:5px!important;
-  }
-  #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>.wpb-set-index::before{content:none!important;}
-  #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(2){
-    grid-column:2/4;grid-row:1;width:100%!important;text-align:right!important;
-    padding-top:0!important;display:flex;justify-content:flex-end;
-  }
-  #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(2) [data-reference-action]{
-    width:auto!important;min-height:30px;padding:1px 6px!important;
-  }
-  #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(3){
-    grid-column:1;grid-row:2;min-width:0!important;width:auto!important;
-  }
-  #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(4){
-    grid-column:2;grid-row:2;min-width:0!important;width:auto!important;
-    padding-top:0!important;
-  }
-  #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(3)::before,
-  #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(4)::before{
-    display:block;position:static;content:"LOAD";height:14px;
-    color:var(--pi-color-on-muted);font-size:11px;font-weight:700;
-    line-height:14px;margin-bottom:3px;text-align:center;
-  }
-  #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(4)::before{content:"REPS";}
-  #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>.wpb-set-actions{
-    grid-column:3;grid-row:2;align-self:start;margin-top:17px!important;
-    width:36px!important;
-  }
-  #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls .wpb-set-stepper{
-    width:28px!important;min-width:28px!important;
-  }
-  #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls .wpb-set-complete{
-    width:36px!important;min-width:36px!important;
-  }
-}
-@media(max-width:340px){
-  #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls{column-gap:6px!important;}
-  #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(3)>div:first-child,
-  #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(4)>div:first-child{gap:4px!important;}
-}
-
-/* B885 completion geometry: on narrow phones completed sets have no +/- buttons.
-   Put the locked values back on ONE row. This keeps the recorded RIR tag below
-   reps while preventing the two-tier editable layout from wasting 116px per
-   completed set. The pending/editable rows keep their wide safe hit tracks. */
-@media(max-width:420px){
-  #root .wpb-workout[data-focus-mode="false"] [data-testid^="set-"][data-done="1"] .wpb-set-controls{
-    display:flex!important;align-items:flex-start!important;gap:6px!important;
-    padding:2px!important;
-  }
-  #root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls>.wpb-set-index{padding-top:7px!important;
-  }
-  #root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls>div:nth-child(2){
-    display:block!important;width:60px!important;flex:0 0 60px!important;
-    text-align:left!important;padding-top:4px!important;
-  }
-  #root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls>div:nth-child(3),
-  #root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls>div:nth-child(4){
-    flex:1 1 0!important;min-width:0!important;padding-top:0!important;
-  }
-  #root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls>div:nth-child(3)::before,
-  #root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls>div:nth-child(4)::before{
-    content:none!important;display:none!important;
-  }
-  #root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls>.wpb-set-actions{
-    margin-top:0!important;width:36px!important;flex:0 0 36px!important;
-  }
+  #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>.wpb-set-index{width:28px!important;min-width:28px!important;}
 }
 
 /* B886 — A set's number is its safe, discoverable options affordance. */
@@ -7319,17 +7270,6 @@ background:var(--pi-color-card)!important;
 #root .wpb-workout .wpb-set-index[aria-expanded="true"]{
   background:var(--pi-m3e-primary-container)!important;
   color:var(--wpb-theme-text)!important;
-}
-@media(max-width:420px){
-  #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>.wpb-set-index{
-    grid-column:1;grid-row:1;min-width:38px!important;min-height:38px!important;
-    width:38px!important;flex:0 0 38px!important;justify-self:start;
-    padding:0 5px!important;
-  }
-  #root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls>.wpb-set-index{
-    width:32px!important;min-width:32px!important;flex:0 0 32px!important;
-    min-height:34px!important;padding:0 2px!important;
-  }
 }
 #root .wpb-set-option-sheet .wpb-set-option-row{
   min-height:64px;touch-action:manipulation;

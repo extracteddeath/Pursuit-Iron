@@ -302,8 +302,7 @@ object CustomTrainingCycleDomain {
                 if (set.activeSeconds !in 1..3600 ||
                     set.restSeconds !in 0..3600 ||
                     (set.targetRir != null && set.targetRir !in 0..10) ||
-                    set.reps.minimum !in 1..100 ||
-                    set.reps.maximum !in set.reps.minimum..100 ||
+                    !KotlinSetNumberAuthorityDomain.validIssuedRepBand(set.reps) ||
                     (set.exactRepTarget != null &&
                         (set.type != DraftSetType.WORKING ||
                             set.exactRepTarget !in set.reps.minimum..set.reps.maximum)) ||

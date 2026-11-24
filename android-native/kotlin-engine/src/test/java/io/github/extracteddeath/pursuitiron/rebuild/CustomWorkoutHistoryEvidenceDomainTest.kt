@@ -212,4 +212,44 @@ class CustomWorkoutHistoryEvidenceDomainTest {
         assertEquals(3,score.completedFollowUpVisits)
     }
 
+    @Test fun namedRepOutRetainsIssuedIntentThroughRealCorrectionAndFinish() {
+        val base=draft()
+        val original=base.snapshot.slots.single()
+        val originalSet=original.sets.single()
+        val intent=CustomPercentageSetIntent(
+            NamedPercentageScheme.GZCLP,PercentageTier.PRIMARY,
+            PercentageDayRole.STANDARD,1,4,5,5,BigDecimal("20.00"),
+            BigDecimal("100"),BigDecimal("100.000"),0,true,false)
+        val target=originalSet.copy(prescription=originalSet.prescription.copy(
+            amplifier=null,reps=RepBand(3,3),exactRepTarget=3,percentageIntent=intent))
+        val slot=original.copy(role=ComposerRole.PRIMARY,sets=listOf(target))
+        val snapshot=base.snapshot.copy(slots=listOf(slot),knownSetAndRestSeconds=150)
+        var journal=CustomWorkoutJournalDomain.begin("named-history",snapshot,
+            base.preparedConsentFingerprint)
+        journal=accept(journal,record("attempt-1",0,main,KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,3,0)))
+        journal=accept(journal,CustomWorkoutJournalOperation.Record(
+            "corrected-1",1,main,KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,7,null),"attempt-1"))
+        journal=accept(journal,CustomWorkoutJournalOperation.Finish("finish-named",2))
+        val evidence=(CustomWorkoutHistoryEvidenceDomain.project(journal)
+            as CustomHistoryEvidenceResult.Candidate).evidence
+        val fact=evidence.visits.single()
+        assertEquals(intent,fact.percentageIntent)
+        assertEquals(RepBand(3,3),fact.prescribedReps)
+        assertEquals(7,fact.actual?.reps)
+        assertNull(fact.actual?.actualRir)
+        assertEquals("corrected-1",fact.effectiveEventId)
+        assertTrue(fact.matchesIssuedMain(slot,target))
+        assertFalse(fact.copy(percentageIntent=null).matchesIssuedMain(slot,target))
+        assertFalse(fact.copy(percentageIntent=intent.copy(repOut=false)).matchesIssuedMain(slot,target))
+        assertEquals(intent,journal.originalSnapshot.slots.single().sets.single().prescription.percentageIntent)
+        assertFalse(evidence.canApplyProgression)
+        val coached=CustomNextWorkoutCoachingDomain.review(CustomNextWorkoutCoachingRequest(
+            snapshot,"slot-1",emptyList(),null,BigDecimal("5"),CoachReadiness.NORMAL,false))
+        assertEquals(CustomNextWorkoutCoachingStatus.CHANGED_PRESCRIPTION,coached.status)
+        assertNull(coached.loadReviewCandidate)
+        assertTrue(coached.nextSetSuggestions.isEmpty())
+    }
+
 }

@@ -2721,11 +2721,15 @@ internal class NativeKotlinCandidateHost(context:Context) {
         if((request.maximumEasierStep==null)!=(request.stepUnit==null) ||
             (request.stepUnit!=null && request.stepUnit!=gym.unit))
             return deny("The load adjustment unit does not match the current gym.")
-        val roster=if(request.maximumEasierStep!=null) {
-            if(!permissions.adaptLoads)
-                return deny("Authorize load adaptation before adjusting recovery weights.")
+        if(request.maximumEasierStep!=null && !permissions.adaptLoads)
+            return deny("Authorize load adaptation before adjusting recovery weights.")
+        val hasBoundStation=original.blocks[anchorIndex].days.any{day->
+            day.slots.any{it.machineInstanceId!=null}}
+        // Block-relative overrides change sets, not physical slot identity.
+        // Ordinary free weights use verified gym stock, not a machine roster.
+        val roster=if(hasBoundStation) {
             (machineRosters.read(owner.ownerKey) as? NativeMachineRosterResult.Saved)?.snapshot
-                ?:return deny("Verify the current machine inventory before adjusting recovery weights.")
+                ?:return deny("Verify the current bound machine inventory before reviewing recovery weights.")
         } else null
         val generated=ReviewedRecoveryBlockRecipeDomain.propose(
             ReviewedRecoveryBlockRecipeRequest(
@@ -2754,6 +2758,9 @@ internal class NativeKotlinCandidateHost(context:Context) {
             recovery.absoluteWeek!=baseline.absoluteWeek+1 ||
             recovery.blockPurpose!=CustomBlockPurpose.RECOVERY)
             return deny("The audited recovery week did not match the chosen training-block boundary.")
+        NativeKotlinRecoveryWorkoutPreflight.review(
+            owner.ownerKey,candidate,source.setup,source.catalog,source.revision,
+            recovery.absoluteWeek,recovery.blockId,roster)?.let{return deny(it)}
         return NativeRecoveryRecipePreview.Ready(NativeRecoveryRecipeReady(
             request,owner,rights.revision,assistance.revision,roster?.revision,
             schedule.historyRevision,candidate,baseline,recovery))

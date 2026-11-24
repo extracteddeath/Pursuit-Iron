@@ -206,7 +206,10 @@ object CustomSavedHistoryCorrectionDomain {
                 stageTarget
             }
         }
-        if (!CustomWorkoutJournalDomain.actualValid(
+        if ((operation.outcome!=KotlinJournalSetOutcome.SKIPPED &&
+                !KotlinSetNumberAuthorityDomain.validIssuedRepBand(
+                    target.prescription.reps)) ||
+            !CustomWorkoutJournalDomain.actualValid(
                 load, operation.outcome, operation.performed))
             return reject(CustomSavedCorrectionRefusal.INVALID_VALUES)
 

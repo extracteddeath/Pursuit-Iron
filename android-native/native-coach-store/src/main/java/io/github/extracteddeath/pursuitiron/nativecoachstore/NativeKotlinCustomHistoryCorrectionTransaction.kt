@@ -185,6 +185,8 @@ class NativeKotlinCustomHistoryCorrectionTransaction(
             if (decision !is CustomSavedCorrectionDecision.Proposed || decision.replayed)
                 return@fenced rejected(
                     NativeCustomCorrectionTransactionRefusal.CORRECTION_REJECTED)
+            if(!saved.canEncodeProposal(owner,workoutId,entry.storedReceiptId,decision.state))
+                return@fenced rejected(NativeCustomCorrectionTransactionRefusal.CORRECTION_REJECTED)
             val intent = NativeHistoryWriteIntent.CustomCorrect(
                 workoutId, operation)
             val prepared = history.prepare(owner, athlete,

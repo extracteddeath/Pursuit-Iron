@@ -69,6 +69,29 @@ class NativeKotlinCustomMachineBindingPolicyTest {
             review("A",roster().copy(ownerId="other-owner")))
     }
 
+    @Test fun bothDropStagesMustBeAttainableOnTheSelectedPhysicalStation() {
+        val base=snapshot("B","80")
+        val slot=base.slots.single()
+        val set=slot.sets.single()
+        fun withSecond(value:String):NativeCustomMachineBindingReview {
+            val amp=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+                followUpLoad=load("60"),followUpActiveSeconds=30,
+                followUpRounds=2,secondDropLoad=load(value))
+            val proposed=base.copy(slots=listOf(slot.copy(sets=listOf(
+                set.copy(prescription=set.prescription.copy(amplifier=amp))))))
+            assertTrue(AdvancedAmplifierProtocolDomain.validDropSequence(
+                set.prescription.load,amp))
+            return NativeKotlinCustomMachineBindingPolicy.review(
+                "owner-1",proposed,listOf(movement),roster())
+        }
+        assertEquals(NativeCustomMachineBindingReview.Verified(
+            mapOf("leg_extension" to "B")),withSecond("40"))
+        // A accepts 45; B does not. A valid descending recipe is not proof
+        // that all of its stages exist on the chosen station.
+        assertEquals(NativeCustomMachineBindingReview.Rejected(
+            "LOAD_NOT_AVAILABLE_ON_MACHINE"),withSecond("45"))
+    }
+
     @Test fun machineBindingsSurviveDraftAndIssuedSnapshotColdRoundTrips() {
         val old=cycle()
         val unboundBytes=NativeCustomCycleDraftCodec.encode(old)

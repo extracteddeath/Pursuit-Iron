@@ -3269,6 +3269,11 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 if(existing is NativeJournalFileResult.Rejected &&
                     existing.reason!=NativeJournalFileRefusal.NOT_ISSUED)
                     return@withOwnerTransaction null
+                // A finished issued journal belongs in History, never the
+                // time-choice card's Resume shortcut.
+                if(existing is NativeJournalFileResult.Durable &&
+                    existing.journal.finishedByEventId!=null)
+                    return@withOwnerTransaction null
                 val proposal=KotlinShorterSessionReviewDomain.review(
                     KotlinWorkoutSnapshotRequest(
                         approval.approvedSource,approval.currentSource,

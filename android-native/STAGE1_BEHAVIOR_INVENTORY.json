@@ -2,15 +2,15 @@
   "schemaVersion": 1,
   "webCommit": "29faa204212a4d54088b4870341350e605939185",
   "kotlinCommit": "05c02ff2362736439ca1fcabfd7d477b2fa366",
-  "notes": "Required rows are acceptance work packages, not assertions of functional completion. Kotlin fixture candidates are domain/test/source-contract names; source file candidates are not tests and require a dedicated test. No behavior marked accepted until actual evidence recorded. Optional exclusions apply only within launch scope.",
+  "notes": "Supplementary detailed fixture inventory subordinate to STAGE1_BEHAVIOR_INVENTORY.md (canonical stable behavior IDs). These are NOT additional denominator rows. Cross-links preserve original findings and web-source map. Stage-specific checks can span parent stages; pass only after applicable checks complete. Candidate test names are not verification. Optional candidates do not waive any parent requirement.",
   "counts": {
-    "required": 120,
-    "optional": 5,
+    "requiredChecks": 120,
+    "optionalReviewChecks": 5,
     "accepted": 0
   },
   "rows": [
     {
-      "id": "SETUP-PROFILE",
+      "id": "CHECK-SETUP-PROFILE",
       "group": "program-builder",
       "parents": [
         "E01",
@@ -26,10 +26,11 @@
       "acceptance": "Onboard novice/intermediate/advanced, each goal; persist and edit inputs; current verified source governs generation.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "INPUT-GOAL"
     },
     {
-      "id": "SETUP-FREQUENCY",
+      "id": "CHECK-SETUP-FREQUENCY",
       "group": "program-builder",
       "parents": [
         "E01",
@@ -45,10 +46,11 @@
       "acceptance": "Support exact declared 2–6 day family combinations; refuse incompatible days, never substitute silently.",
       "state": "REVIEW",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "INPUT-SCHEDULE"
     },
     {
-      "id": "SETUP-TIME",
+      "id": "CHECK-SETUP-TIME",
       "group": "program-builder",
       "parents": [
         "E02",
@@ -64,10 +66,11 @@
       "acceptance": "40–60,60–90,120+ and other active web time choices; actual warmup, rests, work, setup, unilateral timing and hard caps.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "INPUT-TIME"
     },
     {
-      "id": "SETUP-CONSTRAINTS",
+      "id": "CHECK-SETUP-CONSTRAINTS",
       "group": "program-builder",
       "parents": [
         "E05",
@@ -82,10 +85,11 @@
       "acceptance": "Focus/reduced/excluded muscles, equipment, bodyweight, barbell limit, triceps/lower, supersets, hard/long/rest/locked day and conflict refusal.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "INPUT-CONSTRAINTS"
     },
     {
-      "id": "GEN-ALLOCATE",
+      "id": "CHECK-GEN-ALLOCATE",
       "group": "program-builder",
       "parents": [
         "E11",
@@ -102,10 +106,11 @@
       "acceptance": "Goal and experience based weekly direct/indirect muscle and movement balance; independently verify all required dose bounds.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "PROGRAM-DOSE"
     },
     {
-      "id": "GEN-CAPACITY",
+      "id": "CHECK-GEN-CAPACITY",
       "group": "program-builder",
       "parents": [
         "E14",
@@ -121,10 +126,11 @@
       "acceptance": "Realistic feasible allocation, no junk sets, explicit underfill/infeasibility and alternatives without overriding locks.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "PROGRAM-DURATION"
     },
     {
-      "id": "GEN-TRACE",
+      "id": "CHECK-GEN-TRACE",
       "group": "program-builder",
       "parents": [
         "E11",
@@ -140,10 +146,11 @@
       "acceptance": "Explain actual exercise, set, rep, rest, load and repair decisions from canonical inputs.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "SET-AUTHORITY"
     },
     {
-      "id": "GEN-REVIEW",
+      "id": "CHECK-GEN-REVIEW",
       "group": "program-builder",
       "parents": [
         "E16",
@@ -159,10 +166,11 @@
       "acceptance": "Review exact weeks, save explicit program, issue the same schedule and targets.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "PROGRAM-COMPOSER"
     },
     {
-      "id": "GEN-RECOMMEND",
+      "id": "CHECK-GEN-RECOMMEND",
       "group": "adaptive-progression",
       "parents": [
         "E17",
@@ -210,10 +218,11 @@
           "asserted": "All 40 holds until ceiling, then 30; inverse assistance.",
           "scope": "source assertion inspected; domain only; no row-level end-to-end acceptance"
         }
-      ]
+      ],
+      "behaviorRequirement": "PROGRAM-SPECIAL-TARGET"
     },
     {
-      "id": "NUM-LOAD",
+      "id": "CHECK-NUM-LOAD",
       "group": "adaptive-progression",
       "parents": [
         "E07",
@@ -238,10 +247,11 @@
           "asserted": "No increase beyond authorized limit; exact adjacent stock.",
           "scope": "source assertion inspected; domain only; no row-level end-to-end acceptance"
         }
-      ]
+      ],
+      "behaviorRequirement": "SET-AUTHORITY"
     },
     {
-      "id": "NUM-FIRST",
+      "id": "CHECK-NUM-FIRST",
       "group": "adaptive-progression",
       "parents": [
         "E17",
@@ -257,10 +267,11 @@
       "acceptance": "Initial loads from confirmed training max or verified history; refuse guessed physical load; no fabricated 1RM.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "SET-START"
     },
     {
-      "id": "NUM-EFFORT",
+      "id": "CHECK-NUM-EFFORT",
       "group": "adaptive-progression",
       "parents": [
         "E19",
@@ -277,10 +288,11 @@
       "acceptance": "Separate actual nullable RIR from target; assume target only in evaluation when absent; never write assumed observation.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "SET-MISSING-RIR"
     },
     {
-      "id": "NUM-SCOPE",
+      "id": "CHECK-NUM-SCOPE",
       "group": "adaptive-progression",
       "parents": [
         "E18",
@@ -305,10 +317,11 @@
           "asserted": "Refuses evidence from another physical station, day or block.",
           "scope": "source assertion inspected; domain only; no row-level end-to-end acceptance"
         }
-      ]
+      ],
+      "behaviorRequirement": "SET-CHANGE-CONSENT"
     },
     {
-      "id": "NUM-CORRECTION",
+      "id": "CHECK-NUM-CORRECTION",
       "group": "adaptive-progression",
       "parents": [
         "E30",
@@ -324,10 +337,11 @@
       "acceptance": "Correct last/older actuals; recalculate future suggestion from correct receipt, no silent issued change.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "HISTORY-CORRECT"
     },
     {
-      "id": "NUM-DP-REGRESSION",
+      "id": "CHECK-NUM-DP-REGRESSION",
       "group": "adaptive-progression",
       "parents": [
         "E18",
@@ -344,10 +358,11 @@
       "acceptance": "200×3,205×3,210×2,215×2 for 5–8 never promotes all to 215; repeated near-failure two reps holds rather than earns.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "SET-AUTHORITY"
     },
     {
-      "id": "NUM-LEVELING",
+      "id": "CHECK-NUM-LEVELING",
       "group": "adaptive-progression",
       "parents": [
         "E18",
@@ -364,10 +379,11 @@
       "acceptance": "Explicit Leveling fills current unsaved set fields only, exact stock; no future prescription/history mutation.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "SET-LEVELING"
     },
     {
-      "id": "NUM-OFF",
+      "id": "CHECK-NUM-OFF",
       "group": "adaptive-progression",
       "parents": [
         "E19",
@@ -398,10 +414,11 @@
           "asserted": "Actual zero RIR retained; basic progression does not invoke coach.",
           "scope": "source assertion inspected; domain only; no row-level end-to-end acceptance"
         }
-      ]
+      ],
+      "behaviorRequirement": "SET-MANUAL"
     },
     {
-      "id": "LIVE-FATIGUE",
+      "id": "CHECK-LIVE-FATIGUE",
       "group": "adaptive-progression",
       "parents": [
         "E19",
@@ -418,10 +435,11 @@
       "acceptance": "Observe fatigue/rest/effort; justifiable per-set changes only after approval; no phantom RIR.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "SET-FATIGUE"
     },
     {
-      "id": "LIVE-PLATEAU",
+      "id": "CHECK-LIVE-PLATEAU",
       "group": "adaptive-progression",
       "parents": [
         "E31",
@@ -437,10 +455,11 @@
       "acceptance": "Distinguish insufficient evidence, normal progress, stall, volume response and fatigue; scoped recommendation and refusal.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "CYCLE-LONGITUDINAL"
     },
     {
-      "id": "WORK-ISSUE",
+      "id": "CHECK-WORK-ISSUE",
       "group": "workout-logging",
       "parents": [
         "E17",
@@ -457,10 +476,11 @@
       "acceptance": "Immutable approved next session, exact original keys, gym, program and targets; no duplicate issue after interruption.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "WORKOUT-RESUME"
     },
     {
-      "id": "WORK-ENTRY",
+      "id": "CHECK-WORK-ENTRY",
       "group": "workout-logging",
       "parents": [
         "E17",
@@ -477,10 +497,11 @@
       "acceptance": "Weight/reps/RIR controls, manual replace, increments, distinct blank and zero; complete, failed and skip explicit.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "SET-INPUT"
     },
     {
-      "id": "WORK-WARMUP",
+      "id": "CHECK-WORK-WARMUP",
       "group": "workout-logging",
       "parents": [
         "E17",
@@ -497,10 +518,11 @@
       "acceptance": "Stock-aware ramp, no duplicate warmups, correct rest and full history classification; add/remove/collapse warmups.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "SET-WARMUP"
     },
     {
-      "id": "WORK-MEASURE",
+      "id": "CHECK-WORK-MEASURE",
       "group": "workout-logging",
       "parents": [
         "E08",
@@ -518,10 +540,11 @@
       "acceptance": "All 14 typed exercises integrate whole issued parent, seconds/cm/band reps, corrections, completion and scoped progress.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "EXERCISE-CUSTOM"
     },
     {
-      "id": "WORK-FOCUS",
+      "id": "CHECK-WORK-FOCUS",
       "group": "workout-logging",
       "parents": [
         "E28",
@@ -537,10 +560,11 @@
       "acceptance": "Focus/All preserve draft and set state, next unresolved, active exercise, all required tool actions.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "WORKOUT-FOCUS"
     },
     {
-      "id": "WORK-LAST",
+      "id": "CHECK-WORK-LAST",
       "group": "workout-logging",
       "parents": [
         "E36",
@@ -557,10 +581,11 @@
       "acceptance": "Target/Last toggle persists; exact set ordinal and station/day, no invented RIR or duplicate target values.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "WORKOUT-REFERENCE"
     },
     {
-      "id": "WORK-REST",
+      "id": "CHECK-WORK-REST",
       "group": "workout-tools",
       "parents": [
         "E20",
@@ -577,10 +602,11 @@
       "acceptance": "Rest per set/round/technique, pause/reset, elapsed-clock recovery, no automatic logging.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "REST-TIMER"
     },
     {
-      "id": "WORK-NOTES",
+      "id": "CHECK-WORK-NOTES",
       "group": "workout-tools",
       "parents": [
         "E10",
@@ -597,10 +623,11 @@
       "acceptance": "Session-only expiry, pinned note/setup persists and correct exercise association; no unrelated overwrite.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "WORKOUT-NOTES"
     },
     {
-      "id": "WORK-PLATES",
+      "id": "CHECK-WORK-PLATES",
       "group": "workout-tools",
       "parents": [
         "E07",
@@ -616,10 +643,11 @@
       "acceptance": "Free bar, Smith and counterbalance, plate pairs, exact load, unsupported stock refusal; read-only.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "GYM-PLATES"
     },
     {
-      "id": "WORK-INFO",
+      "id": "CHECK-WORK-INFO",
       "group": "workout-tools",
       "parents": [
         "E10",
@@ -635,10 +663,11 @@
       "acceptance": "Why, actual working-set count, equipment, movement cues, progression and real history; no stale prescription note.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "UI-INFO"
     },
     {
-      "id": "WORK-SUPERSET-AUTHOR",
+      "id": "CHECK-WORK-SUPERSET-AUTHOR",
       "group": "workout-tools",
       "parents": [
         "E21",
@@ -654,10 +683,11 @@
       "acceptance": "Pair/triplet/unequal rounds, compatible partner, opt-out, explicit link/unlink and reorder intact.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "SUPERSET-AUTHOR"
     },
     {
-      "id": "WORK-SUPERSET-LIVE",
+      "id": "CHECK-WORK-SUPERSET-LIVE",
       "group": "workout-tools",
       "parents": [
         "E21",
@@ -674,10 +704,11 @@
       "acceptance": "Generated and authored linked rounds, finish uneven solo, warmups separate, rest after round and amplifier pause.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "SUPERSET-EXEC"
     },
     {
-      "id": "AMP-SELECT",
+      "id": "CHECK-AMP-SELECT",
       "group": "workout-tools",
       "parents": [
         "E20",
@@ -693,10 +724,11 @@
       "acceptance": "Generated myo/drop/partial eligibility, final set only, conservative opt-in; full-cycle audit and correct duration before save.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "AMP-AUTO"
     },
     {
-      "id": "AMP-MYO-CUSTOM",
+      "id": "CHECK-AMP-MYO-CUSTOM",
       "group": "workout-tools",
       "parents": [
         "E20",
@@ -713,10 +745,11 @@
       "acceptance": "Authored 3–5 mini sets, 3–5 reps, same actual last activation load/station, exact short rest and stop; cold correction.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "AMP-MYO"
     },
     {
-      "id": "AMP-MYO-GENERATED",
+      "id": "CHECK-AMP-MYO-GENERATED",
       "group": "workout-tools",
       "parents": [
         "E20",
@@ -732,10 +765,11 @@
       "acceptance": "Generated myo actual activation load never first set or drop-like after reps-only edit; independent actuals, timer and follow-up ownership.",
       "state": "REVIEW",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "AMP-MYO"
     },
     {
-      "id": "AMP-DROP-CUSTOM",
+      "id": "CHECK-AMP-DROP-CUSTOM",
       "group": "workout-tools",
       "parents": [
         "E20",
@@ -752,10 +786,11 @@
       "acceptance": "One/two strictly lower stock-confirmed drops relative to actual prior stage, preserve skipped visits and station, no assisted reverse mistake.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "AMP-DROP"
     },
     {
-      "id": "AMP-DROP-GENERATED",
+      "id": "CHECK-AMP-DROP-GENERATED",
       "group": "workout-tools",
       "parents": [
         "E20",
@@ -771,10 +806,11 @@
       "acceptance": "Generated reduction plans validated against actual station stock, no invented weights; early stop, correction and finish.",
       "state": "REVIEW",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "AMP-DROP"
     },
     {
-      "id": "AMP-PARTIAL-CUSTOM",
+      "id": "CHECK-AMP-PARTIAL-CUSTOM",
       "group": "workout-tools",
       "parents": [
         "E20",
@@ -790,10 +826,11 @@
       "acceptance": "Final full-ROM set plus separate lengthened partial count, no extra normal set, PR or full-ROM reps; same load/station.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "AMP-PARTIAL"
     },
     {
-      "id": "AMP-PARTIAL-GENERATED",
+      "id": "CHECK-AMP-PARTIAL-GENERATED",
       "group": "workout-tools",
       "parents": [
         "E20",
@@ -809,10 +846,11 @@
       "acceptance": "Generated final-set technique shown in Target/Last/after save; log partial separately and preserve actual full-ROM.",
       "state": "REVIEW",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "AMP-PARTIAL"
     },
     {
-      "id": "AMP-RESTPAUSE",
+      "id": "CHECK-AMP-RESTPAUSE",
       "group": "workout-tools",
       "parents": [
         "E20",
@@ -828,10 +866,11 @@
       "acceptance": "Approved native rest-pause staged protocol, same activation load, actual stop, timing and saved history; no claim web automatically selects it.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "AMP-RESTPAUSE"
     },
     {
-      "id": "AMP-CLUSTER",
+      "id": "CHECK-AMP-CLUSTER",
       "group": "workout-tools",
       "parents": [
         "E20",
@@ -847,10 +886,11 @@
       "acceptance": "Approved native same-load cluster protocol, stage count, rests, early stop and exact cold retry.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "AMP-CLUSTER"
     },
     {
-      "id": "AMP-ACCOUNT",
+      "id": "CHECK-AMP-ACCOUNT",
       "group": "workout-tools",
       "parents": [
         "E20",
@@ -867,10 +907,11 @@
       "acceptance": "Correct active seconds/rest and dose credit; preserve across phase/weeks, no fabricated normal sets or silent extra fatigue.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "AMP-REPLAY"
     },
     {
-      "id": "ADJUST-READINESS",
+      "id": "CHECK-ADJUST-READINESS",
       "group": "session-adjustments",
       "parents": [
         "E25",
@@ -886,10 +927,11 @@
       "acceptance": "Low/normal/strong choices scope actual advice, optional and no unsupported load change.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "READINESS"
     },
     {
-      "id": "ADJUST-INJURY",
+      "id": "CHECK-ADJUST-INJURY",
       "group": "session-adjustments",
       "parents": [
         "E26",
@@ -905,10 +947,11 @@
       "acceptance": "Quick report, affected muscle reduction/skip/substitute, preserve existing actuals; explicit non-diagnostic review.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "INJURY"
     },
     {
-      "id": "ADJUST-SHORT",
+      "id": "CHECK-ADJUST-SHORT",
       "group": "session-adjustments",
       "parents": [
         "E27",
@@ -925,10 +968,11 @@
       "acceptance": "Full/45/30/20 for generated/custom, preserve essential work, actual fit, reason, preissue Undo, no orphan supersets.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "TIME-TRIM"
     },
     {
-      "id": "ADJUST-SWAP",
+      "id": "CHECK-ADJUST-SWAP",
       "group": "session-adjustments",
       "parents": [
         "E09",
@@ -944,10 +988,11 @@
       "acceptance": "Live swap, approved gym, no transferred old load or facts, new slot identity and undo.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "SWAP-SCOPE"
     },
     {
-      "id": "ADJUST-MID",
+      "id": "CHECK-ADJUST-MID",
       "group": "session-adjustments",
       "parents": [
         "E28",
@@ -963,10 +1008,11 @@
       "acceptance": "Change permitted progression/sets/reps/rest mid-session; review permanent program update separately from one workout.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "SET-CHANGE-CONSENT"
     },
     {
-      "id": "CUSTOM-EDITOR",
+      "id": "CHECK-CUSTOM-EDITOR",
       "group": "custom-programs",
       "parents": [
         "E16",
@@ -982,10 +1028,11 @@
       "acceptance": "Create clone rename add/remove/reorder day/movement/set; explicit draft/save/discard, stable IDs, audit, Undo.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "PROGRAM-EDIT"
     },
     {
-      "id": "CUSTOM-WEEK",
+      "id": "CHECK-CUSTOM-WEEK",
       "group": "custom-programs",
       "parents": [
         "E16",
@@ -1001,10 +1048,11 @@
       "acceptance": "Week-specific set/load/rep/RIR/rest/amplifier/percentage override persists through phase and issuance.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "PROGRAM-EDIT"
     },
     {
-      "id": "CUSTOM-SCHEDULE",
+      "id": "CHECK-CUSTOM-SCHEDULE",
       "group": "custom-programs",
       "parents": [
         "E16",
@@ -1020,10 +1068,11 @@
       "acceptance": "Explicit schedule weekdays, locks, reorder, next/prepared/resume, calendar consistency.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "INPUT-SCHEDULE"
     },
     {
-      "id": "CUSTOM-IMPORT",
+      "id": "CHECK-CUSTOM-IMPORT",
       "group": "custom-programs",
       "parents": [
         "E16",
@@ -1039,10 +1088,11 @@
       "acceptance": "Program code/file/shared template import review, validate unsupported data, avoid duplicates, no automatic application.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "PROGRAM-IMPORT"
     },
     {
-      "id": "CUSTOM-CONVERT",
+      "id": "CHECK-CUSTOM-CONVERT",
       "group": "custom-programs",
       "parents": [
         "E16",
@@ -1059,10 +1109,11 @@
       "acceptance": "Convert standalone to cycle retaining original block exactly; append reviewed blocks with stable history.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "CYCLE-AUTHOR"
     },
     {
-      "id": "CYCLE-TEMPLATE",
+      "id": "CHECK-CYCLE-TEMPLATE",
       "group": "adaptive-cycles",
       "parents": [
         "E32",
@@ -1078,10 +1129,11 @@
       "acceptance": "All active cycle presets, phases, week durations and goals; real multiweek actual issued sets.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "CYCLE-PHASE"
     },
     {
-      "id": "CYCLE-TRANSITION",
+      "id": "CHECK-CYCLE-TRANSITION",
       "group": "adaptive-cycles",
       "parents": [
         "E32",
@@ -1097,10 +1149,11 @@
       "acceptance": "Hypertrophy to strength to peak; preserve legitimate roster/dose; taper only appropriate phase.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "PROGRAM-STRENGTH-DOSE"
     },
     {
-      "id": "CYCLE-FREQUENCY",
+      "id": "CHECK-CYCLE-FREQUENCY",
       "group": "adaptive-cycles",
       "parents": [
         "E13",
@@ -1116,10 +1169,11 @@
       "acceptance": "ULPPL/PPLUL mixed goal 2 bench/2 squat/1 deadlift practice if feasible and not overridden, correct incline stock.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "PROGRAM-LIFT-PRACTICE"
     },
     {
-      "id": "CYCLE-ADAPT",
+      "id": "CHECK-CYCLE-ADAPT",
       "group": "adaptive-cycles",
       "parents": [
         "E33",
@@ -1135,10 +1189,11 @@
       "acceptance": "Independent adapt split/exercises toggles; existing cycle upgrade and future preview; no changed issued work.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "CYCLE-ADAPT"
     },
     {
-      "id": "CYCLE-RECOVERY",
+      "id": "CHECK-CYCLE-RECOVERY",
       "group": "adaptive-cycles",
       "parents": [
         "E31",
@@ -1154,10 +1209,11 @@
       "acceptance": "Deload on evidence, cap or stall; explicit review, once-only schedule, return to baseline, no unearned demand.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "CYCLE-DELOAD"
     },
     {
-      "id": "CYCLE-ENDLESS",
+      "id": "CHECK-CYCLE-ENDLESS",
       "group": "adaptive-cycles",
       "parents": [
         "E31",
@@ -1174,10 +1230,11 @@
       "acceptance": "Existing endless next day/absolute week, repeat cycle, soft cap or stalled deload, no duplicate scheduled recovery; improved goal-driven Endless Plan separate future enhancement.",
       "state": "REVIEW",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "CYCLE-ENDLESS"
     },
     {
-      "id": "CYCLE-CONSENT",
+      "id": "CHECK-CYCLE-CONSENT",
       "group": "adaptive-cycles",
       "parents": [
         "E33",
@@ -1195,10 +1252,11 @@
       "acceptance": "Scoped approvals and revocation, exact source/owner/context, future block atomic activation, reject stale or wrong gym.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "CYCLE-APPROVAL"
     },
     {
-      "id": "CYCLE-LONG",
+      "id": "CHECK-CYCLE-LONG",
       "group": "adaptive-cycles",
       "parents": [
         "E31",
@@ -1216,10 +1274,11 @@
       "acceptance": "16+ weeks and another full cycle where appropriate; missed days, stalls, injury, changed gym, correction and refusal; actual issuance not forecast-only.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "CYCLE-LONGITUDINAL"
     },
     {
-      "id": "CAT-SEARCH",
+      "id": "CHECK-CAT-SEARCH",
       "group": "exercise-discovery",
       "parents": [
         "E08",
@@ -1236,10 +1295,11 @@
       "acceptance": "Complete search and paging, equipment/muscle/attachment/variant facets, no false availability.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "EXERCISE-LIBRARY"
     },
     {
-      "id": "CAT-VARIANTS",
+      "id": "CHECK-CAT-VARIANTS",
       "group": "exercise-discovery",
       "parents": [
         "E08",
@@ -1255,10 +1315,11 @@
       "acceptance": "Incline levels, rope/straight/V/dual rope, seated lateral, curls etc.; preserve stable distinct load history.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "EXERCISE-ATTACHMENT"
     },
     {
-      "id": "CAT-RANK",
+      "id": "CHECK-CAT-RANK",
       "group": "exercise-discovery",
       "parents": [
         "E09",
@@ -1274,10 +1335,11 @@
       "acceptance": "Movement role/pattern, weekly direct gaps, athlete constraints and feasible stock; reason, no invented equivalent stimulus.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "SWAP-RANK"
     },
     {
-      "id": "CAT-EXCLUDE",
+      "id": "CHECK-CAT-EXCLUDE",
       "group": "exercise-discovery",
       "parents": [
         "E05",
@@ -1294,10 +1356,11 @@
       "acceptance": "Include/exclude, ban/unban, exact source approval and Undo; no changes to issued work.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "EXERCISE-LIBRARY"
     },
     {
-      "id": "CAT-USER",
+      "id": "CHECK-CAT-USER",
       "group": "exercise-discovery",
       "parents": [
         "E08",
@@ -1313,10 +1376,11 @@
       "acceptance": "Create custom exercise identity and metadata with verified load basis; persist, select, history and safe deletion.",
       "state": "REVIEW",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "EXERCISE-CUSTOM"
     },
     {
-      "id": "CAT-GUIDE",
+      "id": "CHECK-CAT-GUIDE",
       "group": "exercise-discovery",
       "parents": [
         "E10",
@@ -1332,10 +1396,11 @@
       "acceptance": "Readable setup/cues and appropriate movement visuals or reviewed equivalent; no incorrect equipment instruction.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "EXERCISE-LIBRARY"
     },
     {
-      "id": "GYM-EDIT",
+      "id": "CHECK-GYM-EDIT",
       "group": "gyms-and-equipment",
       "parents": [
         "E03",
@@ -1352,10 +1417,11 @@
       "acceptance": "Multiple gyms, current gym, inventory, implements, fixtures, attachments, units, bar/Smith weight and per-exercise increment.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "GYM-ROSTER"
     },
     {
-      "id": "GYM-MACHINE",
+      "id": "CHECK-GYM-MACHINE",
       "group": "gyms-and-equipment",
       "parents": [
         "E07",
@@ -1372,10 +1438,11 @@
       "acceptance": "Machine A/B independently named/active/default per gym; exact stack and historical data.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "GYM-MACHINE"
     },
     {
-      "id": "GYM-SWITCH",
+      "id": "CHECK-GYM-SWITCH",
       "group": "gyms-and-equipment",
       "parents": [
         "E28",
@@ -1393,10 +1460,11 @@
       "acceptance": "Quick mid-workout station switch, correct Last and target, original completed sets retain station, safe unavailable equipment.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "GYM-MACHINE"
     },
     {
-      "id": "GYM-HISTORY-ASSOC",
+      "id": "CHECK-GYM-HISTORY-ASSOC",
       "group": "gyms-and-equipment",
       "parents": [
         "E30",
@@ -1413,10 +1481,11 @@
       "acceptance": "Explicit older unassigned facts associate to original machine, not new B; preserve raw receipts, chart/Last/progression station-scoped.",
       "state": "REVIEW",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "GYM-OLD-MACHINE"
     },
     {
-      "id": "GYM-UNIT",
+      "id": "CHECK-GYM-UNIT",
       "group": "gyms-and-equipment",
       "parents": [
         "E03",
@@ -1433,10 +1502,11 @@
       "acceptance": "Exact lb/kg, bar/Smith/dumbbell/cable stock, assistance inverse and typed measurement; reject unverified conversion.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "GYM-UNITS"
     },
     {
-      "id": "HIST-FINISH",
+      "id": "CHECK-HIST-FINISH",
       "group": "history-and-prs",
       "parents": [
         "E23",
@@ -1452,10 +1522,11 @@
       "acceptance": "Exactly once Finish, retry and process death before/after durable receipt, no duplicate completion, correct next day.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "WORKOUT-FINISH"
     },
     {
-      "id": "HIST-CORRECT",
+      "id": "CHECK-HIST-CORRECT",
       "group": "history-and-prs",
       "parents": [
         "E36",
@@ -1471,10 +1542,11 @@
       "acceptance": "Edit prior sets/reps/load/RIR/technique, factual skip/fail, receipt chain, recompute without mutating original issued targets.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "HISTORY-CORRECT"
     },
     {
-      "id": "HIST-SEARCH",
+      "id": "CHECK-HIST-SEARCH",
       "group": "history-and-prs",
       "parents": [
         "E36",
@@ -1490,10 +1562,11 @@
       "acceptance": "Month/calendar, date, program/exercise search, working/all/skipped filters, correct order and undated handling.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "HISTORY-CALENDAR"
     },
     {
-      "id": "HIST-PR",
+      "id": "CHECK-HIST-PR",
       "group": "history-and-prs",
       "parents": [
         "E37",
@@ -1509,10 +1582,11 @@
       "acceptance": "Only genuine eligible PR, no warmup/partial/failed false records, exact station scope and correction-aware recalculation.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "HISTORY-PR"
     },
     {
-      "id": "HIST-RECAP",
+      "id": "CHECK-HIST-RECAP",
       "group": "history-and-prs",
       "parents": [
         "E23",
@@ -1528,10 +1602,11 @@
       "acceptance": "Actual completion recap, feedback and next action use same saved receipt, no phantom PR or double save.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "WORKOUT-FINISH"
     },
     {
-      "id": "VOL-ACCOUNT",
+      "id": "CHECK-VOL-ACCOUNT",
       "group": "volume-and-trends",
       "parents": [
         "E12",
@@ -1548,10 +1623,11 @@
       "acceptance": "Direct/indirect working dose, MEV/MAV/MRV, separate biceps/brachialis and wrist flex/ext, phase weekly changes and meaningful exclusions.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "PROGRAM-DOSE"
     },
     {
-      "id": "VOL-CHART",
+      "id": "CHECK-VOL-CHART",
       "group": "volume-and-trends",
       "parents": [
         "E37",
@@ -1567,10 +1643,11 @@
       "acceptance": "Factual history and trends, dates, exercise/day/machine scope, corrections update charts, no hidden equivalence.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "PROGRESS-TRENDS"
     },
     {
-      "id": "VOL-FAVORITES",
+      "id": "CHECK-VOL-FAVORITES",
       "group": "volume-and-trends",
       "parents": [
         "E38"
@@ -1585,10 +1662,11 @@
       "acceptance": "Ordered exercise/strength favorites, searchable chart selection, persisted owner preference.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "PROGRESS-TRENDS"
     },
     {
-      "id": "VOL-STANDARDS",
+      "id": "CHECK-VOL-STANDARDS",
       "group": "volume-and-trends",
       "parents": [
         "E38"
@@ -1603,10 +1681,11 @@
       "acceptance": "Strength standards accessible, exact source reference, barbell vs dumbbell/bodyweight scores, age/bodyweight context not fabricated percentile.",
       "state": "REVIEW",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "PROGRESS-STANDARDS"
     },
     {
-      "id": "VOL-CLUB",
+      "id": "CHECK-VOL-CLUB",
       "group": "volume-and-trends",
       "parents": [
         "E38"
@@ -1621,10 +1700,11 @@
       "acceptance": "Thousand-pound club actual singles vs projected total, correction-safe, exact physical barbell identity.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "PROGRESS-CLUB"
     },
     {
-      "id": "BODY-TRACK",
+      "id": "CHECK-BODY-TRACK",
       "group": "bodyweight",
       "parents": [
         "E38",
@@ -1639,10 +1719,11 @@
       "acceptance": "Dated bodyweight and active measurement features, edit/delete, trend units, owner, no hidden coaching input.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "PROGRESS-BODY"
     },
     {
-      "id": "BACKUP-EXPORT",
+      "id": "CHECK-BACKUP-EXPORT",
       "group": "backup-restore",
       "parents": [
         "E39"
@@ -1658,10 +1739,11 @@
       "acceptance": "User-facing encrypted whole-store export and factual CSV distinct; all owned record families and active sessions.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "DATA-BACKUP"
     },
     {
-      "id": "BACKUP-RESTORE",
+      "id": "CHECK-BACKUP-RESTORE",
       "group": "backup-restore",
       "parents": [
         "E39"
@@ -1676,10 +1758,11 @@
       "acceptance": "Explicit prehost restore, full cold reopen, corrupted/foreign rejection, interrupted staging rollback; no overwrite or reset.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "DATA-BACKUP"
     },
     {
-      "id": "BACKUP-MERGE",
+      "id": "CHECK-BACKUP-MERGE",
       "group": "backup-restore",
       "parents": [
         "E39"
@@ -1694,10 +1777,11 @@
       "acceptance": "Explicit legacy/history import, review conflict/revision/tombstone, duplicates, Undo, source bytes unchanged; no silent migration.",
       "state": "REVIEW",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "DATA-MERGE"
     },
     {
-      "id": "DATA-RECOVERY",
+      "id": "CHECK-DATA-RECOVERY",
       "group": "backup-restore",
       "parents": [
         "E23",
@@ -1715,10 +1799,11 @@
       "acceptance": "Offline process-death/ack/crash/disk limits, exact journal and history identities, finish capacity, active resume.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "WORKOUT-RESUME"
     },
     {
-      "id": "DATA-OWNER",
+      "id": "CHECK-DATA-OWNER",
       "group": "backup-restore",
       "parents": [
         "E36",
@@ -1735,10 +1820,11 @@
       "acceptance": "Cross-athlete/gym privacy, stale revisions, no orphan/corrupt files, atomic changes with recovery.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "DATA-OWNER"
     },
     {
-      "id": "DATA-UPDATE",
+      "id": "CHECK-DATA-UPDATE",
       "group": "backup-restore",
       "parents": [
         "E39",
@@ -1754,10 +1840,11 @@
       "acceptance": "Controlled signed install/update, device offline/reboot, old format migration and backup rollback; real Android required.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "DATA-UPDATE"
     },
     {
-      "id": "PROFILE-PREFS",
+      "id": "CHECK-PROFILE-PREFS",
       "group": "profile",
       "parents": [
         "E01",
@@ -1774,10 +1861,11 @@
       "acceptance": "Persist athlete profile, goals, coaching settings and custom sections; no cross-owner state.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "UI-SETTINGS"
     },
     {
-      "id": "PROFILE-LEVEL",
+      "id": "CHECK-PROFILE-LEVEL",
       "group": "profile",
       "parents": [
         "E38",
@@ -1793,10 +1881,11 @@
       "acceptance": "Coherent verified level/XP, milestones, history and consistency; no fabricated achievements.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "UI-PROFILE"
     },
     {
-      "id": "PROFILE-SHARE",
+      "id": "CHECK-PROFILE-SHARE",
       "group": "profile",
       "parents": [
         "E38",
@@ -1812,10 +1901,11 @@
       "acceptance": "Private profile/share card and explicit user action; optional additional sharing/social breadth not core engine gate.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "UI-OPTIONAL-SHARING"
     },
     {
-      "id": "PROFILE-THEME",
+      "id": "CHECK-PROFILE-THEME",
       "group": "profile",
       "parents": [
         "E40"
@@ -1830,10 +1920,11 @@
       "acceptance": "All required themes, non-neon default, light/dark and accessible tokens, smooth reduced-motion transitions.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "UI-M3E"
     },
     {
-      "id": "PROFILE-SETTINGS",
+      "id": "CHECK-PROFILE-SETTINGS",
       "group": "profile",
       "parents": [
         "E40",
@@ -1849,10 +1940,11 @@
       "acceptance": "Settings, version/What's New, feedback/report, privacy and data controls, no silent upload.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "UI-SETTINGS"
     },
     {
-      "id": "UI-HOME",
+      "id": "CHECK-UI-HOME",
       "group": "program-builder",
       "parents": [
         "E22",
@@ -1869,10 +1961,11 @@
       "acceptance": "Today next action, Game Plan, expandable session, current program/day and identical Train targets; no duplicate coach banners.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "UI-TODAY"
     },
     {
-      "id": "UI-PLAN",
+      "id": "CHECK-UI-PLAN",
       "group": "custom-programs",
       "parents": [
         "E16",
@@ -1889,10 +1982,11 @@
       "acceptance": "Plan schedule/volume/progression/blueprint, full program, phase/week/day, actual issued preview, recoverable editor.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "UI-PLAN"
     },
     {
-      "id": "UI-TRAIN",
+      "id": "CHECK-UI-TRAIN",
       "group": "workout-logging",
       "parents": [
         "E22",
@@ -1909,10 +2003,11 @@
       "acceptance": "Train compact tools, steppers/long press/manual entry, set animation, target/last, focus dock, rest, skip/finish and resume.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "UI-TRAIN"
     },
     {
-      "id": "UI-NAV",
+      "id": "CHECK-UI-NAV",
       "group": "profile",
       "parents": [
         "E29",
@@ -1928,10 +2023,11 @@
       "acceptance": "Stable single screen owner, bottom nav/rail, smooth profile morph and back, no sticky gaps or flashing.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "UI-M3E"
     },
     {
-      "id": "UI-A11Y",
+      "id": "CHECK-UI-A11Y",
       "group": "profile",
       "parents": [
         "E40",
@@ -1947,10 +2043,11 @@
       "acceptance": "Actual phone/tablet/foldable, large text/keyboard/TalkBack, 48dp targets, light/dark, rotation and reduced motion.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "CERT-DEVICE"
     },
     {
-      "id": "RUNTIME-ONE",
+      "id": "CHECK-RUNTIME-ONE",
       "group": "profile",
       "parents": [
         "E41"
@@ -1965,10 +2062,11 @@
       "acceptance": "Resolved native app runtime Kotlin-only, no legacy policy or demo route, exact source verified and freeze.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "CERT-COMPARISON"
     },
     {
-      "id": "CERT-PAIRED",
+      "id": "CHECK-CERT-PAIRED",
       "group": "adaptive-progression",
       "parents": [
         "E41"
@@ -1983,85 +2081,91 @@
       "acceptance": "Fresh matched functional outputs and independent intended results; separate superiority, no claim from CI or source name.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "CERT-COMPARISON"
     },
     {
-      "id": "OPT-SOCIAL",
+      "id": "CHECK-OPT-SOCIAL",
       "group": "profile",
       "parents": [
         "E40"
       ],
       "stage": "POST-BETA",
-      "scope": "optional-policy",
+      "scope": "optional-candidate",
       "webSource": "android-native/LAUNCH_BETA_SCOPE.md",
       "candidateFixtures": [],
       "acceptance": "Optional social/leaderboard features beyond core private training, per LAUNCH_BETA_SCOPE. No engine exclusion.",
-      "state": "DEFERRED_OPTIONAL",
-      "evidence": "Existing beta scope policy; no change to mandatory engine parity",
-      "deviceRequired": false
+      "state": "SCOPE_REVIEW",
+      "evidence": "Only explicitly agreed optional UI/future enhancement may be deferred; no blanket waiver. Mandatory parent remains required.",
+      "deviceRequired": false,
+      "behaviorRequirement": "UI-OPTIONAL-SHARING"
     },
     {
-      "id": "OPT-GALLERY-ART",
+      "id": "CHECK-OPT-GALLERY-ART",
       "group": "custom-programs",
       "parents": [
         "E16"
       ],
       "stage": "POST-BETA",
-      "scope": "optional-policy",
+      "scope": "optional-candidate",
       "webSource": "android-native/LAUNCH_BETA_SCOPE.md",
       "candidateFixtures": [],
       "acceptance": "Decorative gallery and elaborate browse presentation may be deferred; actual template configuration and safe import remain required.",
-      "state": "DEFERRED_OPTIONAL",
-      "evidence": "Existing beta scope policy; no change to mandatory engine parity",
-      "deviceRequired": false
+      "state": "SCOPE_REVIEW",
+      "evidence": "Only explicitly agreed optional UI/future enhancement may be deferred; no blanket waiver. Mandatory parent remains required.",
+      "deviceRequired": false,
+      "behaviorRequirement": "UI-OPTIONAL-SHARING"
     },
     {
-      "id": "OPT-ANALYTICS-VISUAL",
+      "id": "CHECK-OPT-ANALYTICS-VISUAL",
       "group": "volume-and-trends",
       "parents": [
         "E38"
       ],
       "stage": "POST-BETA",
-      "scope": "optional-policy",
+      "scope": "optional-candidate",
       "webSource": "android-native/LAUNCH_BETA_SCOPE.md",
       "candidateFixtures": [],
       "acceptance": "Elaborate charts beyond required factual volume/history/strength/consistency may be deferred; underlying analytics remain required.",
-      "state": "DEFERRED_OPTIONAL",
-      "evidence": "Existing beta scope policy; no change to mandatory engine parity",
-      "deviceRequired": false
+      "state": "SCOPE_REVIEW",
+      "evidence": "Only explicitly agreed optional UI/future enhancement may be deferred; no blanket waiver. Mandatory parent remains required.",
+      "deviceRequired": false,
+      "behaviorRequirement": "PROGRESS-TRENDS"
     },
     {
-      "id": "OPT-DEV-DEMO",
+      "id": "CHECK-OPT-DEV-DEMO",
       "group": "profile",
       "parents": [
         "E41"
       ],
       "stage": "POST-BETA",
-      "scope": "optional-policy",
+      "scope": "optional-candidate",
       "webSource": "android-native/LAUNCH_BETA_SCOPE.md",
       "candidateFixtures": [],
       "acceptance": "Development demos, benchmarks and prototype screens excluded from distributable runtime; independent CI evidence remains required.",
-      "state": "DEFERRED_OPTIONAL",
-      "evidence": "Existing beta scope policy; no change to mandatory engine parity",
-      "deviceRequired": false
+      "state": "SCOPE_REVIEW",
+      "evidence": "Only explicitly agreed optional UI/future enhancement may be deferred; no blanket waiver. Mandatory parent remains required.",
+      "deviceRequired": false,
+      "behaviorRequirement": "CERT-COMPARISON"
     },
     {
-      "id": "OPT-ENDLESS-UPGRADE",
+      "id": "CHECK-OPT-ENDLESS-UPGRADE",
       "group": "adaptive-cycles",
       "parents": [
         "E35"
       ],
       "stage": "POST-BETA",
-      "scope": "optional-policy",
+      "scope": "optional-candidate",
       "webSource": "android-native/LAUNCH_BETA_SCOPE.md",
       "candidateFixtures": [],
       "acceptance": "New future goal-driven Endless Plan optimization beyond existing web behavior; existing CYCLE-ENDLESS mandatory.",
-      "state": "DEFERRED_OPTIONAL",
-      "evidence": "Existing beta scope policy; no change to mandatory engine parity",
-      "deviceRequired": false
+      "state": "SCOPE_REVIEW",
+      "evidence": "Only explicitly agreed optional UI/future enhancement may be deferred; no blanket waiver. Mandatory parent remains required.",
+      "deviceRequired": false,
+      "behaviorRequirement": "CYCLE-ENDLESS"
     },
     {
-      "id": "TIME-S20",
+      "id": "CHECK-TIME-S20",
       "group": "program-builder",
       "parents": [
         "E02",
@@ -2077,10 +2181,11 @@
       "acceptance": "Generate, review, save and issue up to 20 minutes sessions; verified work/rest/warmup budget and explicit infeasibility, no silent substitution. Shorter-session action is separate.",
       "state": "GAP",
       "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "INPUT-TIME"
     },
     {
-      "id": "TIME-S40",
+      "id": "CHECK-TIME-S40",
       "group": "program-builder",
       "parents": [
         "E02",
@@ -2096,10 +2201,11 @@
       "acceptance": "Generate, review, save and issue 20–40 minutes sessions; verified work/rest/warmup budget and explicit infeasibility, no silent substitution. Shorter-session action is separate.",
       "state": "GAP",
       "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "INPUT-TIME"
     },
     {
-      "id": "TIME-S60",
+      "id": "CHECK-TIME-S60",
       "group": "program-builder",
       "parents": [
         "E02",
@@ -2115,10 +2221,11 @@
       "acceptance": "Generate, review, save and issue 40–60 minutes sessions; verified work/rest/warmup budget and explicit infeasibility, no silent substitution. Shorter-session action is separate.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "INPUT-TIME"
     },
     {
-      "id": "TIME-S90",
+      "id": "CHECK-TIME-S90",
       "group": "program-builder",
       "parents": [
         "E02",
@@ -2134,10 +2241,11 @@
       "acceptance": "Generate, review, save and issue 60–90 minutes sessions; verified work/rest/warmup budget and explicit infeasibility, no silent substitution. Shorter-session action is separate.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "INPUT-TIME"
     },
     {
-      "id": "TIME-S120",
+      "id": "CHECK-TIME-S120",
       "group": "program-builder",
       "parents": [
         "E02",
@@ -2153,10 +2261,11 @@
       "acceptance": "Generate, review, save and issue 90–120 minutes sessions; verified work/rest/warmup budget and explicit infeasibility, no silent substitution. Shorter-session action is separate.",
       "state": "GAP",
       "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "INPUT-TIME"
     },
     {
-      "id": "TIME-S120P",
+      "id": "CHECK-TIME-S120P",
       "group": "program-builder",
       "parents": [
         "E02",
@@ -2172,10 +2281,11 @@
       "acceptance": "Generate, review, save and issue over 120 minutes sessions; verified work/rest/warmup budget and explicit infeasibility, no silent substitution. Shorter-session action is separate.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "INPUT-TIME"
     },
     {
-      "id": "EXP-NONE",
+      "id": "CHECK-EXP-NONE",
       "group": "program-builder",
       "parents": [
         "E01",
@@ -2192,10 +2302,11 @@
       "acceptance": "Preserve brand-new profile intent and experience-appropriate dose, technique, progression and fatigue; reviewed equivalence permitted, no silent coercion.",
       "state": "GAP",
       "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "INPUT-EXPERIENCE"
     },
     {
-      "id": "EXP-BEGINNER",
+      "id": "CHECK-EXP-BEGINNER",
       "group": "program-builder",
       "parents": [
         "E01",
@@ -2212,10 +2323,11 @@
       "acceptance": "Preserve beginner profile intent and experience-appropriate dose, technique, progression and fatigue; reviewed equivalence permitted, no silent coercion.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "INPUT-EXPERIENCE"
     },
     {
-      "id": "EXP-INTERMEDIATE",
+      "id": "CHECK-EXP-INTERMEDIATE",
       "group": "program-builder",
       "parents": [
         "E01",
@@ -2232,10 +2344,11 @@
       "acceptance": "Preserve intermediate profile intent and experience-appropriate dose, technique, progression and fatigue; reviewed equivalence permitted, no silent coercion.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "INPUT-EXPERIENCE"
     },
     {
-      "id": "EXP-ADVANCED",
+      "id": "CHECK-EXP-ADVANCED",
       "group": "program-builder",
       "parents": [
         "E01",
@@ -2252,10 +2365,11 @@
       "acceptance": "Preserve advanced profile intent and experience-appropriate dose, technique, progression and fatigue; reviewed equivalence permitted, no silent coercion.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "INPUT-EXPERIENCE"
     },
     {
-      "id": "CYCLE-PRESET-POWERBUILDING",
+      "id": "CHECK-CYCLE-PRESET-POWERBUILDING",
       "group": "adaptive-cycles",
       "parents": [
         "E32",
@@ -2271,10 +2385,11 @@
       "acceptance": "Generate and issue the complete 6 hypertrophy / 5 strength / 3 peak weeks preset; phase, duration, dose and transition preserved.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "CYCLE-PHASE"
     },
     {
-      "id": "CYCLE-PRESET-STRENGTH_PEAK",
+      "id": "CHECK-CYCLE-PRESET-STRENGTH_PEAK",
       "group": "adaptive-cycles",
       "parents": [
         "E32",
@@ -2290,10 +2405,11 @@
       "acceptance": "Generate and issue the complete 4 mixed accumulation / 4 intensification / 2 peak preset; phase, duration, dose and transition preserved.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "CYCLE-PHASE"
     },
     {
-      "id": "CYCLE-PRESET-FOUNDATION",
+      "id": "CHECK-CYCLE-PRESET-FOUNDATION",
       "group": "adaptive-cycles",
       "parents": [
         "E32",
@@ -2309,10 +2425,11 @@
       "acceptance": "Generate and issue the complete 4 foundation / 5 hypertrophy / 4 mixed accumulation preset; phase, duration, dose and transition preserved.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "CYCLE-PHASE"
     },
     {
-      "id": "CYCLE-PRESET-HYPERTROPHY_SPEC",
+      "id": "CHECK-CYCLE-PRESET-HYPERTROPHY_SPEC",
       "group": "adaptive-cycles",
       "parents": [
         "E32",
@@ -2328,10 +2445,11 @@
       "acceptance": "Generate and issue the complete two 5-week hypertrophy waves preset; phase, duration, dose and transition preserved.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "CYCLE-PHASE"
     },
     {
-      "id": "PHASE-HYPERTROPHY_ACCUMULATION",
+      "id": "CHECK-PHASE-HYPERTROPHY_ACCUMULATION",
       "group": "adaptive-cycles",
       "parents": [
         "E13",
@@ -2348,10 +2466,11 @@
       "acceptance": "Author and execute hypertrophy_accumulation; correct duration, exercise/sets/rep/RIR/rest and phase-specific dose, preservation and approved transition.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "CYCLE-PHASE"
     },
     {
-      "id": "PHASE-STRENGTH_ACCUMULATION",
+      "id": "CHECK-PHASE-STRENGTH_ACCUMULATION",
       "group": "adaptive-cycles",
       "parents": [
         "E13",
@@ -2368,10 +2487,11 @@
       "acceptance": "Author and execute strength_accumulation; correct duration, exercise/sets/rep/RIR/rest and phase-specific dose, preservation and approved transition.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "CYCLE-PHASE"
     },
     {
-      "id": "PHASE-MIXED_ACCUMULATION",
+      "id": "CHECK-PHASE-MIXED_ACCUMULATION",
       "group": "adaptive-cycles",
       "parents": [
         "E13",
@@ -2388,10 +2508,11 @@
       "acceptance": "Author and execute mixed_accumulation; correct duration, exercise/sets/rep/RIR/rest and phase-specific dose, preservation and approved transition.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "CYCLE-PHASE"
     },
     {
-      "id": "PHASE-INTENSIFICATION",
+      "id": "CHECK-PHASE-INTENSIFICATION",
       "group": "adaptive-cycles",
       "parents": [
         "E13",
@@ -2408,10 +2529,11 @@
       "acceptance": "Author and execute intensification; correct duration, exercise/sets/rep/RIR/rest and phase-specific dose, preservation and approved transition.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "CYCLE-PHASE"
     },
     {
-      "id": "PHASE-PEAK",
+      "id": "CHECK-PHASE-PEAK",
       "group": "adaptive-cycles",
       "parents": [
         "E13",
@@ -2428,10 +2550,11 @@
       "acceptance": "Author and execute peak; correct duration, exercise/sets/rep/RIR/rest and phase-specific dose, preservation and approved transition.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "CYCLE-PHASE"
     },
     {
-      "id": "PHASE-FOUNDATION",
+      "id": "CHECK-PHASE-FOUNDATION",
       "group": "adaptive-cycles",
       "parents": [
         "E13",
@@ -2448,10 +2571,11 @@
       "acceptance": "Author and execute foundation; correct duration, exercise/sets/rep/RIR/rest and phase-specific dose, preservation and approved transition.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "CYCLE-PHASE"
     },
     {
-      "id": "CYCLE-CUSTOM-BOUNDS",
+      "id": "CHECK-CYCLE-CUSTOM-BOUNDS",
       "group": "adaptive-cycles",
       "parents": [
         "E16",
@@ -2468,7 +2592,8 @@
       "acceptance": "Support active custom cycle bounds 2–8 blocks, 1–24 whole weeks/block, max 104 weeks, per-block optional split/days and safe refusal of invalid combinations.",
       "state": "MAP",
       "evidence": "candidate only; inspect exact fixture and record relevant stage outcome",
-      "deviceRequired": true
+      "deviceRequired": true,
+      "behaviorRequirement": "CYCLE-AUTHOR"
     }
   ]
 }

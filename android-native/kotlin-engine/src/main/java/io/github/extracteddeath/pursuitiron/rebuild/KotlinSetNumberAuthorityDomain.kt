@@ -171,6 +171,23 @@ object KotlinSetNumberAuthorityDomain {
         ))
     }
 
+    /**
+     * Strict physical-station attribution for completed weighted evidence.
+     * Callers must first match the fact to its exact issued set and verify
+     * completeness of the relevant working-set ledger. No authored machine
+     * label, skipped visit or failed attempt can establish independence.
+     */
+    fun completedPhysicalStation(
+        issuedLoad:DraftSetLoad,
+        outcome:KotlinJournalSetOutcome,
+        actual:KotlinPerformedSet?
+    ):String? {
+        if(issuedLoad !is DraftSetLoad.Verified ||
+            outcome!=KotlinJournalSetOutcome.COMPLETED ||
+            !valid(issuedLoad,outcome,actual))return null
+        return actual?.machineInstanceId
+    }
+
     /** Same accepted/rejected policy for generated, custom and saved replay. */
     fun valid(
         issuedLoad:DraftSetLoad,

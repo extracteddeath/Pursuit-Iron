@@ -13,6 +13,12 @@ internal object NativeRecoveryScheduleInventoryPolicy {
             it.cycleId==cycleId &&
                 (!it.completed || it.absoluteWeek>=firstChangedWeek)
         }
+
+    /** Existing date/activation approvals bind exact draft bytes. Until an
+     * explicit reapproval transaction exists, never invalidate these records. */
+    fun calendarPermits(cycleId:String,activationBarrier:Boolean,
+        approvedCycles:Set<String>,calendarCycles:Set<String>):Boolean =
+        !activationBarrier && cycleId !in approvedCycles && cycleId !in calendarCycles
 }
 
 sealed interface NativeRecoveryScheduleReview {
@@ -28,7 +34,11 @@ class NativeKotlinRecoveryScheduleFence(
     private val fence:NativeKotlinApprovalRevisionFence,
     private val identity:NativeKotlinCurrentIdentity,
     private val history:NativeKotlinMixedHistoryReadCoordinator,
-    private val inventory:NativeKotlinCustomOutstandingWorkoutInventory
+    private val inventory:NativeKotlinCustomOutstandingWorkoutInventory,
+    private val handoffs:NativeKotlinFutureActivationHandoffFileStore,
+    private val commits:NativeKotlinFutureActivationCommitTransaction,
+    private val approvals:NativeKotlinFutureActivationApprovalFileStore,
+    private val calendars:NativeKotlinActivatedBlockCalendarFileStore
 ) {
     fun review(ownerKey:String,cycleId:String,firstChangedWeek:Int):
         NativeRecoveryScheduleReview {
@@ -54,6 +64,22 @@ class NativeKotlinRecoveryScheduleFence(
                         census.sessions,cycleId,firstChangedWeek))
                     return@withOwnerTransaction deny(
                         "Resolve unfinished workouts first. A recovery edit cannot shift a recorded training week.")
+                val handoff=handoffs.inventoryOwner(ownerKey)
+                val commit=commits.inventoryOwner(ownerKey)
+                    as? NativeFutureCommitInventory.Verified
+                    ?:return@withOwnerTransaction deny("Activation records could not be verified.")
+                val approved=approvals.inventoryOwner(ownerKey)
+                    as? NativeFutureApprovalInventory.Verified
+                    ?:return@withOwnerTransaction deny("Future block approvals could not be verified.")
+                val dates=calendars.inventoryOwner(ownerKey)
+                    as? NativeActivatedBlockCalendarInventory.Verified
+                    ?:return@withOwnerTransaction deny("Calendar approvals could not be verified.")
+                if(!NativeRecoveryScheduleInventoryPolicy.calendarPermits(
+                        cycleId,handoff!=NativeFutureHandoffReview.Missing || commit.state!=null,
+                        approved.records.filterNot{it.revoked}.map{it.cycleId}.toSet(),
+                        dates.records.map{it.calendar.cycleId}.toSet()))
+                    return@withOwnerTransaction deny(
+                        "An existing activation or calendar approval must be resolved before changing this schedule.")
                 if(identity.signedInIdentity()!=owner)
                     return@withOwnerTransaction deny("The active athlete changed.")
                 NativeRecoveryScheduleReview.Ready(timeline.manifestRevision)

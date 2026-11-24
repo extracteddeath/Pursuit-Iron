@@ -10,6 +10,7 @@ import org.junit.rules.TemporaryFolder
 class NativeKotlinCustomHistoryTransactionTest {
     @get:Rule val temp=TemporaryFolder()
     private var supersetFixture=false
+    private var stagedMyoFixture=false
     private var partnerIdeasFixture=false
     private var current:NativeKotlinOwnerIdentity?=
         NativeKotlinOwnerIdentity("owner-1","athlete-1")
@@ -117,7 +118,10 @@ class NativeKotlinCustomHistoryTransactionTest {
         )),mapOf("base" to listOf(
             CustomWeekSlotOverride(2,0,"slot-0",if(supersetFixture)listOf(
                 set(16).copy(amplifier=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,20,
-                    followUpActiveSeconds=15)),set(16)) else listOf(set(16))))))
+                    followUpActiveSeconds=15)),set(16)) else if(stagedMyoFixture)
+                listOf(set(16).copy(amplifier=CustomSetAmplifier(
+                    CustomAmplifierKind.MYO_REPS,4,20,followUpActiveSeconds=15,
+                    followUpRounds=3))) else listOf(set(16))))))
     private fun bounds()=TrainingMuscle.entries.map { muscle ->
         DeclaredMuscleDoseBounds(muscle,
             if(partnerIdeasFixture && muscle in setOf(TrainingMuscle.ABS,TrainingMuscle.CALVES))n("6")
@@ -715,6 +719,86 @@ class NativeKotlinCustomHistoryTransactionTest {
         assertEquals(committed.copy(replayed=true),retry)
         assertEquals(ledger,(history.open("owner-1","athlete-1")
             as NativeHistoryLedgerResult.Durable).ledger)
+    }
+
+    @Test fun stagedMyoCorrectionsRecoverBothCrashWindowsWithoutChangingAnotherVisit() {
+        stagedMyoFixture=true
+        ready()
+        fun cold()=NativeKotlinCustomWorkoutJournalFileStore(
+            temp.root.toPath(),NativeKotlinApprovalRevisionFence(temp.root.toPath()),
+            identity,prepared,preflight,history,composerJournal)
+        fun currentJournal()=(cold().open("owner-1","workout-2")
+            as NativeCustomJournalResult.Durable).issued.journal
+        val setKey="cycle-1:w2:d0:slot-0:s1"
+        fun stage(i:Int)=CustomWorkoutVisitKey(setKey,CustomWorkoutVisitPart.FOLLOW_UP,i)
+        val visits=listOf(CustomWorkoutVisitKey(setKey,CustomWorkoutVisitPart.MAIN),
+            stage(1),stage(2),stage(3))
+        visits.forEachIndexed{index,visit->
+            val journal=currentJournal()
+            assertEquals(visit,CustomWorkoutJournalDomain.nextUnresolvedVisit(journal))
+            val saved=cold().record("owner-1","workout-2",
+                CustomWorkoutJournalOperation.Record("myo-$index",journal.revision,
+                    visit,KotlinJournalSetOutcome.COMPLETED,
+                    KotlinPerformedSet(null,null,if(index==0)16 else 4,1)))
+            assertTrue(saved.toString(),saved is NativeCustomJournalResult.Durable)
+        }
+        val finish=CustomWorkoutJournalOperation.Finish("myo-finish",currentJournal().revision)
+        val completed=transactions.complete("owner-1","athlete-1","workout-2",finish)
+        assertTrue(completed.toString(),completed is NativeCustomFinishResult.Committed)
+        val original=currentJournal()
+        fun ledger()=(NativeKotlinHistoryManifestFileStore(temp.root.toPath())
+            .open("owner-1","athlete-1") as NativeHistoryLedgerResult.Durable).ledger
+        fun coldCorrections()=NativeKotlinCustomSavedCorrectionFileStore(
+            temp.root.toPath(),NativeKotlinApprovalRevisionFence(temp.root.toPath()),
+            identity,cold(),NativeKotlinHistoryManifestFileStore(temp.root.toPath()))
+        fun coldTransaction()=NativeKotlinCustomHistoryCorrectionTransaction(
+            NativeKotlinHistoryManifestFileStore(temp.root.toPath()),cold(),
+            coldCorrections(),NativeKotlinApprovalRevisionFence(temp.root.toPath()),identity)
+        fun recover(op:CustomSavedVisitCorrection,writeFirst:Boolean) {
+            val before=ledger()
+            val intent=NativeHistoryWriteIntent.CustomCorrect("workout-2",op)
+            assertTrue(history.prepare("owner-1","athlete-1",before.revision,intent)
+                is NativeHistoryLedgerResult.Durable)
+            assertEquals(intent,ledger().pending)
+            if(writeFirst) {
+                val applied=coldCorrections().appendPending("owner-1","workout-2",op)
+                assertTrue(applied.toString(),applied is NativeCustomSavedCorrectionResult.Durable)
+            }
+            assertEquals(NativeKotlinMixedHistoryReadResult.Rejected(
+                NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION),
+                mixedReader().read("owner-1","athlete-1"))
+            val recovered=coldTransaction().recover("owner-1","athlete-1")
+            assertTrue(recovered.toString(),recovered is NativeCustomCorrectionTransactionResult.Committed)
+            val result=recovered as NativeCustomCorrectionTransactionResult.Committed
+            assertEquals(op.expectedCorrectionRevision+1,result.correctionRevision)
+            assertEquals(before.revision+1,result.manifestRevision)
+            assertEquals(result.copy(replayed=true),coldTransaction().correct(
+                "owner-1","athlete-1","workout-2",op))
+            assertEquals(original,currentJournal())
+            assertNull(ledger().pending)
+        }
+        // Correct stage 2 without suppressing the still-reachable stage 3.
+        val second=CustomSavedVisitCorrection("edit-myo-2",0,stage(2),
+            "myo-2",KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(null,null,5,1))
+        recover(second,false)
+        // Last stage can reach the floor; no later optional visit is invented.
+        val third=CustomSavedVisitCorrection("edit-myo-3",1,stage(3),
+            "myo-3",KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(null,null,3,1))
+        recover(third,true)
+        val saved=coldCorrections().open("owner-1","workout-2")
+            as NativeCustomSavedCorrectionResult.Opened
+        assertEquals(listOf(second,third),saved.state.receipts.map{it.correction})
+        val review=mixedReader().read("owner-1","athlete-1")
+        assertTrue(review.toString(),review is NativeKotlinMixedHistoryReadResult.Review)
+        val facts=((review as NativeKotlinMixedHistoryReadResult.Review)
+            .timeline.completions.single() as NativeKotlinMixedHistoryCompletion.Custom)
+            .evidence.visits
+        assertEquals(listOf(16,4,5,3),facts.map{it.actual?.reps})
+        assertEquals(listOf("myo-0","myo-1","edit-myo-2","edit-myo-3"),
+            facts.map{it.effectiveEventId})
+        assertEquals(listOf(1,2,3),facts.filter{
+            it.part==CustomWorkoutVisitPart.FOLLOW_UP}.map{it.stage})
+        assertEquals(2L,ledger().completions.single().savedCorrectionRevision)
     }
 
     @Test fun interruptionBeforeCustomCorrectionFileIsRecoverable() {

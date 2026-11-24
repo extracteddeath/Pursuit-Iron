@@ -1,4 +1,34 @@
 :root{color-scheme:dark;--boot-bg:#0A0908;--boot-fg:#F5F0E8;--boot-muted:rgba(245,240,232,.62);--boot-accent:#F5F0E8;--boot-on-accent:#0A0908;--pi-radius-sm:10px;--pi-radius-md:14px;--pi-radius-lg:20px;--pi-motion-fast:140ms;--pi-motion-standard:220ms;--pi-ease:cubic-bezier(.2,.8,.2,1)}
+/* PERFORMANCE (B1034): spring-driven motion values are registered as NON-inherited.
+   ui-motion writes them every frame on the element that paints them (a sheet, its backdrop,
+   a pressed control, a disclosure card, a selection track). As ordinary custom properties they
+   inherited, so every frame restyled the whole subtree: an opening sheet restyled all of its
+   content ~25 times, and the tab bar's sliding indicator restyled every tab, icon and label.
+   Track indicators paint on ::before, which reads the values with an explicit `inherit`.
+   SELECTOR BUCKETING (B1034): a rule whose rightmost compound is a multi-argument :is()/:where()
+   cannot be indexed by class, so the browser tried it against every element on every restyle
+   (about 40% of all selector-matching time). Such lists are written one selector per argument.
+   Where the arguments' specificity differed, the lower ones are written :where(arg) plus a
+   never-matching :not(pi-pad…) that restores the :is() list's exact specificity. */
+@property --pi-surface-x{syntax:"*";inherits:false}
+@property --pi-surface-y{syntax:"*";inherits:false}
+@property --pi-surface-opacity{syntax:"*";inherits:false}
+@property --pi-surface-scale{syntax:"*";inherits:false}
+@property --pi-backdrop-opacity{syntax:"*";inherits:false}
+@property --pi-sheet-radius{syntax:"*";inherits:false}
+@property --pi-disclosure-radius{syntax:"*";inherits:false}
+@property --pi-control-shape{syntax:"*";inherits:false}
+@property --pi-control-scale{syntax:"*";inherits:false}
+@property --pi-corner-0{syntax:"*";inherits:false}
+@property --pi-corner-1{syntax:"*";inherits:false}
+@property --pi-corner-2{syntax:"*";inherits:false}
+@property --pi-corner-3{syntax:"*";inherits:false}
+@property --pi-choice-grow{syntax:"*";inherits:false}
+@property --pi-switch-x{syntax:"*";inherits:false}
+@property --pi-m3-track-x{syntax:"*";inherits:false}
+@property --pi-m3-track-y{syntax:"*";inherits:false}
+@property --pi-m3-track-width{syntax:"*";inherits:false}
+@property --pi-m3-track-height{syntax:"*";inherits:false}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 /* Native feel: keep orientation-driven text autosizing stable while preserving user zoom.
    The viewport no longer caps maximum-scale, so pinch zoom remains available for accessibility. */
@@ -206,7 +236,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    :where gives the reset zero specificity, so rem-scaled labels and inputs
    on Home, Workout, Program and modal controls override it without
    new priority declarations. */
-:where(#root) :where(button,[role="button"],input,textarea,select){font:inherit}
+:where(#root) :where(button),
+:where(#root) :where([role="button"]),
+:where(#root) :where(input),
+:where(#root) :where(textarea),
+:where(#root) :where(select){font:inherit}
 /* No blanket translateZ(0): it gave every button (48 on the workout screen, hundreds in the library) its own
    compositor layer for the whole session. The browser promotes a button only while its press scale runs. */
 #root button,#root [role="button"]{touch-action:manipulation;transition:transform var(--pi-motion-fast) var(--pi-ease),opacity var(--pi-motion-fast) ease,filter var(--pi-motion-fast) ease}
@@ -313,11 +347,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background:var(--pi-color-canvas);
   backdrop-filter:none;-webkit-backdrop-filter:none;
 }
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-primary-action,.wpb-secondary-action,.wpb-danger-action){
+#root[data-pi-motion="expressive"] .wpb .wpb-primary-action,#root[data-pi-motion="expressive"] .wpb .wpb-secondary-action,#root[data-pi-motion="expressive"] .wpb .wpb-danger-action{
   letter-spacing:-.012em;}
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-primary-action:not(:where(.wpb-gym-done)),.wpb-secondary-action,.wpb-danger-action){
+#root[data-pi-motion="expressive"] .wpb .wpb-primary-action:not(:where(.wpb-gym-done)),#root[data-pi-motion="expressive"] .wpb .wpb-secondary-action,#root[data-pi-motion="expressive"] .wpb .wpb-danger-action{
   border-radius:16px!important;}
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-primary-action,.wpb-secondary-action,.wpb-danger-action):focus-visible{
+#root[data-pi-motion="expressive"] .wpb .wpb-primary-action:focus-visible,#root[data-pi-motion="expressive"] .wpb .wpb-secondary-action:focus-visible,#root[data-pi-motion="expressive"] .wpb .wpb-danger-action:focus-visible{
   outline-offset:3px;
 }
 /* Navigation: a quiet tonal pill sits under the icon. Labels stay visible without expanding the bar. */
@@ -354,12 +388,12 @@ display:block!important;
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]::before{
   opacity:1!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab :is(svg,span){
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab svg,#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab span{
   position:relative;
   z-index:1;
 }
 
-#root[data-pi-motion="expressive"] .wpb-home :is(.wpb-action-tile,.wpb-carousel-card){
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile,#root[data-pi-motion="expressive"] .wpb-home .wpb-carousel-card{
   border-radius:var(--pi-layout-radius)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile{
@@ -475,7 +509,7 @@ display:block!important;
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session-detail{
   transform-origin:top center;
 }
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-history-session-detail,.wpb-advanced-body){
+#root[data-pi-motion="expressive"] .wpb .wpb-history-session-detail,#root[data-pi-motion="expressive"] .wpb .wpb-advanced-body{
   /* Only newly mounted/expanded content moves. Never animate row height or saved state. */
   animation:piDisclosureReveal 175ms cubic-bezier(.2,.8,.25,1) both;
 }
@@ -489,7 +523,7 @@ display:block!important;
   }
 }
 @media(prefers-reduced-motion:reduce){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-history-session-detail,.wpb-advanced-body){
+  #root[data-pi-motion="expressive"] .wpb .wpb-history-session-detail,#root[data-pi-motion="expressive"] .wpb .wpb-advanced-body{
     animation:none!important;
     translate:none!important;
   }
@@ -498,11 +532,22 @@ display:block!important;
 /* PI M3 SHARED SELECTION — one indicator travels between actual semantic choices.
    The React buttons remain real controls; the track is paint-only and never covers
    touch targets, changes layout, modifies workout rows or overrides theme colors. */
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-progress .wpb-premium-tabs,.wpb-settings .wpb-segmented,.wpb-exercise-tabs,.wpb-library-flag-filter,.wpb-progress-grouping,.wpb-exercise-window-tabs)[data-pi-m3-track]{
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-progress .wpb-premium-tabs)[data-pi-m3-track],
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-settings .wpb-segmented)[data-pi-m3-track],
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-tabs.wpb-exercise-tabs[data-pi-m3-track],
+#root[data-pi-motion="expressive"] .wpb .wpb-library-flag-filter.wpb-library-flag-filter[data-pi-m3-track],
+#root[data-pi-motion="expressive"] .wpb .wpb-progress-grouping.wpb-progress-grouping[data-pi-m3-track],
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-window-tabs.wpb-exercise-window-tabs[data-pi-m3-track]{
   position:relative!important;
   isolation:isolate;
 }
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-progress .wpb-premium-tabs,.wpb-settings .wpb-segmented,.wpb-exercise-tabs,.wpb-library-flag-filter,.wpb-progress-grouping,.wpb-exercise-window-tabs)[data-pi-m3-track]::before{
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-progress .wpb-premium-tabs)[data-pi-m3-track]::before,
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-settings .wpb-segmented)[data-pi-m3-track]::before,
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-tabs.wpb-exercise-tabs[data-pi-m3-track]::before,
+#root[data-pi-motion="expressive"] .wpb .wpb-library-flag-filter.wpb-library-flag-filter[data-pi-m3-track]::before,
+#root[data-pi-motion="expressive"] .wpb .wpb-progress-grouping.wpb-progress-grouping[data-pi-m3-track]::before,
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-window-tabs.wpb-exercise-window-tabs[data-pi-m3-track]::before{
+  --pi-m3-track-x:inherit;--pi-m3-track-y:inherit;--pi-m3-track-width:inherit;--pi-m3-track-height:inherit;
   content:"";
   position:absolute;
   z-index:0;
@@ -557,7 +602,12 @@ display:block!important;
 
 }
 @media(prefers-reduced-motion:reduce){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-progress .wpb-premium-tabs,.wpb-settings .wpb-segmented,.wpb-exercise-tabs,.wpb-library-flag-filter,.wpb-progress-grouping,.wpb-exercise-window-tabs)[data-pi-m3-track]::before{
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-progress .wpb-premium-tabs)[data-pi-m3-track]::before,
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-settings .wpb-segmented)[data-pi-m3-track]::before,
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-tabs.wpb-exercise-tabs[data-pi-m3-track]::before,
+#root[data-pi-motion="expressive"] .wpb .wpb-library-flag-filter.wpb-library-flag-filter[data-pi-m3-track]::before,
+#root[data-pi-motion="expressive"] .wpb .wpb-progress-grouping.wpb-progress-grouping[data-pi-m3-track]::before,
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-window-tabs.wpb-exercise-window-tabs[data-pi-m3-track]::before{
     will-change:auto;
   }
   #root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile,
@@ -598,7 +648,7 @@ display:block!important;
 }
 /* Dialogs use a wider rounded surface than normal content cards, but
    retain their existing max width, inline theme fill, form layout and actions. */
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-pop,.wpb-dialog){
+#root[data-pi-motion="expressive"] .wpb .wpb-pop,#root[data-pi-motion="expressive"] .wpb .wpb-dialog{
   border-radius:28px!important;
   border-color:var(--pi-m3-overlay-stroke)!important;
   box-shadow:0 12px 45px rgba(0,0,0,.19)!important;
@@ -618,7 +668,7 @@ display:block!important;
 }
 /* M3 outlined field feedback is limited to configuration and overlay forms.
    Workout number fields, steppers, RIR and Target/Previous never match. */
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-settings,.wpb-pop,.wpb-dialog,[data-sheet-drag]):not(.wpb-workout) :is(input,textarea,select):not([type="range"]):not([type="checkbox"]):focus-visible{
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-settings,.wpb-pop,.wpb-dialog,[data-sheet-drag]):not(.wpb-workout) input:not([type="range"]):not([type="checkbox"]):focus-visible,#root[data-pi-motion="expressive"] .wpb :is(.wpb-settings,.wpb-pop,.wpb-dialog,[data-sheet-drag]):not(.wpb-workout) textarea:not([type="range"]):not([type="checkbox"]):focus-visible,#root[data-pi-motion="expressive"] .wpb :is(.wpb-settings,.wpb-pop,.wpb-dialog,[data-sheet-drag]):not(.wpb-workout) select:not([type="range"]):not([type="checkbox"]):focus-visible{
   outline:2px solid var(--pi-m3-overlay-focus)!important;
   outline-offset:2px!important;
 }
@@ -695,7 +745,7 @@ display:block!important;
   box-shadow:inset 3px 0 0 currentColor,0 1px 9px color-mix(in srgb,currentColor 6%,transparent)!important;
 }
 
-#root[data-pi-motion="expressive"] .wpb-wizard :is(.wpb-wizard-option,.wpb-wizard-choice,.wpb-wizard-preset):focus-visible{
+#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-option:focus-visible,#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-choice:focus-visible,#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-preset:focus-visible{
   outline:2px solid currentColor!important;
   outline-offset:2px!important;
 }
@@ -785,7 +835,7 @@ display:block!important;
   font-size:14px!important;
   transition:border-color 150ms var(--pi-ease), box-shadow 150ms var(--pi-ease)!important;
 }
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filters :is(input,select):focus-visible{
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filters input:focus-visible,#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filters select:focus-visible{
   outline:2px solid color-mix(in srgb,currentColor 35%,transparent)!important;
   outline-offset:2px!important;
 }
@@ -1066,7 +1116,20 @@ display:block!important;
 .wpb-exercise-goal-hint{margin-top:var(--pi-space-2);font-size:var(--pi-type-caption);color:var(--pi-color-on-muted)}
 .wpb-exercise-ban{display:flex;align-items:center;justify-content:center;gap:var(--pi-space-2);width:100%;min-height:48px;margin-top:var(--pi-space-2);padding:var(--pi-space-3);border:1px solid var(--wpb-theme-danger-edge);border-radius:var(--pi-shape-action);background:transparent;color:var(--wpb-theme-danger);font-size:var(--pi-type-support);font-weight:650;cursor:pointer}
 .wpb-exercise-ban[aria-pressed="true"]{border-color:var(--pi-color-divider);color:var(--pi-color-on-muted)}
-@media(forced-colors:active){.wpb-library :is(.wpb-library-back,.wpb-library-find,.wpb-library-compare,.wpb-filter-chip,.wpb-library-flag,.wpb-library-row),.wpb-exercise-detail :is(.wpb-exercise-note,.wpb-exercise-note-empty,.wpb-exercise-variant,.wpb-exercise-goal,.wpb-exercise-goal-editor,.wpb-exercise-goal-input,.wpb-exercise-goal-save,.wpb-exercise-ban){border-color:ButtonText;background:ButtonFace;color:ButtonText}.wpb-library :is(.wpb-filter-chip,.wpb-library-flag)[aria-pressed="true"],.wpb-exercise-goal-save{background:Highlight;color:HighlightText}}
+@media(forced-colors:active){.wpb-library .wpb-library-back,
+.wpb-library .wpb-library-find,
+.wpb-library .wpb-library-compare,
+.wpb-library .wpb-filter-chip,
+.wpb-library .wpb-library-flag,
+.wpb-library .wpb-library-row,
+.wpb-exercise-detail .wpb-exercise-note,
+.wpb-exercise-detail .wpb-exercise-note-empty,
+.wpb-exercise-detail .wpb-exercise-variant,
+.wpb-exercise-detail .wpb-exercise-goal,
+.wpb-exercise-detail .wpb-exercise-goal-editor,
+.wpb-exercise-detail .wpb-exercise-goal-input,
+.wpb-exercise-detail .wpb-exercise-goal-save,
+.wpb-exercise-detail .wpb-exercise-ban{border-color:ButtonText;background:ButtonFace;color:ButtonText}.wpb-library .wpb-filter-chip[aria-pressed="true"],.wpb-library .wpb-library-flag[aria-pressed="true"],.wpb-exercise-goal-save{background:Highlight;color:HighlightText}}
 
 #root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail.wpb-backdrop{
   background-clip:border-box;
@@ -1244,6 +1307,7 @@ display:block!important;
   isolation:isolate;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]::before{
+  --pi-m3-track-x:inherit;--pi-m3-track-y:inherit;--pi-m3-track-width:inherit;--pi-m3-track-height:inherit;
   content:"";
   position:absolute;
   left:0;top:0;z-index:0;
@@ -1283,7 +1347,7 @@ display:block!important;
 /* PI M3 DISCLOSURE CHOREOGRAPHY — cross-screen layout and motion system.
    React still owns the open state and all action callbacks. Movement is only
    on card geometry and arriving content, never the workout logging rows. */
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-program .wpb-day-card,.hp-card)[data-pi-disclosure]{
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-program .wpb-day-card)[data-pi-disclosure],#root[data-pi-motion="expressive"] .wpb .hp-card.hp-card[data-pi-disclosure]{
   border-radius:var(--pi-disclosure-radius,16px)!important;
   transition:border-color 180ms var(--pi-ease),
              background-color 180ms var(--pi-ease),
@@ -1302,7 +1366,11 @@ display:block!important;
   outline-offset:-3px!important;
   border-radius:12px;
 }
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-program .wpb-expand,.hp-card .hp-blocks,.wpb-profile-achievement-board,.wpb-progress-disclosure> :not(summary),.wpb-advanced .wpb-advanced-body)[data-pi-expand-enter]{
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-program .wpb-expand)[data-pi-expand-enter],
+#root[data-pi-motion="expressive"] .wpb :is(.hp-card .hp-blocks)[data-pi-expand-enter],
+#root[data-pi-motion="expressive"] .wpb .wpb-profile-achievement-board.wpb-profile-achievement-board[data-pi-expand-enter],
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-progress-disclosure> :not(summary)):not(.pi-pad.pi-pad)[data-pi-expand-enter],
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-advanced .wpb-advanced-body)[data-pi-expand-enter]{
   animation:piDisclosureContent 260ms cubic-bezier(.2,.83,.22,1) both!important;
 }
 @keyframes piDisclosureContent{
@@ -1310,14 +1378,14 @@ display:block!important;
   55%{opacity:1;translate:0 1px}
   100%{opacity:1;translate:0 0}
 }
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-progress-disclosure,.wpb-settings details.wpb-advanced)[data-pi-disclosure="open"]{
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-progress-disclosure):not(pi-pad.pi-pad.pi-pad)[data-pi-disclosure="open"],#root[data-pi-motion="expressive"] .wpb :is(.wpb-settings details.wpb-advanced)[data-pi-disclosure="open"]{
   border-color:color-mix(in srgb,currentColor 17%,transparent)!important;
 }
 @media(prefers-reduced-motion:reduce),(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb [data-pi-expand-enter]{
     animation:none!important;translate:none!important;
   }
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-program .wpb-day-card,.hp-card)[data-pi-disclosure]{
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-program .wpb-day-card)[data-pi-disclosure],#root[data-pi-motion="expressive"] .wpb .hp-card.hp-card[data-pi-disclosure]{
     transition:none!important;
   }
 }
@@ -1531,7 +1599,7 @@ display:block!important;
   }
 }
 @media(prefers-reduced-motion:reduce),(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-action-tile,.wpb-wizard-option,.wpb-filter-chip){
+  #root[data-pi-motion="expressive"] .wpb .wpb-action-tile,#root[data-pi-motion="expressive"] .wpb .wpb-wizard-option,#root[data-pi-motion="expressive"] .wpb .wpb-filter-chip{
     transition:none!important;
   }
 }
@@ -1735,10 +1803,10 @@ display:block!important;
   #root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-option{padding-inline:11px!important}
 }
 @media(prefers-reduced-motion:reduce),(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-library-row,.wpb-wizard-option,.wpb-settings-row){transition:none!important;transform:none!important}
+  #root[data-pi-motion="expressive"] .wpb .wpb-library-row,#root[data-pi-motion="expressive"] .wpb .wpb-wizard-option,#root[data-pi-motion="expressive"] .wpb .wpb-settings-row{transition:none!important;transform:none!important}
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-library-row,.wpb-wizard-option[aria-pressed="true"],.wpb-library-search:focus-within){border:1px solid CanvasText!important}
+  #root[data-pi-motion="expressive"] .wpb .wpb-library-row.wpb-library-row,#root[data-pi-motion="expressive"] .wpb .wpb-wizard-option[aria-pressed="true"],#root[data-pi-motion="expressive"] .wpb .wpb-library-search:focus-within{border:1px solid CanvasText!important}
 }
 
 /* M3 EXPRESSIVE R6 CONSOLIDATED — Home dial + Plan and Progress.
@@ -1891,6 +1959,7 @@ display:block!important;
   box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes[data-pi-m3-track]::before{
+  --pi-m3-track-x:inherit;--pi-m3-track-y:inherit;--pi-m3-track-width:inherit;--pi-m3-track-height:inherit;
   content:"";
   position:absolute;top:0;left:0;z-index:0;pointer-events:none;
   width:var(--pi-m3-track-width,0px);
@@ -1994,7 +2063,9 @@ display:block!important;
 /* One large measured fact per dashboard; companion numbers are secondary. */
 /* Library and program creation use filled/tonal/outlined roles rather than
    gradients, with the existing focus/selection-driven shape morph intact. */
-#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library :is(.wpb-library-row,.wpb-library-search,.wpb-library-flag-filter),
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-row,
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-search,
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-flag-filter,
 #root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-option,
 #root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump-control{
   background-image:none!important;
@@ -2006,7 +2077,7 @@ display:block!important;
 }
 /* Sheets, dialogs and menus are high-elevation tonal containers, not glossy
    overlays. Keep actual modal z-order, detents and keyboard avoidance. */
-#root[data-pi-motion="expressive"] .wpb .wpb-backdrop>[data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)),#root[data-pi-motion="expressive"] .wpb :is(.wpb-pop,.wpb-dialog){
+#root[data-pi-motion="expressive"] .wpb .wpb-backdrop>[data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)),#root[data-pi-motion="expressive"] .wpb .wpb-pop,#root[data-pi-motion="expressive"] .wpb .wpb-dialog{
   background-image:none!important;
   box-shadow:0 10px 28px rgba(0,0,0,.16)!important;}
 /* The M3E selected indicator is a solid resting color; the original measured
@@ -2022,7 +2093,11 @@ display:block!important;
   text-wrap:balance;
 }
 @media (forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-home-hero,.wpb-plan-glance-tile,.wpb-progress-glance-item,.wpb-wizard-option,.wpb-library-row){
+  #root[data-pi-motion="expressive"] .wpb .wpb-home-hero,
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile,
+#root[data-pi-motion="expressive"] .wpb .wpb-progress-glance-item,
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-option,
+#root[data-pi-motion="expressive"] .wpb .wpb-library-row{
     background-color:Canvas!important;
     border-color:CanvasText!important;
   }
@@ -2050,7 +2125,7 @@ display:block!important;
 }
 /* Responsive 2026 list height: long names can wrap, and the actual content
    determines the row height. No rigid cropping or a second inaccessible title. */
-#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results>.wpb-library-row :is(span,strong){
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results>.wpb-library-row span,#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results>.wpb-library-row strong{
   min-width:0;
   overflow-wrap:anywhere;
   white-space:normal;
@@ -2064,13 +2139,16 @@ display:block!important;
    to charts, overriding workouts, or changing displayed training statistics. */
 
 @media(prefers-reduced-motion:reduce){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-library-row,.wpb-settings-card>.wpb-settings-row,.wpb-settings-card>button,.wpb-history-session){
+  #root[data-pi-motion="expressive"] .wpb .wpb-library-row.wpb-library-row,
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-settings-card>.wpb-settings-row),
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-settings-card>button):not(.pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] .wpb .wpb-history-session.wpb-history-session{
     transition:none!important;
     transform:none!important;
   }
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-library-row,.wpb-settings-card,.wpb-history-session){
+  #root[data-pi-motion="expressive"] .wpb .wpb-library-row,#root[data-pi-motion="expressive"] .wpb .wpb-settings-card,#root[data-pi-motion="expressive"] .wpb .wpb-history-session{
     border-color:CanvasText!important;
     background-color:Canvas!important;
   }
@@ -2142,7 +2220,7 @@ display:block!important;
     border-color 180ms var(--pi-m3e-motion-emphasized),
     color 180ms var(--pi-m3e-motion-emphasized)!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-home-create :is(svg,[data-icon]){
+#root[data-pi-motion="expressive"] .wpb .wpb-home-create :where(svg):not(.pi-pad),#root[data-pi-motion="expressive"] .wpb .wpb-home-create [data-icon]{
   color:light-dark(currentColor,var(--pi-m3e-primary));
 }
 /* Card shape, day dial and legible workout metrics remain prominent because
@@ -2157,7 +2235,7 @@ display:block!important;
 }
 /* Respect theme-specific high-contrast surfaces: do not force pink in HC mode. */
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-home-create,.wpb-home-hero .wpb-primary-action){
+  #root[data-pi-motion="expressive"] .wpb .wpb-home-create.wpb-home-create,#root[data-pi-motion="expressive"] .wpb :is(.wpb-home-hero .wpb-primary-action){
     background-color:ButtonFace!important;
     color:ButtonText!important;
     border:1px solid ButtonText!important;
@@ -2225,7 +2303,12 @@ display:block!important;
   border-color:var(--pi-r11-edge)!important;
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-plan-glance-tile,.wpb-progress-glance-item,.wpb-history-session,.wpb-library-search,.wpb-library-row,.wpb-library-flag-filter){
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile,
+#root[data-pi-motion="expressive"] .wpb .wpb-progress-glance-item,
+#root[data-pi-motion="expressive"] .wpb .wpb-history-session,
+#root[data-pi-motion="expressive"] .wpb .wpb-library-search,
+#root[data-pi-motion="expressive"] .wpb .wpb-library-row,
+#root[data-pi-motion="expressive"] .wpb .wpb-library-flag-filter{
     background-color:Canvas!important;
     border-color:CanvasText!important;
     box-shadow:none!important;
@@ -2258,7 +2341,9 @@ display:block!important;
 }
 @media(prefers-reduced-motion:reduce),(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail[data-pi-detail-linked="1"]
-    :is(.wpb-exercise-detail-header>div:last-child,.wpb-exercise-figure-wrap){
+    :is(.wpb-exercise-detail-header>div:last-child),
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail[data-pi-detail-linked="1"]
+    :where(.wpb-exercise-figure-wrap):not(pi-pad.pi-pad.pi-pad){
     animation:none!important;
     translate:none!important;
     opacity:1!important;
@@ -2506,7 +2591,12 @@ display:block!important;
   }
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-library-header,.wpb-library-search,.wpb-library-row,.wpb-wizard-header,.wpb-wizard-option,.wpb-wizard-footer){
+  #root[data-pi-motion="expressive"] .wpb .wpb-library-header,
+#root[data-pi-motion="expressive"] .wpb .wpb-library-search,
+#root[data-pi-motion="expressive"] .wpb .wpb-library-row,
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-header,
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-option,
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-footer{
     background-color:Canvas!important;
     color:CanvasText!important;
     border-color:CanvasText!important;
@@ -2632,7 +2722,7 @@ display:block!important;
 @media(prefers-reduced-motion:reduce),(forced-colors:active){#root .wpb .wpb-selection-sheet{border-radius:29px 29px 0 0}}
 @media(prefers-reduced-motion:reduce){#root .wpb .wpb-selection-sheet .wpb-switcher-row{transition:none;transform:none}#root .wpb .wpb-selection-sheet .wpb-gym-done{transition:none}}
 @media(forced-colors:active){
- #root .wpb :is(.wpb-selection-sheet,.wpb-switcher-row,.wpb-gym-card){background:Canvas;color:CanvasText;border-color:CanvasText}
+ #root .wpb .wpb-selection-sheet,#root .wpb .wpb-switcher-row,#root .wpb .wpb-gym-card{background:Canvas;color:CanvasText;border-color:CanvasText}
  #root .wpb .wpb-selection-sheet .wpb-switcher-search{background:Canvas;color:CanvasText;border-color:CanvasText;box-shadow:none}
  #root .wpb .wpb-selection-sheet .wpb-switcher-row[data-state="active"]{border-color:Highlight}
 }
@@ -2742,14 +2832,22 @@ display:block!important;
   }
 }
 @media(prefers-reduced-motion:reduce){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-exercise-tabs>button,.wpb-exercise-window-tabs>button,.wpb-sheet-close){
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-exercise-tabs>button),#root[data-pi-motion="expressive"] .wpb :is(.wpb-exercise-window-tabs>button),#root[data-pi-motion="expressive"] .wpb :where(.wpb-sheet-close):not(pi-pad.pi-pad){
     transition:none!important;
   }
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-exercise-detail-header,.wpb-exercise-tabs,.wpb-exercise-window-tabs,.wpb-sheet-close,.wpb-backdrop>[data-sheet-drag]){
+  #root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail-header.wpb-exercise-detail-header,
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-tabs.wpb-exercise-tabs,
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-window-tabs.wpb-exercise-window-tabs,
+#root[data-pi-motion="expressive"] .wpb .wpb-sheet-close.wpb-sheet-close,
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-backdrop>[data-sheet-drag]){
     color:CanvasText!important;}
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-exercise-detail-header,.wpb-exercise-tabs,.wpb-exercise-window-tabs,.wpb-sheet-close,.wpb-backdrop>[data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet))){
+  #root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail-header.wpb-exercise-detail-header,
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-tabs.wpb-exercise-tabs,
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-window-tabs.wpb-exercise-window-tabs,
+#root[data-pi-motion="expressive"] .wpb .wpb-sheet-close.wpb-sheet-close,
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-backdrop>[data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet))){
     background-color:Canvas!important;
     border-color:CanvasText!important;}
 }
@@ -2825,7 +2923,7 @@ display:block!important;
   }
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-achievement-sheet,.wpb-dialog,.wpb-sheet-action){
+  #root[data-pi-motion="expressive"] .wpb .wpb-achievement-sheet,#root[data-pi-motion="expressive"] .wpb .wpb-dialog,#root[data-pi-motion="expressive"] .wpb .wpb-sheet-action{
     background-color:Canvas!important;
     color:CanvasText!important;
     border-color:CanvasText!important;
@@ -2862,13 +2960,13 @@ display:block!important;
   }
 }
 @media(prefers-reduced-motion:reduce){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-exercise-options-sheet>.wpb-sheet-action,.wpb-program button[aria-label^="More options for "],.wpb-swap-results [aria-label^="Swap to "]){
+  #root[data-pi-motion="expressive"] .wpb :where(.wpb-exercise-options-sheet>.wpb-sheet-action):not(pi-pad.pi-pad.pi-pad),#root[data-pi-motion="expressive"] .wpb :is(.wpb-program button[aria-label^="More options for "]),#root[data-pi-motion="expressive"] .wpb :where(.wpb-swap-results [aria-label^="Swap to "]):not(pi-pad.pi-pad.pi-pad){
     transition:none!important;
     transform:none!important;
   }
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-exercise-options-sheet,.wpb-exercise-options-sheet>.wpb-sheet-action,.wpb-swap-results [aria-label^="Swap to "]){
+  #root[data-pi-motion="expressive"] .wpb .wpb-exercise-options-sheet.wpb-exercise-options-sheet,#root[data-pi-motion="expressive"] .wpb :is(.wpb-exercise-options-sheet>.wpb-sheet-action),#root[data-pi-motion="expressive"] .wpb :is(.wpb-swap-results [aria-label^="Swap to "]){
     background-color:Canvas!important;
     color:CanvasText!important;
     border-color:CanvasText!important;
@@ -2926,13 +3024,13 @@ display:block!important;
   }
 }
 @media(prefers-reduced-motion:reduce){
-  #root[data-pi-motion="expressive"] .wpb-workout :is(.wpb-workout-tool,.wpb-rest-actions>button){
+  #root[data-pi-motion="expressive"] .wpb-workout :where(.wpb-workout-tool):not(pi-pad.pi-pad),#root[data-pi-motion="expressive"] .wpb-workout :is(.wpb-rest-actions>button){
     transition:none!important;
     transform:none!important;
   }
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb-workout :is(.wpb-workout-tool,.wpb-rest-card,.wpb-rest-actions>button){
+  #root[data-pi-motion="expressive"] .wpb-workout :where(.wpb-workout-tool):not(pi-pad.pi-pad),#root[data-pi-motion="expressive"] .wpb-workout :where(.wpb-rest-card):not(pi-pad.pi-pad),#root[data-pi-motion="expressive"] .wpb-workout :is(.wpb-rest-actions>button){
     background-color:Canvas!important;
     color:CanvasText!important;
     border-color:CanvasText!important;
@@ -2963,7 +3061,8 @@ display:block!important;
   flex-wrap:wrap;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-actions>button:focus-visible,
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session :is(button,summary):focus-visible{
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session button:focus-visible,
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session summary:focus-visible{
   outline:2px solid var(--pi-m3e-primary)!important;
   outline-offset:2px;
 }
@@ -3011,7 +3110,10 @@ display:block!important;
   }
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-history-session,.wpb-history-session-detail,.wpb-finish-sheet,.wpb-finish-sheet .wpb-finish-metrics>div){
+  #root[data-pi-motion="expressive"] .wpb :where(.wpb-history-session):not(pi-pad.pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-history-session-detail):not(pi-pad.pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-finish-sheet):not(pi-pad.pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-finish-sheet .wpb-finish-metrics>div){
     background-color:Canvas!important;
     color:CanvasText!important;
     border-color:CanvasText!important;
@@ -3064,7 +3166,7 @@ display:block!important;
   background-image:none!important;
   box-shadow:none!important;
 }
-#root[data-pi-motion="expressive"] .wpb-onboarding :is(.wpb-onboarding-primary,.wpb-onboarding-secondary){
+#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-primary,#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-secondary{
   box-sizing:border-box;
   min-height:50px!important;
   border-radius:16px!important;
@@ -3074,7 +3176,7 @@ display:block!important;
   border:1px solid var(--pi-r11-edge)!important;
   background-color:var(--pi-r11-raised)!important;
 }
-#root[data-pi-motion="expressive"] .wpb-onboarding :is(.wpb-onboarding-primary,.wpb-onboarding-secondary):focus-visible{
+#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-primary:focus-visible,#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-secondary:focus-visible{
   outline:2px solid var(--pi-m3e-primary)!important;
   outline-offset:2px!important;
 }
@@ -3088,7 +3190,7 @@ display:block!important;
   }
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb-onboarding :is(.wpb-onboarding-feature,.wpb-onboarding-footer,.wpb-onboarding-secondary){
+  #root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-feature,#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-footer,#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-secondary{
     background-color:Canvas!important;
     color:CanvasText!important;
     border-color:CanvasText!important;
@@ -3099,15 +3201,57 @@ display:block!important;
    One keyboard-visible focus language and reliable touch targets on real
    action controls. Layout, DOM events, program settings and active workout
    input handlers remain owned by the original components. */
-#root[data-pi-motion="expressive"] :is(.wpb-home-create,.wpb-action-tile,.wpb-plan-panes>button,.wpb-premium-tabs>button,.wpb-settings-row,.wpb-settings-jump-control,.wpb-profile-achievement-toggle,.wpb-wizard-option,.wpb-wizard-back-action,.wpb-wizard-next-action,.wpb-onboarding-primary,.wpb-onboarding-secondary,.wpb-workout-tool,.wpb-rest-actions>button,.wpb-history-actions>button,.wpb-sheet-close){
+#root[data-pi-motion="expressive"] :where(.wpb-home-create):not(pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] :where(.wpb-action-tile):not(pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] :is(.wpb-plan-panes>button),
+#root[data-pi-motion="expressive"] :is(.wpb-premium-tabs>button),
+#root[data-pi-motion="expressive"] :where(.wpb-settings-row):not(pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] :where(.wpb-settings-jump-control):not(pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] :where(.wpb-profile-achievement-toggle):not(pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] :where(.wpb-wizard-option):not(pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] :where(.wpb-wizard-back-action):not(pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] :where(.wpb-wizard-next-action):not(pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] :where(.wpb-onboarding-primary):not(pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] :where(.wpb-onboarding-secondary):not(pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] :where(.wpb-workout-tool):not(pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] :is(.wpb-rest-actions>button),
+#root[data-pi-motion="expressive"] :is(.wpb-history-actions>button),
+#root[data-pi-motion="expressive"] :where(.wpb-sheet-close):not(pi-pad.pi-pad){
   touch-action:manipulation;
 }
-#root[data-pi-motion="expressive"] :is(.wpb-home-create,.wpb-action-tile,.wpb-plan-panes>button,.wpb-premium-tabs>button,.wpb-settings-row,.wpb-settings-jump-control,.wpb-profile-achievement-toggle,.wpb-wizard-option,.wpb-wizard-back-action,.wpb-wizard-next-action,.wpb-onboarding-primary,.wpb-onboarding-secondary,.wpb-workout-tool,.wpb-rest-actions>button,.wpb-history-actions>button,.wpb-sheet-close):focus-visible{
+#root[data-pi-motion="expressive"] :where(.wpb-home-create):not(pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] :where(.wpb-action-tile):not(pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] :is(.wpb-plan-panes>button):focus-visible,
+#root[data-pi-motion="expressive"] :is(.wpb-premium-tabs>button):focus-visible,
+#root[data-pi-motion="expressive"] :where(.wpb-settings-row):not(pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] :where(.wpb-settings-jump-control):not(pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] :where(.wpb-profile-achievement-toggle):not(pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] :where(.wpb-wizard-option):not(pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] :where(.wpb-wizard-back-action):not(pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] :where(.wpb-wizard-next-action):not(pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] :where(.wpb-onboarding-primary):not(pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] :where(.wpb-onboarding-secondary):not(pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] :where(.wpb-workout-tool):not(pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] :is(.wpb-rest-actions>button):focus-visible,
+#root[data-pi-motion="expressive"] :is(.wpb-history-actions>button):focus-visible,
+#root[data-pi-motion="expressive"] :where(.wpb-sheet-close):not(pi-pad.pi-pad):focus-visible{
   outline:2px solid var(--pi-m3e-primary)!important;
   outline-offset:2px!important;
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] :is(.wpb-home-create,.wpb-action-tile,.wpb-plan-panes>button,.wpb-premium-tabs>button,.wpb-settings-row,.wpb-profile-achievement-toggle,.wpb-wizard-option,.wpb-onboarding-primary,.wpb-onboarding-secondary,.wpb-workout-tool,.wpb-rest-actions>button,.wpb-history-actions>button,.wpb-sheet-close):focus-visible{
+  #root[data-pi-motion="expressive"] :where(.wpb-home-create):not(pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] :where(.wpb-action-tile):not(pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] :is(.wpb-plan-panes>button):focus-visible,
+#root[data-pi-motion="expressive"] :is(.wpb-premium-tabs>button):focus-visible,
+#root[data-pi-motion="expressive"] :where(.wpb-settings-row):not(pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] :where(.wpb-profile-achievement-toggle):not(pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] :where(.wpb-wizard-option):not(pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] :where(.wpb-onboarding-primary):not(pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] :where(.wpb-onboarding-secondary):not(pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] :where(.wpb-workout-tool):not(pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] :is(.wpb-rest-actions>button):focus-visible,
+#root[data-pi-motion="expressive"] :is(.wpb-history-actions>button):focus-visible,
+#root[data-pi-motion="expressive"] :where(.wpb-sheet-close):not(pi-pad.pi-pad):focus-visible{
     outline-color:Highlight!important;
   }
 }
@@ -3120,10 +3264,19 @@ display:block!important;
   padding-right:max(6px,env(safe-area-inset-right))!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab>span,
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-home-hero,.wpb-action-tile,.wpb-plan-glance-tile,.wpb-progress-glance-item,.wpb-profile-hero,.wpb-settings-card,.wpb-settings-row){
+#root[data-pi-motion="expressive"] .wpb .wpb-home-hero,
+#root[data-pi-motion="expressive"] .wpb .wpb-action-tile,
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile,
+#root[data-pi-motion="expressive"] .wpb .wpb-progress-glance-item,
+#root[data-pi-motion="expressive"] .wpb .wpb-profile-hero,
+#root[data-pi-motion="expressive"] .wpb .wpb-settings-card,
+#root[data-pi-motion="expressive"] .wpb .wpb-settings-row{
   min-width:0;
 }
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-home-hero,.wpb-progress-glance-item) :is(h1,h2,h3,.mono){
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-home-hero,.wpb-progress-glance-item) :where(h1):not(.pi-pad),
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-home-hero,.wpb-progress-glance-item) :where(h2):not(.pi-pad),
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-home-hero,.wpb-progress-glance-item) :where(h3):not(.pi-pad),
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-home-hero,.wpb-progress-glance-item) .mono{
   overflow-wrap:anywhere;
 }
 @media(max-width:359px){
@@ -3148,7 +3301,12 @@ display:block!important;
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab:focus-visible{
   outline:2px solid currentColor!important;
 }
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-home-create,.wpb-home .wpb-home-hero .wpb-primary-action,.wpb-onboarding-primary,.wpb-onboarding-secondary,.wpb-wizard-next-action,.wpb-wizard-back-action):focus-visible{
+#root[data-pi-motion="expressive"] .wpb .wpb-home-create.wpb-home-create.wpb-home-create:focus-visible,
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-home .wpb-home-hero .wpb-primary-action):focus-visible,
+#root[data-pi-motion="expressive"] .wpb .wpb-onboarding-primary.wpb-onboarding-primary.wpb-onboarding-primary:focus-visible,
+#root[data-pi-motion="expressive"] .wpb .wpb-onboarding-secondary.wpb-onboarding-secondary.wpb-onboarding-secondary:focus-visible,
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-next-action.wpb-wizard-next-action.wpb-wizard-next-action:focus-visible,
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-back-action.wpb-wizard-back-action.wpb-wizard-back-action:focus-visible{
   outline:2px solid currentColor!important;
   outline-offset:2px!important;
 }
@@ -3176,7 +3334,7 @@ display:block!important;
   color:var(--pi-r36-secondary-label)!important;
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-home-hero>button:first-child>div:first-child,.wpb-plan-glance-tile>div:first-child,.wpb-progress-glance-label){
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-home-hero>button:first-child>div:first-child),#root[data-pi-motion="expressive"] .wpb :where(.wpb-plan-glance-tile>div:first-child):not(pi-pad):not(pi-pad.pi-pad.pi-pad.pi-pad),#root[data-pi-motion="expressive"] .wpb :where(.wpb-progress-glance-label):not(pi-pad):not(pi-pad.pi-pad.pi-pad.pi-pad){
     color:CanvasText!important;
   }
 }
@@ -3207,7 +3365,11 @@ display:block!important;
   min-width:48px!important;
   min-height:48px!important;
 }
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-sheet-close,.wpb-exercise-detail-header>button:first-child,.wpb-workout-tool,.wpb-rest-actions>button,.wpb-history-actions>button):focus-visible{
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-sheet-close):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-exercise-detail-header>button:first-child):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-workout-tool):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-rest-actions>button):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-history-actions>button):not(pi-pad.pi-pad.pi-pad):focus-visible{
   outline:2px solid currentColor!important;
   outline-offset:2px!important;
 }
@@ -3227,7 +3389,11 @@ display:block!important;
     stroke-width:3px!important;
     stroke-opacity:1!important;
   }
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-sheet-close,.wpb-exercise-detail-header>button:first-child,.wpb-workout-tool,.wpb-rest-actions>button,.wpb-history-actions>button):focus-visible{
+  #root[data-pi-motion="expressive"] .wpb :where(.wpb-sheet-close):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-exercise-detail-header>button:first-child):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-workout-tool):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-rest-actions>button):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-history-actions>button):not(pi-pad.pi-pad.pi-pad):focus-visible{
     outline-color:Highlight!important;
   }
 }
@@ -3319,7 +3485,7 @@ display:block!important;
     background-color:Highlight!important;
     outline-color:Highlight!important;
   }
-  #root[data-pi-motion="expressive"] .wpb-home :is(.wpb-home-hero,.wpb-home-session-preview,.wpb-home-compose-bar){
+  #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero,#root[data-pi-motion="expressive"] .wpb-home .wpb-home-session-preview,#root[data-pi-motion="expressive"] .wpb-home .wpb-home-compose-bar{
     background-color:Canvas!important;
     border-color:CanvasText!important;
   }
@@ -3366,7 +3532,7 @@ display:block!important;
   padding-bottom:10px!important;
   gap:7px!important;
 }
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filters :is(input,select){
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filters input,#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filters select{
   box-sizing:border-box;
   min-height:48px!important;
   border:1px solid var(--pi-r11-edge)!important;
@@ -3401,7 +3567,11 @@ display:block!important;
 }
 @media(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile :is(.wpb-profile-section),
-#root[data-pi-motion="expressive"] .wpb-progress :is(.wpb-progress-glance-item,.wpb-premium-tabs,.wpb-history-filters input,.wpb-history-filters select,.wpb-progress-grouping){
+#root[data-pi-motion="expressive"] .wpb-progress :where(.wpb-progress-glance-item):not(pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] .wpb-progress :where(.wpb-premium-tabs):not(pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] .wpb-progress :is(.wpb-history-filters input),
+#root[data-pi-motion="expressive"] .wpb-progress :is(.wpb-history-filters select),
+#root[data-pi-motion="expressive"] .wpb-progress :where(.wpb-progress-grouping):not(pi-pad.pi-pad){
     background-color:Canvas!important;
     color:CanvasText!important;
     border-color:CanvasText!important;
@@ -3453,12 +3623,18 @@ display:block!important;
 }
 /* Keyboard and switch input need a visible, theme-native indication. Do not
    use a barely translucent focus outline on search or onboarding actions. */
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-progress .wpb-history-filters input,.wpb-progress .wpb-history-filters select,.wpb-onboarding-primary,.wpb-onboarding-secondary):focus-visible{
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-progress .wpb-history-filters input):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-progress .wpb-history-filters select):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-onboarding-primary):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-onboarding-secondary):not(pi-pad.pi-pad.pi-pad):focus-visible{
   outline:2.5px solid currentColor!important;
   outline-offset:2px!important;
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-history-filters input,.wpb-history-filters select,.wpb-onboarding-primary,.wpb-onboarding-secondary):focus-visible{outline-color:Highlight!important}
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-history-filters input):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-history-filters select):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-onboarding-primary):not(pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-onboarding-secondary):not(pi-pad.pi-pad):focus-visible{outline-color:Highlight!important}
 }
 
 /* M3 EXPRESSIVE R41 — TIGHT TONAL SCALE / PROGRESS RECOMPOSITION
@@ -3477,7 +3653,11 @@ display:block!important;
 }
 /* Make the page-level hierarchy consistent; don't recolor the independent
    fullscreen workout logger, its training fields or completed rows. */
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-home,.wpb-plan-view,.wpb-progress,.wpb-profile,.wpb-settings){
+#root[data-pi-motion="expressive"] .wpb .wpb-home,
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view,
+#root[data-pi-motion="expressive"] .wpb .wpb-progress,
+#root[data-pi-motion="expressive"] .wpb .wpb-profile,
+#root[data-pi-motion="expressive"] .wpb .wpb-settings{
   background-color:light-dark(var(--pi-m3e-base),var(--pi-r41-page))!important;
   background-image:none!important;
 }
@@ -3581,7 +3761,7 @@ display:block!important;
 }
 /* Rein in the page-level card radius/spacing without touching the logger.
    Shared low cards are 20–22px; selection controls are smaller. */
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-plan-glance-tile,.wpb-progress-glance-item){
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile,#root[data-pi-motion="expressive"] .wpb .wpb-progress-glance-item{
   border-radius:var(--pi-shape-card)!important;
   box-shadow:none!important;
   background-image:none!important;
@@ -3602,7 +3782,14 @@ display:block!important;
   }
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-history-session,.wpb-history-session-detail,.wpb-premium-tabs,.wpb-progress-grouping,.wpb-history-actions>button,.wpb-history-group-header,.wpb-settings-card,.wpb-profile-section){
+  #root[data-pi-motion="expressive"] .wpb :where(.wpb-history-session):not(pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-history-session-detail):not(pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-premium-tabs):not(pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-progress-grouping):not(pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-history-actions>button),
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-history-group-header):not(pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-settings-card):not(pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-profile-section):not(pi-pad.pi-pad){
     background-color:Canvas!important;
     color:CanvasText!important;
     border-color:CanvasText!important;
@@ -3621,19 +3808,20 @@ display:block!important;
 .wpb .wpb-settings-row--stack{flex-direction:column;align-items:stretch;}
 .wpb .wpb-settings-row--stack>.wpb-settings-row-copy{flex:none;}
 .wpb .wpb-settings-row--stack>.wpb-settings-row-control{width:100%;}
-.wpb .wpb-settings-card>:is(button,.wpb-settings-row){border-radius:var(--pi-m3e-list-compressed,8px);transition:background-color var(--pi-motion-paint,160ms) var(--pi-ease);}
-.wpb .wpb-settings-card>:is(button,.wpb-settings-row):first-child{border-top-left-radius:var(--pi-shape-card);border-top-right-radius:var(--pi-shape-card);}
-.wpb .wpb-settings-card>:is(button,.wpb-settings-row):last-child{border-bottom-left-radius:var(--pi-shape-card);border-bottom-right-radius:var(--pi-shape-card);}
-.wpb .wpb-settings-card>:is(button,.wpb-settings-row)+:is(button,.wpb-settings-row){border-top:1px solid var(--pi-color-divider);}
-.wpb .wpb-settings-card>:is(button,.wpb-settings-row):is(:active,:focus-within){background:var(--pi-color-control);}
+.wpb .wpb-settings-card>:where(button):not(.pi-pad),.wpb .wpb-settings-card>.wpb-settings-row{border-radius:var(--pi-m3e-list-compressed,8px);transition:background-color var(--pi-motion-paint,160ms) var(--pi-ease);}
+.wpb .wpb-settings-card>:where(button):not(.pi-pad):first-child,.wpb .wpb-settings-card>.wpb-settings-row:first-child{border-top-left-radius:var(--pi-shape-card);border-top-right-radius:var(--pi-shape-card);}
+.wpb .wpb-settings-card>:where(button):not(.pi-pad):last-child,.wpb .wpb-settings-card>.wpb-settings-row:last-child{border-bottom-left-radius:var(--pi-shape-card);border-bottom-right-radius:var(--pi-shape-card);}
+.wpb .wpb-settings-card>:is(button,.wpb-settings-row)+:where(button):not(.pi-pad),.wpb .wpb-settings-card>:is(button,.wpb-settings-row)+.wpb-settings-row{border-top:1px solid var(--pi-color-divider);}
+.wpb .wpb-settings-card>:where(button):not(.pi-pad):is(:active,:focus-within),.wpb .wpb-settings-card>.wpb-settings-row:is(:active,:focus-within){background:var(--pi-color-control);}
 #root .wpb .wpb-settings-navigation{width:100%;text-align:left;cursor:pointer;font:inherit;}
 .wpb-settings-navigation>svg{flex-shrink:0;}
 @media(hover:hover) and (pointer:fine){.wpb .wpb-settings-navigation:hover{background:var(--pi-color-control);}}
 @media(prefers-contrast:more){.wpb .wpb-settings-card{border-color:var(--wpb-theme-border);}}
-@media(prefers-reduced-motion:reduce){.wpb .wpb-settings-card>:is(button,.wpb-settings-row){transition:none;}}
+@media(prefers-reduced-motion:reduce){.wpb .wpb-settings-card>:where(button):not(.pi-pad),.wpb .wpb-settings-card>.wpb-settings-row{transition:none;}}
 @media(forced-colors:active){
 .wpb .wpb-settings-card,
-.wpb .wpb-settings-card>:is(button,.wpb-settings-row){border-color:CanvasText;}}
+.wpb .wpb-settings-card>:where(button):not(.pi-pad),
+.wpb .wpb-settings-card>.wpb-settings-row{border-color:CanvasText;}}
 
 .wpb .wpb-settings>.wpb-page-scroll{flex:1;overflow-y:auto;padding:var(--pi-space-2) var(--pi-page-inset) var(--pi-space-8)}
 .wpb .wpb-settings [data-settings-anchor]{scroll-margin-top:var(--pi-space-2)}
@@ -3663,7 +3851,7 @@ display:block!important;
 @media(prefers-reduced-motion:reduce){.wpb-theme-chevron{transition:none}}
 @media(forced-colors:active){.wpb .wpb-theme-picker,.wpb .wpb-theme-options-body,.wpb .wpb-theme-option{background:Canvas;color:CanvasText;border-color:CanvasText}.wpb .wpb-theme-option[aria-pressed="true"]{background:Highlight;color:HighlightText;border-color:Highlight}
 
-  #root[data-pi-motion="expressive"] .wpb-settings :is(.wpb-settings-card,.wpb-settings-jump-control,.wpb-segmented){
+  #root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-card,#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump-control,#root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented{
     background-color:Canvas!important;
     color:CanvasText!important;
     border-color:CanvasText!important;
@@ -3755,7 +3943,11 @@ display:block!important;
   }
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-plan-glance-tile,.wpb-plan-panes,.wpb-week-rail>button,.wpb-day-card,.wpb-day-card>.wpb-expand){
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile.wpb-plan-glance-tile,
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-panes.wpb-plan-panes,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-week-rail>button):not(.pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] .wpb .wpb-day-card.wpb-day-card,
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-day-card>.wpb-expand){
     color:CanvasText!important;
     background-color:Canvas!important;
     border-color:CanvasText!important;
@@ -3840,7 +4032,16 @@ display:block!important;
   }
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-library,.wpb-library-header,.wpb-library-search,.wpb-library-flag-filter,.wpb-library-results>.wpb-library-row,.wpb-exercise-detail,.wpb-exercise-detail-header,.wpb-exercise-figure-wrap,.wpb-exercise-tabs,.wpb-exercise-window-tabs){
+  #root[data-pi-motion="expressive"] .wpb .wpb-library.wpb-library,
+#root[data-pi-motion="expressive"] .wpb .wpb-library-header.wpb-library-header,
+#root[data-pi-motion="expressive"] .wpb .wpb-library-search.wpb-library-search,
+#root[data-pi-motion="expressive"] .wpb .wpb-library-flag-filter.wpb-library-flag-filter,
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-library-results>.wpb-library-row),
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail.wpb-exercise-detail,
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail-header.wpb-exercise-detail-header,
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-figure-wrap.wpb-exercise-figure-wrap,
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-tabs.wpb-exercise-tabs,
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-window-tabs.wpb-exercise-window-tabs{
     background-color:Canvas!important;
     color:CanvasText!important;
     border-color:CanvasText!important;
@@ -3889,7 +4090,17 @@ display:block!important;
 }
 /* Keyboard/TV/switch navigation should be clearly visible regardless of
    accent/theme and component border style. Outlines do not affect geometry. */
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-tabbar .wpb-tab,.wpb-plan-panes>button,.wpb-premium-tabs>button,.wpb-week-rail>button,.wpb-day-toggle,.wpb-library-flag,.wpb-filter-chip,.wpb-exercise-tabs>button,.wpb-exercise-window-tabs>button,.wpb-settings-jump-control,.wpb-settings .wpb-segmented>button):focus-visible{
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-tabbar .wpb-tab):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-plan-panes>button):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-premium-tabs>button):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-week-rail>button):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-day-toggle):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-library-flag):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-filter-chip):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-exercise-tabs>button):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-exercise-window-tabs>button):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-settings-jump-control):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-settings .wpb-segmented>button):focus-visible{
   outline:2px solid var(--pi-r45-keyboard-ring)!important;
   outline-offset:2px!important;
 }
@@ -3899,7 +4110,17 @@ display:block!important;
   border-radius:16px!important;
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-tabbar .wpb-tab,.wpb-plan-panes>button,.wpb-premium-tabs>button,.wpb-week-rail>button,.wpb-day-toggle,.wpb-library-flag,.wpb-filter-chip,.wpb-exercise-tabs>button,.wpb-exercise-window-tabs>button,.wpb-settings-jump-control,.wpb-settings .wpb-segmented>button):focus-visible{
+  #root[data-pi-motion="expressive"] .wpb :where(.wpb-tabbar .wpb-tab):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-plan-panes>button):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-premium-tabs>button):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-week-rail>button):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-day-toggle):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-library-flag):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-filter-chip):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-exercise-tabs>button):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-exercise-window-tabs>button):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-settings-jump-control):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-settings .wpb-segmented>button):focus-visible{
     outline-color:Highlight!important;
   }
 }
@@ -3955,7 +4176,7 @@ display:block!important;
 }
 /* Use numeric rhythm for dashboard measures so digit changes don't visually
    shift adjoining units, labels or real values; no font size coercion. */
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-plan-glance-tile,.wpb-progress-glance-item,.wpb-exercise-records){
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile,#root[data-pi-motion="expressive"] .wpb .wpb-progress-glance-item,#root[data-pi-motion="expressive"] .wpb .wpb-exercise-records{
   font-variant-numeric:tabular-nums;
 }
 @media(forced-colors:active){
@@ -3981,7 +4202,7 @@ display:block!important;
   line-height:1.2!important;
   text-align:center;
 }
-#root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented>button :is(span,b,strong){
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented>button span,#root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented>button b,#root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented>button strong{
   min-width:0;
   max-width:100%;
   white-space:normal!important;
@@ -4043,7 +4264,10 @@ display:block!important;
 
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-home-hero,.wpb-home-session-preview,.wpb-program .wpb-day-card,.wpb-program .hp-card){
+  #root[data-pi-motion="expressive"] .wpb .wpb-home-hero.wpb-home-hero,
+#root[data-pi-motion="expressive"] .wpb .wpb-home-session-preview.wpb-home-session-preview,
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-program .wpb-day-card),
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-program .hp-card){
     background-color:Canvas!important;
     border-color:CanvasText!important;
     color:CanvasText!important;
@@ -4170,7 +4394,12 @@ display:block!important;
   }
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb-workout :is(.wpb-workout-actions>.wpb-workout-finish,.wpb-workout-tool,.wpb-coach-card,button[aria-label="Expand Coach guidance"],button[aria-label^="Edit pinned note for "],.wpb-workout-footer-primary[aria-label="Next exercise"]){
+  #root[data-pi-motion="expressive"] .wpb-workout :is(.wpb-workout-actions>.wpb-workout-finish),
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-tool.wpb-workout-tool,
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-coach-card.wpb-coach-card,
+#root[data-pi-motion="expressive"] .wpb-workout :where(button[aria-label="Expand Coach guidance"]):not(.pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] .wpb-workout :where(button[aria-label^="Edit pinned note for "]):not(.pi-pad.pi-pad),
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-footer-primary[aria-label="Next exercise"]{
     background-color:ButtonFace!important;
     color:ButtonText!important;
     border-color:ButtonText!important;
@@ -4224,7 +4453,13 @@ display:block!important;
   --pi-r11-selected:var(--pi-color-feature);
   --pi-r11-edge:var(--pi-color-divider);
 }
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-home,.wpb-plan-view,.wpb-progress,.wpb-profile,.wpb-settings,.wpb-library,.wpb-program){
+#root[data-pi-motion="expressive"] .wpb .wpb-home,
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view,
+#root[data-pi-motion="expressive"] .wpb .wpb-progress,
+#root[data-pi-motion="expressive"] .wpb .wpb-profile,
+#root[data-pi-motion="expressive"] .wpb .wpb-settings,
+#root[data-pi-motion="expressive"] .wpb .wpb-library,
+#root[data-pi-motion="expressive"] .wpb .wpb-program{
   background-color:var(--pi-color-canvas)!important;
   background-image:none!important;
 }
@@ -4250,7 +4485,13 @@ display:block!important;
 }
 /* Common control tracks: identical roles for Settings, Plan, Progress,
    filters and Exercise Detail, not arbitrary colors per screen. */
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-settings .wpb-segmented,.wpb-plan-panes,.wpb-premium-tabs,.wpb-progress-grouping,.wpb-library-flag-filter,.wpb-exercise-tabs,.wpb-exercise-window-tabs){
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-settings .wpb-segmented),
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-panes.wpb-plan-panes,
+#root[data-pi-motion="expressive"] .wpb .wpb-premium-tabs.wpb-premium-tabs,
+#root[data-pi-motion="expressive"] .wpb .wpb-progress-grouping.wpb-progress-grouping,
+#root[data-pi-motion="expressive"] .wpb .wpb-library-flag-filter.wpb-library-flag-filter,
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-tabs.wpb-exercise-tabs,
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-window-tabs.wpb-exercise-window-tabs{
   background:var(--pi-color-control)!important;
   background-image:none!important;
   border-color:var(--pi-color-divider)!important;
@@ -4306,7 +4547,13 @@ display:block!important;
 }
 /* The spring owns selection geometry, while semantic color owns paint.
    Prevent stale JS theme sampling from yielding a different selected fill. */
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-settings .wpb-segmented,.wpb-plan-panes,.wpb-premium-tabs,.wpb-progress-grouping,.wpb-library-flag-filter,.wpb-exercise-tabs,.wpb-exercise-window-tabs)[data-pi-m3-track]::before{
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-settings .wpb-segmented)[data-pi-m3-track]::before,
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-panes.wpb-plan-panes[data-pi-m3-track]::before,
+#root[data-pi-motion="expressive"] .wpb .wpb-premium-tabs.wpb-premium-tabs[data-pi-m3-track]::before,
+#root[data-pi-motion="expressive"] .wpb .wpb-progress-grouping.wpb-progress-grouping[data-pi-m3-track]::before,
+#root[data-pi-motion="expressive"] .wpb .wpb-library-flag-filter.wpb-library-flag-filter[data-pi-m3-track]::before,
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-tabs.wpb-exercise-tabs[data-pi-m3-track]::before,
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-window-tabs.wpb-exercise-window-tabs[data-pi-m3-track]::before{
   background:var(--pi-color-active)!important;
   background-image:none!important;
   box-shadow:none!important;
@@ -4439,7 +4686,9 @@ display:block!important;
   box-shadow:none!important;
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb .wpb-plan-view :is(.wpb-plan-week-card,.wpb-plan-session-link,.wpb-plan-open-program),
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-week-card,
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-session-link,
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-open-program,
 #root[data-pi-motion="expressive"] .wpb .wpb-program .wpb-phase-block>div>div{
     background:Canvas!important;
     color:CanvasText!important;
@@ -4609,7 +4858,7 @@ background:var(--pi-color-card)!important;
 #root[data-pi-motion="expressive"] .wpb-program .wpb-exercise-actions>button[aria-label^="How "]{
   font-weight:660;
 }
-#root[data-pi-motion="expressive"] .wpb-program :is(.wpb-day-hit-chip,.wpb-exercise-actions>button,.wpb-day-toggle):focus-visible{
+#root[data-pi-motion="expressive"] .wpb-program :where(.wpb-day-hit-chip):not(pi-pad.pi-pad):focus-visible,#root[data-pi-motion="expressive"] .wpb-program :is(.wpb-exercise-actions>button):focus-visible,#root[data-pi-motion="expressive"] .wpb-program :where(.wpb-day-toggle):not(pi-pad.pi-pad):focus-visible{
   outline:2px solid var(--pi-m3e-primary);
   outline-offset:2px;
 }
@@ -4625,7 +4874,10 @@ background:var(--pi-color-card)!important;
   }
 }
 @media (forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb-program :is(.wpb-program-exercise,.wpb-day-hit-chip,.wpb-day-hit-panel,.wpb-schedule-day){
+  #root[data-pi-motion="expressive"] .wpb-program .wpb-program-exercise,
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-hit-chip,
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-hit-panel,
+#root[data-pi-motion="expressive"] .wpb-program .wpb-schedule-day{
     background:Canvas!important;
     color:CanvasText!important;
     border-color:CanvasText!important;
@@ -4639,7 +4891,18 @@ background:var(--pi-color-card)!important;
   outline-offset:-2px!important;
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-settings-card,.wpb-theme-picker,.wpb-settings-jump-control,.wpb-profile-section,.wpb-history-session,.wpb-segmented,.wpb-plan-panes,.wpb-premium-tabs,.wpb-progress-grouping,.wpb-library-flag-filter,.wpb-exercise-tabs,.wpb-exercise-window-tabs){
+  #root[data-pi-motion="expressive"] .wpb .wpb-settings-card,
+#root[data-pi-motion="expressive"] .wpb .wpb-theme-picker,
+#root[data-pi-motion="expressive"] .wpb .wpb-settings-jump-control,
+#root[data-pi-motion="expressive"] .wpb .wpb-profile-section,
+#root[data-pi-motion="expressive"] .wpb .wpb-history-session,
+#root[data-pi-motion="expressive"] .wpb .wpb-segmented,
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-panes,
+#root[data-pi-motion="expressive"] .wpb .wpb-premium-tabs,
+#root[data-pi-motion="expressive"] .wpb .wpb-progress-grouping,
+#root[data-pi-motion="expressive"] .wpb .wpb-library-flag-filter,
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-tabs,
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-window-tabs{
     background:Canvas!important;
     border-color:CanvasText!important;
     color:CanvasText!important;
@@ -4734,7 +4997,7 @@ background:var(--pi-color-card)!important;
   outline-offset:2px!important;
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-settings-jump-control,.wpb-progress .wpb-premium-tabs){
+  #root[data-pi-motion="expressive"] .wpb .wpb-settings-jump-control.wpb-settings-jump-control,#root[data-pi-motion="expressive"] .wpb :is(.wpb-progress .wpb-premium-tabs){
     color:ButtonText!important;
     background:Canvas!important;
     border-color:CanvasText!important;
@@ -4825,7 +5088,7 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-home-content{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);column-gap:var(--pi-space-6);align-content:start;align-items:start}
 #root .wpb .wpb-home-content>*{grid-column:1/-1}
 #root .wpb .wpb-home-content>.wpb-home-hero{grid-column:1;grid-row:span 3}
-#root .wpb .wpb-home-content>:is(.wpb-home-week,.wpb-home-game-plan,.wpb-home-health){grid-column:2}
+#root .wpb .wpb-home-content>.wpb-home-week,#root .wpb .wpb-home-content>.wpb-home-game-plan,#root .wpb .wpb-home-content>.wpb-home-health{grid-column:2}
 }
 .wpb-home-brand{display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--pi-space-2);margin:var(--pi-space-2) 0 0;color:var(--pi-color-on-muted);font-size:var(--pi-type-support);line-height:1.5;}
 .wpb-home-brand-long{color:var(--wpb-theme-accent-ink);font-weight:700;}
@@ -5043,23 +5306,23 @@ background:var(--pi-color-card)!important;
 }
 /* M3E state layer: one owner for shared native buttons/choices. No
    synthetic click, drag transform or compulsory bounce on repeated logging. */
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-ui-action,.wpb-ui-choice){
+#root[data-pi-motion="expressive"] .wpb .wpb-ui-action,#root[data-pi-motion="expressive"] .wpb .wpb-ui-choice{
   position:relative;isolation:isolate;
 }
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-ui-action,.wpb-ui-choice)::after{
+#root[data-pi-motion="expressive"] .wpb .wpb-ui-action::after,#root[data-pi-motion="expressive"] .wpb .wpb-ui-choice::after{
   content:"";position:absolute;inset:0;pointer-events:none;
   border-radius:inherit;background:currentColor;opacity:0;
   transition:opacity var(--pi-m3e-effects-fast,120ms) var(--pi-m3e-ease-effects,ease-out);
 }
 @media(hover:hover) and (pointer:fine){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-ui-action,.wpb-ui-choice):hover:not(:disabled)::after{opacity:.07}
+  #root[data-pi-motion="expressive"] .wpb .wpb-ui-action:hover:not(:disabled)::after,#root[data-pi-motion="expressive"] .wpb .wpb-ui-choice:hover:not(:disabled)::after{opacity:.07}
 }
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-ui-action,.wpb-ui-choice):active:not(:disabled)::after{opacity:.12}
+#root[data-pi-motion="expressive"] .wpb .wpb-ui-action:active:not(:disabled)::after,#root[data-pi-motion="expressive"] .wpb .wpb-ui-choice:active:not(:disabled)::after{opacity:.12}
 @media(prefers-reduced-motion:reduce){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-ui-action,.wpb-ui-choice)::after{transition:none}
+  #root[data-pi-motion="expressive"] .wpb .wpb-ui-action::after,#root[data-pi-motion="expressive"] .wpb .wpb-ui-choice::after{transition:none}
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-ui-action,.wpb-ui-choice)::after{display:none}
+  #root[data-pi-motion="expressive"] .wpb .wpb-ui-action::after,#root[data-pi-motion="expressive"] .wpb .wpb-ui-choice::after{display:none}
 }
 /* Cohesion 13 — one two-line choice variant for Plan, Program and cycle blocks. */
 #root .wpb .wpb-ui-choice[data-choice-kind="summary"]{
@@ -5129,7 +5392,7 @@ background:var(--pi-color-card)!important;
 #root[data-pi-motion="expressive"] .wpb .wpb-ui-choice.wpb-ui-choice:not([data-choice-kind="tab"])[aria-pressed="true"]>div{
   color:inherit!important;
 }
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-ui-action,.wpb-ui-choice):focus-visible{
+#root[data-pi-motion="expressive"] .wpb .wpb-ui-action:focus-visible,#root[data-pi-motion="expressive"] .wpb .wpb-ui-choice:focus-visible{
   outline:2px solid var(--wpb-focus)!important;
   outline-offset:2px!important;
 }
@@ -5176,7 +5439,7 @@ background:var(--pi-color-card)!important;
   color:var(--pi-color-on-control);
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-ui-action.wpb-ui-action[data-action],.wpb-ui-choice.wpb-ui-choice){
+  #root[data-pi-motion="expressive"] .wpb .wpb-ui-action.wpb-ui-action[data-action],#root[data-pi-motion="expressive"] .wpb .wpb-ui-choice.wpb-ui-choice.wpb-ui-choice{
     background:ButtonFace!important;
     color:ButtonText!important;
     border:1px solid ButtonText!important;
@@ -5192,7 +5455,7 @@ background:var(--pi-color-card)!important;
    These surfaces follow the selected palette rather than introducing gray.
    Keep focus/input ownership, selected filters, measured menu placement,
    spring morphing, and 48px clear/touch targets exactly where they are. */
-#root[data-pi-motion="expressive"] .wpb .wpb-library.wpb-library.wpb-library .wpb-library-search,#root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-history-filters :is(input,select){
+#root[data-pi-motion="expressive"] .wpb .wpb-library.wpb-library.wpb-library .wpb-library-search,#root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-history-filters input,#root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-history-filters select{
   background:var(--pi-color-control)!important;
   background-image:none!important;
   color:var(--pi-color-on-control)!important;
@@ -5204,7 +5467,7 @@ background:var(--pi-color-card)!important;
   color:var(--pi-color-on-control)!important;
   caret-color:var(--pi-m3e-primary);
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-library.wpb-library.wpb-library .wpb-library-search:focus-within,#root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-history-filters :is(input,select):focus-visible{
+#root[data-pi-motion="expressive"] .wpb .wpb-library.wpb-library.wpb-library .wpb-library-search:focus-within,#root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-history-filters input:focus-visible,#root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-history-filters select:focus-visible{
   border-color:var(--pi-m3e-primary)!important;
   box-shadow:0 0 0 2px color-mix(in srgb,var(--pi-m3e-primary) 17%,transparent)!important;
 }
@@ -5219,7 +5482,7 @@ background:var(--pi-color-card)!important;
   outline-offset:-3px!important;
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-library-search),#root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-history-filters :is(input,select){
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-library-search),#root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-history-filters input,#root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-history-filters select{
     background:Canvas!important;
     color:CanvasText!important;
     border-color:CanvasText!important;
@@ -5529,7 +5792,10 @@ background:var(--pi-color-card)!important;
   min-width:0;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-panel,
-#root[data-pi-motion="expressive"] .wpb-progress :is(.wpb-chart,.wpb-history-session,.wpb-history-filters,.wpb-progress-measure-row){
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-chart,
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session,
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filters,
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-measure-row{
   min-width:0;
   max-width:100%;
 }
@@ -5642,7 +5908,7 @@ background:var(--pi-color-card)!important;
     max-width:1200px!important;
     min-width:0;
   }
-  #root[data-pi-motion="expressive"] .wpb :is([data-view-frame="wizard"],[data-view-frame="cycleWizard"]){
+  #root[data-pi-motion="expressive"] .wpb [data-view-frame="wizard"],#root[data-pi-motion="expressive"] .wpb [data-view-frame="cycleWizard"]{
     min-width:0;
     width:100%;
   }
@@ -5941,22 +6207,22 @@ background:var(--pi-color-card)!important;
   --pi-r73-state-ease:cubic-bezier(.2,.8,.2,1);
   --pi-r73-focus-ring:var(--pi-r45-keyboard-ring,var(--pi-m3e-primary));
 }
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-library-row,.wpb-workout-side-item){
+#root[data-pi-motion="expressive"] .wpb .wpb-library-row,#root[data-pi-motion="expressive"] .wpb .wpb-workout-side-item{
   transition:background-color var(--pi-r73-state-duration) var(--pi-r73-state-ease),
              border-color var(--pi-r73-state-duration) var(--pi-r73-state-ease),
              color var(--pi-r73-state-duration) var(--pi-r73-state-ease);
 }
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-library-row,.wpb-workout-side-item):focus-visible{
+#root[data-pi-motion="expressive"] .wpb .wpb-library-row:focus-visible,#root[data-pi-motion="expressive"] .wpb .wpb-workout-side-item:focus-visible{
   outline:2px solid var(--pi-r73-focus-ring)!important;
   outline-offset:2px!important;
 }
 @media (forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-library-row,.wpb-workout-side-item):focus-visible{
+  #root[data-pi-motion="expressive"] .wpb .wpb-library-row:focus-visible,#root[data-pi-motion="expressive"] .wpb .wpb-workout-side-item:focus-visible{
     outline-color:Highlight!important;
   }
 }
 @media (prefers-reduced-motion:reduce){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-library-row,.wpb-workout-side-item){
+  #root[data-pi-motion="expressive"] .wpb .wpb-library-row,#root[data-pi-motion="expressive"] .wpb .wpb-workout-side-item{
     transition:none!important;
     animation:none!important;
   }
@@ -6033,7 +6299,13 @@ background:var(--pi-color-card)!important;
 /* R74 / Build 855 — keyboard and system high-contrast accessibility.
    Focus is keyboard-only, painted within the existing controls without
    increasing their hitbox or mutating the R73 moving-selection indicator. */
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-library-header button[aria-label="Back"],.wpb-exercise-detail button[aria-label="Back to library"],.wpb-wizard-header button[aria-label="Back"],.wpb-library-search input,.wpb-wizard-step input,.wpb-wizard-step select,.wpb-wizard-step textarea):focus-visible{
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-library-header button[aria-label="Back"]):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-exercise-detail button[aria-label="Back to library"]):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-wizard-header button[aria-label="Back"]):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-library-search input):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-wizard-step input):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-wizard-step select):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-wizard-step textarea):not(pi-pad.pi-pad.pi-pad):focus-visible{
   outline:2px solid var(--pi-r45-keyboard-ring,var(--pi-m3e-primary))!important;
   outline-offset:2px!important;
 }
@@ -6052,7 +6324,13 @@ background:var(--pi-color-card)!important;
     text-decoration-thickness:2px!important;
     text-underline-offset:.15em!important;
   }
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-library-header button[aria-label="Back"],.wpb-exercise-detail button[aria-label="Back to library"],.wpb-wizard-header button[aria-label="Back"],.wpb-library-search input,.wpb-wizard-step input,.wpb-wizard-step select,.wpb-wizard-step textarea):focus-visible{
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-library-header button[aria-label="Back"]):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-exercise-detail button[aria-label="Back to library"]):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-wizard-header button[aria-label="Back"]):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-library-search input):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-wizard-step input):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-wizard-step select):not(pi-pad.pi-pad.pi-pad):focus-visible,
+#root[data-pi-motion="expressive"] .wpb :where(.wpb-wizard-step textarea):not(pi-pad.pi-pad.pi-pad):focus-visible{
     outline-color:Highlight!important;
   }
 }
@@ -6070,14 +6348,18 @@ background:var(--pi-color-card)!important;
    existing controls and moving selection track; never squeeze words into
    overlapping fixed-width cells. em sizing follows text-only enlargement. */
 #root[data-pi-motion="expressive"] .wpb .wpb-library.wpb-library.wpb-library
-  :is(.wpb-filter-chip,.wpb-library-flag){
+  .wpb-filter-chip,
+#root[data-pi-motion="expressive"] .wpb .wpb-library.wpb-library.wpb-library
+  .wpb-library-flag{
   min-width:48px!important;
   line-height:1.25!important;
   white-space:nowrap!important;
   overflow-wrap:normal!important;
   word-break:normal!important;}
 #root[data-pi-motion="expressive"] .wpb .wpb-library.wpb-library.wpb-library
-  :is(.wpb-filter-chip:not(:where(.wpb-gym-preset,.wpb-gym-rack-preset)),.wpb-library-flag){
+  .wpb-filter-chip:not(:where(.wpb-gym-preset,.wpb-gym-rack-preset)),
+#root[data-pi-motion="expressive"] .wpb .wpb-library.wpb-library.wpb-library
+  .wpb-library-flag{
   min-height:48px!important;}
 #root[data-pi-motion="expressive"] .wpb .wpb-library.wpb-library.wpb-library
   .wpb-library-flag-filter{
@@ -6290,11 +6572,11 @@ background:var(--pi-color-card)!important;
 .wpb .wpb-wizard-cycle-adapt[aria-checked="true"] .wpb-wizard-cycle-check{
   border-color:var(--pi-color-active);background:var(--pi-color-active);
 }
-.wpb :is(.wpb-wizard-cycle-option,.wpb-wizard-cycle-adapt):focus-visible{
+.wpb .wpb-wizard-cycle-option:focus-visible,.wpb .wpb-wizard-cycle-adapt:focus-visible{
   outline:2px solid var(--wpb-focus,currentColor);outline-offset:2px;
 }
 @media(forced-colors:active){
-  .wpb :is(.wpb-wizard-cycle-option,.wpb-wizard-cycle-adapt){border-color:ButtonText;}
+  .wpb .wpb-wizard-cycle-option,.wpb .wpb-wizard-cycle-adapt{border-color:ButtonText;}
   .wpb .wpb-wizard-cycle-option[aria-pressed="true"],
   .wpb .wpb-wizard-cycle-adapt[aria-checked="true"]{border-color:Highlight;outline:2px solid Highlight;}
   .wpb .wpb-wizard-cycle-adapt[aria-checked="true"] .wpb-wizard-cycle-check{
@@ -6307,12 +6589,12 @@ background:var(--pi-color-card)!important;
   font-size:1.125rem;font-weight:500;border-radius:var(--pi-shape-action,14px);
 }
 .wpb .wpb-wizard-name-input[data-has-value="true"]{border-color:var(--pi-color-active,var(--wpb-theme-accent));}
-.wpb .wpb-wizard-step :is(.wpb-wizard-unit-option,.wpb-wizard-mode-option):focus-visible{
+.wpb .wpb-wizard-step .wpb-wizard-unit-option:focus-visible,.wpb .wpb-wizard-step .wpb-wizard-mode-option:focus-visible{
   outline:2px solid var(--wpb-focus,currentColor);outline-offset:2px;
 }
 @media(forced-colors:active){
-  .wpb .wpb-wizard-step :is(.wpb-wizard-unit-option,.wpb-wizard-mode-option){border-color:ButtonText;}
-  .wpb .wpb-wizard-step :is(.wpb-wizard-unit-option,.wpb-wizard-mode-option)[aria-pressed="true"]{
+  .wpb .wpb-wizard-step .wpb-wizard-unit-option,.wpb .wpb-wizard-step .wpb-wizard-mode-option{border-color:ButtonText;}
+  .wpb .wpb-wizard-step .wpb-wizard-unit-option[aria-pressed="true"],.wpb .wpb-wizard-step .wpb-wizard-mode-option[aria-pressed="true"]{
     border-color:Highlight;outline:2px solid Highlight;
   }
 }
@@ -6338,7 +6620,7 @@ background:var(--pi-color-card)!important;
   touch-action:pan-x pan-y;margin-bottom:var(--pi-space-3);padding-bottom:var(--pi-space-1);
 }
 .wpb .wpb-wizard-preset{flex-shrink:0;white-space:nowrap;}
-.wpb :is(.wpb-wizard-superset-choices,.wpb-wizard-barbell-choices){display:grid;gap:var(--pi-space-2);}
+.wpb .wpb-wizard-superset-choices,.wpb .wpb-wizard-barbell-choices{display:grid;gap:var(--pi-space-2);}
 .wpb .wpb-wizard-choice{min-width:0;white-space:normal;}
 .wpb .wpb-wizard-constraint-label{
   margin:var(--pi-space-6) 0 var(--pi-space-1);font-size:var(--pi-type-label);
@@ -6374,7 +6656,7 @@ background:var(--pi-color-card)!important;
 #root[data-pi-motion="expressive"] .wpb .wpb-wizard-option-copy{
   overflow-wrap:anywhere;
 }
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-wizard-unit-choices,.wpb-wizard-superset-choices){
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-unit-choices,#root[data-pi-motion="expressive"] .wpb .wpb-wizard-superset-choices{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(min(100%,9em),1fr));
 }
@@ -6550,7 +6832,14 @@ background:var(--pi-color-card)!important;
 
 /* B874 — Workouts: Android long-press is a tap, not text-selection.
    Keep editable weight/reps inputs fully selectable for keyboard replacement. */
-#root .wpb-workout :is(.wpb-set-controls,.wpb-set-head,.wpb-set-actions,.wpb-workout-tools,.wpb-workout-plate-strip,.wpb-workout-inline-plates,.wpb-exercise-heading,.wpb-workout-plate-strip *){
+#root .wpb-workout .wpb-set-controls,
+#root .wpb-workout .wpb-set-head,
+#root .wpb-workout .wpb-set-actions,
+#root .wpb-workout .wpb-workout-tools,
+#root .wpb-workout .wpb-workout-plate-strip,
+#root .wpb-workout .wpb-workout-inline-plates,
+#root .wpb-workout .wpb-exercise-heading,
+#root .wpb-workout :is(.wpb-workout-plate-strip *){
   -webkit-touch-callout:none;
   -webkit-user-select:none;
   user-select:none;
@@ -6736,7 +7025,11 @@ background:var(--pi-color-card)!important;
   border-radius:12px;font-size:14px;font-weight:700;white-space:nowrap;
 }
 #root .wpb-workout .wpb-exercise-head-actions>button:focus-visible,
-#root .wpb-workout :is(.wpb-workout-pinned-note,.wpb-workout-exercise-link,.wpb-b973-set-close,.wpb-b973-coach-collapsed,.wpb-b973-coach-toggle):focus-visible,
+#root .wpb-workout .wpb-workout-pinned-note:focus-visible,
+#root .wpb-workout .wpb-workout-exercise-link:focus-visible,
+#root .wpb-workout .wpb-b973-set-close:focus-visible,
+#root .wpb-workout .wpb-b973-coach-collapsed:focus-visible,
+#root .wpb-workout .wpb-b973-coach-toggle:focus-visible,
 #root .wpb-workout .wpb-workout-average-action:focus-visible,
 #root .wpb-workout .wpb-rest-actions>.wpb-rest-action:focus-visible{
   outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px;
@@ -7273,7 +7566,11 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-progress .wpb-progress-trend-label{font-size:14px;color:var(--wpb-theme-faint);}
 #root .wpb .wpb-progress .wpb-progress-trend-value{font-size:14px;font-weight:700;color:var(--wpb-theme-muted);}
 #root .wpb .wpb-progress .wpb-progress-body-form{display:flex;gap:var(--pi-space-2);margin-bottom:var(--pi-space-4);}
-#root .wpb .wpb-progress :is(.wpb-progress-body-input,.wpb-progress-measure-input,.wpb-progress-session-search,.wpb-progress-filter-program,.wpb-progress-filter-period){border:1px solid var(--wpb-theme-border);color:var(--wpb-theme-text)}
+#root .wpb .wpb-progress .wpb-progress-body-input,
+#root .wpb .wpb-progress .wpb-progress-measure-input,
+#root .wpb .wpb-progress .wpb-progress-session-search,
+#root .wpb .wpb-progress .wpb-progress-filter-program,
+#root .wpb .wpb-progress .wpb-progress-filter-period{border:1px solid var(--wpb-theme-border);color:var(--wpb-theme-text)}
 #root .wpb .wpb-progress .wpb-progress-body-input{flex:1;padding:13px 14px;border-radius:12px;background:var(--wpb-theme-card);font-size:16px;font-weight:600;}
 #root .wpb .wpb-progress .wpb-progress-body-log{padding:0 var(--pi-space-5);border-radius:12px;border:none;font-weight:700;font-size:16px;cursor:pointer;background:var(--wpb-theme-card);color:var(--wpb-theme-faint);}
 #root .wpb .wpb-progress .wpb-progress-empty-body{margin-top:var(--pi-space-6);text-align:center;color:var(--wpb-theme-faint);}
@@ -7334,7 +7631,10 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-progress .wpb-history-detail-title{font-size:16px;font-weight:700;overflow-wrap:anywhere;}
 #root .wpb .wpb-progress .wpb-history-detail-date{font-size:14px;color:var(--wpb-theme-muted);margin-top:1px;}
 #root .wpb .wpb-progress .wpb-history-actions{display:flex;gap:var(--pi-space-2);flex-shrink:0;}
-#root .wpb .wpb-progress :is(.wpb-history-share,.wpb-history-repeat,.wpb-history-edit,.wpb-history-delete){flex-shrink:0;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+#root .wpb .wpb-progress .wpb-history-share,
+#root .wpb .wpb-progress .wpb-history-repeat,
+#root .wpb .wpb-progress .wpb-history-edit,
+#root .wpb .wpb-progress .wpb-history-delete{flex-shrink:0;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer}
 #root .wpb .wpb-progress .wpb-history-share{border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-card);color:var(--wpb-theme-muted);}
 #root .wpb .wpb-progress .wpb-history-repeat{border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-accent-ink);}
 #root .wpb .wpb-progress .wpb-history-edit{border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-muted);padding:0;}
@@ -7481,15 +7781,18 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-progress .wpb-progress-tab[aria-selected="true"]{border-bottom-color:var(--wpb-theme-accent);color:var(--wpb-theme-text);}
 #root .wpb .wpb-progress .wpb-progress-glance-value[data-has-value="true"]{color:var(--wpb-theme-text);}
 #root .wpb .wpb-progress .wpb-progress-body-summary[data-has-series="true"]{margin-bottom:var(--pi-space-3);}
-#root .wpb .wpb-progress :is(.wpb-progress-body-change,.wpb-progress-trend-value,.wpb-progress-volume-change-value,.wpb-progress-lift-change){font-variant-numeric:tabular-nums}
-#root .wpb .wpb-progress :is(.wpb-progress-body-change,.wpb-progress-trend-value)[data-direction="up"]{color:var(--wpb-theme-accent-ink);}
-#root .wpb .wpb-progress :is(.wpb-progress-body-change,.wpb-progress-trend-value)[data-direction="down"]{color:var(--wpb-theme-warning);}
+#root .wpb .wpb-progress .wpb-progress-body-change,
+#root .wpb .wpb-progress .wpb-progress-trend-value,
+#root .wpb .wpb-progress .wpb-progress-volume-change-value,
+#root .wpb .wpb-progress .wpb-progress-lift-change{font-variant-numeric:tabular-nums}
+#root .wpb .wpb-progress .wpb-progress-body-change[data-direction="up"],#root .wpb .wpb-progress .wpb-progress-trend-value[data-direction="up"]{color:var(--wpb-theme-accent-ink);}
+#root .wpb .wpb-progress .wpb-progress-body-change[data-direction="down"],#root .wpb .wpb-progress .wpb-progress-trend-value[data-direction="down"]{color:var(--wpb-theme-warning);}
 #root .wpb .wpb-progress .wpb-progress-body-log:not(:disabled){background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent);}
 #root .wpb .wpb-progress .wpb-progress-measure-row[data-open="true"]{border-color:var(--wpb-theme-accent-edge);}
 #root .wpb .wpb-progress .wpb-progress-measure-toggle:disabled{cursor:default;}
 #root .wpb .wpb-progress .wpb-progress-measure-log:not(:disabled){background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent);cursor:pointer;}
 #root .wpb .wpb-progress .wpb-progress-group-choice[aria-pressed="true"]{background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);}
-#root .wpb .wpb-progress :is(.wpb-progress-measure-toggle[aria-expanded="true"] .wpb-progress-measure-chevron,.wpb-history-session-toggle[aria-expanded="true"] .wpb-history-session-chevron){transform:rotate(180deg)}
+#root .wpb .wpb-progress :is(.wpb-progress-measure-toggle[aria-expanded="true"] .wpb-progress-measure-chevron),#root .wpb .wpb-progress :is(.wpb-history-session-toggle[aria-expanded="true"] .wpb-history-session-chevron){transform:rotate(180deg)}
 #root .wpb .wpb-progress .wpb-progress-lift-choice[aria-current="true"]{background:var(--wpb-theme-card);color:var(--wpb-theme-accent-ink);font-weight:800;}
 #root .wpb .wpb-progress .wpb-progress-record-row+.wpb-progress-record-row{border-top:1px solid var(--wpb-theme-border-soft)}
 #root .wpb .wpb-progress .wpb-progress-intensity-row[data-last="false"]{margin-bottom:9px;}
@@ -7502,9 +7805,9 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-progress .wpb-progress-range-column[data-trained="true"][data-current="true"] .wpb-progress-range-number{color:var(--wpb-theme-accent-ink)}
 #root .wpb .wpb-progress .wpb-progress-range-column[data-trained="true"] .wpb-progress-range-bar{background:var(--wpb-theme-accent-faint)}
 #root .wpb .wpb-progress .wpb-progress-range-column[data-trained="true"][data-current="true"] .wpb-progress-range-bar{background:var(--wpb-theme-accent)}
-#root .wpb .wpb-progress :is(.wpb-progress-volume-change-value,.wpb-progress-lift-change)[data-direction="up"]{color:var(--wpb-theme-accent);background:var(--wpb-theme-accent-dim);}
+#root .wpb .wpb-progress .wpb-progress-volume-change-value[data-direction="up"],#root .wpb .wpb-progress .wpb-progress-lift-change[data-direction="up"]{color:var(--wpb-theme-accent);background:var(--wpb-theme-accent-dim);}
 #root .wpb .wpb-progress .wpb-progress-lift-row[data-stalled="true"]{border-color:var(--wpb-theme-warning-dim);}
-#root .wpb .wpb-progress :is(.wpb-progress-record-level[data-high="true"],.wpb-progress-volume-change-value[data-direction="down"],.wpb-progress-lift-change[data-direction="down"]){color:var(--wpb-theme-warning);background:var(--wpb-theme-warning-dim);}
+#root .wpb .wpb-progress .wpb-progress-record-level[data-high="true"],#root .wpb .wpb-progress .wpb-progress-volume-change-value[data-direction="down"],#root .wpb .wpb-progress .wpb-progress-lift-change[data-direction="down"]{color:var(--wpb-theme-warning);background:var(--wpb-theme-warning-dim);}
 
 /* B891 — favorite chart ordering and dense training-history readability. */
 .wpb-chart-favorites{margin:0 0 10px;border:1px solid var(--pi-color-divider);border-radius:16px;background:var(--pi-color-card);color:inherit;overflow:hidden}
@@ -7579,7 +7882,7 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-profile .wpb-profile-detail-progress-track{height:7px;border-radius:999px;background:var(--wpb-theme-bg-tint);overflow:hidden}
 #root .wpb .wpb-profile-trend-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:4px;flex-wrap:wrap;row-gap:var(--pi-space-1)}
 #root .wpb .wpb-profile-trend-title{font-size:14px;font-weight:700;color:var(--wpb-theme-text)}
-#root .wpb :is(.wpb-profile-trend-delta,.wpb-profile-pattern-level){font-size:var(--pi-type-caption);font-weight:700;color:var(--pi-profile-trend-ink)}
+#root .wpb .wpb-profile-trend-delta,#root .wpb .wpb-profile-pattern-level{font-size:var(--pi-type-caption);font-weight:700;color:var(--pi-profile-trend-ink)}
 #root .wpb .wpb-profile-trend-levels{font-size:11px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
 #root .wpb .wpb-profile-trend-ink{color:var(--pi-profile-trend-ink)}
 #root .wpb .wpb-profile-trend-current{color:var(--wpb-theme-faint);font-weight:500}
@@ -7693,7 +7996,7 @@ background:var(--pi-color-card)!important;
   translate:none!important;
   transform:none;
 }
-#root .wpb :is(.wpb-page-shell,.wpb-exercise-detail){
+#root .wpb .wpb-page-shell,#root .wpb .wpb-exercise-detail{
   animation:none!important;
 }
 #root .wpb .wpb-wizard-step{
@@ -7818,7 +8121,7 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-save-review-alert{padding:12px;margin:8px 0;border-radius:12px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);font-size:0.8125rem;line-height:1.5}
 #root .wpb .wpb-save-review-undo{font-size:0.75rem;color:var(--wpb-theme-muted);margin:10px 0 14px;line-height:1.5}
 #root .wpb .wpb-save-review-footer{flex-shrink:0;padding-top:10px;border-top:1px solid var(--wpb-theme-border)}
-#root .wpb :is(.wpb-save-review-confirm,.wpb-save-review-cancel){width:100%}
+#root .wpb .wpb-save-review-confirm,#root .wpb .wpb-save-review-cancel{width:100%}
 #root .wpb .wpb-save-review-cancel{margin-top:8px}
 @media(forced-colors:active){#root .wpb .wpb-save-review-panel,#root .wpb .wpb-save-review-scope,#root .wpb .wpb-save-review-close,#root .wpb .wpb-save-review-cancel{border-color:CanvasText;background:Canvas;color:CanvasText}}
 
@@ -8102,7 +8405,7 @@ background:var(--pi-color-card)!important;
   border-radius:var(--pi-shape-card);
   background:var(--pi-color-card);border:1px solid var(--pi-color-divider);
 }
-#root .wpb :is(.wpb-home-game-plan,.wpb-home-week,.wpb-home-recovery){margin:0 0 var(--pi-space-5);min-width:0}
+#root .wpb .wpb-home-game-plan,#root .wpb .wpb-home-week,#root .wpb .wpb-home-recovery{margin:0 0 var(--pi-space-5);min-width:0}
 #root .wpb .wpb-game-plan-heading{min-height:32px;margin:0 0 var(--pi-space-2);font-size:var(--pi-type-section);gap:var(--pi-space-2)}
 .wpb-game-plan-count{margin-left:auto;font-size:var(--pi-type-label);color:var(--pi-color-on-muted);font-weight:700}
 #root .wpb .wpb-session-game-plan .wpb-game-plan-exercise{
@@ -8189,7 +8492,7 @@ background:var(--pi-color-card)!important;
 #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-segmented>button{
   transition:background-color 160ms var(--pi-ease),color 160ms var(--pi-ease),border-color 160ms var(--pi-ease)!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-wizard :is(.wpb-wizard-option,.wpb-wizard-choice,.wpb-wizard-preset){
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard .wpb-wizard-option,#root[data-pi-motion="expressive"] .wpb .wpb-wizard .wpb-wizard-choice,#root[data-pi-motion="expressive"] .wpb .wpb-wizard .wpb-wizard-preset{
   transition:background-color 160ms var(--pi-ease),border-color 160ms var(--pi-ease),color 160ms var(--pi-ease),box-shadow 160ms var(--pi-ease)!important;
 }
 @media(prefers-reduced-motion:reduce),(forced-colors:active){
@@ -8197,7 +8500,9 @@ background:var(--pi-color-card)!important;
     animation:none!important;translate:none!important;scale:1!important;opacity:1!important;
   }
   #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-segmented>button,
-  #root[data-pi-motion="expressive"] .wpb .wpb-wizard :is(.wpb-wizard-option,.wpb-wizard-choice,.wpb-wizard-preset){
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard .wpb-wizard-option,
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard .wpb-wizard-choice,
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard .wpb-wizard-preset{
     transition:none!important;
   }
 }
@@ -8266,9 +8571,12 @@ background:var(--pi-color-card)!important;
 /* Program sheets reuse one overlay, panel and focus geometry owner. */
 #root .wpb .wpb-ui-sheet-backdrop{position:fixed;inset:0;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.6);animation:fadeIn .2s both}
 #root .wpb .wpb-ui-sheet-panel{box-sizing:border-box;display:flex;flex-direction:column;min-width:0;width:100%;overflow:hidden;color:var(--wpb-theme-text);max-height:min(var(--pi-ui-sheet-max-vh,86dvh),calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - var(--pi-ui-sheet-top-gap,24px)),100%);border-radius:var(--pi-ui-sheet-radius,var(--pi-shape-card)) var(--pi-ui-sheet-radius,var(--pi-shape-card)) 0 0;background:var(--pi-ui-sheet-fill,var(--wpb-theme-bg-tint));animation:sheetUp var(--pi-ui-sheet-enter-duration,.25s) var(--pi-ui-sheet-enter-ease,cubic-bezier(.2,.8,.2,1)) both}
-#root .wpb .wpb-ui-sheet-focus :is(button,input,textarea):focus-visible,
-#root .wpb :is(.wpb-load-wave,.wpb-training-max-summary):focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
-@media(forced-colors:active){#root .wpb .wpb-ui-sheet-focus :is(button,input,textarea):focus-visible{outline-color:Highlight}}
+#root .wpb .wpb-ui-sheet-focus button:focus-visible,
+#root .wpb .wpb-ui-sheet-focus input:focus-visible,
+#root .wpb .wpb-ui-sheet-focus textarea:focus-visible,
+#root .wpb .wpb-load-wave:focus-visible,
+#root .wpb .wpb-training-max-summary:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+@media(forced-colors:active){#root .wpb .wpb-ui-sheet-focus button:focus-visible,#root .wpb .wpb-ui-sheet-focus input:focus-visible,#root .wpb .wpb-ui-sheet-focus textarea:focus-visible{outline-color:Highlight}}
 #root .wpb .wpb-program-reference-backdrop{z-index:70}
 #root .wpb .wpb-program-reference-panel{max-width:56rem;--pi-ui-sheet-radius:24px;--pi-ui-sheet-enter-duration:.26s;--pi-ui-sheet-enter-ease:cubic-bezier(.2,.8,.3,1)}
 #root .wpb .wpb-program-reference-heading{--pi-ui-sheet-heading-gap:var(--pi-space-3)}
@@ -8299,7 +8607,7 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-progression-columns{padding:0 0 6px;font-size:.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--wpb-theme-muted)}
 #root .wpb .wpb-progression-columns>span:not(:first-child){text-align:center}
 #root .wpb .wpb-progression-row{border-top:1px solid var(--wpb-theme-border);padding:12px 0}
-#root .wpb .wpb-progression[data-columns="1"] :is(.wpb-progression-columns,.wpb-progression-row){grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}
+#root .wpb .wpb-progression[data-columns="1"] .wpb-progression-columns,#root .wpb .wpb-progression[data-columns="1"] .wpb-progression-row{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}
 #root .wpb .wpb-progression-lift{display:flex;flex-direction:column;gap:3px;min-width:0;overflow-wrap:anywhere}
 #root .wpb .wpb-progression-lift strong{font-size:.875rem;line-height:1.5;font-weight:650}
 #root .wpb .wpb-progression-lift svg{margin-left:4px;color:var(--wpb-theme-accent-ink)}
@@ -8324,7 +8632,7 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-progression-methods b{color:var(--wpb-theme-accent-ink)}
 #root .wpb .wpb-progression-reason{padding:8px 0;border-top:1px solid var(--wpb-theme-border-soft)}
 #root .wpb .wpb-progression-reason [data-progression-delta="changed"]{color:var(--wpb-theme-accent-ink);font-weight:650}
-#root .wpb .wpb-progression :is(button,input,summary):focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+#root .wpb .wpb-progression button:focus-visible,#root .wpb .wpb-progression input:focus-visible,#root .wpb .wpb-progression summary:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
 @container progression (max-width:32rem){
   #root .wpb .wpb-progression-columns{display:none}
   #root .wpb .wpb-progression-row{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
@@ -8340,7 +8648,7 @@ background:var(--pi-color-card)!important;
 @media(forced-colors:active){
   #root .wpb .wpb-info-card,#root .wpb .wpb-program-reference-panel,#root .wpb .wpb-progression-cell,#root .wpb .wpb-progression-page{border:1px solid CanvasText;background:Canvas;color:CanvasText}
   #root .wpb .wpb-progression-cell[data-deload="true"]{border-style:dashed}
-  #root .wpb .wpb-info-card-toggle:focus-visible,#root .wpb .wpb-progression :is(button,input,summary):focus-visible{outline-color:Highlight}
+  #root .wpb .wpb-info-card-toggle:focus-visible,#root .wpb .wpb-progression button:focus-visible,#root .wpb .wpb-progression input:focus-visible,#root .wpb .wpb-progression summary:focus-visible{outline-color:Highlight}
 }
 
 /* M371: progression choices share one staged program writer and one presentation owner. */
@@ -8388,7 +8696,7 @@ background:var(--pi-color-card)!important;
    UiChoice owns selected paint/focus; these roles own only the settings anatomy. */
 
 #root .wpb .wpb-program-settings-backdrop{z-index:60}
-#root .wpb :is(.wpb-program-settings-panel,.wpb-program-share-panel){max-width:46rem;border-top:1px solid var(--wpb-theme-border);--pi-ui-sheet-radius:24px;--pi-ui-sheet-enter-duration:.28s;--pi-ui-sheet-enter-ease:cubic-bezier(.2,.7,.3,1)}
+#root .wpb .wpb-program-settings-panel,#root .wpb .wpb-program-share-panel{max-width:46rem;border-top:1px solid var(--wpb-theme-border);--pi-ui-sheet-radius:24px;--pi-ui-sheet-enter-duration:.28s;--pi-ui-sheet-enter-ease:cubic-bezier(.2,.7,.3,1)}
 #root .wpb .wpb-program-settings-panel{--pi-ui-sheet-max-vh:88dvh;--pi-ui-sheet-top-gap:32px}
 #root .wpb .wpb-ui-sheet-heading{display:flex;flex-shrink:0;align-items:center;justify-content:space-between;gap:var(--pi-ui-sheet-heading-gap,var(--pi-space-2));padding:var(--pi-ui-sheet-heading-padding,10px 18px 4px)}
 
@@ -8431,7 +8739,7 @@ background:var(--pi-color-card)!important;
 /* Program inspection: one themed owner for selected-week sharing and load-wave labels. */
 #root .wpb .wpb-program-share-backdrop{z-index:70}
 #root .wpb .wpb-program-share-panel{--pi-ui-sheet-max-vh:92dvh;--pi-ui-sheet-top-gap:32px}
-#root .wpb :is(.wpb-program-settings-panel,.wpb-program-share-panel):focus{outline:none}
+#root .wpb .wpb-program-settings-panel:focus,#root .wpb .wpb-program-share-panel:focus{outline:none}
 #root .wpb .wpb-program-share-panel::before{flex-shrink:0}
 #root .wpb .wpb-program-share-heading h2{--pi-ui-sheet-title-leading:1.3}
 #root .wpb .wpb-program-share-body{padding:8px 18px 16px}
@@ -8461,7 +8769,7 @@ background:var(--pi-color-card)!important;
 /* Program exercise actions: scalable content beneath a persistent heading. */
 #root .wpb .wpb-exercise-options-backdrop{z-index:80}
 #root .wpb .wpb-exercise-options-sheet{--pi-ui-sheet-max-vh:88dvh;--pi-ui-sheet-top-gap:32px}
-#root .wpb :is(.wpb-training-max-sheet,.wpb-exercise-options-sheet){border:1px solid var(--wpb-theme-border);border-bottom:0}
+#root .wpb .wpb-training-max-sheet,#root .wpb .wpb-exercise-options-sheet{border:1px solid var(--wpb-theme-border);border-bottom:0}
 #root .wpb .wpb-exercise-options-sheet::before{flex-shrink:0}
 #root .wpb .wpb-exercise-options-heading{--pi-ui-sheet-heading-gap:10px;--pi-ui-sheet-heading-padding:10px max(16px,env(safe-area-inset-left)) 8px}
 #root .wpb .wpb-exercise-options-identity{flex:1;min-width:0}
@@ -8501,8 +8809,8 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-note-editor-actions>button{flex:1 1 5rem;min-width:0;white-space:normal;overflow-wrap:anywhere;font-size:1rem}
 #root .wpb .wpb-note-editor-actions .wpb-note-editor-remove{color:var(--wpb-theme-danger)}
 #root .wpb .wpb-note-editor input{min-height:48px;min-width:3.75rem}
-#root .wpb .wpb-note-editor :is(input,textarea,button):focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
-@media(forced-colors:active){#root .wpb .wpb-note-editor,#root .wpb .wpb-note-editor :is(input,textarea){border:1px solid CanvasText;background:Canvas;color:CanvasText}#root .wpb .wpb-note-editor :is(input,textarea,button):focus-visible{outline-color:Highlight}}
+#root .wpb .wpb-note-editor input:focus-visible,#root .wpb .wpb-note-editor textarea:focus-visible,#root .wpb .wpb-note-editor button:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+@media(forced-colors:active){#root .wpb .wpb-note-editor,#root .wpb .wpb-note-editor input,#root .wpb .wpb-note-editor textarea{border:1px solid CanvasText;background:Canvas;color:CanvasText}#root .wpb .wpb-note-editor input:focus-visible,#root .wpb .wpb-note-editor textarea:focus-visible,#root .wpb .wpb-note-editor button:focus-visible{outline-color:Highlight}}
 
 /* Training maxes: one editable sheet, staged values and canonical load previews. */
 #root .wpb .wpb-training-max-summary{box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;margin-bottom:12px;padding:13px 14px;border:1px solid var(--wpb-theme-border);border-radius:16px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);text-align:left;cursor:pointer}
@@ -8536,7 +8844,10 @@ background:var(--pi-color-card)!important;
 
 @media(min-width:840px) and (min-height:600px){#root .wpb .wpb-training-max-backdrop{align-items:center;padding:24px}#root .wpb .wpb-training-max-sheet{border-bottom:1px solid var(--wpb-theme-border);border-radius:var(--pi-shape-card)}}
 @media(prefers-reduced-motion:reduce){#root .wpb .wpb-training-max-backdrop,#root .wpb .wpb-training-max-sheet{animation:none}}
-@media(forced-colors:active){#root .wpb :is(.wpb-training-max-sheet,.wpb-training-max-input,.wpb-training-max-conversion,.wpb-training-max-summary){background:Canvas;color:CanvasText;border-color:CanvasText}#root .wpb .wpb-training-max-summary:focus-visible{outline-color:Highlight}}
+@media(forced-colors:active){#root .wpb .wpb-training-max-sheet,
+#root .wpb .wpb-training-max-input,
+#root .wpb .wpb-training-max-conversion,
+#root .wpb .wpb-training-max-summary{background:Canvas;color:CanvasText;border-color:CanvasText}#root .wpb .wpb-training-max-summary:focus-visible{outline-color:Highlight}}
 
 /* Context menus: one renderer, measured anchor owner and themed row family. */
 #root .wpb .wpb-menu-dismiss{position:fixed;inset:0;z-index:40}
@@ -8613,7 +8924,7 @@ background:var(--pi-color-card)!important;
 /* Share-card fields use the shared .wpb-ui-control. */
 .wpb-profile-card-favorites>p{margin:var(--pi-space-4) 0 0;font-size:.875rem;line-height:1.5;color:var(--wpb-theme-muted)}
 @media(max-width:360px){.wpb-profile-share-card{padding:16px}}
-@media(forced-colors:active){.wpb-profile-share-card,.wpb-profile-card-actions>button{border:1px solid CanvasText}.wpb-profile-card-field :is(input,select){border-color:CanvasText}}
+@media(forced-colors:active){.wpb-profile-share-card,.wpb-profile-card-actions>button{border:1px solid CanvasText}.wpb-profile-card-field input,.wpb-profile-card-field select{border-color:CanvasText}}
 
 @container pi-r77-profile (max-width:22em){.wpb-profile-card-metrics{grid-template-columns:minmax(0,1fr)}}
 .wpb-profile-share-toggles button[aria-pressed="true"] span{background:var(--pi-color-card,var(--wpb-theme-card))}
@@ -8643,7 +8954,7 @@ background:var(--pi-color-card)!important;
   background:var(--pi-color-on-active);transform:translateX(18px);
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-switch:disabled {opacity:.55;cursor:not-allowed;}
-#root[data-pi-motion="expressive"] .wpb .wpb-settings :is(.wpb-settings-switch,.wpb-reminder-day):focus-visible {
+#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-switch:focus-visible,#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-reminder-day:focus-visible{
   outline:2px solid var(--pi-m3e-primary);outline-offset:2px;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-reminder-days {
@@ -8658,7 +8969,7 @@ background:var(--pi-color-card)!important;
   background:var(--pi-color-active);color:var(--pi-color-on-active);border-color:var(--pi-color-active);
 }
 @media(prefers-reduced-motion:reduce){
-  #root[data-pi-motion="expressive"] .wpb .wpb-settings :is(.wpb-settings-switch-track,.wpb-settings-switch-thumb){transition:none;}
+  #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-switch-track,#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-switch-thumb{transition:none;}
 }
 @media(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-switch-track {border-color:ButtonText;background:ButtonFace;}
@@ -8965,7 +9276,7 @@ background:var(--pi-color-card)!important;
 
 /* B969: compact workout action rail. All actions remain named for assistive tech;
    only the icon paints, and the available horizontal width is used for logging. */
-#root .wpb-workout :is(.wpb-workout-tools .wpb-workout-tool,.wpb-rest-actions>.wpb-rest-action){box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:0 0 48px;width:48px;min-width:48px;height:48px;min-height:48px;padding:0}
+#root .wpb-workout :is(.wpb-workout-tools .wpb-workout-tool),#root .wpb-workout :is(.wpb-rest-actions>.wpb-rest-action){box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:0 0 48px;width:48px;min-width:48px;height:48px;min-height:48px;padding:0}
 #root .wpb-workout .wpb-workout-tools .wpb-workout-tool{line-height:1;border-radius:12px;color:var(--wpb-theme-muted);background:transparent}
 #root .wpb-workout .wpb-workout-tools .wpb-workout-tool>svg{
   display:block;
@@ -9055,7 +9366,7 @@ background:var(--pi-color-card)!important;
 #root .wpb-workout .wpb-workout-header{
   border-bottom:1px solid var(--wpb-theme-border-soft);
 }
-#root .wpb-workout :is(.wpb-workout-close,.wpb-workout-header-action){box-sizing:border-box;flex-shrink:0;width:48px;height:48px;align-items:center;justify-content:center;padding:0;background:transparent;color:var(--wpb-theme-text);cursor:pointer}
+#root .wpb-workout .wpb-workout-close,#root .wpb-workout .wpb-workout-header-action{box-sizing:border-box;flex-shrink:0;width:48px;height:48px;align-items:center;justify-content:center;padding:0;background:transparent;color:var(--wpb-theme-text);cursor:pointer}
 #root .wpb-workout .wpb-workout-close{display:flex;border:0;border-radius:12px}
 #root .wpb-workout .wpb-workout-header>[role="progressbar"]{
   margin-top:8px;
@@ -9186,8 +9497,8 @@ background:var(--pi-color-card)!important;
 #root .wpb-workout .wpb-b973-set-type[aria-pressed="true"]{border-color:var(--wpb-theme-accent);background:var(--wpb-theme-accent-dim);}
 #root .wpb-workout .wpb-b973-set-detail{display:block;margin-top:3px;color:var(--wpb-theme-muted);font-size:.75rem;line-height:1.4;overflow-wrap:anywhere;}
 #root .wpb-workout .wpb-b973-set-guidance{padding:8px 4px 0;color:var(--wpb-theme-muted);font-size:.75rem;line-height:1.5;}
-#root .wpb-workout :is(.wpb-b973-coach-collapsed,.wpb-b973-coach-toggle){display:flex;align-items:center;width:100%;min-height:48px;text-align:left;cursor:pointer}
-#root .wpb-workout :is(.wpb-b973-coach-collapsed,.wpb-b973-coach-open){border:1px solid var(--wpb-theme-border-soft);background:var(--wpb-theme-card);text-align:left}
+#root .wpb-workout .wpb-b973-coach-collapsed,#root .wpb-workout .wpb-b973-coach-toggle{display:flex;align-items:center;width:100%;min-height:48px;text-align:left;cursor:pointer}
+#root .wpb-workout .wpb-b973-coach-collapsed,#root .wpb-workout .wpb-b973-coach-open{border:1px solid var(--wpb-theme-border-soft);background:var(--wpb-theme-card);text-align:left}
 #root .wpb-workout .wpb-b973-coach-collapsed{gap:7px;margin:0 0 9px;padding:7px 10px;border-radius:12px}
 #root .wpb-workout .wpb-b973-coach-toggle{gap:8px;padding:0;border:0;background:transparent;color:inherit}
 #root .wpb-workout .wpb-b973-coach-label{flex-shrink:0;font-size:.6875rem;font-weight:750;letter-spacing:.04em;text-transform:uppercase;color:var(--wpb-theme-accent-ink);}
@@ -9204,7 +9515,7 @@ background:var(--pi-color-card)!important;
 #root .wpb-workout .wpb-b973-coach-item-evidence{margin-top:5px;color:var(--wpb-theme-muted);font-size:.75rem;line-height:1.35;overflow-wrap:anywhere;}
 @media (forced-colors:active){
 #root .wpb-workout .wpb-b973-set-type[aria-pressed="true"]{outline:2px solid Highlight;outline-offset:-2px;}
-#root .wpb-workout :is(.wpb-b973-set-close,.wpb-b973-coach-collapsed,.wpb-b973-coach-toggle):focus-visible{outline-color:Highlight}
+#root .wpb-workout .wpb-b973-set-close:focus-visible,#root .wpb-workout .wpb-b973-coach-collapsed:focus-visible,#root .wpb-workout .wpb-b973-coach-toggle:focus-visible{outline-color:Highlight}
 }
 @media (prefers-reduced-motion:reduce){#root .wpb-workout .wpb-b973-set-sheet{animation:none;}}
 
@@ -9551,26 +9862,35 @@ background:var(--pi-color-card)!important;
 #root .wpb-program .wpb-program-icon-change{width:48px;height:48px;border-radius:12px;background:color-mix(in srgb,var(--pi-program-icon-color) 12%,transparent);border:1px solid color-mix(in srgb,var(--pi-program-icon-color) 34%,transparent);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer}
 #root .wpb-program .wpb-program-rename-input{flex:1;min-width:0;font-size:18px;font-weight:700;padding:4px 8px;border-radius:8px;border:1px solid var(--wpb-theme-accent);background:var(--wpb-theme-card-high);color:var(--wpb-theme-text)}
 #root .wpb-program .wpb-program-rename-save{width:48px;height:48px;color:var(--wpb-theme-accent-ink);border:1px solid var(--wpb-theme-accent-dim);background:var(--wpb-theme-card);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border-radius:12px}
-#root .wpb-workout :is(.wpb-workout-timer,.wpb-workout-header-action,.wpb-workout-empty-add):focus-visible,#root .wpb-program :is(.wpb-program-header-back,.wpb-program-icon-change,.wpb-program-rename-input,.wpb-program-rename-save):focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+#root .wpb-workout .wpb-workout-timer:focus-visible,
+#root .wpb-workout .wpb-workout-header-action:focus-visible,
+#root .wpb-workout .wpb-workout-empty-add:focus-visible,
+#root .wpb-program .wpb-program-header-back:focus-visible,
+#root .wpb-program .wpb-program-icon-change:focus-visible,
+#root .wpb-program .wpb-program-rename-input:focus-visible,
+#root .wpb-program .wpb-program-rename-save:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
 @media(forced-colors:active){#root .wpb-workout .wpb-workout-header-action[data-focus="1"]{outline:2px solid Highlight;outline-offset:-2px}}
 
 /* B993: CSS-owned Workout exercise information typography and responsive cards. */
 #root .wpb .wpb-exinfo-meta{margin:2px 0 12px;color:var(--wpb-theme-muted);font-size:14px;line-height:1.45}
 #root .wpb .wpb-exinfo-metric{flex:1 1 0;min-width:0;background:var(--wpb-theme-card);border-radius:12px;padding:11px 4px;text-align:center}
-#root .wpb :is(.wpb-exinfo-metric-value,.wpb-exinfo-record-value){font-size:16px;color:var(--wpb-theme-accent-ink);overflow-wrap:anywhere}
+#root .wpb .wpb-exinfo-metric-value,#root .wpb .wpb-exinfo-record-value{font-size:16px;color:var(--wpb-theme-accent-ink);overflow-wrap:anywhere}
 #root .wpb .wpb-exinfo-metric-value{font-weight:600}
 #root .wpb .wpb-exinfo-record-value{font-weight:700}
-#root .wpb :is(.wpb-exinfo-metric-label,.wpb-exinfo-rest-caption){font-size:11px;color:var(--wpb-theme-muted)}
+#root .wpb .wpb-exinfo-metric-label,#root .wpb .wpb-exinfo-rest-caption{font-size:11px;color:var(--wpb-theme-muted)}
 #root .wpb .wpb-exinfo-metric-label{margin-top:2px}
 #root .wpb .wpb-exinfo-why-title{font-size:14px;font-weight:800;color:var(--wpb-theme-text)}
-#root .wpb :is(.wpb-exinfo-why-copy,.wpb-exinfo-cue-copy){font-size:14px;color:var(--wpb-theme-text);overflow-wrap:anywhere}
+#root .wpb .wpb-exinfo-why-copy,#root .wpb .wpb-exinfo-cue-copy{font-size:14px;color:var(--wpb-theme-text);overflow-wrap:anywhere}
 #root .wpb .wpb-exinfo-why-copy{line-height:1.45}
 #root .wpb .wpb-exinfo-why-chip{font-size:11px;font-weight:700;color:var(--wpb-theme-accent-ink);background:var(--wpb-theme-bg-tint);padding:4px 7px;border-radius:8px}
 #root .wpb .wpb-exinfo-why-disclosure{cursor:pointer;color:var(--wpb-theme-accent-ink);font-size:12px;font-weight:700;padding:8px 0;min-height:48px;display:list-item}
 #root .wpb .wpb-exinfo-muted{color:var(--wpb-theme-muted)}
 #root .wpb .wpb-exinfo-rest-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;background:var(--wpb-theme-card);border-radius:12px;padding:10px 12px;margin-bottom:12px;min-width:0}
 
-#root .wpb :is(.wpb-exinfo-secondary-copy,.wpb-exinfo-tempo-copy,.wpb-exinfo-demo-copy,.wpb-exinfo-set-helper){font-size:14px;color:var(--wpb-theme-muted)}
+#root .wpb .wpb-exinfo-secondary-copy,
+#root .wpb .wpb-exinfo-tempo-copy,
+#root .wpb .wpb-exinfo-demo-copy,
+#root .wpb .wpb-exinfo-set-helper{font-size:14px;color:var(--wpb-theme-muted)}
 #root .wpb .wpb-exinfo-secondary-copy{margin-bottom:12px;line-height:1.45}
 #root .wpb .wpb-exinfo-pinned{display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;padding:10px 12px;border-radius:12px;background:var(--wpb-theme-accent-dim);min-width:0}
 #root .wpb .wpb-exinfo-pinned-copy{font-size:14px;line-height:1.4;white-space:pre-wrap;color:var(--wpb-theme-text);overflow-wrap:anywhere}
@@ -9591,18 +9911,33 @@ background:var(--pi-color-card)!important;
 
 /* B993: Workout Info bottom sheet has one visual-viewport owner and accessible controls. */
 #root .wpb .wpb-exinfo-sheet{box-sizing:border-box;display:block;width:100%;max-width:46rem;min-width:0;max-height:min(90dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 16px));overflow-y:auto;overscroll-behavior:contain;scroll-padding-block:16px;background:var(--wpb-theme-bg-tint);border:1px solid var(--wpb-theme-border);border-bottom:0;border-radius:24px 24px 0 0;padding:8px 18px calc(env(safe-area-inset-bottom) + 26px);animation:sheetUp .28s cubic-bezier(.2,.7,.3,1) both}
-#root .wpb :is(.wpb-exinfo-close,.wpb-exinfo-rest-step,.wpb-exinfo-rest-auto,.wpb-exinfo-weight-choice){box-sizing:border-box;min-width:48px;min-height:48px;border:1px solid var(--wpb-theme-border);cursor:pointer}
-#root .wpb :is(.wpb-exinfo-close,.wpb-exinfo-rest-step,.wpb-exinfo-rest-auto){display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+#root .wpb .wpb-exinfo-close,
+#root .wpb .wpb-exinfo-rest-step,
+#root .wpb .wpb-exinfo-rest-auto,
+#root .wpb .wpb-exinfo-weight-choice{box-sizing:border-box;min-width:48px;min-height:48px;border:1px solid var(--wpb-theme-border);cursor:pointer}
+#root .wpb .wpb-exinfo-close,#root .wpb .wpb-exinfo-rest-step,#root .wpb .wpb-exinfo-rest-auto{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
 #root .wpb .wpb-exinfo-close{border-radius:16px;background:var(--wpb-theme-card);color:var(--wpb-theme-muted)}
-#root .wpb :is(.wpb-exinfo-rest-step,.wpb-exinfo-rest-auto){border-radius:12px;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text)}
+#root .wpb .wpb-exinfo-rest-step,#root .wpb .wpb-exinfo-rest-auto{border-radius:12px;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text)}
 #root .wpb .wpb-exinfo-rest-step{font-size:18px;font-weight:700}
 #root .wpb .wpb-exinfo-rest-auto{padding:0 10px;font-size:14px;font-weight:600;color:var(--wpb-theme-muted)}
 #root .wpb .wpb-exinfo-weight-choice{padding:9px 12px;border-radius:8px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);font-size:14px;font-weight:600}
 #root .wpb .wpb-exinfo-weight-choice[aria-pressed="true"]{border-color:var(--wpb-theme-accent);background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink)}
-#root .wpb .wpb-exinfo-sheet :is(button,a,summary,input,textarea):focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+#root .wpb .wpb-exinfo-sheet button:focus-visible,
+#root .wpb .wpb-exinfo-sheet a:focus-visible,
+#root .wpb .wpb-exinfo-sheet summary:focus-visible,
+#root .wpb .wpb-exinfo-sheet input:focus-visible,
+#root .wpb .wpb-exinfo-sheet textarea:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
 @media(max-width:359px){#root .wpb .wpb-exinfo-sheet{padding-inline:12px}#root .wpb .wpb-exinfo-rest-row{gap:6px}}
 @media(prefers-reduced-motion:reduce){#root .wpb .wpb-exinfo-sheet{animation:none}}
-@media(forced-colors:active){#root .wpb .wpb-exinfo-sheet,#root .wpb :is(.wpb-exinfo-close,.wpb-exinfo-rest-step,.wpb-exinfo-rest-auto,.wpb-exinfo-weight-choice){border-color:ButtonText;background:Canvas;color:CanvasText}#root .wpb .wpb-exinfo-weight-choice[aria-pressed="true"]{background:Highlight;color:HighlightText}#root .wpb .wpb-exinfo-sheet :is(button,a,summary,input,textarea):focus-visible{outline-color:Highlight}}
+@media(forced-colors:active){#root .wpb .wpb-exinfo-sheet,
+#root .wpb .wpb-exinfo-close,
+#root .wpb .wpb-exinfo-rest-step,
+#root .wpb .wpb-exinfo-rest-auto,
+#root .wpb .wpb-exinfo-weight-choice{border-color:ButtonText;background:Canvas;color:CanvasText}#root .wpb .wpb-exinfo-weight-choice[aria-pressed="true"]{background:Highlight;color:HighlightText}#root .wpb .wpb-exinfo-sheet button:focus-visible,
+#root .wpb .wpb-exinfo-sheet a:focus-visible,
+#root .wpb .wpb-exinfo-sheet summary:focus-visible,
+#root .wpb .wpb-exinfo-sheet input:focus-visible,
+#root .wpb .wpb-exinfo-sheet textarea:focus-visible{outline-color:Highlight}}
 
 /* B994: one M3 token owner for completed Workout metrics, coaching and actions. */
 #root .wpb .wpb-finish-sheet{box-sizing:border-box;width:100%;max-height:min(88dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 16px));overflow-y:auto;overscroll-behavior:contain;border-top:1px solid var(--wpb-theme-border);border-radius:22px 22px 0 0;padding:8px 16px calc(env(safe-area-inset-bottom) + 22px);background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);animation:sheetUp .28s cubic-bezier(.2,.7,.3,1) both;}
@@ -9649,7 +9984,7 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-finish-feedback-toggle[aria-expanded="true"] .wpb-finish-feedback-chevron{transform:rotate(180deg)}
 #root .wpb .wpb-finish-routine-save:disabled{background:var(--wpb-theme-card);color:var(--wpb-theme-faint);cursor:default}
 #root .wpb .wpb-finish-save:disabled{opacity:.65;cursor:wait}
-#root .wpb .wpb-finish-sheet :is(button,input,summary):focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+#root .wpb .wpb-finish-sheet button:focus-visible,#root .wpb .wpb-finish-sheet input:focus-visible,#root .wpb .wpb-finish-sheet summary:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
 @media(max-width:360px){#root .wpb .wpb-finish-metrics{gap:5px;flex-wrap:nowrap}#root .wpb .wpb-finish-metric{padding:9px 4px}}
 @media(prefers-reduced-motion:reduce){#root .wpb .wpb-finish-sheet{animation:none}#root .wpb .wpb-finish-feedback-chevron{transition:none}}
 @media(forced-colors:active){#root .wpb .wpb-finish-rating-choice,#root .wpb .wpb-finish-share-action,#root .wpb .wpb-finish-routine-input{border-color:ButtonText;background:Canvas;color:CanvasText}#root .wpb .wpb-finish-rating-choice[aria-pressed="true"]{outline:2px solid Highlight;outline-offset:-2px}}
@@ -9679,10 +10014,14 @@ background:var(--pi-color-card)!important;
 /* B1004 — six confirmation CTAs share the existing theme and pressable action. */
 #root .wpb .wpb-dialog-primary-action{box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:48px;margin-bottom:8px;padding:13px;border:0;border-radius:12px;background:var(--wpb-theme-accent);color:var(--wpb-theme-accent-text);font-weight:700;cursor:pointer}
 /* B1005 — shared section kickers, compact actions and card badges. */
-#root .wpb :is(.wpb-ey,.wpb-ey6,.wpb-ey8,.wpb-eya,.wpb-eya8){font-size:var(--pi-type-caption);font-weight:800;letter-spacing:.5px;text-transform:uppercase}
-#root .wpb :is(.wpb-ey,.wpb-ey6,.wpb-ey8){color:var(--wpb-theme-faint)}
-#root .wpb :is(.wpb-eya,.wpb-eya8){color:var(--wpb-theme-accent-ink)}
-#root .wpb :is(.wpb-ey8,.wpb-eya8){margin-bottom:8px}
+#root .wpb .wpb-ey,
+#root .wpb .wpb-ey6,
+#root .wpb .wpb-ey8,
+#root .wpb .wpb-eya,
+#root .wpb .wpb-eya8{font-size:var(--pi-type-caption);font-weight:800;letter-spacing:.5px;text-transform:uppercase}
+#root .wpb .wpb-ey,#root .wpb .wpb-ey6,#root .wpb .wpb-ey8{color:var(--wpb-theme-faint)}
+#root .wpb .wpb-eya,#root .wpb .wpb-eya8{color:var(--wpb-theme-accent-ink)}
+#root .wpb .wpb-ey8,#root .wpb .wpb-eya8{margin-bottom:8px}
 #root .wpb .wpb-ey6{margin-bottom:6px}
 #root .wpb .wpb-square-accent{width:34px;height:34px;border-radius:8px;background:var(--wpb-theme-accent-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 #root .wpb .wpb-close-quiet{background:none;border:0;color:var(--wpb-theme-muted);cursor:pointer;padding:4px}
@@ -9690,12 +10029,15 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-preview-meta{font-size:var(--pi-type-support);color:var(--wpb-theme-muted);margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 #root .wpb .wpb-preview-kicker{font-size:var(--pi-type-support);font-weight:700;letter-spacing:1.2px;color:var(--wpb-theme-accent-ink);text-transform:uppercase}
 /* B1006 — reusable comparison panels and quiet controls. */
-#root .wpb :is(.wpb-quiet-faint,.wpb-quiet-back){background:none;border:0;cursor:pointer}
+#root .wpb .wpb-quiet-faint,#root .wpb .wpb-quiet-back{background:none;border:0;cursor:pointer}
 #root .wpb .wpb-quiet-faint{color:var(--wpb-theme-faint);padding:2px}
 #root .wpb .wpb-quiet-back{color:var(--wpb-theme-text);padding:4px}
-#root .wpb :is(.wpb-compare-panel,.wpb-compact-card,.wpb-compare-cue,.wpb-split-choices){background:var(--wpb-theme-card)}
+#root .wpb .wpb-compare-panel,
+#root .wpb .wpb-compact-card,
+#root .wpb .wpb-compare-cue,
+#root .wpb .wpb-split-choices{background:var(--wpb-theme-card)}
 #root .wpb .wpb-compare-panel{border-radius:16px;padding:4px 15px 13px;margin-bottom:16px}
-#root .wpb :is(.wpb-compact-card,.wpb-compare-cue,.wpb-split-choices){border-radius:12px}
+#root .wpb .wpb-compact-card,#root .wpb .wpb-compare-cue,#root .wpb .wpb-split-choices{border-radius:12px}
 #root .wpb .wpb-compact-card{padding:10px 12px}
 #root .wpb .wpb-compare-cue{padding:11px 13px}
 #root .wpb .wpb-split-choices{display:flex;padding:2px}
@@ -9703,9 +10045,9 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-type-micro-faint{font-size:var(--pi-type-caption);color:var(--wpb-theme-faint);font-weight:600}
 /* B1007 — round steps, meter tracks and comparison notes. */
 #root .wpb .wpb-round-step{width:48px;height:48px;border-radius:8px;border:0;background:none;color:var(--wpb-theme-muted);cursor:pointer;font-size:var(--pi-type-body);font-weight:700;line-height:1}
-#root .wpb :is(.wpb-meter,.wpb-meter-grow){height:6px;border-radius:999px;background:var(--wpb-theme-bg-tint);overflow:hidden}
+#root .wpb .wpb-meter,#root .wpb .wpb-meter-grow{height:6px;border-radius:999px;background:var(--wpb-theme-bg-tint);overflow:hidden}
 #root .wpb .wpb-meter-grow{flex:1}
-#root .wpb :is(.wpb-compare-note,.wpb-quiet-note){font-size:var(--pi-type-caption);color:var(--wpb-theme-faint)}
+#root .wpb .wpb-compare-note,#root .wpb .wpb-quiet-note{font-size:var(--pi-type-caption);color:var(--wpb-theme-faint)}
 #root .wpb .wpb-compare-note{margin-top:16px;line-height:1.5;padding:0 2px}
 #root .wpb .wpb-quiet-note{margin-top:12px;line-height:1.45;font-style:italic}
 /* B1008 — unified destructive actions and theme-safe danger emblems. */
@@ -9713,18 +10055,37 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-dialog-danger-flex{display:flex;align-items:center;justify-content:center;gap:6px}
 #root .wpb .wpb-danger-emblem{width:38px;height:38px;border-radius:12px;background:var(--wpb-theme-danger-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 /* B1009 — shared, palette-owned fixed text roles (dynamic metrics remain inline). */
-#root .wpb :is(.pi-t-muted,.pi-t-caption-mt2,.pi-t-muted-600,.pi-t-caption-muted,.pi-t-explain,.pi-t-form-label,.pi-t-body-mb16,.pi-t-support-mt1){color:var(--wpb-theme-muted)}
-#root .wpb :is(.pi-t-strong,.pi-t-body-mb16){font-size:var(--pi-type-body)}
-#root .wpb :is(.pi-t-strong,.pi-t-text-700){font-weight:700}
-#root .wpb :is(.pi-t-strong,.pi-t-text,.pi-t-text-600,.pi-t-text-700,.pi-t-chart-label){color:var(--wpb-theme-text)}
-#root .wpb :is(.pi-t-caption-mt2,.pi-t-caption-f1,.pi-t-caption-muted,.pi-t-form-label,.pi-t-faint-auto,.pi-t-faint-mt2){font-size:var(--pi-type-caption)}
-#root .wpb :is(.pi-t-caption-mt2,.pi-t-faint-mt2){margin-top:2px}
-#root .wpb :is(.pi-t-caption-f1,.pi-t-faint-auto,.pi-t-faint-mt2){color:var(--wpb-theme-faint)}
-#root .wpb :is(.pi-t-caption-f1,.pi-t-support-mt1){margin-top:1px}
-#root .wpb :is(.pi-t-muted-600,.pi-t-text-600,.pi-t-form-label,.pi-t-chart-label){font-weight:600}
+#root .wpb .pi-t-muted,
+#root .wpb .pi-t-caption-mt2,
+#root .wpb .pi-t-muted-600,
+#root .wpb .pi-t-caption-muted,
+#root .wpb .pi-t-explain,
+#root .wpb .pi-t-form-label,
+#root .wpb .pi-t-body-mb16,
+#root .wpb .pi-t-support-mt1{color:var(--wpb-theme-muted)}
+#root .wpb .pi-t-strong,#root .wpb .pi-t-body-mb16{font-size:var(--pi-type-body)}
+#root .wpb .pi-t-strong,#root .wpb .pi-t-text-700{font-weight:700}
+#root .wpb .pi-t-strong,
+#root .wpb .pi-t-text,
+#root .wpb .pi-t-text-600,
+#root .wpb .pi-t-text-700,
+#root .wpb .pi-t-chart-label{color:var(--wpb-theme-text)}
+#root .wpb .pi-t-caption-mt2,
+#root .wpb .pi-t-caption-f1,
+#root .wpb .pi-t-caption-muted,
+#root .wpb .pi-t-form-label,
+#root .wpb .pi-t-faint-auto,
+#root .wpb .pi-t-faint-mt2{font-size:var(--pi-type-caption)}
+#root .wpb .pi-t-caption-mt2,#root .wpb .pi-t-faint-mt2{margin-top:2px}
+#root .wpb .pi-t-caption-f1,#root .wpb .pi-t-faint-auto,#root .wpb .pi-t-faint-mt2{color:var(--wpb-theme-faint)}
+#root .wpb .pi-t-caption-f1,#root .wpb .pi-t-support-mt1{margin-top:1px}
+#root .wpb .pi-t-muted-600,
+#root .wpb .pi-t-text-600,
+#root .wpb .pi-t-form-label,
+#root .wpb .pi-t-chart-label{font-weight:600}
 #root .wpb .pi-t-explain{font-size:var(--pi-type-label);line-height:1.4;margin-bottom:8px}
-#root .wpb :is(.pi-t-form-label,.pi-t-chart-label){margin-bottom:4px}
-#root .wpb :is(.pi-t-chart-label,.pi-t-support-mt1){font-size:var(--pi-type-support)}
+#root .wpb .pi-t-form-label,#root .wpb .pi-t-chart-label{margin-bottom:4px}
+#root .wpb .pi-t-chart-label,#root .wpb .pi-t-support-mt1{font-size:var(--pi-type-support)}
 #root .wpb .pi-t-body-mb16{margin-bottom:16px}
 #root .wpb .pi-t-faint-auto{margin-left:auto}
 
@@ -9803,16 +10164,20 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-template-search-input{flex:1;min-width:0;min-height:32px;padding:0;border:0;outline:0;background:transparent;color:var(--wpb-theme-text);font:inherit;font-size:var(--pi-type-body)}
 #root .wpb .wpb-template-gym-label,#root .wpb .wpb-template-category{flex-shrink:0;color:var(--pi-color-on-muted);font-size:var(--pi-type-label);font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 #root .wpb .wpb-template-category{margin:var(--pi-space-1) 2px var(--pi-space-2)}
-#root .wpb :is(.wpb-template-filter,.wpb-template-gym-choice){flex-shrink:0;min-height:48px;padding:var(--pi-space-2) var(--pi-space-3);border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-pill);background:var(--pi-color-card);color:var(--pi-color-on-muted);white-space:nowrap;font-size:var(--pi-type-support);font-weight:650}
-#root .wpb :is(.wpb-template-filter,.wpb-template-gym-choice)[aria-pressed="true"]{background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);border-color:var(--wpb-theme-accent-ink)}
+#root .wpb .wpb-template-filter,#root .wpb .wpb-template-gym-choice{flex-shrink:0;min-height:48px;padding:var(--pi-space-2) var(--pi-space-3);border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-pill);background:var(--pi-color-card);color:var(--pi-color-on-muted);white-space:nowrap;font-size:var(--pi-type-support);font-weight:650}
+#root .wpb .wpb-template-filter[aria-pressed="true"],#root .wpb .wpb-template-gym-choice[aria-pressed="true"]{background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);border-color:var(--wpb-theme-accent-ink)}
 #root .wpb .wpb-template-filter-clear{min-height:48px;flex-shrink:0;padding:var(--pi-space-2) var(--pi-space-3);border:1px dashed var(--pi-color-divider);border-radius:var(--pi-shape-pill);color:var(--pi-color-on-muted);font-size:var(--pi-type-support)}
 #root .wpb .wpb-template-empty{text-align:center;color:var(--pi-color-on-muted);font-size:var(--pi-type-body);padding:var(--pi-space-6) var(--pi-space-2)}
 #root .wpb .wpb-template-row{width:100%;align-items:center;margin-bottom:var(--pi-space-2)}
 #root .wpb .wpb-template-row-icon{flex:0 0 34px;width:34px;height:34px;border-radius:var(--pi-shape-action);background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);display:flex;align-items:center;justify-content:center}
-#root .wpb .wpb-template-card:focus-visible,#root .wpb :is(.wpb-template-filter,.wpb-template-gym-choice,.wpb-template-browse-link,.wpb-template-filter-clear):focus-visible{outline:2px solid var(--wpb-focus);outline-offset:2px}
+#root .wpb .wpb-template-card:focus-visible,
+#root .wpb .wpb-template-filter:focus-visible,
+#root .wpb .wpb-template-gym-choice:focus-visible,
+#root .wpb .wpb-template-browse-link:focus-visible,
+#root .wpb .wpb-template-filter-clear:focus-visible{outline:2px solid var(--wpb-focus);outline-offset:2px}
 @media(max-width:359px){#root .wpb .wpb-template-featured{flex-basis:190px;max-width:78vw}#root .wpb .wpb-template-card.wpb-ui-card{padding:var(--pi-space-2)}}
 @media(prefers-reduced-motion:reduce){#root .wpb .wpb-template-sheet{animation:none}}
-@media(forced-colors:active){#root .wpb .wpb-template-card,#root .wpb :is(.wpb-template-filter,.wpb-template-gym-choice,.wpb-template-search){border-color:CanvasText}#root .wpb :is(.wpb-template-filter,.wpb-template-gym-choice)[aria-pressed="true"]{background:Highlight;color:HighlightText}}
+@media(forced-colors:active){#root .wpb .wpb-template-card,#root .wpb .wpb-template-filter,#root .wpb .wpb-template-gym-choice,#root .wpb .wpb-template-search{border-color:CanvasText}#root .wpb .wpb-template-filter[aria-pressed="true"],#root .wpb .wpb-template-gym-choice[aria-pressed="true"]{background:Highlight;color:HighlightText}}
 /* B1026 — prototype features: week strip, 7-day recap, pain check, routines */
 #root .wpb .wpb-home-content>.wpb-home-strip{grid-column:1/-1}
 #root .wpb .wpb-home-strip{margin:0 0 var(--pi-space-5);padding:var(--pi-space-3) var(--pi-space-4);min-width:0}
@@ -9923,7 +10288,7 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-ui-banner-action{flex:none;max-width:9rem;padding-inline:14px;white-space:normal}
 #root .wpb .wpb-swap-option{margin-bottom:8px;border:1px solid var(--wpb-theme-border);border-radius:12px}
 #root .wpb .wpb-add-create{width:100%;margin-top:12px;gap:6px}
-#root .wpb :is(.wpb-add-back,.wpb-add-save){flex:1}
+#root .wpb .wpb-add-back,#root .wpb .wpb-add-save{flex:1}
 #root .wpb .wpb-add-save{flex:2}
 #root .wpb .wpb-ui-modal-sheet-toolbar{display:grid;flex:none;gap:4px;padding:4px 18px 8px;border-bottom:1px solid var(--wpb-theme-border-soft)}
 #root .wpb .wpb-ui-chip-row{display:flex;align-items:center;gap:8px;overflow-x:auto;scrollbar-width:none;margin-inline:-18px;padding-inline:18px}

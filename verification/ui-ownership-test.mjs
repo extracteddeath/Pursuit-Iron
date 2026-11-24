@@ -76,7 +76,7 @@ assert.ok(css.includes('.wpb-ui-sheet-close,#root .wpb-workout .wpb-b973-set-clo
 
 
 // Icon actions in Workout and Rest share one measured 48px CSS geometry owner.
-const iconActions = css.split('#root .wpb-workout :is(.wpb-workout-tools .wpb-workout-tool,.wpb-rest-actions>.wpb-rest-action){')[1]?.split('}')[0] || '';
+const iconActions = css.split('#root .wpb-workout :is(.wpb-workout-tools .wpb-workout-tool),#root .wpb-workout :is(.wpb-rest-actions>.wpb-rest-action){')[1]?.split('}')[0] || '';
 for (const size of ['display:inline-flex','align-items:center','justify-content:center',
     'flex:0 0 48px','width:48px','min-width:48px','height:48px','min-height:48px','padding:0'])
     assert.ok(iconActions.includes(size), 'Shared Workout/Rest icon geometry lost: '+size);
@@ -87,10 +87,11 @@ for (const selector of ['#root .wpb-workout .wpb-workout-tools .wpb-workout-tool
         'Workout/Rest-specific style must not re-own common icon geometry: '+selector);
 }
 
-// Workout controls share a theme-aware keyboard ring, using :is() only
-// for the single-class targets (which keeps their original specificity).
+// Workout controls share a theme-aware keyboard ring, one selector per control (B1034:
+// no rightmost :is() list, so the rule stays indexed by class).
 const focusGroup = css.split('#root .wpb-workout .wpb-exercise-head-actions>button:focus-visible,')[1]?.split('}')[0] || '';
-for (const selector of [':is(.wpb-workout-pinned-note,.wpb-workout-exercise-link,.wpb-b973-set-close,.wpb-b973-coach-collapsed,.wpb-b973-coach-toggle):focus-visible,',
+for (const selector of ['.wpb-workout-pinned-note:focus-visible,','.wpb-workout-exercise-link:focus-visible,','.wpb-b973-set-close:focus-visible,',
+    '.wpb-b973-coach-collapsed:focus-visible,','.wpb-b973-coach-toggle:focus-visible,',
     '.wpb-rest-actions>.wpb-rest-action:focus-visible{'])
     assert.ok(focusGroup.includes(selector), 'Workout focus group missing: '+selector);
 assert.ok(focusGroup.includes('outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px;'),
@@ -107,7 +108,7 @@ assert.ok(!app.includes('placeholder: "Add a note\\u2026"') &&
   css.includes('.wpb-session-notes-previous{'),
   'Session note action, repeat option and previous exercise note retain one owner');
 
-const infoTouch=css.split('#root .wpb :is(.wpb-exinfo-close,.wpb-exinfo-rest-step,.wpb-exinfo-rest-auto,.wpb-exinfo-weight-choice){')[1]?.split('}')[0]||'';
+const infoTouch=css.split('#root .wpb .wpb-exinfo-close,\n#root .wpb .wpb-exinfo-rest-step,\n#root .wpb .wpb-exinfo-rest-auto,\n#root .wpb .wpb-exinfo-weight-choice{')[1]?.split('}')[0]||'';
 for(const p of ['box-sizing:border-box','min-width:48px','min-height:48px','cursor:pointer'])
   assert.ok(infoTouch.includes(p),'Shared Info touch-size owner: '+p);
 assert.ok(app.includes('className: "pressable wpb-workout-average-action"') &&
@@ -126,19 +127,19 @@ for(const names of [
   ['metric-value','record-value'],['why-copy','cue-copy'],
   ['metric-label','rest-caption'],['secondary-copy','tempo-copy','demo-copy','set-helper']
 ]) {
- const rule='#root .wpb :is('+names.map(name=>'.wpb-exinfo-'+name).join(',')+'){';
- assert.ok(css.includes(rule),'Workout Info typography owner must stay shared: '+names.join(','));
+ const rules=[',',',\n'].map(sep=>names.map(name=>'#root .wpb .wpb-exinfo-'+name).join(sep)+'{');
+ assert.ok(rules.some(rule=>css.includes(rule)),'Workout Info typography owner must stay shared: '+names.join(','));
 }
 assert.ok(app.includes('className: "wpb-b973-coach-label", children: "Coach"') &&
     !app.includes('style: { ...eyebrowAccent() }, children: "Coach"'),
     'Workout Coach heading cannot regain a duplicate inline style object');
 // Workout Leave and header actions share one 48px control geometry owner.
-const headerButtonGeometry=css.split('#root .wpb-workout :is(.wpb-workout-close,.wpb-workout-header-action){')[1]?.split('}')[0]||'';
+const headerButtonGeometry=css.split('#root .wpb-workout .wpb-workout-close,#root .wpb-workout .wpb-workout-header-action{')[1]?.split('}')[0]||'';
 for(const token of ['box-sizing:border-box','width:48px','height:48px',
     'background:transparent','color:var(--wpb-theme-text)','cursor:pointer'])
     assert.ok(headerButtonGeometry.includes(token),'Header shared CSS lost '+token);
 for(const selector of ['.wpb-workout-close{','.wpb-workout-header-action{']){
-    const feature=css.split('#root .wpb-workout '+selector)[1]?.split('}')[0]||'';
+    const feature=css.split('\n#root .wpb-workout '+selector)[1]?.split('}')[0]||'';
     assert.ok(feature&&!feature.includes('width:48px')&&!feature.includes('height:48px')&&!feature.includes('background:transparent'),
       'Workout header feature rules must not own shared geometry: '+selector);
 }
@@ -162,11 +163,11 @@ assert.ok(setEntryFocus.includes('.wpb-set-index:focus-visible{') &&
     setEntryFocus.includes('outline:2px solid var(--pi-m3e-primary)!important;outline-offset:1px!important;') &&
     css.split('#root .wpb-workout .wpb-set-index:focus-visible{').length===2,
     'Workout set focus rings must have one shared rule');
-const coachChrome=css.split('#root .wpb-workout :is(.wpb-b973-coach-collapsed,.wpb-b973-coach-toggle){')[1]?.split('}')[0]||'';
+const coachChrome=css.split('#root .wpb-workout .wpb-b973-coach-collapsed,#root .wpb-workout .wpb-b973-coach-toggle{')[1]?.split('}')[0]||'';
 for(const prop of ['display:flex','align-items:center','width:100%','min-height:48px','text-align:left','cursor:pointer'])
     assert.ok(coachChrome.includes(prop),'Coach shared control chrome lost '+prop);
 for(const name of ['collapsed','toggle']){
- const feature=css.split('#root .wpb-workout .wpb-b973-coach-'+name+'{')[1]?.split('}')[0]||'';
+ const feature=css.split('\n#root .wpb-workout .wpb-b973-coach-'+name+'{')[1]?.split('}')[0]||'';
  assert.ok(feature&&!feature.includes('min-height:48px')&&!feature.includes('display:flex'),
    'Coach feature-specific paint must not duplicate shared control layout: '+name);
 }
@@ -257,7 +258,7 @@ for(const cls of ['wpb-program-settings-body','wpb-program-share-body',
 // B1027: footer layout remains local; sizing, state, typography and paint
 // now belong to shared UiAction variants instead of a second footer-specific
 // button system. Preserve both callbacks and the real 48/52px touch contract.
-const saveActionGeometry=css.split('#root .wpb :is(.wpb-save-review-confirm,.wpb-save-review-cancel){')[1]?.split('}')[0]||'';
+const saveActionGeometry=css.split('#root .wpb .wpb-save-review-confirm,#root .wpb .wpb-save-review-cancel{')[1]?.split('}')[0]||'';
 assert.ok(saveActionGeometry.includes('width:100%'),
     'Review actions retain full-width footer composition');
 for(const token of ['min-height:','font-size:','line-height:','padding:','border-radius:','cursor:'])
@@ -323,8 +324,8 @@ for(const cls of ['wpb-program-reference-panel','wpb-progression-choice-panel',
 assert.ok(css.includes('.wpb-training-max-backdrop{align-items:center;padding:24px}') &&
   css.includes('.wpb-program-schedule-backdrop{z-index:60;justify-content:flex-start}'),
   'Centered Training Max and edge-aligned Weekly Schedule retain their variants');
-assert.ok(css.includes('.wpb-ui-sheet-focus :is(button,input,textarea):focus-visible,') &&
-  css.includes('.wpb-ui-sheet-focus :is(button,input,textarea):focus-visible{outline-color:Highlight}'),
+assert.ok(css.includes('.wpb-ui-sheet-focus button:focus-visible,\n#root .wpb .wpb-ui-sheet-focus input:focus-visible,\n#root .wpb .wpb-ui-sheet-focus textarea:focus-visible,') &&
+  css.includes('.wpb-ui-sheet-focus textarea:focus-visible{outline-color:Highlight}'),
   'Shared keyboard and high contrast focus styles must remain available');
 
 
@@ -338,7 +339,7 @@ for(const prop of [
     'animation:sheetUp var(--pi-ui-sheet-enter-duration,.25s) var(--pi-ui-sheet-enter-ease,cubic-bezier(.2,.8,.2,1)) both'
 ]) assert.ok(sheetChrome.includes(prop), 'Shared Program sheet chrome missing '+prop);
 for(const [owner,properties] of [
-    ['#root .wpb :is(.wpb-program-settings-panel,.wpb-program-share-panel){',
+    ['#root .wpb .wpb-program-settings-panel,#root .wpb .wpb-program-share-panel{',
         ['max-width:46rem','--pi-ui-sheet-radius:24px','--pi-ui-sheet-enter-duration:.28s','--pi-ui-sheet-enter-ease:cubic-bezier(.2,.7,.3,1)']],
     ['#root .wpb .wpb-program-reference-panel{',
         ['max-width:56rem','--pi-ui-sheet-radius:24px','--pi-ui-sheet-enter-duration:.26s','--pi-ui-sheet-enter-ease:cubic-bezier(.2,.8,.3,1)']],
@@ -355,7 +356,7 @@ for(const [owner,properties] of [
     for(const prop of ['border-radius:','background:','animation:'])
         assert.ok(!local.includes(prop), 'Sheet-specific chrome must not be forked: '+owner+' '+prop);
 }
-assert.ok(css.includes('#root .wpb :is(.wpb-training-max-sheet,.wpb-exercise-options-sheet){border:1px solid var(--wpb-theme-border);border-bottom:0}'),
+assert.ok(css.includes('#root .wpb .wpb-training-max-sheet,#root .wpb .wpb-exercise-options-sheet{border:1px solid var(--wpb-theme-border);border-bottom:0}'),
     'Exercise Options and Training Maxes share the same single open-bottom border owner');
 assert.ok(css.includes('#root .wpb .wpb-training-max-sheet{border-bottom:1px solid var(--wpb-theme-border);border-radius:var(--pi-shape-card)}'),
     'Centered Training Maxes retains complete edge and corner treatment');
@@ -399,7 +400,7 @@ for(const [cls,vh,gap] of [
     ['wpb-training-max-sheet','88dvh','24px'],
     ['wpb-exercise-options-sheet','88dvh','32px']
 ]){
-    const local=css.split('#root .wpb .'+cls+'{')[1]?.split('}')[0]||'';
+    const local=css.split('\n#root .wpb .'+cls+'{')[1]?.split('}')[0]||'';
     assert.ok(local&&!local.includes('max-height:min(') &&
         local.includes('--pi-ui-sheet-max-vh:'+vh),'Height variant remains distinct: '+cls);
     if(gap!=='24px')assert.ok(local.includes('--pi-ui-sheet-top-gap:'+gap),'Safe-area gap preserved: '+cls);
@@ -475,11 +476,11 @@ const workoutFlex=css.split('#root .wpb-workout[data-focus-mode="true"] .wpb-exe
 assert.ok(workoutFlex.includes('#root .wpb-workout .wpb-warmup-step{display:flex;align-items:flex-start;gap:8px;min-width:0;') &&
     css.split('#root .wpb-workout .wpb-warmup-step{').length===2,
     'Workout Focus title and warmup row must have one shared geometry owner');
-const workoutFocus=css.split('#root .wpb-workout :is(.wpb-workout-pinned-note,.wpb-workout-exercise-link,')[1]?.split('}')[0]||'';
+const workoutFocus=css.split('#root .wpb-workout .wpb-workout-pinned-note:focus-visible,')[1]?.split('}')[0]||'';
 for(const role of ['.wpb-b973-set-close','.wpb-b973-coach-collapsed','.wpb-b973-coach-toggle'])
   assert.ok(workoutFocus.includes(role),'Workout shared focus ring missing '+role);
 assert.ok(workoutFocus.includes('outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px;') &&
-    css.includes(':is(.wpb-b973-set-close,.wpb-b973-coach-collapsed,.wpb-b973-coach-toggle):focus-visible{outline-color:Highlight}') &&
+    css.includes('#root .wpb-workout .wpb-b973-set-close:focus-visible,#root .wpb-workout .wpb-b973-coach-collapsed:focus-visible,#root .wpb-workout .wpb-b973-coach-toggle:focus-visible{outline-color:Highlight}') &&
     !css.includes('.wpb-load-advice>button:focus-visible{'),
     'Workout Coach and set editor require a visible forced-colors focus ring');
 assert.ok(css.includes('.wpb-set-option-row:focus-visible{outline:2px solid var(--pi-m3e-primary)!important;outline-offset:2px!important;') &&

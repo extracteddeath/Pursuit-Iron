@@ -969,6 +969,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         "The correction was not saved. Review the saved set and retry."
                     } ?:state.unavailableReason?.let(::humanStatus),
                     machineInstanceId=recordedMachineId,
+                    attemptAllowed=!needsMachineSelection,
                     athleteId=journal?.snapshot?.source?.athleteId.orEmpty(),
                     workoutId=workoutId,
                     issuedGymId=issuedGymId,machineRoster=machineRoster,
@@ -1366,6 +1367,7 @@ private fun NativeKotlinSetCard(
     busy:Boolean,
     saveError:String?,
     machineInstanceId:String?,
+    attemptAllowed:Boolean,
     athleteId:String,
     workoutId:String,
     issuedGymId:String?,
@@ -1509,9 +1511,9 @@ private fun NativeKotlinSetCard(
         PursuitSetEntryActions(
             completeLabel=if(set.isResolved)"Save correction" else "Complete",
             skipLabel="Skip",
-            canComplete=!busy && actual!=null,
+            canComplete=!busy && attemptAllowed && actual!=null,
             canSkip=!busy,
-            canFail=!busy && failedActual!=null,
+            canFail=!busy && attemptAllowed && failedActual!=null,
             onComplete={onRecord(KotlinJournalSetOutcome.COMPLETED,actual)},
             onSkip=onSkip,
             onFail={failedActual?.let(onFail)}

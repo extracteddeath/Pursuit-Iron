@@ -556,6 +556,61 @@ class KotlinNativeJournalFileStore(private val privateDirectory: Path) {
     }
 
     /**
+     * Resolve the current remaining-set review under the journal's OS lock,
+     * reduce every skip in memory, then publish exactly one atomic envelope.
+     * No generic batch API can introduce corrections, swaps or Finish.
+     */
+    internal fun skipRemainingStored(
+        ownerKey:String,workoutId:String,expectedRevision:Long,exerciseId:String,
+        authorizeCurrent:(String,KotlinTrainingSourceRevision)->Boolean
+    ):NativeJournalFileResult {
+        if(!ownerId.matches(ownerKey) || !ownerId.matches(workoutId))
+            return NativeJournalFileResult.Rejected(
+                NativeJournalFileRefusal.INVALID_ARGUMENT)
+        return runCatching {
+            locked(ownerKey,workoutId){file->
+                val prior=recoverSaved(file,ownerKey,workoutId,authorizeCurrent)
+                if(prior !is NativeJournalFileResult.Durable)return@locked prior
+                val review=WorkoutRemainingExerciseDomain.generated(
+                    prior.journal,exerciseId)
+                    ?:return@locked NativeJournalFileResult.Rejected(
+                        NativeJournalFileRefusal.JOURNAL_REJECTED,
+                        KotlinJournalRefusal.UNKNOWN_SET)
+                if(review.journalRevision!=expectedRevision)
+                    return@locked NativeJournalFileResult.Rejected(
+                        NativeJournalFileRefusal.JOURNAL_REJECTED,
+                        KotlinJournalRefusal.STALE_REVISION)
+                if(review.entries.isEmpty())return@locked prior
+                var next=prior.journal
+                for(key in review.entries){
+                    val operation=KotlinJournalOperation.RecordSet(
+                        "skip-"+java.util.UUID.randomUUID(),next.revision,
+                        key,KotlinJournalSetOutcome.SKIPPED,null)
+                    when(val decision=KotlinWorkoutJournalDomain.reduce(next,operation)){
+                        is KotlinJournalDecision.Rejected->
+                            return@locked NativeJournalFileResult.Rejected(
+                                NativeJournalFileRefusal.JOURNAL_REJECTED,decision.reason)
+                        is KotlinJournalDecision.Proposed->{
+                            if(decision.replayed)return@locked NativeJournalFileResult.Rejected(
+                                NativeJournalFileRefusal.JOURNAL_REJECTED,
+                                KotlinJournalRefusal.EVENT_ID_COLLISION)
+                            next=decision.state
+                        }
+                    }
+                }
+                val original=next.originalSnapshot
+                val envelope=SavedReceipts(ownerKey,
+                    NativeJournalBinary.snapshotHash(original),next.snapshot,
+                    next.storedIdentity,next.receipts,next.revision,
+                    next.finishedByEventId,original)
+                atomicWrite(file,NativeJournalBinary.encode(envelope))
+                NativeJournalFileResult.Durable(next,false)
+            }
+        }.getOrElse {NativeJournalFileResult.Rejected(
+            NativeJournalFileRefusal.STORAGE_UNAVAILABLE)}
+    }
+
+    /**
      * Owner-approved Composer replacement/undo. The trusted factory is
      * evaluated AFTER replaying the physical disk journal under its OS lock.
      * Caller MUST also hold the approval/gym owner revision fence and

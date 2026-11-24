@@ -677,9 +677,14 @@ private fun NativeKotlinCandidateTrainEntry(
     // Both minimized and cold-resumed generated sessions verify their own
     // signed, unfinished journal on tap. Optional inventory/time previews
     // can fail or run slowly without blocking that independent recovery.
+    val currentCustomId by rememberUpdatedState(customWorkoutId)
+    val currentGeneratedId by rememberUpdatedState(generatedWorkoutId)
+    fun noCompetingWorkout()=selectedId==null && currentCustomId==null &&
+        currentGeneratedId==null && !measuredOpen
     fun canVerifyGeneratedResume()=NativeKotlinTrainResumeGate.mayVerifyGenerated(
         resumeChecking=resumeChecking,manualLookupBusy=searching,
-        anotherWorkoutOpen=selectedId!=null || customWorkoutId!=null || measuredOpen)
+        anotherWorkoutOpen=!noCompetingWorkout(),
+        timeAcceptanceBusy=timeAcceptanceBusy)
     var showIdEntry by rememberSaveable {mutableStateOf(false)}
     var showOtherWorkouts by rememberSaveable {mutableStateOf(false)}
     var visibleUnfinishedCount by rememberSaveable(host) {mutableIntStateOf(20)}
@@ -804,7 +809,7 @@ private fun NativeKotlinCandidateTrainEntry(
                                         // Ignore a stale approval reply if the athlete
                                         // opened another workout or changed context.
                                         if(minimizedGeneratedId==awaitingWorkoutId &&
-                                            selectedId==null && customWorkoutId==null) {
+                                            noCompetingWorkout()) {
                                             if(verifiedUnfinished) {
                                                 selectedId=awaitingWorkoutId
                                                 minimizedGeneratedId=null
@@ -851,7 +856,7 @@ private fun NativeKotlinCandidateTrainEntry(
                                                     issuedId
                                             }.getOrDefault(false)
                                         }
-                                        if(selectedId==null && customWorkoutId==null &&
+                                        if(noCompetingWorkout() &&
                                             resumableGeneratedId==issuedId) {
                                             if(isCurrentAndUnfinished)
                                                 selectedId=issuedId
@@ -894,12 +899,15 @@ private fun NativeKotlinCandidateTrainEntry(
                                 style=MaterialTheme.typography.labelMedium)
                             result.workouts.take(visibleUnfinishedCount).forEach { item->
                                 OutlinedButton(
+                                    enabled=canVerifyGeneratedResume(),
                                     modifier=Modifier.fillMaxWidth(),
                                     onClick={
                                         // The journal performs a separate
                                         // owner and disk validation on open.
-                                        resumable=null
-                                        onOpenCustomWorkout(item.workoutId)
+                                        if(canVerifyGeneratedResume()) {
+                                            resumable=null
+                                            onOpenCustomWorkout(item.workoutId)
+                                        }
                                     }) {
                                     Column(Modifier.fillMaxWidth(),
                                         verticalArrangement=Arrangement.spacedBy(2.dp)) {
@@ -1053,6 +1061,7 @@ private fun NativeKotlinCandidateTrainEntry(
                         enabled=mayStart && !timeAcceptanceBusy &&
                             !timePreviewBusy && !searching && !resumeChecking
                     ) {
+                        if(!canVerifyGeneratedResume())return@PursuitPrimaryAction
                         if(available.alreadyIssued ||
                             selection==available.currentLimitMinutes) {
                             selectedId=available.workoutId
@@ -1067,9 +1076,9 @@ private fun NativeKotlinCandidateTrainEntry(
                                             available.expectedApprovalRevision,
                                             selection,java.util.UUID.randomUUID().toString())
                                     }
-                                    if(updated is NativeApprovalWriteResult.Committed)
-                                        selectedId=available.workoutId
-                                    else {
+                                    if(updated is NativeApprovalWriteResult.Committed) {
+                                        if(noCompetingWorkout())selectedId=available.workoutId
+                                    } else {
                                         selectionMessage="The selected time option could not be saved. The original workout remains unchanged; refresh and review again."
                                         timePreview=null
                                     }
@@ -1117,9 +1126,10 @@ private fun NativeKotlinCandidateTrainEntry(
                                 style=MaterialTheme.typography.labelMedium)
                             review.workouts.take(20).forEach {item->
                                 OutlinedButton(
-                                    enabled=!searching && !resumeChecking && !reviewingResume,
+                                    enabled=canVerifyGeneratedResume() && !reviewingResume,
                                     modifier=Modifier.fillMaxWidth(),
                                     onClick={
+                                        if(!canVerifyGeneratedResume())return@OutlinedButton
                                         resumeChecking=true
                                         measuredError=null
                                         scope.launch {
@@ -1128,7 +1138,8 @@ private fun NativeKotlinCandidateTrainEntry(
                                                     host.openMeasuredWorkout(item.workoutId)
                                                 }
                                                 if(opened is NativeMeasuredWorkoutStoreResult.Durable &&
-                                                    opened.stored.journal.finishedByEventId==null) {
+                                                    opened.stored.journal.finishedByEventId==null &&
+                                                    noCompetingWorkout()) {
                                                     measuredResumeId=item.workoutId
                                                     measuredOpen=true
                                                 } else {
@@ -1172,9 +1183,10 @@ private fun NativeKotlinCandidateTrainEntry(
                                 style=MaterialTheme.typography.bodySmall)
                             confirmed.confirmed.take(20).forEach {item->
                                 OutlinedButton(
-                                    enabled=!searching && !resumeChecking && !reviewingResume,
+                                    enabled=canVerifyGeneratedResume() && !reviewingResume,
                                     modifier=Modifier.fillMaxWidth(),
                                     onClick={
+                                        if(!canVerifyGeneratedResume())return@OutlinedButton
                                         resumeChecking=true
                                         measuredError=null
                                         scope.launch {
@@ -1183,7 +1195,8 @@ private fun NativeKotlinCandidateTrainEntry(
                                                     host.issueMeasuredWorkout(item.workoutId)
                                                 }
                                                 if(issued is NativeMeasuredWorkoutStoreResult.Durable &&
-                                                    issued.stored.journal.finishedByEventId==null) {
+                                                    issued.stored.journal.finishedByEventId==null &&
+                                                    noCompetingWorkout()) {
                                                     measuredResumeId=item.workoutId
                                                     measuredOpen=true
                                                 } else measuredError=
@@ -1221,8 +1234,9 @@ private fun NativeKotlinCandidateTrainEntry(
                         style=MaterialTheme.typography.bodySmall)
                 }
                 PursuitPrimaryAction("Create measured workout",
-                    enabled=!searching && !reviewingResume && !resumeChecking,
+                    enabled=canVerifyGeneratedResume() && !reviewingResume,
                     onClick={
+                        if(!canVerifyGeneratedResume())return@PursuitPrimaryAction
                         measuredResumeId=null
                         measuredEntryVersion++
                         measuredError=null
@@ -1239,7 +1253,8 @@ private fun NativeKotlinCandidateTrainEntry(
                     style=MaterialTheme.typography.titleMedium)
                 Text("Open the workout from your saved native approval. The app checks the current athlete, program revision and grant before you can train.")
                 PursuitPrimaryAction("Open my approved workout",
-                    enabled=!searching) {
+                    enabled=canVerifyGeneratedResume()) {
+                    if(!canVerifyGeneratedResume())return@PursuitPrimaryAction
                     searching=true
                     selectionMessage=null
                     scope.launch {
@@ -1248,7 +1263,7 @@ private fun NativeKotlinCandidateTrainEntry(
                                 host.currentlyApprovedKotlinWorkoutId()
                             }
                             if(found!=null) {
-                                selectedId=found
+                                if(noCompetingWorkout())selectedId=found
                             } else {
                                 selectionMessage="No current native generated-workout approval was found. Finish and save an approved Kotlin plan first."
                             }
@@ -1276,8 +1291,8 @@ private fun NativeKotlinCandidateTrainEntry(
                         isError=entryId.isNotBlank() && !valid,
                         modifier=Modifier.fillMaxWidth())
                     PursuitPrimaryAction(
-                        "Open workout by ID",enabled=valid && !searching
-                    ) { selectedId=entryId }
+                        "Open workout by ID",enabled=valid && canVerifyGeneratedResume()
+                    ) { if(valid && canVerifyGeneratedResume())selectedId=entryId }
                 }
             }
         }

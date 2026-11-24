@@ -93,6 +93,40 @@ class ReviewedRecoveryBlockRecipeDomainTest {
         assertFalse(candidate.mayIssueWorkout)
     }
 
+    @Test fun appendRecoveryUsesFinalResolvedWeekAndNeverShiftsExistingWeeks() {
+        val base=cycle().let{it.copy(blocks=it.blocks.take(1))}
+        val slot=base.blocks.last().days.first().slots.first()
+        val changed=slot.sets.map{it.copy(targetRir=3)}
+        val source=base.copy(weekOverrides=mapOf("block-1" to listOf(
+            CustomWeekSlotOverride(1,0,slot.slotId,changed))))
+        val request=request(source,target="block-1").copy(
+            appendRecoveryBlockId="recovery-next",minimumTargetRir=2)
+        val denied=ReviewedRecoveryBlockRecipeDomain.propose(request)
+        assertEquals(ReviewedRecoveryBlockRecipeStatus.PERMISSION_REQUIRED,denied.status)
+        val allowed=request.copy(source=request.source.copy(
+            permissions=request.source.permissions.copy(adaptBlocks=true)))
+        val result=ReviewedRecoveryBlockRecipeDomain.propose(allowed)
+        assertEquals(result.explanation,ReviewedRecoveryBlockRecipeStatus.READY_FOR_REVIEW,
+            result.status)
+        val proposed=result.candidate!!.proposedCycle
+        assertEquals(source.blocks,proposed.blocks.dropLast(1))
+        assertEquals(source.weekOverrides,proposed.weekOverrides)
+        assertEquals(source.revision+1,proposed.revision)
+        val recovery=proposed.blocks.last()
+        assertEquals("recovery-next",recovery.blockId)
+        assertEquals(CustomBlockPurpose.RECOVERY,recovery.purpose)
+        assertEquals(1,recovery.weeks)
+        assertEquals(source.blocks.last().days.map{it.weekday},recovery.days.map{it.weekday})
+        assertEquals(changed.first(),recovery.days.first().slots.first().sets.single())
+        assertEquals(listOf(27,9),result.comparison!!.evaluated.single()
+            .coachingAudit!!.weeks.map{it.workingSets})
+        assertFalse(result.mayIssueWorkout)
+        assertFalse(result.mayApplyAutomatically)
+        val duplicate=ReviewedRecoveryBlockRecipeDomain.propose(
+            allowed.copy(appendRecoveryBlockId="block-1"))
+        assertEquals(ReviewedRecoveryBlockRecipeStatus.INVALID_REQUEST,duplicate.status)
+    }
+
     @Test fun eachChangedDimensionNeedsPermissionAndOnlyRecoveryMayBeTargeted() {
         for(permissions in listOf(
             CustomCycleCoachPermissions(adaptRir=true),

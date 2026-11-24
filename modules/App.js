@@ -7841,6 +7841,16 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
         return m;
     }, [history, program]);
     const isDayDone = (dayId, wk) => !!dayDoneThisWeek[`${dayId}:${wk}`];
+    // B1044: each week chip carries a dot per training day, filled once that day is logged, so the
+    // rail reads as the block's weeks × days grid (as RP's mesocycle view does) without a second table.
+    const weekChipLabel = w => {
+        const days = daysInWeek(program, w);
+        if (!days.length) return `Week ${w}`;
+        const done = days.filter(d => isDayDone(d.id, w)).length;
+        return _jsxs(_Fragment, { children: [`Week ${w}`, _jsx("span", { className: "wpb-week-dots", "aria-hidden": true,
+            children: days.map(d => _jsx("i", { "data-done": isDayDone(d.id, w) ? "true" : undefined }, d.id)) }),
+            _jsx("span", { className: "wpb-week-dots-text", children: `, ${done} of ${days.length} days done` })] });
+    };
     const progHint = (day, id, slot) => {
         if (program.config?.percentScheme)
             return null;
@@ -7992,7 +8002,7 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                             })(), _jsx("div", { className: "wpb-program-upgrade-assurance", children: "Your logged sets and history are untouched. If you don't like the result, the version you have now will be saved under Earlier layouts in Plan info after you apply the preview." }), _jsxs("div", { className: "wpb-s956-display-flex wpb-s956-gap-8 wpb-s956-flexwrap-wrap", children: [_jsxs("button", { onClick: () => { if (hasEdits)
                                             setConfirmEngine(true);
                                         else
-                                            onRegenerate(program.seed, ENGINE_V); }, "aria-label": "Rebuild with the latest program logic", className: "pressable wpb-program-upgrade-apply", children: [_jsx(Zap, { size: 14 }), " Update program"] }), _jsx("button", { onClick: () => (onCommitProgram || setProgram)(p => ({ ...p, engineDeclined: ENGINE_V })), "aria-label": "Keep this program as it is", className: "pressable wpb-program-upgrade-keep", children: "Keep it as it is" })] })] })), program.config?.endless && !manual ? (_jsx(ContinuousWave, { weeks: weeks, deloadWeek: deloadWeek, activeWeek: activeWeek, nowWeek: endlessNowWeek, onPick: pickWeek, dim: manual })) : (_jsxs("div", { className: "wpb-hscroll wpb-choice-rail wpb-week-rail", "data-active-week": activeWeek, children: [weeks.map(w => (_jsx(UiChoice, { kind: "summary", className: "wpb-program-week-chip", label: `Week ${w}`, caption: weekChipText(w), selected: activeWeek === w, onClick: () => pickWeek(w), "data-deload": "false" }, w))), deloadWeek && _jsx(UiChoice, { kind: "summary", className: "wpb-program-week-chip", label: "Deload", "data-deload": "true", caption: weekChipCaption(deloadWeek), selected: activeWeek === deloadWeek, onClick: () => pickWeek(deloadWeek) })] })), program.config?.percentScheme === "531" && !manual && (() => {
+                                            onRegenerate(program.seed, ENGINE_V); }, "aria-label": "Rebuild with the latest program logic", className: "pressable wpb-program-upgrade-apply", children: [_jsx(Zap, { size: 14 }), " Update program"] }), _jsx("button", { onClick: () => (onCommitProgram || setProgram)(p => ({ ...p, engineDeclined: ENGINE_V })), "aria-label": "Keep this program as it is", className: "pressable wpb-program-upgrade-keep", children: "Keep it as it is" })] })] })), program.config?.endless && !manual ? (_jsx(ContinuousWave, { weeks: weeks, deloadWeek: deloadWeek, activeWeek: activeWeek, nowWeek: endlessNowWeek, onPick: pickWeek, dim: manual })) : (_jsxs("div", { className: "wpb-hscroll wpb-choice-rail wpb-week-rail", "data-active-week": activeWeek, children: [weeks.map(w => (_jsx(UiChoice, { kind: "summary", className: "wpb-program-week-chip", label: weekChipLabel(w), caption: weekChipText(w), selected: activeWeek === w, onClick: () => pickWeek(w), "data-deload": "false" }, w))), deloadWeek && _jsx(UiChoice, { kind: "summary", className: "wpb-program-week-chip", label: "Deload", "data-deload": "true", caption: weekChipCaption(deloadWeek), selected: activeWeek === deloadWeek, onClick: () => pickWeek(deloadWeek) })] })), program.config?.percentScheme === "531" && !manual && (() => {
                         const total = weeksOf(program);
                         const wave = PCT_SCHEMES["531"].weeks[activeWeek > total ? 3 : (activeWeek - 1) % 4];
                         const pcts = wave.sets.map(s => `${Math.round(s[0] * 100)}%`).join(" · ");

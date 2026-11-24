@@ -754,7 +754,7 @@ class NativeKotlinTrackedWorkoutGatewayTest {
         assertEquals(1,authorizationReads)
         assertFalse(saved.replayed)
         assertEquals(2L,saved.journal.revision)
-        assertEquals(listOf(1L,2L),saved.journal.receipts.map{it.journalRevision})
+        assertEquals(listOf(1L,2L),saved.journal.receipts.map{it.appliedRevision})
         assertEquals(saved.journal,original())
         val after=java.nio.file.Files.readAllBytes(file)
         assertTrue(gateway().skipRemainingExercise(

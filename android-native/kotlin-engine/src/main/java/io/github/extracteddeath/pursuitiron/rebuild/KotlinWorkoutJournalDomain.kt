@@ -119,7 +119,6 @@ sealed interface KotlinJournalDecision {
 
 object KotlinWorkoutJournalDomain {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
-    private val zero=BigDecimal.ZERO
     // Preserve every legacy receipt. Once ordinary edits reach their limit,
     // the remaining bounded slots are for unresolved work and Finish only.
     internal const val EDIT_LIMIT = 2048

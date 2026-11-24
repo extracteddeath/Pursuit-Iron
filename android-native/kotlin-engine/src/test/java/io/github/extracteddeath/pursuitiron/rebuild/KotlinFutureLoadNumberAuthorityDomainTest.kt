@@ -23,6 +23,49 @@ class KotlinFutureLoadNumberAuthorityDomainTest {
     )=KotlinFutureLoadNumberAuthorityDomain.review(
         n(from),n(to),unit,basis,stock,n(limit),source)
 
+    @Test fun zeroStockSelectorCannotBecomeOrdinaryIssuedOrFutureWorkingWeight() {
+        val modes=listOf(LoadBasis.DUMBBELL_PER_HAND,
+            LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK,
+            LoadBasis.EXERCISE_OVERRIDE,LoadBasis.SMITH_TOTAL,
+            LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+        for(basis in modes) {
+            val stock=VerifiedLoadStock.Totals(LoadUnit.LB,basis,
+                listOf(n("0"),n("5"),n("10")))
+            assertTrue("Stock actually offers zero: $basis",
+                (EquipmentLoadDomain.inspect(stock,n("0"),LoadUnit.LB)
+                    as LoadInspection.Confirmed).exact)
+            assertFalse("Zero cannot be issued for $basis",
+                KotlinSetNumberAuthorityDomain.validPrescribedLoad(n("0"),basis))
+            assertEquals("$basis must refuse a forged zero issued target",
+                KotlinFutureLoadReview.Rejected(
+                    KotlinFutureLoadRefusal.UNVERIFIED_ISSUED_LOAD),
+                review(from="0",to="5",stock=stock,basis=basis))
+            assertEquals("$basis must not return to an invalid zero target",
+                KotlinFutureLoadReview.Rejected(
+                    KotlinFutureLoadRefusal.UNVERIFIED_CANDIDATE_LOAD),
+                review(from="5",to="0",stock=stock,basis=basis,
+                    source=KotlinFutureLoadSource.RETURN_TO_DEMONSTRATED_LOAD))
+        }
+        val landmine=VerifiedLoadStock.Totals(
+            LoadUnit.LB,LoadBasis.LANDMINE_ADDED_PLATES,
+            listOf(n("0"),n("5"),n("10")))
+        assertTrue(KotlinSetNumberAuthorityDomain.validPrescribedLoad(
+            n("0"),LoadBasis.LANDMINE_ADDED_PLATES))
+        val valid=review(from="0",to="5",stock=landmine,
+            basis=LoadBasis.LANDMINE_ADDED_PLATES)
+        assertTrue("Zero added landmine plates retains legitimate physical meaning",
+            valid is KotlinFutureLoadReview.Accepted)
+        assertEquals(n("5"),(valid as KotlinFutureLoadReview.Accepted).fact.proposedLoad)
+        // The assisted terminal refusal remains more precise than a
+        // generic stock failure; zero is not converted to unassisted reps.
+        val assistedZero=assisted.copy(minimum=n("0"))
+        assertEquals(KotlinFutureLoadReview.Rejected(
+            KotlinFutureLoadRefusal.NO_LOWER_ASSISTED_SETTING),
+            review(from="5",to="0",stock=assistedZero,
+                basis=LoadBasis.ASSISTANCE_COUNTERWEIGHT,
+                source=KotlinFutureLoadSource.EARNED_ASSISTANCE_DECREMENT))
+    }
+
     @Test fun earnedIncrementUsesOnlyImmediateVerifiedNextStockAndNeverWrites() {
         val ready=review() as KotlinFutureLoadReview.Accepted
         assertEquals(n("200"),ready.fact.issuedLoad)

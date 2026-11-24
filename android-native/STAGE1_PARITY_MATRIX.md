@@ -1,11 +1,11 @@
 # Stage 1 — active-web / Kotlin parity matrix (initial inventory)
-**State:** S1 IN PROGRESS, not acceptance. **Owner:** Kotlin rebuild development. **Inventory revision:** 1 (2026-11-24).
+**State:** S1 inventory assembled; acceptance pending verified PR #1041 and integrated branch. **Owner:** Kotlin rebuild development. **Inventory revision:** 2 (2026-11-24).
 **Pinned web:** `29faa204212a4d54088b4870341350e605939185` (Build 1016 changelog, next-engine 0.65.10).
 **Pinned Kotlin:** `05c02ff2362736439ca1fcabfd7d477bfb2fa366`. Stage 0 accepted: [engine push CI](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/45482709594) and [Compose push CI](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/45482709540).
 This matrix operationalizes [master plan](MASTER_DEVELOPMENT_PLAN.md), retaining [E01–E41 scope](kotlin-engine/ENGINE_BASELINE_COVERAGE.md) and [historical web parity ledger](NATIVE_WEB_FEATURE_PARITY_LEDGER.md). Historical statuses are NOT current proof.
 
 ## Evidence rules
-MAP = source/test candidate identified, behavior not yet individually accepted. GAP = visible source-surface difference; requires disposition or verified equivalent, not automatic waiver. REVIEW = declared compatibility definition needs active route/saved-plan assessment. All are open. A passing branch-wide CI is necessary but not sufficient. Fixture names below are candidate locations for evidence inspection and further regression design; no per-row pass claimed. Required row IDs remain stable across revisions. Use stage as work owner; append exact test method, matched web fixture, result, source SHA and device requirement as evidence is reviewed. Scope denominator is not yet complete.
+MAP = source/test candidate identified, behavior not yet individually accepted. GAP = visible source-surface difference; requires disposition or verified equivalent, not automatic waiver. REVIEW = declared compatibility definition needs active route/saved-plan assessment. All are open. A passing branch-wide CI is necessary but not sufficient. Fixture names below are candidate locations for evidence inspection and further regression design; no per-row pass claimed. Required row IDs remain stable across revisions. Use stage as work owner; append exact test method, matched web fixture, result, source SHA and device requirement as evidence is reviewed. Scope is versioned below; later evidence and approved web deltas update rows without silently moving the denominator.
 
 ## 41 inherited acceptance requirements
 Each E-ID links to the unchanged authoritative requirement in ENGINE_BASELINE_COVERAGE. The independent outcome below defines the next evidence work, not a substitute for its full wording.
@@ -64,7 +64,16 @@ Web source: `modules/next-engine/progression-style.js`. Kotlin source: `BasicPro
 | PROG-LINEAR | linear | Reviewed exact step after required success, no unearned increases after missed/failed set | BasicProgressionPolicyDomainTest | S2 / MAP |
 | PROG-WAVE | wave | Preserve authored week/set load wave and correct rest/reps; confirmed training max and stock | BasicProgrammedPercentageLoadDomainTest; ReviewedStrengthWeekPeriodizationDomainTest | S2 / MAP |
 | PROG-E1RM | e1rm | Estimate only from eligible observed effort and load; separate from confirmed training max; no invented evidence | ProgressionEffortDomainTest; EvidenceBackedStrengthWeekLoadDomainTest | S2 / MAP |
-Additional separate rows to verify: PROG-ASSISTANCE (inverse counterweight), PROG-BODYWEIGHT (no external load invented), PROG-LEVELING (current unsaved workout only), PROG-REP-TARGET (authored exact targets), PROG-COACH-OFF (no adaptive effect), PROG-CORRECTION (corrected history updates next recommendation, no silent issued changes). Candidate owners: BasicBodyweightRepProgressionDomain, AssistedCounterweightProgressionDomain, DoubleProgressionLevelingDomain, CustomBasicHistoryProgressionDomain, CoachAssistancePolicy. All S2 / MAP; linked to E04/E18/E24/E30/E36.
+### Additional baseline modes and cross-mode acceptance (S2)
+| Stable ID | Mode | Required outcome | Candidate tests | Stage/state |
+|---|---|---|---|---|
+| PROG-ASSISTANCE | Inverse counterweight | Only lower attainable assistance after earned success; no borrowed station | AssistedCounterweightProgressionDomainTest | S2 / MAP |
+| PROG-BODYWEIGHT | Bodyweight | Earn reps without inventing external load | BasicProgressionExtendedCoverageTest | S2 / MAP |
+| PROG-LEVELING | Leveling | Current unsaved fields only; future prescription untouched | DoubleProgressionLevelingDomainTest | S2 / MAP |
+| PROG-REP-TARGET | Exact rep targets | Approved per-set targets advance only under intended rule | BasicProgressionExtendedCoverageTest | S2 / MAP |
+| PROG-COACH-OFF | Coaching disabled | Preserve basic/manual path; fatigue and adaptive coaching cannot override | BasicProgressionPolicyDomainTest; NativeKotlinCoachAssistanceSettingsStoreTest | S2 / MAP |
+| PROG-CORRECTION | Corrected history | Current future recommendation uses verified corrected facts; issued targets unchanged | CustomBasicHistoryProgressionDomainTest; NativeKotlinHistoryTransactionCoordinatorTest | S2 / MAP |
+Linked to E04/E18/E24/E30/E36.
 
 ## Explicitly supported topology families — 26
 Web source: `modules/next-engine/topology.js` SUPPORTED_SPLIT_FAMILIES, candidateStructures and splitSupportsTrainingDays (2–6). The table is an inventory of actual locked/preferred candidate branches, not a claim each is visible in every wizard or every goal. Core automatic search uses full_body, upper_lower, ppl, ulppl, pplul, custom (PPL excluded from automatic five-day search). Other families are explicitly preferred/locked compatibility contracts. Preserve saved-program reproduction as well as active selectable functionality. Kotlin `CoachWeekComposer.kt` currently declares FOUR named ComposerSplit values; authored custom equivalents may cover some outcomes, but do not establish automatic/locked generation parity. Native `CoachAthleteSetupDomain.kt` input and day-frequency support must be checked. In particular the web allows two-day programs, whereas the existing master baseline focused on 3–6.
@@ -96,7 +105,7 @@ Web source: `modules/next-engine/topology.js` SUPPORTED_SPLIT_FAMILIES, candidat
 | SPLIT-STRENGTH_FB | strength_fb | 3 | No distinct ComposerSplit | S4 / GAP |
 | SPLIT-TEXAS | texas | 3 | No distinct ComposerSplit; volume/recovery/intensity separate | S4 / GAP |
 | SPLIT-UPPER_LOWER_ALT | upper_lower_alt | 3 | No distinct ComposerSplit; alternating weeks need proof | S4 / GAP |
-Fixture requirement for EACH row: exercise the supported day counts and applicable goals/experience/stock, check exact day intents, loadable main lifts, movement and muscle dose, phase-specific frequency, timing and constraints; save and issue, complete, then progress/rebuild without changing locked family. Verify unsupported combinations refuse or present explicit alternatives. Active picker vs saved-only compatibility and template restrictions remain to be traced in S1. Do not blindly add 22 enums or reproduce old branded formulas where the web itself uses a Pursuit interpretation.
+Fixture requirement for EACH row: exercise the supported day counts and applicable goals/experience/stock, check exact day intents, loadable main lifts, movement and muscle dose, phase-specific frequency, timing and constraints; save and issue, complete, then progress/rebuild without changing locked family. Verify unsupported combinations refuse or present explicit alternatives. Pinned public catalog SPLITS contains 24 of these families and Wizard filters them by selected 2–6 day frequency (App.js lines 5730, 5839). The remaining custom and pplul are active automatic topology families, not silently dropped. All 75 template rows are separately inventoried in STAGE1_WEB_SHELL_INVENTORY.json. Their concrete goal, duration, gym and week restrictions are referenced by source line. S4 must verify those outcomes rather than only matching family names. Do not blindly add 22 enums or reproduce old branded formulas where the web itself uses a Pursuit interpretation.
 
 ## Percentage protocol inventory — nine declared schemes
 Web source: `modules/next-engine/percentage-protocols.js`, PCT_SCHEMES, percentageProtocolFor, adaptPercentageSetBudget and deriveTieredLinearState. Kotlin `BasicProgrammedPercentageLoadDomain.kt` currently reviews authored weekly percentage, fixed set count and RepBand against confirmed TM and exact stock. Generic percentage support is NOT proof of all within-day ramps, plus sets, tier states, recovery schedules or max updates.
@@ -111,15 +120,36 @@ Web source: `modules/next-engine/percentage-protocols.js`, PCT_SCHEMES, percenta
 | PCT-GVT | gvt | Volume prescription and explicit percentage basis | S2 / REVIEW |
 | PCT-RIPPLER | rippler | Tiered changing intensity wave | S2 / REVIEW |
 | PCT-JT | jt | Tiered powerbuilding heavy/volume structure | S2 / REVIEW |
-For each: trace real active prescription call site or saved compatibility route; require exact authored basis, per-set percentage/reps/plus targets and week/day/tier, feasible rounding, failed/successful history, max-update rules and recovery. If a definition is inactive, provide source-backed disposition rather than declaring parity or requiring an unused implementation. Cross-link S4 programming and S5 persistence.
+All nine schemes are active public template configurations and named code values (catalog.js/TEMPLATES and programs.js/CODE_SCHEMES). The real percentagePlanFor → percentageProtocolFor path in training-domain/prescriptions.js executes them; all remain mandatory. Require exact authored basis, per-set percentage/reps/plus targets and week/day/tier, feasible rounding, failed/successful history, max-update rules and recovery. REVIEW here means functional evidence outstanding, not inactive/optional. Cross-link S4 programming and S5 persistence.
 
-## Product coverage and web delta — pending detail
-The 14 stable FeatureCatalog groups remain mandatory references. Map to E requirements rather than replacing them: adaptive-progression (E18–19/E24/E30–34), workout-logging (E17/E20–24/E36), session-adjustments (E25–28), workout-tools (E07/E09–10/E20–21/E28), program-builder (E01–02/E05/E11–16), custom-programs (E16/E32–33), adaptive-cycles (E31–35), exercise-discovery (E08–10), history-and-prs (E23/E36–37), volume-and-trends (E12–14/E38), bodyweight (E38), backup-restore (E39), gyms-and-equipment (E03–04/E07), profile (E01/E06/E40). Each group needs child behavioral rows with real source/evidence, including optional UI classification.
+## Product coverage and web delta
+The 14 stable FeatureCatalog groups remain mandatory references. Map to E requirements rather than replacing them: adaptive-progression (E18–19/E24/E30–34), workout-logging (E17/E20–24/E36), session-adjustments (E25–28), workout-tools (E07/E09–10/E20–21/E28), program-builder (E01–02/E05/E11–16), custom-programs (E16/E32–33), adaptive-cycles (E31–35), exercise-discovery (E08–10), history-and-prs (E23/E36–37), volume-and-trends (E12–14/E38), bodyweight (E38), backup-restore (E39), gyms-and-equipment (E03–04/E07), profile (E01/E06/E40). Each group is expanded in [STAGE1_BEHAVIOR_INVENTORY.md](STAGE1_BEHAVIOR_INVENTORY.md), with 87 stable child rows, stage owners, candidate fixtures and independent expected outcomes. Source coverage of all 144 pinned web modules is recorded in [STAGE1_WEB_SOURCE_MAP.json](STAGE1_WEB_SOURCE_MAP.json).
 Build 1016 additions need separate regression trace: strength transition set continuity, actual working-set count in Info, machine/swap discoverability, old unassigned history explicitly assigned to original machine. Build 1011 physical machine/default changes and Build 1010 ULPPL/PPLUL named lift frequency and variant selection remain required. Historical draft #443–448 review by S3/S5/S6; no blind merge. No optional UI deferral removes an engine feature.
 
-## S1 remaining work
-- Trace active web entry points and saved compatibility paths for all declared schemes/families, exercise actual fixtures, reconcile 2-day scope with the existing 3–6 baseline without silently waiving it.
-- Extract exact active catalog identities/metadata from pinned current web vs Kotlin, not older checkpoint counts; review measurement, attachment, muscle and loading differences.
-- Expand E20 into generated/custom/partial/amplifier-specific rows; E11–16 into split/goals/time/constraint rows; full lifecycle, consent, storage/restore, UI and optional feature coverage.
-- Check each candidate test's actual assertions and source route, record fresh matched evidence from pinned revisions. Refresh stale superiority measurements separately; never count them as passed parity.
-- Establish stable findings ledger and versioned denominator before S1 exit. No readiness percentage until inventory complete.
+## Catalog, shell and template inventory
+- [STAGE1_CATALOG_INVENTORY.json](STAGE1_CATALOG_INVENTORY.json): all 383 effective web engine IDs, 369 standard and 14 typed measured Kotlin source matches; zero absent IDs. Web source priority is curated first, then extended; duplicate ID and normalized name shadowing follows the actual web owner. 26 shadowed definitions recorded separately. Each row has a source location and S3 evidence profile. Matching identity is not reviewed physical semantics.
+- [STAGE1_WEB_SHELL_INVENTORY.json](STAGE1_WEB_SHELL_INVENTORY.json): 372 public shell identifiers, 346 direct canonical matches, 22 explicit web aliases, four normalized-name candidate matches, zero unresolved names. None of the four name fallbacks is accepted until physical meaning and preserved history identity are proven. Also 75 actual template configurations including all nine percentage schemes.
+- [STAGE1_BEHAVIOR_INVENTORY.md](STAGE1_BEHAVIOR_INVENTORY.md): 87 independent outcome rows (74 MAP, 12 GAP, one REVIEW), including both generated/custom paths, all eight declared phase policies, six web duration choices, four experience choices, and core UI. Source-level gaps are assigned to the relevant execution stage.
+- [STAGE1_FINDINGS.md](STAGE1_FINDINGS.md): stage-owned findings, evidence baseline and explicit remaining verification obligations.
+- [STAGE1_WEB_SOURCE_MAP.json](STAGE1_WEB_SOURCE_MAP.json): 144 source files assigned to child requirements; route-level App.js evidence was obtained using the full pinned blob, not the empty large-file contents result.
+
+## Versioned inventory denominator
+| Lane | Count | What is counted |
+|---|---:|---|
+| Original mandatory requirements | 41 | E01–E41, retained unchanged |
+| Product capability groups | 14 | Cross-reference groups, not an additional pass denominator |
+| Detailed behavior | 87 | Child acceptance requirements |
+| Progression | 13 | Seven public styles plus six explicit baseline/cross-mode requirements |
+| Topology | 26 | 24 public SPLITS plus two additional automatic families |
+| Percentage protocols | 9 | All active in public templates |
+| Canonical exercise identities | 383 | 369 standard, 14 measured |
+| Web shell exercise references | 372 | Mapping/alias preservation, not additional unique exercises |
+| Template configurations | 75 | Distinct template outcomes |
+| Web source ownership | 144 | Source files mapped, not runtime acceptance cases |
+
+These lanes overlap; do not sum them into a product completion percentage. Inventory coverage is different from functional acceptance. The new inventory has no row independently certified merely because its source or candidate fixture exists. Execution stages fill the per-row evidence from exact source/fixture SHAs and required results. Device-only cases remain S8.
+
+## S1 exit
+- Both source pins fixed; 41 inherited requirements, 14 groups and detailed source-backed child rows assigned. All declared topology families, progression styles, active percentage protocols, exact catalog and shell identities and template configurations have stable IDs and an owner, expected outcome and candidate fixture/evidence profile.
+- Existing tests are candidate evidence locations; do not label the test's entire requirement passed from name, suite success or an older pinned comparison. Review actual assertions and matched current-web executions as part of the owning stage (S2/S3/S4/S5/S6 and final S7), with the baseline evidence documented in STAGE1_FINDINGS.
+- Findings have explicit stage dispositions and a new-finding process in the master plan. No parity gap waived. Source-only S1 inventory validation must pass; both required CI suites must pass on the final integrated revision to record formal S1 acceptance. No APK.

@@ -1,6 +1,5 @@
 package io.github.extracteddeath.pursuitiron.rebuild
 
-import java.math.BigDecimal
 import java.util.Collections
 
 /** Fresh, athlete-reviewed replacement prescription. No prior lift loads,

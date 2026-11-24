@@ -267,6 +267,7 @@ export const browserShards = Object.freeze({
         'r65-adaptive-shell-browser-test.mjs'
     ]),
     'integration-accessibility': Object.freeze([
+        'b1036-spacing-browser-test.mjs',
         'shared-control-routed-visual-browser-test.mjs',
         'm3e-shared-components-browser-test.mjs',
         'ui-dom-ownership-browser-test.mjs',

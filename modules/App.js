@@ -91,7 +91,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='1037';
+const __APP_VERSION__='4.0.0'; const __BUILD__='1038';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -116,7 +116,7 @@ import { programWorkingWeeks, cycleBlockMetadata } from "./program-duration.js";
 
 
 import { emptyRetiredTrialData, preserveRetiredTrialData, emptyRetiredRolloutData, preserveRetiredRolloutData } from "./legacy-research-data.js";
-import { ChevronLeft, ChevronRight, ChevronUp, Check, Plus, Minus, Dumbbell, Target, Clock, Zap, Calendar, RefreshCw, X, Repeat, Ban, Save, Flame, Layers, Trophy, Settings2, Trash2, ChevronDown, Pencil, Pin, Folder as FolderIcon, AlertTriangle, Video, ExternalLink, Wand2, Battery, Library, Search, Upload, Minimize2, MoreHorizontal, Copy, BarChart3, PlusCircle, Play, Pause, SkipForward, CheckCircle2, TrendingUp, Timer, TrendingDown, Info, Home as HomeIcon, Activity, Award, GripVertical, WifiOff, HardDrive, Heart, Sun, Moon, ArrowUpRight, Share2, Anchor, Axe, Bone, Brain, Compass, Crown, Feather, Footprints, Gauge, Gem, Hammer, HandMetal, Hourglass, Medal, Mountain, Orbit, PersonStanding, Rocket, Shield, Skull, Snowflake, Sparkles, Star, Swords, Waves, Wind, Pickaxe, Milestone, Smartphone, Undo2, Maximize2, History, HelpCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronUp, Check, Plus, Minus, Dumbbell, Target, Clock, Zap, Calendar, RefreshCw, X, Repeat, Ban, Save, Flame, Layers, Trophy, Settings2, Trash2, ChevronDown, Pencil, Pin, Folder as FolderIcon, AlertTriangle, Video, ExternalLink, Wand2, Battery, BatteryMedium, BatteryLow, Library, Search, Upload, Minimize2, MoreHorizontal, Copy, BarChart3, PlusCircle, Play, Pause, SkipForward, CheckCircle2, TrendingUp, Timer, TrendingDown, Info, Home as HomeIcon, Activity, Award, GripVertical, WifiOff, HardDrive, Heart, Sun, Moon, ArrowUpRight, Share2, Anchor, Axe, Bone, Brain, Compass, Crown, Feather, Footprints, Gauge, Gem, Hammer, HandMetal, Hourglass, Medal, Mountain, Orbit, PersonStanding, Rocket, Shield, Skull, Snowflake, Sparkles, Star, Swords, Waves, Wind, Pickaxe, Milestone, Smartphone, Undo2, Maximize2, History, HelpCircle } from "lucide-react";
 /* ============================== DESIGN TOKENS ============================== */
 // Full per-theme palettes (ported from the Pursuit running app — tinted, cohesive).
 // Each theme defines its own background/surface/text tints, not just an accent swap.
@@ -1032,9 +1032,9 @@ function StyleTag({ theme } = {}) {
       .wpb-primary-action:not(:where(.wpb-gym-done)){font-size:16px!important;font-weight:700!important;}
       .wpb-primary-action:not(:where(.wpb-gym-done)){border-radius:var(--r-md)!important;}
       .wpb-primary-action:disabled{background:${C.cardHi}!important;color:${C.faint}!important;border-color:${C.borderSoft}!important;box-shadow:none!important;}
-      .wpb-secondary-action{min-height:44px;border-radius:var(--r-md)!important;background:${C.cardHi}!important;color:${C.text}!important;border:1px solid ${C.border}!important;box-shadow:none!important;font-weight:650!important;}
-      .wpb-ghost-action{min-height:40px;border-radius:var(--r-md)!important;background:transparent!important;color:${C.accentInk}!important;border:1px solid transparent!important;font-weight:650!important;}
-      .wpb-danger-action{min-height:44px;border-radius:var(--r-md)!important;background:${C.dangerDim}!important;color:${C.danger}!important;border:1px solid color-mix(in srgb,${C.danger} 34%,${C.border})!important;font-weight:650!important;}
+      .wpb-secondary-action{min-height:48px;border-radius:var(--r-md)!important;background:${C.cardHi}!important;color:${C.text}!important;border:1px solid ${C.border}!important;box-shadow:none!important;font-weight:650!important;}
+      .wpb-ghost-action{min-height:48px;border-radius:var(--r-md)!important;background:transparent!important;color:${C.accentInk}!important;border:1px solid transparent!important;font-weight:650!important;}
+      .wpb-danger-action{min-height:48px;border-radius:var(--r-md)!important;background:${C.dangerDim}!important;color:${C.danger}!important;border:1px solid color-mix(in srgb,${C.danger} 34%,${C.border})!important;font-weight:650!important;}
       .wpb-icon-control{width:40px;height:40px;border-radius:10px!important;background:${C.bg2}!important;color:${C.muted}!important;border:1px solid ${C.borderSoft}!important;box-shadow:none!important;}
       .wpb-icon-control[data-active="true"]{background:${C.accentDim}!important;color:${C.accentInk}!important;border-color:color-mix(in srgb,${C.accent} 42%,${C.border})!important;}
       .wpb-status{display:inline-flex;align-items:center;gap:3px;min-height:20px;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:700;letter-spacing:.1px;line-height:1.2;white-space:nowrap;}
@@ -1204,7 +1204,7 @@ function StyleTag({ theme } = {}) {
       .wpb-page-shell:not(.wpb-workout) .wpb-primary-action{min-height:46px!important;}
       .wpb-page-shell:not(.wpb-workout) .wpb-primary-action:not(:where(.wpb-gym-done)){border-radius:10px!important;}
       .wpb-page-shell:not(.wpb-workout) .wpb-secondary-action,
-      .wpb-page-shell:not(.wpb-workout) .wpb-ghost-action{min-height:42px!important;border-radius:10px!important;}
+      .wpb-page-shell:not(.wpb-workout) .wpb-ghost-action{min-height:48px!important;border-radius:10px!important;}
       .wpb-page-shell:not(.wpb-workout) .wpb-danger-action,
       .wpb .wpb-confirm-danger{min-height:46px!important;border-radius:10px!important;}
       .wpb [data-wpb-dialog] button{min-height:42px;}
@@ -2135,7 +2135,7 @@ function StyleTag({ theme } = {}) {
       .wpb-error-card{border-radius:11px!important;padding:14px!important;}
       .wpb-state-card--error{background:color-mix(in srgb,${C.danger} 3%,transparent)!important;}
       .wpb-empty-state{border-style:solid!important;box-shadow:none!important;}
-      .wpb-empty-action{min-height:42px!important;padding:9px 14px!important;border-radius:10px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;font-size:13.5px!important;font-weight:680!important;}
+      .wpb-empty-action{min-height:48px!important;padding:9px 14px!important;border-radius:10px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;font-size:13.5px!important;font-weight:680!important;}
       .wpb-sheet-action:not(.wpb-program-exercise-action){margin-bottom:0!important;border-radius:0!important;border-left:0!important;border-right:0!important;border-top:0!important;border-bottom:1px solid var(--section-rule)!important;background:transparent!important;padding:13px 4px!important;}
 
       .wpb-chart{overflow:hidden;max-width:100%;min-width:0;}
@@ -12921,7 +12921,9 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                        edges and the padding puts the space back inside, so the band spans the width and
                                        the number sits clear of the rule. */
                                     margin: `0 -${SET_ROW_BLEED}px`,
-                                    padding: isActive ? `2px ${SET_ROW_BLEED}px 2px ${SET_ROW_BLEED - 4}px` : `2px ${SET_ROW_BLEED}px`,
+                                    // Every row carries the 4px rule (transparent when idle), so every row subtracts it: the set
+                                    // number and steppers line up from row to row instead of jumping 4px on the active set.
+                                    padding: `2px ${SET_ROW_BLEED}px 2px ${SET_ROW_BLEED - 4}px`,
                                     borderLeft: `4px solid ${isActive ? C.accent : isEffort ? `${C.accent}55` : "transparent"}`,
                                     background: isActive ? C.accentDim : "transparent",
                                     transition: "opacity .18s, background .18s"
@@ -13477,7 +13479,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                 className: "wpb-readiness-option pressable",
                 "data-readiness-factor": o.factor, "aria-pressed": readiness?.factor === o.factor,
                 onClick: () => applyReadiness(o.label, o.factor), children: [
-                    _jsx("span", { className: "wpb-readiness-icon", children: _jsx(o.factor === 1 ? Flame : Battery, { size: 19 }) }),
+                    _jsx("span", { className: "wpb-readiness-icon", children: _jsx(o.factor === 1 ? Flame : o.factor >= .95 ? BatteryMedium : BatteryLow, { size: 19 }) }),
                     _jsxs("span", { className: "wpb-readiness-copy", children: [
                         _jsx("strong", { children: o.label }),
                         _jsx("span", { children: o.detail })] }),
@@ -18994,8 +18996,13 @@ function App() {
                 shell.dataset.scrolled = scroller.scrollTop > 4 ? "1" : "0";
             // While a restore is still waiting for content to grow tall enough, the clamped offset is
             // not the user's position: recording it would overwrite the remembered one for good.
-            if (pending && pending.scroller === scroller)
-                return;
+            if (pending && pending.scroller === scroller) {
+                // Our own re-application lands exactly on the value we set. Anything else moved it
+                // (the lifter, or the app scrolling something into view): stop restoring and record it.
+                if (Math.abs(scroller.scrollTop - pending.set) <= 1)
+                    return;
+                settle();
+            }
             if (scroller.closest(`[data-view-frame="${view}"]`))
                 scrollMemory.current[scrollKey(scroller)] = scroller.scrollTop;
         };
@@ -19021,7 +19028,12 @@ function App() {
                 return;
             const { scroller, target } = pending;
             const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
-            scroller.scrollTop = Math.min(target, max);
+            if (Math.abs(scroller.scrollTop - pending.set) > 1) {
+                settle(); // moved by someone else since the last re-application
+                return;
+            }
+            pending.set = Math.min(target, max);
+            scroller.scrollTop = pending.set;
             if (max >= target)
                 settle();
         };
@@ -19038,7 +19050,7 @@ function App() {
                 return;
             }
             const resize = new ResizeObserver(apply);
-            pending = { scroller, target, resize, timer: setTimeout(settle, 1000) };
+            pending = { scroller, target, set: scroller.scrollTop, resize, timer: setTimeout(settle, 1000) };
             resize.observe(scroller);
             [...scroller.children].forEach(child => resize.observe(child));
         };

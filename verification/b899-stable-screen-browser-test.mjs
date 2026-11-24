@@ -261,7 +261,11 @@ try{
    await click('View full program');await page.waitForSelector('.wpb-program');
    const menu=await page.$(`[aria-label="More options for ${expectedPreview.day}"]`);
    await menu.evaluate(n=>n.scrollIntoView({block:'center'}));await menu.click();await click('Delete day');
-   await page.waitForSelector('.wpb-dialog');await click('Delete day');
+   // Confirm inside the dialog: the day menu's own "Delete day" item can still be in the DOM
+   // while its sheet closes, and a page-wide text match would press it instead of the confirm.
+   await page.waitForSelector('.wpb-dialog');
+   await page.waitForFunction(()=>[...document.querySelectorAll('.wpb-dialog button')].some(b=>b.textContent.trim()==='Delete day'));
+   await page.evaluate(()=>[...document.querySelectorAll('.wpb-dialog button')].find(b=>b.textContent.trim()==='Delete day').click());
    await page.waitForFunction(id=>!document.getElementById('pv-day-'+id),{},expectedPreview.dayId);
    await page.waitForSelector('.wpb-dialog',{hidden:true});
    const deletedDayDraft=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));

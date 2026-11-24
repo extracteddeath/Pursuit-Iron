@@ -125,6 +125,17 @@ object CustomBlockTransitionLoadDomain {
             val authored=target.prescription.load as DraftSetLoad.Verified
             val oldLoad=historical.prescription.load as DraftSetLoad.Verified
             val weight=minOf(authored.value,fact.priorLoad)
+            // A selectable physical setting is not automatically a valid
+            // prescribed working weight. In particular, a machine/cable
+            // selector of zero must not be promoted to a strength-block
+            // starting load. Some bases (landmine added plates) explicitly
+            // permit zero, so delegate the exception to the one authority.
+            if(!KotlinSetNumberAuthorityDomain.validIssuedLoad(authored) ||
+                !KotlinSetNumberAuthorityDomain.validIssuedLoad(oldLoad) ||
+                !KotlinSetNumberAuthorityDomain.validPrescribedLoad(
+                    weight,authored.basis))
+                return result(CustomBlockTransitionLoadStatus.EQUIPMENT_UNVERIFIED,
+                    "The authored, previous and proposed loads must satisfy the shared issued-weight rules, not merely appear on the equipment selector.",assumed=assumed)
             fun buildable(value:BigDecimal)=EquipmentLoadDomain.inspect(stock,value,authored.unit)
                 .let{it is LoadInspection.Confirmed && it.exact}
             if(authored.basis!=oldLoad.basis || authored.unit!=oldLoad.unit ||
@@ -138,10 +149,21 @@ object CustomBlockTransitionLoadDomain {
                 fact.actualRir,historical.prescription.targetRir,effort.source)
         }
         val first=proposed.first()
-        if(next.sets.filter{it.prescription.type==DraftSetType.WARMUP}.any {set->
+        // A warmup is part of the proposed session, not a free-form number.
+        // This source review must reject a fake or unbuildable warmup before
+        // it can present otherwise valid working weights for acceptance.
+        if(nextWarmups.any {set->
             val load=set.prescription.load as? DraftSetLoad.Verified
             load==null || load.unit!=first.unit || load.basis!=first.basis ||
-                load.value>proposed.minOf{it.proposedLoad}
+                !KotlinSetNumberAuthorityDomain.validIssuedLoad(load) ||
+                EquipmentLoadDomain.inspect(stock,load.value,load.unit).let {
+                    it !is LoadInspection.Confirmed || !it.exact
+                }
+        })return result(CustomBlockTransitionLoadStatus.EQUIPMENT_UNVERIFIED,
+            "All warmup loads must be valid issued weights, exactly available on the same verified equipment.",assumed=assumed)
+        if(nextWarmups.any {set->
+            (set.prescription.load as DraftSetLoad.Verified).value>
+                proposed.minOf{it.proposedLoad}
         })return result(CustomBlockTransitionLoadStatus.WARMUP_ABOVE_STARTING_LOAD,
             "Review the warmups before accepting a lower working weight.",assumed=assumed)
         val changed=next.copy(sets=Collections.unmodifiableList(next.sets.map{set->

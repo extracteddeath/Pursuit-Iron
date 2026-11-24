@@ -255,6 +255,107 @@ class CustomBlockTransitionLoadDomainTest {
             review(snapshot(true,listOf(215,215,215))).status)
     }
 
+    @Test fun buildableZeroMachineSelectorCannotBecomeNewBlockStartingWeight() {
+        val zeroStock=VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.MACHINE_STACK,
+            listOf(n(0),n(195),n(200),n(205),n(215)))
+        // The stock truthfully says selector 0 exists. It must not become
+        // permission to issue zero as a machine working prescription.
+        val physical=EquipmentLoadDomain.inspect(zeroStock,n(0),LoadUnit.LB)
+        assertTrue(physical is LoadInspection.Confirmed && physical.exact)
+        for(loads in listOf(listOf(0,215),listOf(215,0),listOf(0,0))) {
+            val result=review(snapshot(true,loads),physical=zeroStock)
+            assertEquals(loads.toString(),
+                CustomBlockTransitionLoadStatus.EQUIPMENT_UNVERIFIED,result.status)
+            assertNull(result.proposedWorkout)
+            assertTrue(result.sets.isEmpty())
+            assertFalse(result.mayApplyAutomatically)
+            assertFalse(result.mayIssueWorkout)
+        }
+        // A legitimate positive selector remains available after the gate.
+        val valid=review(snapshot(true,listOf(215,215)),physical=zeroStock)
+        assertEquals(CustomBlockTransitionLoadStatus.READY_FOR_REVIEW,valid.status)
+        assertEquals(listOf(n(200),n(200)),valid.sets.map{it.proposedLoad})
+    }
+
+    @Test fun explicitlyUnloadedLandmineDoesNotInheritMachineZeroBan() {
+        // The shared load basis, not the numeric spelling 0.000, owns
+        // whether unloaded added plates can be a real working prescription.
+        val basis=LoadBasis.LANDMINE_ADDED_PLATES
+        fun landmine(day:CustomWorkoutDaySnapshot)=day.copy(slots=
+            day.slots.map{slot->slot.copy(sets=slot.sets.map{set->
+                set.copy(prescription=set.prescription.copy(load=
+                    (set.prescription.load as DraftSetLoad.Verified)
+                        .copy(basis=basis)))
+            })})
+        val equipment=VerifiedLoadStock.Totals(LoadUnit.LB,basis,
+            listOf(n(0),n(200),n(205),n(215)))
+        val previous=completed(landmine(snapshot(loads=listOf(200,205))))
+        val candidate=landmine(snapshot(true,listOf(0,215)))
+        val result=review(candidate,listOf(previous),physical=equipment)
+        assertEquals(CustomBlockTransitionLoadStatus.READY_FOR_REVIEW,result.status)
+        assertEquals(listOf(n(0),n(205)),result.sets.map{it.proposedLoad})
+        assertFalse(result.mayApplyAutomatically)
+    }
+
+    @Test fun crossBlockWarmupsMustUseExactValidPhysicalLoads() {
+        fun withWarmup(day:CustomWorkoutDaySnapshot,value:Int,
+            basis:LoadBasis=LoadBasis.MACHINE_STACK)=day.copy(slots=
+            day.slots.map{slot->slot.copy(sets=listOf(
+                CustomWorkoutSetSnapshot(
+                    "warmup-${day.absoluteWeek}","main",3,
+                    CustomAuthoredSet(DraftSetType.WARMUP,
+                        DraftSetLoad.Verified(LoadUnit.LB,basis,n(value)),
+                        RepBand(10,10),null,30,60))
+            )+slot.sets)})
+        // The helper's default two-item RIR/rep observations only cover
+        // ordinary working sets. Supply the warmup's own third fact rather
+        // than accidentally indexing beyond the historical observation list.
+        fun completedWarmup(day:CustomWorkoutDaySnapshot)=completed(day,
+            rirs=listOf(null,2,2),performed=listOf(10,8,8))
+        fun check(value:Int,inventory:VerifiedLoadStock=stock)=
+            review(withWarmup(snapshot(true,listOf(215,215)),value),
+                listOf(completedWarmup(withWarmup(snapshot(),value))),
+                physical=inventory)
+        // A genuine lighter warmup remains a factual part of the proposal.
+        val okay=check(195)
+        assertEquals(CustomBlockTransitionLoadStatus.READY_FOR_REVIEW,okay.status)
+        assertEquals(n(195),(
+            okay.proposedWorkout!!.slots.single().sets.first()
+                .prescription.load as DraftSetLoad.Verified).value)
+        // The selector can truly include 0 but that is not a machine warmup.
+        val zeroStock=VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.MACHINE_STACK,
+            listOf(n(0),n(195),n(200),n(205),n(215)))
+        val zero=check(0,zeroStock)
+        assertEquals(CustomBlockTransitionLoadStatus.EQUIPMENT_UNVERIFIED,zero.status)
+        assertNull(zero.proposedWorkout)
+        assertTrue(zero.sets.isEmpty())
+        // A positive weight absent from the exact inventory is equally
+        // invalid even if it is lower than every proposed working set.
+        assertEquals(CustomBlockTransitionLoadStatus.EQUIPMENT_UNVERIFIED,
+            check(197).status)
+        // A real but heavier warmup must not be silently kept after a
+        // lower-block transition; the specific ordering warning still wins.
+        assertEquals(CustomBlockTransitionLoadStatus.WARMUP_ABOVE_STARTING_LOAD,
+            check(205).status)
+
+        // Zero added plates is a verified landmine warmup, not a machine zero.
+        fun landmine(day:CustomWorkoutDaySnapshot)=day.copy(slots=
+            day.slots.map{slot->slot.copy(sets=slot.sets.map{set->
+                set.copy(prescription=set.prescription.copy(load=
+                    (set.prescription.load as DraftSetLoad.Verified)
+                        .copy(basis=LoadBasis.LANDMINE_ADDED_PLATES)))
+            })})
+        val landmineStock=VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.LANDMINE_ADDED_PLATES,
+            listOf(n(0),n(195),n(200),n(205),n(215)))
+        val former=landmine(withWarmup(snapshot(),0))
+        val future=landmine(withWarmup(snapshot(true,listOf(215,215)),0))
+        val allowed=review(future,listOf(completedWarmup(former)),physical=landmineStock)
+        assertEquals(CustomBlockTransitionLoadStatus.READY_FOR_REVIEW,allowed.status)
+        assertEquals(n(0),(allowed.proposedWorkout!!.slots.single().sets.first()
+            .prescription.load as DraftSetLoad.Verified).value)
+    }
+
     @Test fun malformedOrdinalsFailClosedInsteadOfThrowingOrDuplicatingFacts() {
         val old=snapshot().let {s->s.copy(slots=s.slots.map{slot->
             slot.copy(sets=slot.sets.map{it.copy(ordinalInSlot=1)})})}

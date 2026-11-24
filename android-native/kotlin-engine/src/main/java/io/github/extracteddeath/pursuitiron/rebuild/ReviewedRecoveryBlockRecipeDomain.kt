@@ -3,8 +3,8 @@ package io.github.extracteddeath.pursuitiron.rebuild
 import java.math.BigDecimal
 
 /**
- * Review-only recovery recipe for an EXISTING, not-yet-issued recovery
- * block. The owner must establish future-block eligibility separately.
+ * Review-only recovery recipe for an existing future recovery block or a
+ * new trailing recovery week. The owner establishes issuance eligibility.
  * The caller chooses the set cap, reserve floor and optional physical step
  * budget; none is a universal deload recommendation. No estimated load or
  * calendar change is made.
@@ -16,7 +16,10 @@ data class ReviewedRecoveryBlockRecipeRequest(
     /** Null preserves all weights. Otherwise require exactly one easier
      * attainable setting per retained weighted working set, within this budget. */
     val maximumEasierStep:BigDecimal?=null,
-    val verifiedMachineConfigurations:List<KotlinGymMachineAlternatives>?=null
+    val verifiedMachineConfigurations:List<KotlinGymMachineAlternatives>?=null,
+    /** Explicit opt-in to append after the final TRAINING block. The source
+     * targetBlockId identifies that final block, not the new recovery ID. */
+    val appendRecoveryBlockId:String?=null
 )
 
 enum class ReviewedRecoveryBlockRecipeStatus {
@@ -43,23 +46,44 @@ object ReviewedRecoveryBlockRecipeDomain {
         val input=request.source
         val cycle=input.approvedCycle
         val budget=request.maximumEasierStep
-        val block=cycle.blocks.singleOrNull{it.blockId==input.targetBlockId}
-        if(block==null || block.purpose!=CustomBlockPurpose.RECOVERY ||
+        val appendId=request.appendRecoveryBlockId
+        val anchor=cycle.blocks.singleOrNull{it.blockId==input.targetBlockId}
+        val appending=appendId!=null
+        if(anchor==null ||
+            (!appending && anchor.purpose!=CustomBlockPurpose.RECOVERY) ||
+            (appending && (anchor!=cycle.blocks.lastOrNull() ||
+                anchor.purpose!=CustomBlockPurpose.TRAINING ||
+                !Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$").matches(appendId!!) ||
+                cycle.blocks.any{it.blockId==appendId} ||
+                cycle.blocks.size>=26 || cycle.blocks.sumOf{it.weeks.toLong()}>=104L)) ||
             request.maximumWorkingSetsPerSlot !in 1..32 ||
             request.minimumTargetRir !in 2..10 ||
             (budget!=null && (budget.signum()<=0 ||
                 !KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(budget))) ||
-            cycle.revision==Long.MAX_VALUE || input.alternatives.isNotEmpty() ||
+            cycle.revision !in 1 until 9_007_199_254_740_991L || input.alternatives.isNotEmpty() ||
             input.prospectiveByOptionId.isNotEmpty() ||
             input.sourceProspectiveByBlockId.isNotEmpty() ||
-            cycle.weekOverrides[block.blockId].orEmpty().isNotEmpty())
+            (!appending && cycle.weekOverrides[anchor.blockId].orEmpty().isNotEmpty()))
             return result(ReviewedRecoveryBlockRecipeStatus.INVALID_REQUEST,
-                "Choose an existing unissued recovery template without overrides and explicitly review the set cap and reserve floor.")
+                "Choose an existing recovery template without overrides or append after the final training block, with explicit recipe settings.")
         val sourceReview=AdaptiveCycleOptionReviewDomain.review(input)
         if(sourceReview.sourceAudit.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW)
             return result(ReviewedRecoveryBlockRecipeStatus.SOURCE_UNRESOLVED,
                 "The complete source cycle must pass review before proposing a recovery recipe.",
                 comparison=sourceReview)
+        if(appending && !input.permissions.adaptBlocks)
+            return result(ReviewedRecoveryBlockRecipeStatus.PERMISSION_REQUIRED,
+                "Adding a recovery week requires block adaptation permission.")
+        // Clone the last RESOLVED training week, not the block template.
+        // Existing calendar and week overrides remain exactly unchanged.
+        val block=if(appending) {
+            val structural=sourceReview.sourceAudit.structuralReview
+            val last=structural?.let{CustomTrainingCycleDomain.week(it,it.totalWeeks)}
+                ?:return result(ReviewedRecoveryBlockRecipeStatus.SOURCE_UNRESOLVED,
+                    "The final training week could not be resolved.",comparison=sourceReview)
+            anchor.copy(blockId=checkNotNull(appendId),label="Recovery",
+                purpose=CustomBlockPurpose.RECOVERY,weeks=1,days=last.days)
+        } else anchor
         // Explicit permission checks cover removed working sets too; a
         // removed amplifier cannot disappear behind the set-count permission.
         val working=block.days.flatMap{it.slots}.flatMap{it.sets}
@@ -135,8 +159,12 @@ object ReviewedRecoveryBlockRecipeDomain {
         if(changed==block)return result(ReviewedRecoveryBlockRecipeStatus.NO_CHANGE,
             "The authored recovery recipe already meets these settings.")
         val proposed=cycle.copy(revision=cycle.revision+1,
-            blocks=cycle.blocks.map{if(it.blockId==block.blockId)changed else it})
+            blocks=if(appending)cycle.blocks+changed else
+                cycle.blocks.map{if(it.blockId==block.blockId)changed else it})
         val option=AdaptiveCycleOption("reviewed_recovery_recipe",proposed)
+        // The existing option review targets a block that exists in the
+        // source. Keep the anchor as its target; its full-cycle audit and
+        // transition permission checks include the appended block.
         val review=AdaptiveCycleOptionReviewDomain.review(input.copy(alternatives=listOf(option)))
         if(review.evaluated.singleOrNull()?.status!=AdaptiveCycleOptionStatus.READY_FOR_REVIEW)
             return result(ReviewedRecoveryBlockRecipeStatus.AUDIT_REFUSED,
@@ -146,7 +174,8 @@ object ReviewedRecoveryBlockRecipeDomain {
             "Review fewer sets, more prescribed reserve and no amplifiers. "+
                 (if(budget==null)"Retained loads are unchanged. " else
                     "Weighted working sets use one verified easier setting within the approved limit. ")+
-                "Rep targets, equipment and calendar remain unchanged.",
+                (if(appending)"One recovery week is appended; existing weeks and calendars are unchanged." else
+                    "Rep targets, equipment and calendar remain unchanged."),
             option,review)
     }
 }

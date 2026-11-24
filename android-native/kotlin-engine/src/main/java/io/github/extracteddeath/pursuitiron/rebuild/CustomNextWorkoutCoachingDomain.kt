@@ -301,9 +301,10 @@ object CustomNextWorkoutCoachingDomain {
             ?:return result(CustomNextWorkoutCoachingStatus.CHANGED_DAY_OR_EXERCISE,
                 explanation="The current approved day does not contain this movement slot.")
         val nextSets=target.sets.filter{it.prescription.type==DraftSetType.WORKING}
-        if(nextSets.isEmpty() || nextSets.size>32)
+        if(nextSets.isEmpty() || nextSets.size>32 ||
+            nextSets.any{it.prescription.percentageIntent!=null})
             return result(CustomNextWorkoutCoachingStatus.CHANGED_PRESCRIPTION,
-                explanation="There is no comparable working-set prescription.")
+                explanation="There is no comparable ordinary working-set prescription; named percentages require dedicated review.")
 
         // The shared issued-number authority distinguishes an actual
         // physical Machine A/B from a free barbell. The factual receipt can
@@ -473,7 +474,7 @@ object CustomNextWorkoutCoachingDomain {
                         next.prescription.reps.minimum ||
                     old.slotId!=next.slotId ||
                     old.ordinalInSlot!=next.ordinalInSlot ||
-                    old.prescription.amplifier!=null
+                    old.prescription.amplifier!=null || old.prescription.percentageIntent!=null
             })
             return result(CustomNextWorkoutCoachingStatus.CHANGED_PRESCRIPTION,
                 ids,latest.evidence.workoutId,

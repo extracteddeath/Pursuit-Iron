@@ -35,6 +35,16 @@ class BasicProgramProgressionPlanDomainTest {
         (BasicProgramProgressionPlanDomain.review(cycle,selected)
             as ProgramProgressionPlan.Ready).assignments.single()
 
+    @Test fun corruptedIssuedRepBandCannotGetAProgressionRoute() {
+        for(band in listOf(RepBand(0,10),RepBand(11,10),RepBand(6,101))) {
+            val invalid=cycle(block(slots=listOf(
+                slot(sets=listOf(working(band=band),working(band=band))))))
+            assertTrue("Malformed rep band must fail before any route: $band",
+                BasicProgramProgressionPlanDomain.review(invalid)
+                    is ProgramProgressionPlan.Refused)
+        }
+    }
+
     @Test fun progressionAssignmentRespectsWhatZeroPhysicallyMeans() {
         for (basis in LoadBasis.entries) {
             val set=working().copy(load=DraftSetLoad.Verified(LoadUnit.KG,basis,n("0.000")))

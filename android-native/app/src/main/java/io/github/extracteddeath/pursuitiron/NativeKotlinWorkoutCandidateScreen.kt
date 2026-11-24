@@ -320,8 +320,14 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         }
     }
     val allSets=presentation?.exercises?.flatMap{it.sets}.orEmpty()
+    // Exactly one issued occurrence owns each stable setKey. Do not pool
+    // A -> B -> A into one editor, Leveling review or set ordinal.
+    val occurrenceBySetKey=presentation?.exercises.orEmpty()
+        .flatMap{occurrence->occurrence.sets.map{it.target.setKey to occurrence}}
+        .toMap()
     val selected=allSets.firstOrNull{it.target.setKey==selectedKey}
         ?:allSets.firstOrNull()
+    val selectedOccurrence=selected?.target?.setKey?.let{occurrenceBySetKey[it]}
     val activeKeys=if(showAll)allSets else listOfNotNull(selected)
     val issuedGymId=journal?.originalSnapshot?.source?.gymId
     val activeMachineConfig=selected?.target?.exerciseId?.let {exerciseId->
@@ -336,9 +342,10 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     val currentMachine=selected?.target?.exerciseId?.let{
         workoutMachineChoice(machineChoices.encoded,it,null)
     }
-    val currentLevelingScope=selected?.target?.exerciseId?.let {
-        it+"|"+(currentMachine ?: "unassigned")
-    }
+    val currentLevelingScope=selectedOccurrence?.sets?.firstOrNull()
+        ?.target?.setKey?.let { occurrenceKey ->
+            occurrenceKey+"|"+(currentMachine ?: "unassigned")
+        }
     LaunchedEffect(workoutId,currentLevelingScope) {
         if(priorLevelingScope!=null &&
             priorLevelingScope!=currentLevelingScope)
@@ -533,18 +540,25 @@ internal fun NativeKotlinWorkoutCandidateScreen(
 
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            presentation.exercises.forEach{ex->
+            presentation.exercises.forEachIndexed{index,ex->
                 val selectedExercise=ex.sets.any{it.target.setKey==selected?.target?.setKey}
+                val repeated=presentation.exercises.count{
+                    it.exerciseId==ex.exerciseId
+                }>1
+                val occurrenceNumber=presentation.exercises.take(index+1).count{
+                    it.exerciseId==ex.exerciseId
+                }
                 FilterChip(selected=selectedExercise,
                     onClick={selectedKey=ex.nextUnresolvedSetKey
                         ?:ex.sets.last().target.setKey},
-                    label={Text("${kotlinExerciseLabel(ex.exerciseId)} · ${ex.resolvedCount}/${ex.sets.size}")})
+                    label={Text("${kotlinExerciseLabel(ex.exerciseId)}"+
+                        (if(repeated)" · #$occurrenceNumber" else "")+
+                        " · ${ex.resolvedCount}/${ex.sets.size}")})
             }
         }
         val focusDetail=selected?.target?.let { target ->
-            val typeSets=allSets.filter {
-                it.target.exerciseId==target.exerciseId &&
-                    it.target.type==target.type
+            val typeSets=selectedOccurrence?.sets.orEmpty().filter {
+                it.target.type==target.type
             }
             val number=typeSets.indexOfFirst {
                 it.target.setKey==target.setKey
@@ -666,12 +680,13 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         // remain untouched. The journal still owns each actual when logged.
         if(selected!=null && journal!=null && !presentation.finished) {
             val exerciseId=selected.target.exerciseId
-            val numberOfWorkingSets=allSets.count {
-                it.target.exerciseId==exerciseId &&
-                    it.target.type==DraftSetType.WORKING
+            val numberOfWorkingSets=selectedOccurrence?.sets.orEmpty().count {
+                it.target.type==DraftSetType.WORKING
             }
             if(numberOfWorkingSets>=2) {
-                var levelingExpanded by rememberSaveable(workoutId,exerciseId) {
+                var levelingExpanded by rememberSaveable(
+                    workoutId,selectedOccurrence?.sets?.firstOrNull()?.target?.setKey
+                ) {
                     mutableStateOf(false)
                 }
                 OutlinedButton(
@@ -686,9 +701,8 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         else "Leveling · adjust current sets")
                 }
                 if(levelingExpanded) {
-            val workingSets=allSets.filter {
-                it.target.exerciseId==exerciseId &&
-                    it.target.type==DraftSetType.WORKING
+            val workingSets=selectedOccurrence?.sets.orEmpty().filter {
+                it.target.type==DraftSetType.WORKING
             }
             val levelRows=workingSets.map {set->
                 val done=set.isResolved
@@ -718,7 +732,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             val allVerified=loadTypes.all{it is DraftSetLoad.Verified}
             // Inspecting verified barbell combinations can be expensive.
             // Never enumerate plate combinations on Compose's UI thread.
-            var review by remember(workoutId,exerciseId,currentMachine,
+            var review by remember(workoutId,currentLevelingScope,
                 levelRows,levelingStock) {
                 mutableStateOf<CurrentWorkoutLevelingReview?>(null)
             }
@@ -890,9 +904,8 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             error=machineChoices.error,
             acknowledgedCreatedMachineId=machineChoices.createdMachineId,
             priorHistory=lastReferences,
-            priorWorkingKeys=allSets.filter {
-                it.target.exerciseId==selected?.target?.exerciseId &&
-                    it.target.type==DraftSetType.WORKING
+            priorWorkingKeys=selectedOccurrence?.sets.orEmpty().filter {
+                it.target.type==DraftSetType.WORKING
             }.map {WorkoutReferenceKey(it.target.setKey)},
             onRequestHistory={stationHistoryRequested=true},
             externalOpen=selected!=null &&
@@ -939,6 +952,8 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             // editor across Focus/All, A -> B -> A, and rotation. One station
             // cannot inherit another station's typed load. Durable actuals
             // are still authoritative after the saved receipt revision moves.
+            val occurrenceTypeSets=occurrenceBySetKey[set.target.setKey]
+                ?.sets.orEmpty().filter{it.target.type==set.target.type}
             editorStates.SaveableStateProvider(
                 "composer-set:${set.target.setKey}:station:"+
                     (recordedMachineId?.let{"id:$it"} ?: "none")
@@ -971,12 +986,11 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         set.target.setKey in levelSetKeys)
                         CurrentWorkoutLevelingDraft(levelVersion,levelWeight,levelReps)
                     else null,
-                    position=allSets.filter{it.target.exerciseId==set.target.exerciseId &&
-                        it.target.type==set.target.type}.indexOf(set)+1,
-                    setCount=allSets.count{it.target.exerciseId==set.target.exerciseId &&
-                        it.target.type==set.target.type},
+                    position=occurrenceTypeSets.indexOf(set)+1,
+                    setCount=occurrenceTypeSets.size,
                     plannedBackoffNote=NativeKotlinPlannedBackoffNote.fromIssuedTargets(
-                        allSets,set.target),
+                        occurrenceBySetKey[set.target.setKey]?.sets.orEmpty(),
+                        set.target),
                     showExerciseHeading=showAll || presentation.finished,
                     onHistory={historyExerciseId=set.target.exerciseId},
                     onInfo={
@@ -1160,6 +1174,9 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 else null
             }
             val infoMachine=workoutMachineChoice(machineChoices.encoded,exerciseId,null)
+            val multipleOccurrences=presentation?.exercises.orEmpty().count {
+                it.exerciseId==exerciseId
+            }>1
             val infoOptions=NativeKotlinEquipmentRecoveryPolicy.review(
                 activeWorkout=presentation?.finished==false && !state.busy && !swapLoading,
                 hasPhysicalMachineConfig=infoConfig!=null &&
@@ -1209,12 +1226,14 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         infoExerciseId=null
                         openPhysicalMachineFor=exerciseId
                     }) else null,
-                onSwapExercise=if(!infoWarmupsOnly && infoOptions.canReplaceExercise)
+                onSwapExercise=if(!infoWarmupsOnly && !multipleOccurrences &&
+                    infoOptions.canReplaceExercise)
                     ({
                         infoExerciseId=null
                         reviewSwap(exerciseId)
                     }) else null,
                 onSkipRemainingExercise=if(!infoWarmupsOnly &&
+                    !multipleOccurrences &&
                     infoActions.mayRequestSkipRemaining)journal?.revision?.let{revision->
                     ({
                         infoExerciseId=null
@@ -1229,7 +1248,11 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         undoConfirm=event.eventId
                     })
                 }else null,
-                unavailableReason=if(!infoWarmupsOnly &&
+                unavailableReason=if(multipleOccurrences && !infoWarmupsOnly)
+                    "This movement appears more than once in the issued workout. "+
+                    "Use each set's Skip control; bulk skip and workout-only "+
+                    "swap are unavailable until occurrence-specific review is supported."
+                else if(!infoWarmupsOnly &&
                     presentation?.finished==false)infoOptions.reason else null,
                 outcomes=journal?.effectiveSets.orEmpty().mapNotNull { (key,receipt)->
                     (receipt.operation as? KotlinJournalOperation.RecordSet)?.let{key to it.outcome}

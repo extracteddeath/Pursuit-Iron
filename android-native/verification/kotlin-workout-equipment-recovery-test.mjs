@@ -39,8 +39,14 @@ assert.match(generated,/NativeKotlinEquipmentRecoveryPolicy\.review\(/);
 assert.match(generated,/hasPhysicalMachineConfig=infoConfig!=null/);
 assert.match(generated,/hasRecordedExerciseWork=targets\.any\{/);
 assert.match(generated,/onChooseMachine=if\(!infoWarmupsOnly && infoOptions\.canChangeStation\)/);
-assert.match(generated,/onSwapExercise=if\(!infoWarmupsOnly && infoOptions\.canReplaceExercise\)/);
-assert.match(generated,/unavailableReason=if\(!infoWarmupsOnly/);
+// A generated workout may contain more than one occurrence of the same lift.
+ // In that case an exerciseId-wide swap or skip is ambiguous and the Info
+ // sheet must hide it, while retaining exact single-set actions.
+assert.match(generated,/val multipleOccurrences=presentation\?\.exercises\.orEmpty\(\)\.count/);
+assert.match(generated,/onSwapExercise=if\(!infoWarmupsOnly && !multipleOccurrences &&\s*infoOptions\.canReplaceExercise\)/);
+assert.match(generated,/!multipleOccurrences &&\s*infoActions\.mayRequestSkipRemaining/);
+assert.match(generated,/unavailableReason=if\(multipleOccurrences && !infoWarmupsOnly\)/);
+assert.match(generated,/bulk skip and workout-only/);
 assert.match(generated,/openPhysicalMachineFor=exerciseId/);
 assert.match(generated,/reviewSwap\(exerciseId\)/);
 // Opening a physical station is not an instruction to abandon the user's

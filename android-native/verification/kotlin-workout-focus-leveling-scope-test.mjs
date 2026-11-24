@@ -28,8 +28,25 @@ assert.match(focus,/previouslyOpenKeys=stillOpen/,
 assert.doesNotMatch(focus,/if\(presentation!=null\)\s*selectedKey=/,
   'an unconditional revision reset steals Focus during note editing');
 assert.match(screen,/priorLevelingScope by rememberSaveable\(workoutId\)/);
-assert.match(screen,/currentLevelingScope=selected\?\.target\?\.exerciseId/);
+// Repeat A -> B -> A is three separate issued occurrences. A review or
+// draft for the first A cannot include the later A even if exercise and
+// machine identities match. The shared Kotlin projection owns the cards.
+assert.match(screen,/val occurrenceBySetKey=presentation\?\.exercises\.orEmpty\(\)/);
+assert.match(screen,/val selectedOccurrence=selected\?\.target\?\.setKey/);
+assert.match(screen,/currentLevelingScope=selectedOccurrence\?\.sets\?\.firstOrNull\(\)/);
+assert.match(screen,/val workingSets=selectedOccurrence\?\.sets\.orEmpty\(\)\.filter/);
+assert.match(screen,/priorWorkingKeys=selectedOccurrence\?\.sets\.orEmpty\(\)\.filter/);
+assert.match(screen,/position=occurrenceTypeSets\.indexOf\(set\)\+1/);
+assert.match(screen,/setCount=occurrenceTypeSets\.size/);
+assert.match(screen,/plannedBackoffNote=NativeKotlinPlannedBackoffNote\.fromIssuedTargets\(\s*occurrenceBySetKey/);
+assert.match(screen,/presentation\.exercises\.forEachIndexed/);
+assert.match(screen,/if\(repeated\)" · #\$occurrenceNumber"/);
+assert.doesNotMatch(screen,/val workingSets=allSets\.filter\s*\{\s*it\.target\.exerciseId==exerciseId/);
 assert.match(screen,/priorLevelingScope!=currentLevelingScope/);
+assert.match(screen,/val multipleOccurrences=presentation\?\.exercises\.orEmpty\(\)\.count/);
+assert.match(screen,/onSwapExercise=if\(!infoWarmupsOnly && !multipleOccurrences/);
+assert.match(screen,/!multipleOccurrences &&\s*infoActions\.mayRequestSkipRemaining/);
+assert.match(screen,/bulk skip and workout-only/);
 assert.match(screen,/if\(priorLevelingScope==currentLevelingScope/,
   'previous-workout Leveling dialog must be scoped to exact exercise and machine');
 assert.match(screen,/onDismiss=\{priorLevelingScope=null\}/);
@@ -57,7 +74,7 @@ for(const source of [screen,custom]) {
   assert.match(source,/\{lastReferenceRefresh\+\+\}/);
 }
 assert.match(reference,/Text\("Retry Last"\)/);
-console.log('PASS Focus, machine-scoped Leveling and source-keyed retryable Last references');
+console.log('PASS Focus, occurrence/station-scoped Leveling and source-keyed retryable Last references');
 
 // Both workout routes must allow typed browsing and return to source-owned
 // next unfinished entries; no program mutation or journal write is implied.

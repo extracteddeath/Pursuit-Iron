@@ -683,6 +683,49 @@ class NativeKotlinTrackedWorkoutGatewayTest {
         assertEquals(0,original().receipts.size)
     }
 
+    @Test fun repeatedExerciseBulkCommandsFailClosedWithoutTouchingColdJournal() {
+        enroll()
+        val targets=(0..2).map{ordinal->
+            KotlinWorkoutTarget(if(ordinal==1)"row" else "bench",
+                ComposerRole.PRIMARY,ComposerSessionPurpose.HYPERTROPHY,
+                "repeat-$ordinal",DraftSetType.WORKING,ordinal,
+                DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.SMITH_TOTAL,
+                    BigDecimal("200")),RepBand(5,8),2,60,90)
+        }
+        val snapshot=KotlinStagedWorkout(source,"grant-repeat",
+            "repeated-workout",0,0,ComposerSessionPurpose.HYPERTROPHY,40,targets)
+        val identity=KotlinStoredWorkoutIdentity("storage-repeat",
+            "repeated-workout",source,1)
+        assertTrue(journal().issue("owner-1",snapshot,identity)
+            is NativeJournalFileResult.Durable)
+        fun cold()=(gateway().open("owner-1","athlete-1",
+            "repeated-workout") as NativeJournalFileResult.Durable).journal
+        val before=cold()
+        assertEquals(listOf("bench","row","bench"),
+            KotlinWorkoutPresentationDomain.inspect(before)
+                .exercises.map{it.exerciseId})
+        assertNull(WorkoutRemainingExerciseDomain.generated(before,"bench"))
+        val refusedSkip=gateway().skipRemainingExercise(
+            "owner-1","athlete-1","repeated-workout",0L,"bench")
+        assertEquals(NativeJournalFileRefusal.JOURNAL_REJECTED,
+            (refusedSkip as NativeJournalFileResult.Rejected).reason)
+        val refusedSwap=gateway().swapExercise(
+            "owner-1","athlete-1","repeated-workout",
+            "ambiguous-swap",0L,"bench","replacement",emptyList())
+        assertEquals(NativeJournalFileRefusal.SWAP_SOURCE_UNAVAILABLE,
+            (refusedSwap as NativeJournalFileResult.Rejected).reason)
+        assertEquals(before,cold())
+        // Individual set actions still work, and never change the other
+        // occurrence's issued target or create an implicit global skip.
+        val single=gateway().append("owner-1","athlete-1",
+            "repeated-workout",KotlinJournalOperation.RecordSet(
+                "skip-one",0L,"repeat-0",KotlinJournalSetOutcome.SKIPPED,null))
+        assertTrue(single.toString(),single is NativeJournalFileResult.Durable)
+        assertEquals(setOf("repeat-0"),cold().effectiveSets.keys)
+        assertEquals(snapshot,cold().originalSnapshot)
+        assertEquals(1L,cold().revision)
+    }
+
     @Test fun multiEntrySkipAppendsOnlySkipsAndLeavesFinishExplicit() {
         enroll();val initial=issue()
         val saved=gateway().skipRemainingExercise("owner-1","athlete-1","workout-1",0,"bench") as NativeJournalFileResult.Durable

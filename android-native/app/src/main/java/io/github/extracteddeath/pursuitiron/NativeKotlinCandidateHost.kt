@@ -3631,6 +3631,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
             as? NativeJournalFileResult.Durable ?:return emptyList()
         val journal=saved.journal
         if(journal.finishedByEventId!=null ||
+            !KotlinWorkoutPresentationDomain.hasSingleOccurrence(
+                journal.snapshot.targets,previousExerciseId) ||
             journal.snapshot.targets.none{it.exerciseId==previousExerciseId} ||
             journal.snapshot.targets.filter{
                 it.exerciseId==previousExerciseId

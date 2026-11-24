@@ -82,6 +82,40 @@ class KotlinWorkoutRestDomainTest {
     private fun rest(j:CustomWorkoutJournalDraft)=KotlinWorkoutRestDomain.inspect(
         j,CustomWorkoutJournalDomain.nextUnresolvedVisit(j))
 
+    @Test fun repeatedGeneratedExerciseUsesDisplayedOccurrenceIndexForRest() {
+        // A -> B -> A is valid for an immutable set-keyed journal, and
+        // resting after the second A belongs to its THIRD visible card.
+        val targets=listOf(
+            target("first","press",rest=45),
+            target("middle","row",rest=75),
+            target("second-press","press",rest=100),
+            target("end","chinup",rest=60))
+        var journal=composer(targets)
+        journal=record(journal,"second-press")
+        val projected=KotlinWorkoutPresentationDomain.inspect(journal)
+        assertEquals(listOf("press","row","press","chinup"),
+            projected.exercises.map{it.exerciseId})
+        assertEquals(2,KotlinWorkoutRestDomain.inspect(
+            journal,"end").automaticCue?.exerciseIndex)
+        assertEquals(KotlinWorkoutRestCue("event-0",100,2),
+            KotlinWorkoutRestDomain.inspect(journal,"end").automaticCue)
+        assertEquals("first",projected.firstUnresolvedSetKey)
+        assertEquals(3,projected.remainingCount)
+    }
+
+    @Test fun newRoleOnSameGeneratedLiftHasItsOwnRestCard() {
+        val targets=listOf(target("main","press",rest=90),
+            target("accessory","press",rest=45).copy(role=ComposerRole.ACCESSORY),
+            target("remaining","row",rest=120))
+        val journal=record(composer(targets),"accessory")
+        val presentation=KotlinWorkoutPresentationDomain.inspect(journal)
+        assertEquals(3,presentation.exercises.size)
+        assertEquals(listOf("press","press","row"),
+            presentation.exercises.map{it.exerciseId})
+        assertEquals(KotlinWorkoutRestCue("event-0",45,1),
+            KotlinWorkoutRestDomain.inspect(journal,"remaining").automaticCue)
+    }
+
     @Test fun generatedNoteEditDoesNotResetPriorCompletedSetRest() {
         val recorded=record(composer(),"warmup")
         val before=KotlinWorkoutRestDomain.inspect(recorded,"work")

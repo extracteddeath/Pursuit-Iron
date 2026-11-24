@@ -199,6 +199,21 @@ class NativeKotlinTrackedWorkoutGateway(
         if(!authorized(owner,athlete,opened.journal))
             return@fenced NativeJournalFileResult.Rejected(
                 NativeJournalFileRefusal.NOT_AUTHORIZED)
+        // An exerciseId is ambiguous if the same lift is issued twice.
+        // Refuse the ID-wide operation while under the owner/history fence;
+        // do NOT change the reducer's cold replay of older saved swaps.
+        // A lost-ack retry of a committed swap must reach the existing
+        // exact pre-event replay verifier, even though the original
+        // exercise has already been replaced. Unknown NEW operations
+        // cannot use exerciseId to modify two source occurrences.
+        val knownEvent=opened.journal.receipts.any{
+            it.operation.eventId==eventId
+        }
+        if(!knownEvent &&
+            !KotlinWorkoutPresentationDomain.hasSingleOccurrence(
+                opened.journal.snapshot.targets,previousExerciseId))
+            return@fenced NativeJournalFileResult.Rejected(
+                NativeJournalFileRefusal.SWAP_SOURCE_UNAVAILABLE)
         workout.swapExercise(owner,workoutId,eventId,expectedRevision,
             previousExerciseId,replacementExerciseId,intents)
     }

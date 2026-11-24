@@ -18,8 +18,8 @@ for(const theme of (process.env.THEMES||'amethyst,rosewater').split(','))for(con
  await page.goto('http://127.0.0.1:'+server.address().port+'/',{waitUntil:'networkidle0'});await page.waitForSelector('.wpb-tabbar');
  await page.evaluate(px=>{document.documentElement.style.fontSize=px+'px'},fz);
  for(const [name,fn] of Object.entries(steps)){await fn(page,wait);await wait(700);
-  const r=await page.evaluate(sel=>{const o={};const els=[...document.querySelectorAll(sel)];els.forEach((el,i)=>{const cs=getComputedStyle(el);let s={};for(let k=0;k<cs.length;k++){const n=cs[k];if(/^(transition|animation|will-change|view-transition)/.test(n))continue;s[n]=cs.getPropertyValue(n)}
-    const tag=(el.className?.baseVal??el.className)+'#'+i;o[tag]=s;for(const pe of ['::before','::after']){const c=getComputedStyle(el,pe);if(c.content!=='none'&&c.content!=='normal'){let t={};for(let k=0;k<c.length;k++)t[c[k]]=c.getPropertyValue(c[k]);o[tag+pe]=t;}}});return o;},process.env.SEL);
+  const r=await page.evaluate(([sel,keept])=>{const o={};const els=[...document.querySelectorAll(sel)];els.forEach((el,i)=>{const cs=getComputedStyle(el);let s={};for(let k=0;k<cs.length;k++){const n=cs[k];if(!keept&&/^(transition|animation|will-change|view-transition)/.test(n))continue;s[n]=cs.getPropertyValue(n)}
+    const tag=(el.className?.baseVal??el.className)+'#'+i;o[tag]=s;for(const pe of ['::before','::after']){const c=getComputedStyle(el,pe);if(c.content!=='none'&&c.content!=='normal'){let t={};for(let k=0;k<c.length;k++)t[c[k]]=c.getPropertyValue(c[k]);o[tag+pe]=t;}}});return o;},[process.env.SEL,!!process.env.KEEPT]);
   out[`${theme}|${w}|${fz}|${name}`]=r;}
  await page.close();}
 fs.writeFileSync(outFile,JSON.stringify(out));await browser.close();server.close();console.log('states',Object.keys(out).length);

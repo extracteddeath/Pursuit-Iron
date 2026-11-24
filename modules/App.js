@@ -2149,7 +2149,7 @@ function StyleTag({ theme } = {}) {
       .wpb-history-detail-head{min-height:50px;}
       .wpb-history-actions>button,.wpb-history-actions>span>button{min-width:40px!important;min-height:40px!important;}
       .wpb-ex-nav-step{will-change:padding,border-color,background-color;}
-      .wpb-ex-nav-name{will-change:max-width,opacity,transform;margin-left;}
+      .wpb-ex-nav-name{will-change:max-width,opacity,transform;}
       @media(max-width:380px){
         .wpb-workout-actions{gap:4px!important;}
         .wpb-history-detail-head{align-items:flex-start!important;gap:8px!important;}

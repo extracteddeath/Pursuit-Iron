@@ -77,6 +77,10 @@ data class NativeHistoryLedger(
 ) {
     /** Never show a possibly stale Last/PR/progression cache while pending. */
     val readyForHistoryReads: Boolean get() = pending == null
+    /** Admission check, not a reservation for multiple concurrent workouts. */
+    val hasCompletionCapacity: Boolean get() =
+        completions.size < NativeHistoryLedgerBinary.MAX_SESSIONS &&
+            revision < NativeHistoryLedgerBinary.MAX_REV
 }
 
 enum class NativeHistoryLedgerRefusal {
@@ -101,7 +105,7 @@ private object NativeHistoryLedgerBinary {
     const val MAX_SESSIONS = KotlinHistoryCapacityPolicy.MAX_MANIFEST_COMPLETIONS
     private const val MAX_BYTES = KotlinHistoryCapacityPolicy.MAX_LEDGER_BYTES
     private val validId = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
-    private const val MAX_REV = 9_007_199_254_740_991L
+    const val MAX_REV = 9_007_199_254_740_991L
 
     fun hash(data: ByteArray): ByteArray =
         MessageDigest.getInstance("SHA-256").digest(data)

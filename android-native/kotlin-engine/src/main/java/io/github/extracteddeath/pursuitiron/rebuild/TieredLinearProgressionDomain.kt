@@ -63,6 +63,7 @@ sealed interface TieredLinearResult {
     data class Candidate(
         val state: TieredLinearState,
         val targets: List<TieredLinearSetTarget>,
+        val sourceSetCount: Int,
         val transitions: List<TieredLinearTransition>,
         val recovery: Boolean
     ): TieredLinearResult {
@@ -210,6 +211,7 @@ object TieredLinearProgressionDomain {
         return TieredLinearResult.Candidate(state,
             Collections.unmodifiableList(targets(request.tier,issuedState,
                 request.approvedSetBudget,request.recovery)),
+            stageCount(request.tier,state.stage),
             Collections.unmodifiableList(transitions.toList()),request.recovery)
     }
 }

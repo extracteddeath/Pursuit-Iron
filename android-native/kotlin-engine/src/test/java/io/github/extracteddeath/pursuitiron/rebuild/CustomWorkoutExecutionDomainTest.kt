@@ -1197,6 +1197,7 @@ class CustomWorkoutExecutionDomainTest {
         val planned=CustomAmplifierSetSummaryDomain.review(j,set)!!
         assertEquals("Myo-reps",planned.title)
         assertTrue(planned.planned.contains("5 mini-sets"))
+        assertTrue(planned.planned.contains("same activation load"))
         assertEquals("Planned after this working set",planned.progress)
 
         j=record(j,"a:s1",reps=16)
@@ -1209,7 +1210,7 @@ class CustomWorkoutExecutionDomainTest {
         j=record(j,"a:s1",CustomWorkoutVisitPart.FOLLOW_UP,stage=3,reps=3)
         assertEquals("Sequence ended · 3 of 5 logged",
             CustomAmplifierSetSummaryDomain.review(j,set)!!.progress)
-        assertEquals("Performed mini-sets: 5 + 4 + 3 reps",
+        assertEquals("Performed mini-sets at 20 lb: 5 + 4 + 3 reps",
             CustomAmplifierSetSummaryDomain.review(j,set)!!.actuals)
         assertEquals(3,j.effectiveVisits.keys.count{
             it.part==CustomWorkoutVisitPart.FOLLOW_UP

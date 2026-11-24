@@ -249,7 +249,9 @@ internal object NativeCustomWorkoutJournalCodec {
             }
         }
         return out.toByteArray().also{
-            require(it.size in 16..MAX_BYTES)
+            require(it.size>=16)
+            NativeWorkoutJournalByteBudget.requireFits(it.size,MAX_BYTES,
+                if(state.finishedByEventId==null)state.unresolvedVisitCount else null)
         }
     }
 

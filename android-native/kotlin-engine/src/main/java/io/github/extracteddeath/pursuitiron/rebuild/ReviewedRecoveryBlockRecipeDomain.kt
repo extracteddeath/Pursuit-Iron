@@ -4,10 +4,11 @@ import java.math.BigDecimal
 
 /**
  * Review-only recovery recipe for an existing future recovery block or a
- * new trailing recovery week. The owner establishes issuance eligibility.
+ * new recovery week at an existing training-block boundary. The owner
+ * establishes issuance and calendar eligibility; this never mutates storage.
  * The caller chooses the set cap, reserve floor and optional physical step
  * budget; none is a universal deload recommendation. No estimated load or
- * calendar change is made.
+ * calendar mutation is made.
  */
 data class ReviewedRecoveryBlockRecipeRequest(
     val source:AdaptiveCycleOptionRequest,
@@ -19,7 +20,12 @@ data class ReviewedRecoveryBlockRecipeRequest(
     val verifiedMachineConfigurations:List<KotlinGymMachineAlternatives>?=null,
     /** Explicit opt-in to append after the final TRAINING block. The source
      * targetBlockId identifies that final block, not the new recovery ID. */
-    val appendRecoveryBlockId:String?=null
+    val appendRecoveryBlockId:String?=null,
+    /** Explicitly allow insertion between two existing TRAINING blocks.
+     * Subsequent unissued weeks move by one; existing block-relative
+     * overrides and identities stay unchanged. A storage owner must prove
+     * no affected week is prepared/issued/completed before accepting. */
+    val insertAfterAnchor:Boolean=false
 )
 
 enum class ReviewedRecoveryBlockRecipeStatus {
@@ -49,9 +55,13 @@ object ReviewedRecoveryBlockRecipeDomain {
         val appendId=request.appendRecoveryBlockId
         val anchor=cycle.blocks.singleOrNull{it.blockId==input.targetBlockId}
         val appending=appendId!=null
+        val anchorIndex=cycle.blocks.indexOfFirst{it.blockId==input.targetBlockId}
+        val inserting=request.insertAfterAnchor
         if(anchor==null ||
             (!appending && anchor.purpose!=CustomBlockPurpose.RECOVERY) ||
-            (appending && (anchor!=cycle.blocks.lastOrNull() ||
+            (inserting && (!appending || anchorIndex !in 0 until cycle.blocks.lastIndex ||
+                cycle.blocks.getOrNull(anchorIndex+1)?.purpose!=CustomBlockPurpose.TRAINING)) ||
+            (appending && ((!inserting && anchor!=cycle.blocks.lastOrNull()) ||
                 anchor.purpose!=CustomBlockPurpose.TRAINING ||
                 !Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$").matches(appendId!!) ||
                 cycle.blocks.any{it.blockId==appendId} ||
@@ -65,7 +75,7 @@ object ReviewedRecoveryBlockRecipeDomain {
             input.sourceProspectiveByBlockId.isNotEmpty() ||
             (!appending && cycle.weekOverrides[anchor.blockId].orEmpty().isNotEmpty()))
             return result(ReviewedRecoveryBlockRecipeStatus.INVALID_REQUEST,
-                "Choose an existing recovery template without overrides or append after the final training block, with explicit recipe settings.")
+                "Choose an existing recovery template without overrides, append after the final training block, or explicitly insert between training blocks.")
         val sourceReview=AdaptiveCycleOptionReviewDomain.review(input)
         if(sourceReview.sourceAudit.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW)
             return result(ReviewedRecoveryBlockRecipeStatus.SOURCE_UNRESOLVED,
@@ -74,13 +84,14 @@ object ReviewedRecoveryBlockRecipeDomain {
         if(appending && !input.permissions.adaptBlocks)
             return result(ReviewedRecoveryBlockRecipeStatus.PERMISSION_REQUIRED,
                 "Adding a recovery week requires block adaptation permission.")
-        // Clone the last RESOLVED training week, not the block template.
-        // Existing calendar and week overrides remain exactly unchanged.
+        // Clone the anchor's last RESOLVED training week, not the template.
+        // Only the requested boundary changes; block-relative overrides stay intact.
         val block=if(appending) {
             val structural=sourceReview.sourceAudit.structuralReview
-            val last=structural?.let{CustomTrainingCycleDomain.week(it,it.totalWeeks)}
+            val boundary=cycle.blocks.take(anchorIndex+1).sumOf{it.weeks}
+            val last=structural?.let{CustomTrainingCycleDomain.week(it,boundary)}
                 ?:return result(ReviewedRecoveryBlockRecipeStatus.SOURCE_UNRESOLVED,
-                    "The final training week could not be resolved.",comparison=sourceReview)
+                    "The anchor training week could not be resolved.",comparison=sourceReview)
             anchor.copy(blockId=checkNotNull(appendId),label="Recovery",
                 purpose=CustomBlockPurpose.RECOVERY,weeks=1,days=last.days)
         } else anchor
@@ -159,7 +170,8 @@ object ReviewedRecoveryBlockRecipeDomain {
         if(changed==block)return result(ReviewedRecoveryBlockRecipeStatus.NO_CHANGE,
             "The authored recovery recipe already meets these settings.")
         val proposed=cycle.copy(revision=cycle.revision+1,
-            blocks=if(appending)cycle.blocks+changed else
+            blocks=if(appending)cycle.blocks.take(anchorIndex+1)+changed+
+                cycle.blocks.drop(anchorIndex+1) else
                 cycle.blocks.map{if(it.blockId==block.blockId)changed else it})
         val option=AdaptiveCycleOption("reviewed_recovery_recipe",proposed)
         // The existing option review targets a block that exists in the
@@ -174,7 +186,8 @@ object ReviewedRecoveryBlockRecipeDomain {
             "Review fewer sets, more prescribed reserve and no amplifiers. "+
                 (if(budget==null)"Retained loads are unchanged. " else
                     "Weighted working sets use one verified easier setting within the approved limit. ")+
-                (if(appending)"One recovery week is appended; existing weeks and calendars are unchanged." else
+                (if(inserting)"One recovery week is inserted after the chosen training block; every later week moves by one and requires renewed approval." else
+                    if(appending)"One recovery week is appended; existing weeks and calendars are unchanged." else
                     "Rep targets, equipment and calendar remain unchanged."),
             option,review)
     }

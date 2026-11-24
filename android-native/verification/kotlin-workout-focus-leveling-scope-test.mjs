@@ -91,3 +91,14 @@ assert.match(custom,/steps=availableVisits.map/);
 assert.match(custom,/visit,current.effectiveVisits.containsKey\(visit\)/);
 assert.doesNotMatch(custom,/val visitIndex=availableVisits.indexOf\(activeFocus\)/);
 console.log('PASS same typed Focus browsing and return-to-next across both Kotlin journal routes');
+
+// Current-session effort is read-only, exact preceding main working set,
+// same station, independent of the Target/Last switch.
+assert.match(screen,/occurrenceTypeSets\.getOrNull\(occurrenceTypeSets\.indexOf\(set\)-1\)/);
+assert.match(screen,/PursuitPreviousWorkingSetRir\(previousWorking\?\.actual/);
+assert.match(custom,/working\.getOrNull\(working\.indexOf\(set\)-1\)/);
+assert.match(custom,/PursuitPreviousWorkingSetRir\(previousWorking\?\.performed/);
+assert.match(reference,/outcome!=KotlinJournalSetOutcome\.COMPLETED \|\| actual==null/);
+assert.match(reference,/actual\.machineInstanceId!=machineInstanceId/);
+assert.match(reference,/actual\.actualRir\?\.let\{"\$it RIR"\} \?: "RIR not recorded"/);
+assert.match(reference,/Previous working set · \$effort/);

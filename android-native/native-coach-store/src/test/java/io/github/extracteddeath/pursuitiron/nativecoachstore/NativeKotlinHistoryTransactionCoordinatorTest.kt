@@ -86,6 +86,50 @@ class NativeKotlinHistoryTransactionCoordinatorTest {
             "workout-$id", finish(id))).manifest.completions.size)
     }
 
+    @Test fun generatedCorrectionCannotReserveAnotherJournalKindsHistory() {
+        val entries=listOf(
+            KotlinHistoryManifestEntry(1,"workout-1","custom-v2-"+"a".repeat(64),"finish-1",3,0),
+            KotlinHistoryManifestEntry(2,"workout-2","measured-v1-"+"b".repeat(64),"finish-2",3,0),
+            KotlinHistoryManifestEntry(3,"workout-3","storage-3","finish-3",3,0))
+        assertTrue(ledger().enrollVerifiedSnapshot("owner-1","athlete-1",entries){_,_->true}
+            is NativeHistoryLedgerResult.Durable)
+        val original=manifest().ledger
+        for(i in 1..2) {
+            val intent=NativeHistoryWriteIntent.Correct("workout-$i",edit(i))
+            assertEquals(NativeHistoryLedgerResult.Rejected(
+                NativeHistoryLedgerRefusal.INVALID_MANIFEST_TRANSITION),
+                ledger().prepare("owner-1","athlete-1",original.revision,intent))
+            assertEquals(original,manifest().ledger)
+            assertTrue(manifest().ledger.readyForHistoryReads)
+        }
+        val genuine=NativeHistoryWriteIntent.Correct("workout-3",edit(3))
+        assertTrue(ledger().prepare("owner-1","athlete-1",original.revision,genuine)
+            is NativeHistoryLedgerResult.Durable)
+        assertTrue(ledger().finalize("owner-1","athlete-1",genuine,
+            entries.last().copy(savedCorrectionRevision=1)) is NativeHistoryLedgerResult.Durable)
+        assertTrue(manifest().ledger.readyForHistoryReads)
+    }
+
+    @Test fun generatedFinishCannotPublishCustomOrMeasuredReceiptNamespace() {
+        enroll()
+        val intent=NativeHistoryWriteIntent.Finish("workout-1",finish(1))
+        assertTrue(ledger().prepare("owner-1","athlete-1",1,intent)
+            is NativeHistoryLedgerResult.Durable)
+        val pending=manifest().ledger
+        for(prefix in listOf("custom-v2-","measured-v1-")) {
+            val wrong=KotlinHistoryManifestEntry(1,"workout-1",prefix+"c".repeat(64),
+                "finish-1",3,0)
+            assertEquals(NativeHistoryLedgerResult.Rejected(
+                NativeHistoryLedgerRefusal.INVALID_MANIFEST_TRANSITION),
+                ledger().finalize("owner-1","athlete-1",intent,wrong))
+            assertEquals(pending,manifest().ledger)
+        }
+        val actual=KotlinHistoryManifestEntry(1,"workout-1","storage-1","finish-1",3,0)
+        assertTrue(ledger().finalize("owner-1","athlete-1",intent,actual)
+            is NativeHistoryLedgerResult.Durable)
+        assertEquals(listOf(actual),manifest().ledger.completions)
+    }
+
     @Test fun historyCapacityReservesLastCompletionAndRefusesAllNewFinishKindsWithoutPending() {
         val limit=KotlinHistoryCapacityPolicy.MAX_MANIFEST_COMPLETIONS
         val entries=(1 until limit).map { i ->

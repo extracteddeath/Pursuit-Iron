@@ -3259,7 +3259,15 @@ function syncSubSets(sets, ex, unit) {
             }
             return s;
         }
-        if (s.done || userOwnsRuntimeSet(s) || !(actW > 0))
+        if (s.done || !(actW > 0))
+            return s;
+        // Reps-only changes must not take ownership of the inherited mini load.
+        // Logged rows and manually chosen weights stay authoritative.
+        const manualLoad = userOwnsRuntimeSet(s) && (
+            s.kind !== "myo" || s.weightOwner === "user" ||
+            s.target?.w == null || String(s.weight) !== String(s.target.w)
+        );
+        if (manualLoad)
             return s;
         let want;
         if (s.kind === "drop") {

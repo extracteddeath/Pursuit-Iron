@@ -121,6 +121,13 @@ private object NativeHistoryLedgerBinary {
     fun composerReceipt(id:String):Boolean =
         !id.startsWith("custom-") && !id.startsWith("measured-")
 
+    private fun correctionActual(intent:NativeHistoryWriteIntent?):KotlinPerformedSet? =
+        when(intent) {
+            is NativeHistoryWriteIntent.Correct -> intent.operation.actual
+            is NativeHistoryWriteIntent.CustomCorrect -> intent.operation.performed
+            else -> null
+        }
+
     private fun DataOutputStream.time(value:Long?) {
         writeBoolean(value!=null)
         if(value!=null)writeLong(value)
@@ -146,13 +153,12 @@ private object NativeHistoryLedgerBinary {
         require(state.completions.map { it.completionOrder } ==
             (1L..state.completions.size.toLong()).toList())
         // Check the station before publishing the write-ahead intent.
-        val correctionMachine=when(val pending=state.pending) {
-            is NativeHistoryWriteIntent.Correct -> pending.operation.actual?.machineInstanceId
-            is NativeHistoryWriteIntent.CustomCorrect -> pending.operation.performed?.machineInstanceId
-            else -> null
-        }
+        val correctionMachine=correctionActual(state.pending)?.machineInstanceId
         require(correctionMachine==null ||
             KotlinMachineAlternativesDomain.validInstanceId(correctionMachine))
+        val visit=(state.pending as? NativeHistoryWriteIntent.CustomCorrect)?.operation?.visit
+        require(visit==null || (visit.stage in 1..5 &&
+            (visit.part==CustomWorkoutVisitPart.FOLLOW_UP || visit.stage==1)))
         when (val intent = state.pending) {
             null -> Unit
             is NativeHistoryWriteIntent.Finish -> require(
@@ -204,7 +210,7 @@ private object NativeHistoryLedgerBinary {
         if (value != null) {
             val load = value.load
             writeBoolean(load != null)
-            if (load != null) writeUTF(load.toPlainString())
+            if (load != null) writeUTF(if(format>=5)load.toString() else load.toPlainString())
             val unit = value.unit
             writeBoolean(unit != null)
             if (unit != null) writeUTF(unit.name)
@@ -246,14 +252,14 @@ private object NativeHistoryLedgerBinary {
         // intent/receipt. Format 4 is additive; old 1/2/3 still decode.
         val measured=state.pending is NativeHistoryWriteIntent.MeasuredFinish ||
             state.completions.any{it.storedReceiptId.startsWith("measured-v1-")}
-        // Format 5 carries the physical station of a pending correction.
-        // Do not upgrade unrelated manifests or invent a station in old bytes.
-        val correctionMachine=when(val pending=state.pending) {
-            is NativeHistoryWriteIntent.Correct -> pending.operation.actual?.machineInstanceId
-            is NativeHistoryWriteIntent.CustomCorrect -> pending.operation.performed?.machineInstanceId
-            else -> null
-        }
-        val format=if(correctionMachine!=null)5 else if(measured)4 else if(dated)3 else 2
+        // Format 5 preserves the complete correction identity: physical
+        // station, staged follow-up ordinal and exact BigDecimal scale.
+        // Unrelated manifests retain their previous byte formats.
+        val actual=correctionActual(state.pending)
+        val visit=(state.pending as? NativeHistoryWriteIntent.CustomCorrect)?.operation?.visit
+        val needsExactRedo=actual?.machineInstanceId!=null ||
+            (visit!=null && visit.stage!=1) || actual?.load?.toString()?.contains('E')==true
+        val format=if(needsExactRedo)5 else if(measured)4 else if(dated)3 else 2
         val body = ByteArrayOutputStream()
         DataOutputStream(body).use { out ->
             out.writeInt(MAGIC); out.writeInt(format)
@@ -311,6 +317,7 @@ private object NativeHistoryLedgerBinary {
                     out.writeLong(op.expectedCorrectionRevision)
                     out.writeUTF(op.visit.setKey)
                     out.writeUTF(op.visit.part.name)
+                    if(format>=5)out.writeInt(op.visit.stage)
                     out.writeUTF(op.correctsEventId)
                     out.writeUTF(op.outcome.name)
                     out.actual(op.performed,format)
@@ -396,6 +403,7 @@ private object NativeHistoryLedgerBinary {
                         val part = CustomWorkoutVisitPart.entries.singleOrNull {
                             it.name == partName
                         } ?: throw IOException("invalid custom visit part")
+                        val stage=if(format>=5)data.readInt() else 1
                         val predecessor = data.readUTF()
                         val outcomeName = data.readUTF()
                         val outcome = KotlinJournalSetOutcome.entries.singleOrNull {
@@ -403,7 +411,7 @@ private object NativeHistoryLedgerBinary {
                         } ?: throw IOException("invalid custom outcome")
                         NativeHistoryWriteIntent.CustomCorrect(workout,
                             CustomSavedVisitCorrection(event, revision,
-                                CustomWorkoutVisitKey(setKey, part),
+                                CustomWorkoutVisitKey(setKey, part, stage),
                                 predecessor, outcome, data.actual(format)))
                     }
                     5 -> {

@@ -4656,9 +4656,10 @@ background:var(--pi-color-card)!important;
 #root[data-pi-motion="expressive"] .wpb-program .wpb-day-exercise-preview{
   color:var(--pi-color-on-muted)!important;
 }
+/* B1037: training days are filled tiles and rest days are plain text; only today keeps an outline. */
 #root[data-pi-motion="expressive"] .wpb-program .wpb-schedule-day{
-  background:var(--pi-color-card)!important;
-  border-color:var(--pi-color-divider)!important;
+  background:var(--pi-color-control)!important;
+  border-color:transparent!important;
   color:var(--pi-color-on-control)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-program .wpb-schedule-day:not([data-training="true"]){
@@ -4680,24 +4681,45 @@ background:var(--pi-color-card)!important;
   font-size:12px!important;
   letter-spacing:.025em!important;
 }
+/* B1037: Compose AssistChip proportions — a 32px pill inside a 48px touch target, so a day's
+   muscles read as one compact row of chips instead of stacked 48px slabs. The pill is the
+   ::before; the button itself stays a transparent 48px target. */
 #root[data-pi-motion="expressive"] .wpb-program .wpb-day-hit-chip{
   min-height:48px;
-  padding:5px 10px!important;
-  background:var(--pi-color-control)!important;
+  padding:0 12px!important;
+  position:relative;isolation:isolate;
+  background:transparent!important;
   color:var(--pi-color-on-control)!important;
-  border:1px solid var(--pi-color-divider)!important;
-  font-size:12px!important;
+  border:0!important;
+  font-size:var(--pi-type-label)!important;
   line-height:1.25;
 }
-#root[data-pi-motion="expressive"] .wpb-program .wpb-day-hit-chip[data-strong="true"]{
-  color:var(--pi-color-on-control)!important;
-  background:var(--pi-color-feature)!important;
-  border-color:color-mix(in srgb,var(--pi-m3e-primary) 32%,var(--pi-color-divider))!important;
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-hit-chip::before{
+  content:"";position:absolute;inset:8px 0;z-index:-1;border-radius:8px;
+  background:var(--pi-color-control);
+  box-shadow:inset 0 0 0 1px var(--pi-color-divider);
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-hit-chip[data-strong="true"]::before{
+  background:var(--pi-color-feature);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--pi-m3e-primary) 32%,var(--pi-color-divider));
 }
 #root[data-pi-motion="expressive"] .wpb-program .wpb-day-hit-chip[aria-expanded="true"]{
-  box-shadow:inset 0 0 0 1px var(--pi-m3e-primary)!important;
   color:var(--wpb-theme-text)!important;
 }
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-hit-chip[aria-expanded="true"]::before{
+  box-shadow:inset 0 0 0 1.5px var(--pi-m3e-primary);
+}
+#root .wpb .wpb-program .wpb-day-hits-list{display:flex;flex-wrap:wrap;gap:0 var(--pi-space-2);}
+/* Day focus and Add exercise close the day's list as plain sections, not a bordered box and a
+   dashed card. */
+#root .wpb .wpb-program .wpb-day-focus{border-top:1px solid var(--pi-color-divider);padding:var(--pi-space-3) 0 var(--pi-space-1);}
+#root .wpb .wpb-program .wpb-day-focus-title{display:flex;align-items:center;gap:var(--pi-space-2);margin:0 0 var(--pi-space-2);font-size:var(--pi-type-support);font-weight:650;color:var(--pi-color-on-muted);}
+#root .wpb .wpb-program .wpb-day-focus-choices{box-sizing:border-box;display:flex;width:100%;gap:2px;padding:3px;border-radius:var(--pi-shape-action);background:var(--pi-color-control);}
+#root .wpb .wpb-program .wpb-day-focus-choices>.wpb-ui-choice{flex:1 1 auto;min-width:0;min-height:44px;padding:0 var(--pi-space-2);border:0;background:transparent;color:var(--pi-color-on-muted);font-size:var(--pi-type-support);font-weight:650;}
+#root .wpb .wpb-program .wpb-day-focus-choices>.wpb-ui-choice[aria-pressed="true"]{background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);}
+#root .wpb .wpb-program .wpb-day-focus-note{margin:var(--pi-space-2) 0 0;font-size:var(--pi-type-label);line-height:1.45;color:var(--pi-color-on-muted);}
+#root .wpb .wpb-program .wpb-day-add-exercise{display:flex;align-items:center;width:100%;justify-content:flex-start;gap:var(--pi-space-2);padding-inline:0;}
+#root .wpb .wpb-program .wpb-program-add-day,#root .wpb .wpb-program .wpb-program-share-action{display:flex;align-items:center;justify-content:center;width:100%;gap:var(--pi-space-2);margin-top:var(--pi-space-3);}
 #root[data-pi-motion="expressive"] .wpb-program .wpb-day-hit-panel{
   background:var(--pi-color-control)!important;
   border:1px solid var(--pi-color-divider);
@@ -4733,18 +4755,22 @@ background:var(--pi-color-card)!important;
 .wpb-manual-target-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
 #root .wpb .wpb-manual-target-actions>.wpb-ui-action{flex:1 1 5rem;min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;font-size:var(--pi-type-body);}
 @media (max-width:359px){.wpb-manual-targets{grid-column:1/-1;}.wpb-manual-target-field{flex-basis:4.5rem;}}
+/* B1037: exercises are rows of the day's one surface, not cards inside the day card. A divider
+   separates them (Compose ListItem + HorizontalDivider); dragging still lifts the row. */
 #root[data-pi-motion="expressive"] .wpb-program .wpb-program-exercise{
-  background:var(--pi-color-control);
-  padding:10px 10px 10px 7px;
-  border:1px solid var(--pi-color-divider);
-  border-radius:16px;
-  margin-top:8px;
+  background:transparent;
+  padding:var(--pi-space-3) 0;
+  border:0;
+  border-top:1px solid var(--pi-color-divider);
+  border-radius:0;
+  margin-top:0;
   box-shadow:none;
   min-width:0;
 }
-#root .wpb-program .wpb-program-exercise[data-grouped="true"]{border-left:3px solid var(--wpb-theme-accent);}
+#root .wpb-program .wpb-program-exercise[data-grouped="true"]{border-left:3px solid var(--wpb-theme-accent);padding-left:var(--pi-space-2);}
 #root[data-pi-motion="expressive"] .wpb-program .wpb-program-exercise[data-dragging="true"]{
   background:var(--pi-color-inset);
+  border-radius:var(--pi-shape-card);
   box-shadow:0 5px 16px rgba(0,0,0,.18);
 }
 #root[data-pi-motion="expressive"] .wpb-program .wpb-program-exercise-heading{
@@ -4785,7 +4811,7 @@ background:var(--pi-color-card)!important;
   margin-top:8px;
 }
 #root[data-pi-motion="expressive"] .wpb-program .wpb-exercise-actions>button{
-  min-height:40px;
+  min-height:44px;
   background:var(--pi-color-inset);
   border-radius:12px;
   font-size:var(--pi-type-support);

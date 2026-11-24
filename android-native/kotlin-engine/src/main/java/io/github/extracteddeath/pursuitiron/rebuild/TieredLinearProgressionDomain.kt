@@ -29,7 +29,8 @@ data class TieredLinearExposure(
     val observations: List<WorkingSetFact>,
     /** Shortened, substituted, recovery or interrupted exposure is not a
      * normal tier attempt. Preserve it as history, not progression evidence. */
-    val comparableTraining: Boolean
+    val comparableTraining: Boolean,
+    val sourceSlotId: String? = null
 )
 data class TieredLinearRequest(
     val nextWorkoutId: String,
@@ -41,7 +42,8 @@ data class TieredLinearRequest(
     val verifiedStock: VerifiedLoadStock?,
     val maximumAuthorizedIncrease: BigDecimal,
     val approvedSetBudget: Int,
-    val recovery: Boolean = false
+    val recovery: Boolean = false,
+    val sourceSlotId: String? = null
 )
 enum class TieredLinearRefusal {
     INVALID_SOURCE, INVALID_INITIAL_STATE, INVALID_LEDGER,
@@ -128,7 +130,12 @@ object TieredLinearProgressionDomain {
         val transitions=ArrayList<TieredLinearTransition>()
         // A different physical station/day/tier is not evidence for this slot.
         // A newer noncomparable session on this scope blocks fallback.
-        val comparable=ledger.filter{it.scope==request.scope && it.tier==request.tier}
+        val sameScope=ledger.filter{it.scope==request.scope && it.tier==request.tier}
+        if(request.sourceSlotId!=null && (request.sourceSlotId.isBlank() ||
+            sameScope.any{it.sourceSlotId.isNullOrBlank()}))
+            return no(TieredLinearRefusal.INVALID_LEDGER)
+        val comparable=if(request.sourceSlotId==null) sameScope
+            else sameScope.filter{it.sourceSlotId==request.sourceSlotId}
         if(comparable.lastOrNull()?.comparableTraining==false)
             return no(TieredLinearRefusal.NONCOMPARABLE_LATEST)
         for(exposure in comparable) {

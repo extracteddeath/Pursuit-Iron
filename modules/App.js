@@ -91,7 +91,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='1046';
+const __APP_VERSION__='4.0.0'; const __BUILD__='1047';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -6665,8 +6665,10 @@ function PlanView({ programs = null, program, plan, blockNavigation = null, read
                     return (_jsxs(UiChoice, { selected: on, kind: "tab", onClick: () => setPane(id), "aria-label": label, "data-plan-pane": id, className: "wpb-plan-pane-tab", children: [_jsx(Icon, { size: 15 }), _jsx("span", { className: "wpb-plan-pane-label", children: label })] }, id));
                 }) }), (pane === "schedule" || pane === "volume") && plan.totalWeeks > 1 && (_jsx("div", { className: "wpb-hscroll wpb-choice-rail wpb-plan-week-picker", "data-plan-week-picker": true, children: plan.weeks.map(w => {
                     const on = featuredWeek?.week === w.week;
-                    return (_jsx(UiChoice, { selected: on, kind: "summary", onClick: () => pickWeek(w.week), className: "wpb-plan-week-chip", "aria-label": `Week ${w.week}`,
-                        "data-week-status": w.status, label: `Week ${w.week}`, caption: chipCaption(w) }, w.week));
+                    return (_jsx(UiChoice, { selected: on, kind: "summary", onClick: () => pickWeek(w.week), className: "wpb-plan-week-chip", "aria-label": `Week ${w.week}`, "aria-description": w.total ? `${w.done} of ${w.total} sessions done` : undefined,
+                        // B1047: the same per-session dots as the program editor's week chips.
+                        "data-week-status": w.status, label: w.total ? _jsxs(_Fragment, { children: [`Week ${w.week}`, _jsx("span", { className: "wpb-week-dots", "aria-hidden": true,
+                            children: Array.from({ length: w.total }, (_, k) => _jsx("i", { "data-done": k < w.done ? "true" : undefined }, k)) })] }) : `Week ${w.week}`, caption: chipCaption(w) }, w.week));
                 }) })), pane === "schedule" && (() => {
                 const wi = weekIntent(program, openWeek || plan.currentWeek);
                 if (!wi)

@@ -3544,7 +3544,6 @@ display:block!important;
   background-color:light-dark(var(--pi-m3e-surface-container),var(--pi-r41-surface-2))!important;
   border:1px solid var(--pi-r11-edge)!important;
   border-radius:20px!important;
-  box-shadow:none!important;
   padding:4px!important;
   margin:0!important;
 }
@@ -3565,7 +3564,6 @@ display:block!important;
   border-radius:16px!important;
   background-color:light-dark(var(--pi-m3e-surface-container-low),var(--pi-r41-surface-1))!important;
   background-image:none!important;
-  box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-grouping>button{
   padding:7px 13px!important;
@@ -3753,7 +3751,6 @@ display:block!important;
   border:1px solid var(--pi-r11-edge)!important;
   background-color:var(--pi-r11-raised)!important;
   background-image:none!important;
-  box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>button{
   min-width:0;
@@ -6806,7 +6803,6 @@ background:var(--pi-color-card)!important;
   border:1px solid var(--pi-layout-border);padding:5px 2px;
   -webkit-user-select:text!important;user-select:text!important;-webkit-touch-callout:default!important;
 }
-#root .wpb-dock-field-controls .wpb-set-stepper{width:24px;height:44px;}
 #root .wpb-dock-log{
   height:44px;border:0;border-radius:12px;background:var(--pi-color-active);
   color:var(--pi-color-on-active);display:grid;place-items:center;cursor:pointer;
@@ -7377,9 +7373,7 @@ background:var(--pi-color-card)!important;
   margin-top:6px;color:var(--wpb-theme-muted);
 }
 #root .wpb .wpb-progress .wpb-progress-panel{
-  border-radius:var(--pi-shape-card,16px);
-  padding:16px;
-  margin-bottom:12px;background:var(--wpb-theme-card);
+  padding:16px;background:var(--wpb-theme-card);
 }
 #root .wpb .wpb-progress .wpb-progress-entry-row{
   display:flex;
@@ -7426,7 +7420,7 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-progress .wpb-progress-empty-help{font-size:14px;margin-top:2px;}
 #root .wpb .wpb-progress .wpb-progress-entry-value{font-size:16px;font-weight:600;}
 #root .wpb .wpb-progress .wpb-progress-measure-heading{margin-top:var(--pi-space-6);font-size:11px;font-weight:800;letter-spacing:0.5px;color:var(--wpb-theme-faint);text-transform:uppercase;margin-bottom:var(--pi-space-2);}
-#root .wpb .wpb-progress .wpb-progress-measure-row{background:var(--wpb-theme-card);border-radius:16px;padding:10px 11px;margin-bottom:var(--pi-space-2);border:1px solid var(--wpb-theme-border-soft);}
+#root .wpb .wpb-progress .wpb-progress-measure-row{background:var(--wpb-theme-card);border-radius:16px;padding:10px 11px;border:1px solid var(--wpb-theme-border-soft);}
 #root .wpb .wpb-progress .wpb-progress-measure-head{display:flex;align-items:center;gap:var(--pi-space-2);}
 #root .wpb .wpb-progress .wpb-progress-measure-toggle{flex:1;min-width:0;display:flex;align-items:center;gap:9px;padding:3px 2px;border:0;background:none;color:var(--wpb-theme-text);text-align:left;cursor:pointer;}
 #root .wpb .wpb-progress .wpb-progress-grow{flex:1;min-width:0;}
@@ -7438,7 +7432,7 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-progress .wpb-progress-measure-log{min-width:54px;padding:9px 11px;border-radius:12px;border:none;font-weight:700;font-size:14px;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-faint);cursor:default;}
 #root .wpb .wpb-progress .wpb-progress-empty{margin-top:var(--pi-space-10);text-align:center;color:var(--wpb-theme-faint);}
 #root .wpb .wpb-progress .wpb-progress-empty-copy{font-size:16px;margin-top:var(--pi-space-1);}
-#root .wpb .wpb-progress .wpb-consistency-card{background:var(--wpb-theme-card);border:1px solid var(--wpb-theme-border-soft);border-radius:16px;padding:14px 15px;margin-bottom:14px;}
+#root .wpb .wpb-progress .wpb-consistency-card{background:var(--wpb-theme-card);border:1px solid var(--wpb-theme-border-soft);border-radius:16px;padding:14px 15px;}
 #root .wpb .wpb-progress .wpb-progress-consistency-head{display:flex;align-items:baseline;gap:10px;}
 #root .wpb .wpb-progress .wpb-progress-consistency-title{font-size:16px;font-weight:750;flex:1;}
 #root .wpb .wpb-progress .wpb-progress-consistency-last{font-size:12px;color:var(--wpb-theme-faint);}
@@ -7451,9 +7445,9 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-progress .wpb-progress-filter-row{display:flex;gap:var(--pi-space-2);margin-top:var(--pi-space-2);}
 #root .wpb .wpb-progress .wpb-progress-filter-program{flex:1;min-width:0;padding:11px;border-radius:12px;background:var(--wpb-theme-card);}
 #root .wpb .wpb-progress .wpb-progress-filter-period{min-width:0;padding:11px;border-radius:12px;background:var(--wpb-theme-card);}
-#root .wpb .wpb-progress .wpb-history-filter-meta{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px;margin-top:var(--pi-space-2);}
+#root .wpb .wpb-progress .wpb-history-filter-meta{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px;}
 #root .wpb .wpb-progress .wpb-progress-clear-filters{border:none;background:none;color:var(--wpb-theme-accent-ink);padding:var(--pi-space-2) 0;font-weight:700;}
-#root .wpb .wpb-progress .wpb-history-filter-help{font-size:12px;color:var(--wpb-theme-muted);line-height:1.5;}
+#root .wpb .wpb-progress .wpb-history-filter-help{font-size:12px;line-height:1.5;}
 #root .wpb .wpb-progress .wpb-training-history{margin-bottom:var(--pi-space-3);min-width:0;}
 #root .wpb .wpb-progress .wpb-progress-no-matches{padding:var(--pi-space-5) 0;font-size:14px;color:var(--wpb-theme-muted);}
 #root .wpb .wpb-progress .wpb-progress-grouping{display:flex;gap:2px;background:var(--wpb-theme-bg-tint);border-radius:12px;padding:2px;margin-bottom:var(--pi-space-2);align-self:flex-start;width:fit-content;}
@@ -7465,7 +7459,7 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-progress .wpb-progress-phase-title{font-size:14px;font-weight:700;color:var(--wpb-theme-accent-ink);}
 #root .wpb .wpb-progress .wpb-history-session-head{display:flex;align-items:center;gap:var(--pi-space-3);padding:var(--pi-space-3);}
 #root .wpb .wpb-progress .wpb-history-session-toggle{flex:1;min-width:0;min-height:48px;display:flex;align-items:center;gap:var(--pi-space-3);background:none;border:none;padding:0;cursor:pointer;text-align:left;}
-#root .wpb .wpb-progress .wpb-history-date{width:44px;height:44px;border-radius:12px;background:var(--wpb-theme-accent-dim);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;}
+#root .wpb .wpb-progress .wpb-history-date{background:var(--wpb-theme-accent-dim);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;}
 #root .wpb .wpb-progress .wpb-history-date-day{font-size:16px;font-weight:600;color:var(--wpb-theme-accent-ink);line-height:1;}
 #root .wpb .wpb-progress .wpb-history-date-month{font-size:11px;color:var(--wpb-theme-accent-ink);text-transform:uppercase;}
 #root .wpb .wpb-progress .wpb-progress-item-title{font-size:16px;font-weight:700;line-height:1.35;min-width:0;white-space:normal;overflow-wrap:anywhere;}
@@ -7933,7 +7927,7 @@ background:var(--pi-color-card)!important;
 #root .wpb-session-game-plan{padding:14px;margin-top:14px}
 
 
-.wpb-game-plan-heading{display:flex;align-items:center;gap:9px;width:100%;min-height:48px;padding:0;margin:0;border:0;background:transparent;color:var(--wpb-theme-text);text-align:left;font:inherit;font-size:1rem;line-height:1.4}.wpb-game-plan-heading>strong{flex:1}.wpb-game-plan-heading>svg{flex-shrink:0;color:var(--wpb-theme-accent-ink)}button.wpb-game-plan-heading{cursor:pointer}
+.wpb-game-plan-heading{display:flex;align-items:center;width:100%;padding:0;margin:0;border:0;background:transparent;color:var(--wpb-theme-text);text-align:left;font:inherit;font-size:1rem;line-height:1.4}.wpb-game-plan-heading>strong{flex:1}.wpb-game-plan-heading>svg{flex-shrink:0;color:var(--wpb-theme-accent-ink)}button.wpb-game-plan-heading{cursor:pointer}
 #root .wpb-game-plan-exercise{color:var(--pi-color-on-control)}
 
 .wpb-game-plan-exercise p,.wpb-plan-change-card p{font-size:14px;line-height:1.55;color:var(--wpb-theme-muted);margin:7px 0 0;overflow-wrap:anywhere}
@@ -8828,7 +8822,7 @@ background:var(--pi-color-card)!important;
 }
 
 /* Cohesion 12 — Plan pane and week selection presentation has one CSS owner. */
-.wpb-plan-panes{display:flex;flex-wrap:wrap;container-type:inline-size;gap:4px;padding:3px;margin-bottom:12px;border-radius:12px;background:var(--pi-color-control,transparent);}
+.wpb-plan-panes{flex-wrap:wrap;container-type:inline-size;padding:3px;margin-bottom:12px;border-radius:12px;background:var(--pi-color-control,transparent);}
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>.wpb-plan-pane-tab{box-sizing:border-box;display:flex;flex:1 1 0;min-width:0;min-height:48px;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 4px;border:0;border-radius:8px;background:transparent;color:var(--pi-color-on-control,inherit);font-size:11px;font-weight:700;cursor:pointer;}
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>.wpb-plan-pane-tab[aria-pressed="true"]{background:var(--pi-color-card,transparent);color:var(--pi-m3e-primary,var(--wpb-theme-accent,currentColor));font-weight:800;}
 .wpb-plan-pane-label{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -9789,7 +9783,7 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-exinfo-sheet textarea:focus-visible{outline-color:Highlight}}
 
 /* B994: one M3 token owner for completed Workout metrics, coaching and actions. */
-#root .wpb .wpb-finish-sheet{box-sizing:border-box;width:100%;max-height:min(88dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 16px));overflow-y:auto;overscroll-behavior:contain;border-top:1px solid var(--wpb-theme-border);border-radius:22px 22px 0 0;padding:8px 16px calc(env(safe-area-inset-bottom) + 22px);background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);animation:sheetUp .28s cubic-bezier(.2,.7,.3,1) both;}
+#root .wpb .wpb-finish-sheet{width:100%;max-height:min(88dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 16px));overflow-y:auto;overscroll-behavior:contain;border-top:1px solid var(--wpb-theme-border);border-radius:22px 22px 0 0;padding:8px 16px calc(env(safe-area-inset-bottom) + 22px);background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);animation:sheetUp .28s cubic-bezier(.2,.7,.3,1) both;}
 #root .wpb .wpb-finish-trophy{width:40px;height:40px;border-radius:12px;background:var(--wpb-theme-accent-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 #root .wpb .wpb-finish-subtitle{font-size:14px;color:var(--wpb-theme-muted);}
 #root .wpb .wpb-finish-block-label{color:var(--wpb-theme-accent-ink);font-weight:600;}

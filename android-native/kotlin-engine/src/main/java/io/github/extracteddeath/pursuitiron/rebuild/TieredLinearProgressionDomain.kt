@@ -146,7 +146,9 @@ object TieredLinearProgressionDomain {
             return no(TieredLinearRefusal.INVALID_LEDGER)
         val comparable=if(request.sourceSlotId==null) sameScope
             else sameScope.filter{it.sourceSlotId==request.sourceSlotId}
-        if(comparable.lastOrNull()?.let{!it.comparableTraining && it.recoveryReference==null}==true)
+        // Recovery is transparent to the last ordinary-attempt guard.
+        // It cannot rehabilitate an interrupted or otherwise incomparable visit.
+        if(comparable.lastOrNull{it.recoveryReference==null}?.comparableTraining==false)
             return no(TieredLinearRefusal.NONCOMPARABLE_LATEST)
         for(exposure in comparable) {
             val isRecovery=exposure.recoveryReference!=null

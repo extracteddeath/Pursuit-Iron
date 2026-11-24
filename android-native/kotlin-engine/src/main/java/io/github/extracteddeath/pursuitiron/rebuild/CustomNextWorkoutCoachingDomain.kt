@@ -746,11 +746,11 @@ object CustomNextWorkoutCoachingDomain {
                                 receipt.outcome,receipt.actual
                             ) as KotlinWorkingSetEvidenceReview.Accepted).evidence.fact
                         },trainingDayId="${request.next.stamp.cycleId}:${request.next.weekday}:${target.slotId}")
-                    val assisted=straight.first().basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT
+                    val assisted=!straight.first().basis.higherSettingIncreasesDifficulty
                     val assistedReview=if(assisted &&
                         target.machineInstanceId!=null &&
                         target.machineInstanceId==request.requestedMachineInstanceId &&
-                        request.verifiedStock?.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+                        request.verifiedStock?.basis?.higherSettingIncreasesDifficulty==false)
                         runCatching {AssistedCounterweightProgressionDomain.review(
                             AssistedCounterweightReviewRequest(
                                 workout(previous,priorFacts,previousSets),

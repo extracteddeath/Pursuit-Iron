@@ -19,6 +19,29 @@ class KotlinSetNumberAuthorityDomainTest {
         unit:LoadUnit?=LoadUnit.LB,machine:String?="machine-A"
     )=KotlinPerformedSet(weight?.let(::n),unit,reps,rir,machine)
 
+    @Test fun issuedRepBandsHaveOneNumericEnvelopeAcrossAllEntryRoutes() {
+        for(band in listOf(RepBand(1,1),RepBand(3,5),
+            RepBand(6,10),RepBand(1,100),RepBand(100,100)))
+            assertTrue("Valid issued rep range: $band",
+                KotlinSetNumberAuthorityDomain.validIssuedRepBand(band))
+        for(band in listOf(RepBand(0,10),RepBand(-1,8),
+            RepBand(10,9),RepBand(5,101),RepBand(101,101)))
+            assertFalse("Invalid issued rep range: $band",
+                KotlinSetNumberAuthorityDomain.validIssuedRepBand(band))
+
+        // Issued target ranges are not an excuse to fabricate or reject
+        // factual over/under-target reps. This independent check protects
+        // the training-history source of truth.
+        val issued=load("100")
+        for(reps in listOf(1,2,11,25,100))
+            assertTrue(KotlinSetNumberAuthorityDomain.valid(
+                issued,KotlinJournalSetOutcome.COMPLETED,
+                actual("100",reps,2)))
+        assertFalse(KotlinSetNumberAuthorityDomain.valid(
+            issued,KotlinJournalSetOutcome.COMPLETED,
+            actual("100",101,2)))
+    }
+
     @Test fun allOutcomesAndNumericalDeviationsHaveOneExplicitMeaning() {
         val issued=load()
         val pending=KotlinSetNumberAuthorityDomain.review(issued,null,null)

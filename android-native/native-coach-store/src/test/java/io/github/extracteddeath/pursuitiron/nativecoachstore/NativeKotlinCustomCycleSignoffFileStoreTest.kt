@@ -129,6 +129,36 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         return (result as NativeCustomSignoffWrite.Committed).receipt
     }
 
+    @Test fun recoveryPreflightVerifiesEveryRetainedWeightEvenWithoutLoadAdjustment() {
+        machineBindingFixture=true
+        val source=source()
+        val original=cycle()
+        val anchor=original.blocks.single()
+        val recovery=anchor.copy(blockId="recovery",label="Recovery",
+            purpose=CustomBlockPurpose.RECOVERY,weeks=1)
+        val proposed=original.copy(revision=2,blocks=original.blocks+recovery)
+        val a=KotlinPhysicalMachine("A","Leg extension A",
+            unit=LoadUnit.LB,increment=n("5"),minimum=n("20"),maximum=n("160"))
+        val b=KotlinPhysicalMachine("B","Leg extension B",
+            unit=LoadUnit.LB,increment=n("10"),minimum=n("20"),maximum=n("180"))
+        val roster=NativeMachineRosterSnapshot("owner-1",1,listOf(
+            KotlinGymMachineAlternatives("gym-1","leg_extension","B",listOf(a,b))))
+        fun review(c:CustomTrainingCycle=proposed,
+            inventory:NativeMachineRosterSnapshot?=roster,week:Int=4)=
+            NativeKotlinRecoveryWorkoutPreflight.review("owner-1",c,source.setup,
+                source.catalog,source.revision,week,"recovery",inventory)
+        assertNull(review())
+        assertNotNull(review(inventory=null))
+        assertNotNull(review(inventory=roster.copy(ownerId="other")))
+        assertNotNull(review(week=3))
+        // Only the last day is unavailable on B. All days must be verified.
+        val last=recovery.days.last()
+        val bad=recovery.copy(days=recovery.days.dropLast(1)+last.copy(
+            slots=last.slots.map{it.copy(machineInstanceId="B")}))
+        assertTrue(review(proposed.copy(blocks=original.blocks+bad))
+            ?.contains("LOAD_NOT_AVAILABLE_ON_MACHINE")==true)
+    }
+
     @Test fun signedMachineASlotPreparesAndColdOpensDespiteGymBDefault() {
         machineBindingFixture=true
         initialize()

@@ -688,6 +688,8 @@ private fun NativeKotlinCandidateTrainEntry(
     var showIdEntry by rememberSaveable {mutableStateOf(false)}
     var showOtherWorkouts by rememberSaveable {mutableStateOf(false)}
     var visibleUnfinishedCount by rememberSaveable(host) {mutableIntStateOf(20)}
+    var visibleMeasuredCount by rememberSaveable(host) {mutableIntStateOf(20)}
+    var visibleApprovedMeasuredCount by rememberSaveable(host) {mutableIntStateOf(20)}
     // Minimize removes the logger from composition. Preserve its timer and
     // unsubmitted fields per exact workout, then revalidate native storage
     // when reopening. Another workout must never inherit that UI state.
@@ -698,6 +700,8 @@ private fun NativeKotlinCandidateTrainEntry(
     suspend fun refreshUnfinishedWorkouts() {
         reviewingResume=true
         visibleUnfinishedCount=20
+        visibleMeasuredCount=20
+        visibleApprovedMeasuredCount=20
         resumable=null
         resumableMeasured=null
         confirmedUnissuedMeasured=null
@@ -1124,7 +1128,7 @@ private fun NativeKotlinCandidateTrainEntry(
                         if(review.workouts.isNotEmpty()) {
                             Text("${review.workouts.size} unfinished measured sessions",
                                 style=MaterialTheme.typography.labelMedium)
-                            review.workouts.take(20).forEach {item->
+                            review.workouts.take(visibleMeasuredCount).forEach {item->
                                 OutlinedButton(
                                     enabled=canVerifyGeneratedResume() && !reviewingResume,
                                     modifier=Modifier.fillMaxWidth(),
@@ -1159,9 +1163,18 @@ private fun NativeKotlinCandidateTrainEntry(
                                     }
                                 }
                             }
+                            if(review.workouts.size>visibleMeasuredCount) {
+                                val remaining=review.workouts.size-visibleMeasuredCount
+                                OutlinedButton(
+                                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
+                                    enabled=!reviewingResume && !resumeChecking,
+                                    onClick={visibleMeasuredCount+=minOf(20,remaining)}
+                                ) {Text("Show next ${minOf(20,remaining)} unfinished sessions")}
+                            }
                             if(review.workouts.size>20)
-                                Text("Showing 20 verified sessions. Refresh after completing one.",
-                                    style=MaterialTheme.typography.bodySmall)
+                                Text("Showing ${minOf(visibleMeasuredCount,review.workouts.size)} of ${review.workouts.size} verified unfinished sessions.",
+                                    style=MaterialTheme.typography.bodySmall,
+                                    color=MaterialTheme.colorScheme.onSurfaceVariant)
                         } else Text("No unfinished measured sessions.",
                             style=MaterialTheme.typography.bodySmall)
                     }
@@ -1181,7 +1194,7 @@ private fun NativeKotlinCandidateTrainEntry(
                                 style=MaterialTheme.typography.titleSmall)
                             Text("These exact measured plans were already confirmed. Starting one will recheck its saved gym and exercise source.",
                                 style=MaterialTheme.typography.bodySmall)
-                            confirmed.confirmed.take(20).forEach {item->
+                            confirmed.confirmed.take(visibleApprovedMeasuredCount).forEach {item->
                                 OutlinedButton(
                                     enabled=canVerifyGeneratedResume() && !reviewingResume,
                                     modifier=Modifier.fillMaxWidth(),
@@ -1215,9 +1228,18 @@ private fun NativeKotlinCandidateTrainEntry(
                                     }
                                 }
                             }
+                            if(confirmed.confirmed.size>visibleApprovedMeasuredCount) {
+                                val remaining=confirmed.confirmed.size-visibleApprovedMeasuredCount
+                                OutlinedButton(
+                                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
+                                    enabled=!reviewingResume && !resumeChecking,
+                                    onClick={visibleApprovedMeasuredCount+=minOf(20,remaining)}
+                                ) {Text("Show next ${minOf(20,remaining)} approved sessions")}
+                            }
                             if(confirmed.confirmed.size>20)
-                                Text("Showing the first 20 saved approvals.",
-                                    style=MaterialTheme.typography.bodySmall)
+                                Text("Showing ${minOf(visibleApprovedMeasuredCount,confirmed.confirmed.size)} of ${confirmed.confirmed.size} verified approvals.",
+                                    style=MaterialTheme.typography.bodySmall,
+                                    color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     is NativeMeasuredConsentInventoryResult.Rejected ->

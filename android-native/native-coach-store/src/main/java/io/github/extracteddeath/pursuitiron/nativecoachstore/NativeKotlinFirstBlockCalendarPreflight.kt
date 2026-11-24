@@ -171,7 +171,7 @@ class NativeKotlinFirstBlockCalendarPreflight(
                 NativeFirstBlockCalendarRefusal.NOT_AUTHORIZED)
             // A prepared or applied future activation must not be relabeled
             // as a brand-new first cycle. Unrecognized/corrupt also refuses.
-            if(futureCommits.read(ownerKey)!=NativeFutureCommitReview.Missing)
+            if(!futureCommits.verifiesNoActivation(ownerKey))
                 return@withOwnerTransaction refuse(
                     NativeFirstBlockCalendarRefusal.FUTURE_ACTIVATION_PRESENT)
             val verified=(signoffs.recoverReviewedInputs(ownerKey,cycleId)

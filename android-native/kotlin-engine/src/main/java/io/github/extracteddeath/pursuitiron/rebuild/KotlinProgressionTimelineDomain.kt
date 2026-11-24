@@ -201,9 +201,8 @@ object KotlinProgressionTimelineDomain {
                 it.exerciseId==request.exerciseId && it.type==DraftSetType.WORKING
             }
             return working.isNotEmpty() && working.all {
-                it.outcome==KotlinJournalSetOutcome.COMPLETED &&
-                    it.actual?.machineInstanceId?.let(
-                        KotlinMachineAlternativesDomain::validInstanceId)==true
+                KotlinSetNumberAuthorityDomain.completedPhysicalStation(
+                    it.issuedLoad,it.outcome,it.actual)!=null
             }
         }
         val newestMachineIds=dayApplicable.lastOrNull()?.second?.let(::physicalMachines)

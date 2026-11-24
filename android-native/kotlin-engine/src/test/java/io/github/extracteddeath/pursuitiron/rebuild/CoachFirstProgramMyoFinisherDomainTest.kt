@@ -97,6 +97,27 @@ class CoachFirstProgramMyoFinisherDomainTest {
         assertEquals(0,pick.dayIndex)
         assertEquals(before,days)
     }
+    @Test fun finisherRefusesMismatchedImplementAndInvalidIssuedNumbers() {
+        // An authored cable-stack prescription must not become a myo finisher
+        // when the reviewed catalog movement belongs to a machine stack.
+        assertNull(pick(catalog=movement(basis=LoadBasis.MACHINE_STACK)))
+        // Other work having the same number is not evidence that its
+        // physical basis matches the equipment or is a valid issued load.
+        val wrongBasis=load.copy(basis=LoadBasis.MACHINE_STACK)
+        assertNull(pick(s=session(exercise(sets=listOf(
+            set(1,weight=wrongBasis),set(2,weight=wrongBasis))))))
+        val excessPrecision=load.copy(value=BigDecimal("35.0009"))
+        assertNull(pick(s=session(exercise(sets=listOf(
+            set(1,weight=excessPrecision),set(2,weight=excessPrecision))))))
+        val excessiveLoad=load.copy(value=BigDecimal("100001"))
+        assertNull(pick(s=session(exercise(sets=listOf(
+            set(1,weight=excessiveLoad),set(2,weight=excessiveLoad))))))
+        // Valid decimal formatting remains eligible, without re-rounding.
+        val valid=load.copy(value=BigDecimal("35.000"))
+        assertNotNull(pick(s=session(exercise(sets=listOf(
+            set(1,weight=valid),set(2,weight=valid))))))
+    }
+
     @Test fun identicalPhysicalLoadsAcrossDecimalScalesAreOneSameLoadFinisher() {
         val first=set(1,weight=load.copy(value=BigDecimal("35.000")))
         val last=set(2,weight=load.copy(value=BigDecimal("35.0")))

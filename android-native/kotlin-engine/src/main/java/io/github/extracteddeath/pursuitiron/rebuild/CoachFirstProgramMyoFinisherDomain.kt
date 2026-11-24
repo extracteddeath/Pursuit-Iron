@@ -56,6 +56,11 @@ object CoachFirstProgramMyoFinisherDomain {
                 val last=working.last()
                 val set=last.value
                 val load=set.load as? DraftSetLoad.Verified ?:continue
+                // Only a physically valid issued load on the reviewed station
+                // can become a technique candidate. Never offer a cable or
+                // machine finisher on a mismatched basis or malformed weight.
+                if(!KotlinSetNumberAuthorityDomain.validIssuedLoad(load) ||
+                    load.basis!=byId[exercise.exerciseId]?.expectedLoadBasis)continue
                 if(load.value.signum()<=0 || set.targetReps.minimum<12 ||
                     set.targetReps.maximum>20 ||
                     (set.targetRir==null || set.targetRir !in 1..2))continue

@@ -98,6 +98,39 @@ class NativeCustomWorkoutJournalCodecTest {
             CustomWorkoutJournalDomain.reduce(reopened.journal,mini))
     }
 
+    @Test fun largeNotesLeaveRoomForExplicitAmplifierSkipAndFinish() {
+        var state=accept(initial(),event("budget-main",0,CustomWorkoutVisitPart.MAIN,10))
+        val note="漢".repeat(CustomWorkoutJournalDomain.MAX_SESSION_NOTE_CHARS)
+        var refused=false
+        for(index in 0..349) {
+            val proposed=accept(state,CustomWorkoutJournalOperation.SessionNote(
+                "budget-note-$index",state.revision,note))
+            if(index>=320 && runCatching {
+                    NativeCustomWorkoutJournalCodec.encode(record(proposed))
+                }.isFailure) {
+                refused=true
+                break
+            }
+            state=proposed
+        }
+        assertTrue("The fixture must reach the encoded-byte limit",refused)
+        val saved=NativeCustomWorkoutJournalCodec.encode(record(state))
+        assertEquals(record(state),NativeCustomWorkoutJournalCodec.decode(saved))
+        val next=CustomWorkoutJournalDomain.nextUnresolvedVisit(state)
+        assertEquals(CustomWorkoutVisitKey(key,CustomWorkoutVisitPart.FOLLOW_UP),next)
+        state=accept(state,CustomWorkoutJournalOperation.Record(
+            "s".repeat(80),state.revision,checkNotNull(next),
+            KotlinJournalSetOutcome.SKIPPED,null))
+        assertTrue(state.canProposeFinish)
+        NativeCustomWorkoutJournalCodec.encode(record(state))
+        val finished=accept(state,CustomWorkoutJournalOperation.Finish(
+            "f".repeat(80),state.revision))
+        val reopened=NativeCustomWorkoutJournalCodec.decode(
+            NativeCustomWorkoutJournalCodec.encode(record(finished)))
+        assertEquals(record(finished),reopened)
+        assertEquals(0,reopened.journal.unresolvedVisitCount)
+    }
+
     @Test fun machineVariantsPersistIndependentlyInMainAndAmplifierV4Receipts() {
         val base=initial()
         val main=accept(base,CustomWorkoutJournalOperation.Record(

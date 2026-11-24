@@ -176,7 +176,7 @@ object CustomSameBlockLoadContinuityDomain {
         // This baseline-reuse shortcut treats a smaller number as easier.
         // Counterweight assistance runs in reverse; do not "repeat" a lower
         // counterweight after fatigue, even when prior history is complete.
-        if(stock.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+        if(!stock.basis.higherSettingIncreasesDifficulty)
             return result(
                 CustomSameBlockLoadStatus.ASSISTANCE_NEEDS_SEPARATE_RECOVERY_REVIEW,
                 "A lower assisted-machine counterweight is HARDER, not a lower recovery load. Keep the current prescription and explicitly review assistance.",
@@ -221,10 +221,12 @@ object CustomSameBlockLoadContinuityDomain {
                 return result(CustomSameBlockLoadStatus.NEAR_FAILURE,
                     "Near-failure work needs an independent recovery or load review.",
                     prior.evidence.workoutId,assumed=assumed)
-            val repeat=minOf(lastLoad.value,authored.value)
+            val repeat=if(stock.basis.compareDifficulty(
+                authored.value,lastLoad.value)<=0)authored.value else lastLoad.value
             for(value in listOf(lastLoad.value,authored.value,repeat)) {
                 val check=EquipmentLoadDomain.inspect(stock,value,authored.unit)
-                if(check !is LoadInspection.Confirmed || !check.exact)
+                if(!KotlinSetNumberAuthorityDomain.validPrescribedLoad(value,authored.basis) ||
+                    check !is LoadInspection.Confirmed || !check.exact)
                     return result(CustomSameBlockLoadStatus.EQUIPMENT_UNVERIFIED,
                         "Every original and carried weight must be exactly buildable.",
                         prior.evidence.workoutId,assumed=assumed)
@@ -233,15 +235,26 @@ object CustomSameBlockLoadContinuityDomain {
                 authored.value,lastLoad.value,repeat,authored.unit,authored.basis,
                 actual.reps,actual.actualRir,oldSet.prescription.targetRir,effort.source)
         }
-        if(proposals.none{it.proposedLoad<it.authoredLoad})
+        if(proposals.none{stock.basis.compareDifficulty(
+                it.proposedLoad,it.authoredLoad)<0})
             return result(CustomSameBlockLoadStatus.NO_LOWER_VERIFIED_BASELINE,
                 "The next authored targets already preserve or undercut the last verified loads.",
                 prior.evidence.workoutId)
-        val lowest=proposals.minOf{it.proposedLoad}
-        if(selected.sets.filter{it.prescription.type==DraftSetType.WARMUP}.any{
+        val warmups=selected.sets.filter{it.prescription.type==DraftSetType.WARMUP}
+        if(warmups.any{
                 val warm=it.prescription.load as? DraftSetLoad.Verified
                 warm==null || warm.unit!=stock.unit || warm.basis!=stock.basis ||
-                    warm.value>lowest
+                    !KotlinSetNumberAuthorityDomain.validIssuedLoad(warm) ||
+                    EquipmentLoadDomain.inspect(stock,warm.value,warm.unit).let {
+                        it !is LoadInspection.Confirmed || !it.exact
+                    }
+            })return result(CustomSameBlockLoadStatus.EQUIPMENT_UNVERIFIED,
+                "Every retained warmup must be a valid, exactly buildable prescription.",
+                prior.evidence.workoutId,assumed=assumed)
+        if(warmups.any{set->
+                val warm=set.prescription.load as DraftSetLoad.Verified
+                proposals.any{stock.basis.compareDifficulty(
+                    warm.value,it.proposedLoad)>0}
             })
             return result(CustomSameBlockLoadStatus.WARMUP_EXCEEDS_LOAD,
                 "A warmup would exceed the lower working load; review the full prescription.",

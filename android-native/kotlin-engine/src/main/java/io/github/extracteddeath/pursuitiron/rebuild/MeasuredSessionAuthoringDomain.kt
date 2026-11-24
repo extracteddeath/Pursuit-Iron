@@ -25,7 +25,6 @@ data class MeasuredSessionSelection(
 object MeasuredSessionAuthoringDomain {
     val setsPerExercise = 1..8
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
-    private val maxLoad=BigDecimal("100000")
     private fun verifiedBands(profile:ReviewedAthleteSetup):Set<String> =
         profile.gym.availableAttachments.filterTo(mutableSetOf()) {
             it.startsWith("band-") && it.length>5 && id.matches(it)
@@ -163,8 +162,12 @@ object MeasuredSessionAuthoringDomain {
                     null
                 }
             if(loaded) {
-                if(external==null || external<BigDecimal.ZERO ||
-                    external>maxLoad || external.stripTrailingZeros().scale()>3)
+                // Physical stock may expose a zero selector, but that alone
+                // never authorizes a zero added/hand-held prescription.
+                // Reuse the SAME issued-load authority as regular workouts.
+                if(external==null ||
+                    !KotlinSetNumberAuthorityDomain.validPrescribedLoad(
+                        external,definition.expectedBasis ?:return null))
                     return null
                 val proof=EquipmentLoadDomain.inspect(
                     stock,external,profile.gym.unit)

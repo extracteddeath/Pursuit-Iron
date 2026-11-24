@@ -197,7 +197,13 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
     val exactLoad=if(loaded && targetWeight!=null && gym!=null) {
         val checked=EquipmentLoadDomain.inspect(
             verifiedStock,targetWeight,gym.unit)
-        checked is LoadInspection.Confirmed && checked.exact
+        // Physical selector existence is not an issued-load approval:
+        // a verified 0 setting must not appear valid for added/per-hand work.
+        checked is LoadInspection.Confirmed && checked.exact &&
+            definition?.expectedBasis?.let { basis ->
+                KotlinSetNumberAuthorityDomain.validPrescribedLoad(
+                    targetWeight,basis)
+            }==true
     } else !loaded
     // A carry is entered in meters but stored as exact centimeters.
     // Reject fractional centimeters rather than silently rounding them.
@@ -372,8 +378,8 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                 singleLine=true,enabled=!busy,
                                 modifier=Modifier.fillMaxWidth())
                             if(targetExternalLoad.isNotBlank() && !exactLoad)
-                                Text("This load is not an exact value in the "+
-                                    "confirmed gym equipment stock.",
+                                Text("Enter a positive weight that is exactly selectable "+
+                                    "on the confirmed gym equipment.",
                                     color=MaterialTheme.colorScheme.error,
                                     style=MaterialTheme.typography.bodySmall)
                             if(definition?.exerciseId=="farmers")

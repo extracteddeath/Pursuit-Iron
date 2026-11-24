@@ -158,12 +158,6 @@ sealed interface MeasurementPlanResult {
 
 object MeasuredExerciseDomain {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
-    private val maxLoad=BigDecimal("100000")
-
-    private fun numericMass(value:BigDecimal):Boolean =
-        value>=BigDecimal.ZERO && value<=maxLoad &&
-            value.stripTrailingZeros().scale()<=3
-
     private fun expectedSides(rule:MeasuredSideRule,sides:Set<MeasuredSide>):Boolean =
         when(rule) {
             MeasuredSideRule.BOTH -> sides==setOf(MeasuredSide.BOTH)
@@ -217,7 +211,8 @@ object MeasuredExerciseDomain {
                     (plan.matchedPairConfirmed &&
                         plan.exerciseId!="farmers") ||
                     (plan.exerciseId=="farmers" && !plan.matchedPairConfirmed) ||
-                    !numericMass(amount))
+                    !KotlinSetNumberAuthorityDomain.validPrescribedLoad(
+                        amount,stock.basis))
                     return MeasurementPlanResult.Rejected(
                         MeasurementRefusal.UNVERIFIED_STOCK)
                 val proof=EquipmentLoadDomain.inspect(stock,amount,unit)
@@ -278,7 +273,8 @@ object MeasuredExerciseDomain {
                 val stock=plan.physicalStock ?:return false
                 val unit=performed.unit ?:return false
                 if(performed.bandId!=null || unit!=plan.unit ||
-                    !numericMass(actualLoad))return false
+                    !KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(
+                        actualLoad))return false
                 val proof=EquipmentLoadDomain.inspect(stock,actualLoad,unit)
                 return proof is LoadInspection.Confirmed && proof.exact &&
                     proof.basis==definition.expectedBasis

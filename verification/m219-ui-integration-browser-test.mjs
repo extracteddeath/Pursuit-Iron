@@ -79,7 +79,8 @@ try {
                 const selectors = {
                     // B1029/B1030: action tiles live in Plan's program list; Plan's next session is in the selected week.
                     home:['.wpb-home .wpb-home-hero','.wpb-home .wpb-home-week'],
-                    plan:['.wpb-plan-selected-week','.wpb-plan-glance-tile','.wpb-plan-programs .wpb-action-tile'],
+                    // B1040: Plan's overview is a flat stat row and its program routes are one list card.
+                    plan:['.wpb-plan-selected-week','.wpb-plan-glance .wpb-ui-stat','.wpb-plan-programs .wpb-program-create-row'],
                     progress:['.wpb-progress-glance-item','.wpb-progress .wpb-history-filter-help'],
                     profile:['.wpb-profile-share-card','.wpb-profile-strength-link'],
                     settings:['.wpb-settings-card','.wpb-settings-row']

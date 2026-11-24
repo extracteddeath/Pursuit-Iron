@@ -10291,3 +10291,9 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-home-hero-alt{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px}
 #root .wpb .wpb-home-hero-alt>.wpb-ui-action{flex:0 1 auto;width:auto}
 #root .wpb .wpb-profile-strength-link{margin:0 0 var(--pi-space-3);min-height:72px;background:var(--pi-color-card,var(--wpb-theme-card));border:1px solid color-mix(in srgb,var(--pi-color-divider,var(--wpb-theme-border)) 55%,transparent);border-radius:var(--pi-shape-card,24px)}
+/* B1040: Plan's ways to start a program — one card of divided list rows. */
+#root .wpb .wpb-program-create-list{padding:0;overflow:hidden;}
+#root .wpb .wpb-program-create-list>.wpb-ui-list-item{width:100%;border-radius:0;}
+#root .wpb .wpb-program-create-list>.wpb-ui-list-item+.wpb-ui-list-item{border-top:1px solid var(--pi-color-divider);}
+#root .wpb .wpb-program-create-list .wpb-ui-list-leading{color:var(--wpb-theme-accent-ink);}
+#root .wpb .wpb-plan-glance .wpb-ui-stat-label{font-size:var(--pi-type-label);}

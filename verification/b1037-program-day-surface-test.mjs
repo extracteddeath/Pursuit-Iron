@@ -36,4 +36,10 @@ assert.ok(css.includes('@container pi-exercise-actions (max-width:260px){#root .
 // not filled tiles inside their card.
 assert.ok(css.includes('border-radius:0;background:transparent;box-shadow:-1px 0 0 var(--pi-color-divider);text-align:center}'), 'Home stat tiles are flat');
 assert.ok(css.includes('.wpb-profile-card-metrics>div:nth-child(-n+2){padding:var(--pi-space-1) var(--pi-space-3);border-radius:0;background:transparent;box-shadow:-1px 0 0 var(--pi-color-divider)}'), 'Profile metrics are flat');
+// B1040: Plan's overview figures are the flat stat row, its program routes one grouped list,
+// and a finished session is marked by its check rather than struck through.
+assert.ok(app.includes('_jsxs("dl", { className: "wpb-ui-stat-row wpb-plan-glance"'), 'Plan overview uses the flat stat row');
+assert.ok(app.includes('_jsx(UiCard, { className: "wpb-program-create-list", "aria-label": "Start a program"'), 'Program routes are one list card');
+assert.ok(!app.includes('textDecoration: d.done ? "line-through"'), 'Done sessions are not struck through');
+assert.ok(app.includes('const chipCaption = w => w.status === "now" ? "This week" :'), 'The week chip does not repeat the week card count');
 console.log('PASS B1037 program day: one surface with divided exercise rows, compact chips, plain Day focus and shared actions.');

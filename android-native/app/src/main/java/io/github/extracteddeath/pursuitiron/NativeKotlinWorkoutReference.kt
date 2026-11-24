@@ -122,6 +122,21 @@ internal fun PursuitUseLastCompletedSet(
         color=MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
+/** Current-session effort context, not a previous-workout reference or
+ * an input default. Do not borrow from a skipped set or another station. */
+@Composable
+internal fun PursuitPreviousWorkingSetRir(
+    actual:KotlinPerformedSet?,outcome:KotlinJournalSetOutcome?,
+    machineInstanceId:String?
+) {
+    if(outcome!=KotlinJournalSetOutcome.COMPLETED || actual==null ||
+        actual.machineInstanceId!=machineInstanceId)return
+    val effort=actual.actualRir?.let{"$it RIR"} ?: "RIR not recorded"
+    Text("Previous working set · $effort",
+        style=MaterialTheme.typography.labelMedium,
+        color=MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
 /** Fixed weight → reps → RIR order for BOTH references, with the same layout. */
 @Composable
 internal fun PursuitWorkoutSetReference(

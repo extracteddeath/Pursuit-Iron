@@ -37,6 +37,37 @@ class KotlinWorkoutJournalDomainTest {
         assertTrue(accepted.toString(),accepted is KotlinJournalDecision.Proposed)
         return (accepted as KotlinJournalDecision.Proposed).state
     }
+    @Test fun invalidIssuedRepRangeNeverBecomesGeneratedWork() {
+        for(band in listOf(RepBand(0,12),RepBand(13,12),
+                RepBand(8,101),RepBand(-2,0))) {
+            val corrupt=original.copy(targets=listOf(
+                target("bad-range").copy(reps=band)))
+            val journal=KotlinWorkoutJournalDomain.begin(corrupt,receipt)
+            for((name,outcome,performed) in listOf(
+                Triple("done",KotlinJournalSetOutcome.COMPLETED,actual(10)),
+                Triple("failed",KotlinJournalSetOutcome.FAILED_ATTEMPT,
+                    actual(0,null)))) {
+                assertEquals(band.toString(),
+                    KotlinJournalDecision.Rejected(KotlinJournalRefusal.INVALID_VALUES),
+                    KotlinWorkoutJournalDomain.reduce(journal,
+                        record(name,0,"bad-range",outcome,performed)))
+            }
+            assertEquals(KotlinSetEntryResult.Rejected(
+                KotlinSetEntryRefusal.INVALID_REPS),
+                KotlinWorkoutEntryDomain.parse(corrupt.targets.single(),
+                    "30","10","2"))
+            val skipped=apply(journal,record("skip-corrupt",0,"bad-range",
+                KotlinJournalSetOutcome.SKIPPED,null))
+            assertEquals(corrupt,skipped.snapshot)
+            assertEquals(0L,journal.revision)
+            var replay=KotlinWorkoutJournalDomain.begin(corrupt,receipt)
+            for(saved in skipped.receipts)
+                replay=(KotlinWorkoutJournalDomain.reduce(replay,saved.operation)
+                    as KotlinJournalDecision.Proposed).state
+            assertEquals(skipped,replay)
+        }
+    }
+
     @Test fun invalidIssuedGeneratedTargetCannotBeHiddenByValidActual() {
         val invalid=original.copy(targets=listOf(target("bad-target",
             prescribed=load.copy(value=n("-10")))))

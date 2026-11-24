@@ -68,6 +68,8 @@ jobs:
         run: node android-native/kotlin-engine/verification/feature-scope-contract.mjs
       - name: Verify pinned Stage 1 parity inventory structure and fixture references
         run: node android-native/kotlin-engine/verification/stage1-inventory-test.mjs
+      - name: Verify v2 execution milestones retain all frozen acceptance IDs
+        run: node android-native/kotlin-engine/verification/execution-milestones-v2-test.mjs
       - name: Validate web vs Kotlin superiority scorecard without assuming success
         run: |
           node android-native/kotlin-engine/verification/engine-superiority-gate.mjs --self-test

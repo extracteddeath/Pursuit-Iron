@@ -1,0 +1,1906 @@
+{
+  "schemaVersion": 2,
+  "baseline": {
+    "webCommit": "29faa204212a4d54088b4870341350e605939185",
+    "kotlinCommit": "05c02ff2362736439ca1fcabfd7d477bfb2fa366",
+    "canonicalWorkItems": 965,
+    "inheritedRollups": 41,
+    "requiredSupplementaryChecks": 120,
+    "optionalReviewCandidates": 5
+  },
+  "notes": "Frozen Stage 1 inventories retain v1 labels. This overlay owns v2 execution, with separate canonical and supplementary denominators. No pass inferred from mapping. All applicable device evidence required in S9.",
+  "milestones": [
+    {
+      "id": "S0",
+      "title": "Integration baseline",
+      "dependencies": [],
+      "exit": "Retain verified baseline and integrated CI.",
+      "canonical": [],
+      "checks": []
+    },
+    {
+      "id": "S1",
+      "title": "Inventory",
+      "dependencies": [
+        "S0"
+      ],
+      "exit": "Retain frozen pins and exact mapping.",
+      "canonical": [],
+      "checks": []
+    },
+    {
+      "id": "S2A",
+      "title": "Physical load authority",
+      "dependencies": [
+        "S1"
+      ],
+      "exit": "All loading paths verified against stock, units, increments and station identity; plate calculator read-only.",
+      "canonical": [
+        "GYM-ROSTER",
+        "GYM-UNITS",
+        "GYM-IMPLEMENT",
+        "GYM-MACHINE",
+        "GYM-PLATES",
+        "SET-AUTHORITY"
+      ],
+      "checks": [
+        "CHECK-NUM-LOAD",
+        "CHECK-WORK-PLATES",
+        "CHECK-GYM-EDIT",
+        "CHECK-GYM-MACHINE",
+        "CHECK-GYM-UNIT"
+      ]
+    },
+    {
+      "id": "S2B",
+      "title": "Standard/manual progression",
+      "dependencies": [
+        "S2A"
+      ],
+      "exit": "Normal, boundary, negative and cold-replay standard methods; coaching-off, DP regression, bodyweight/assistance and Leveling.",
+      "canonical": [
+        "SET-START",
+        "SET-MANUAL",
+        "SET-LEVELING",
+        "PROG-AUTO",
+        "PROG-DOUBLE",
+        "PROG-DYNAMIC",
+        "PROG-LADDER",
+        "PROG-LINEAR",
+        "PROG-E1RM",
+        "PROG-ASSISTANCE",
+        "PROG-BODYWEIGHT",
+        "PROG-LEVELING",
+        "PROG-REP-TARGET",
+        "PROG-COACH-OFF"
+      ],
+      "checks": [
+        "CHECK-NUM-FIRST",
+        "CHECK-NUM-DP-REGRESSION",
+        "CHECK-NUM-LEVELING",
+        "CHECK-NUM-OFF"
+      ]
+    },
+    {
+      "id": "S2C",
+      "title": "Specialist progression",
+      "dependencies": [
+        "S2A"
+      ],
+      "exit": "All named and authored wave targets, reference consent, issue/log/finish/next review; GZCLP initial reference/reset/recovery; exact rep-out.",
+      "canonical": [
+        "PROGRAM-SPECIAL-TARGET",
+        "PROG-WAVE",
+        "PCT-531",
+        "PCT-531BEG",
+        "PCT-MADCOW",
+        "PCT-NSUNS",
+        "PCT-TEXAS",
+        "PCT-GZCLP",
+        "PCT-GVT",
+        "PCT-RIPPLER",
+        "PCT-JT"
+      ],
+      "checks": [
+        "CHECK-GEN-RECOMMEND"
+      ]
+    },
+    {
+      "id": "S2D",
+      "title": "Factual history and correction",
+      "dependencies": [
+        "S2A"
+      ],
+      "exit": "Independent gym/day/slot/station history; exact nullable RIR and skipped/failed distinctions; corrections and cold replay.",
+      "canonical": [
+        "SET-MISSING-RIR",
+        "SET-FAIL-SKIP",
+        "HISTORY-CORRECT",
+        "PROG-CORRECTION"
+      ],
+      "checks": [
+        "CHECK-NUM-EFFORT",
+        "CHECK-NUM-SCOPE",
+        "CHECK-NUM-CORRECTION"
+      ]
+    },
+    {
+      "id": "S2E",
+      "title": "Integrated numerical certification",
+      "dependencies": [
+        "S2A",
+        "S2B",
+        "S2C",
+        "S2D"
+      ],
+      "exit": "Generated/custom/manual minimum real review→issue→log→finish→next prescription; no unauthorized edits.",
+      "canonical": [
+        "SET-CHANGE-CONSENT"
+      ],
+      "checks": []
+    },
+    {
+      "id": "S3A",
+      "title": "Workout execution lifecycle",
+      "dependencies": [
+        "S2E"
+      ],
+      "exit": "Actual generated/custom/manual issue, logging, skip/finish/resume; truthful target vs actual.",
+      "canonical": [
+        "SET-INPUT",
+        "WORKOUT-RESUME",
+        "WORKOUT-FINISH"
+      ],
+      "checks": [
+        "CHECK-WORK-ISSUE",
+        "CHECK-WORK-ENTRY",
+        "CHECK-HIST-FINISH"
+      ]
+    },
+    {
+      "id": "S3B",
+      "title": "Exercise catalog and swap",
+      "dependencies": [
+        "S2E"
+      ],
+      "exit": "Every identity, alias, metadata, attachment, measurement, stock and swap verified.",
+      "canonical": [
+        "EXERCISE-ATTACHMENT",
+        "EXERCISE-CUSTOM",
+        "SWAP-RANK",
+        "SWAP-SCOPE",
+        "CAT-barbell_bench",
+        "CAT-paused_bench",
+        "CAT-incline_smith",
+        "CAT-machine_press",
+        "CAT-cable_fly",
+        "CAT-chest_supported_row",
+        "CAT-barbell_row",
+        "CAT-neutral_pulldown",
+        "CAT-pullup",
+        "CAT-rear_delt_fly",
+        "CAT-cable_lateral_raise",
+        "CAT-band_lateral_raise",
+        "CAT-machine_ohp",
+        "CAT-preacher_curl",
+        "CAT-cable_curl",
+        "CAT-cable_triceps",
+        "CAT-overhead_cable_triceps",
+        "CAT-back_squat",
+        "CAT-hack_squat",
+        "CAT-leg_press",
+        "CAT-leg_extension",
+        "CAT-rdl",
+        "CAT-seated_leg_curl",
+        "CAT-hip_thrust",
+        "CAT-standing_calf",
+        "CAT-cable_crunch",
+        "CAT-incline_db_press",
+        "CAT-one_arm_db_row",
+        "CAT-db_lateral_raise",
+        "CAT-db_rear_delt_raise",
+        "CAT-db_curl",
+        "CAT-db_overhead_triceps",
+        "CAT-db_split_squat",
+        "CAT-db_rdl",
+        "CAT-db_calf_raise",
+        "CAT-dumbbell_crunch",
+        "CAT-bodyweight_crunch",
+        "CAT-conventional_deadlift",
+        "CAT-barbell_ohp",
+        "CAT-inc-bb-bench",
+        "CAT-low-inc-bb-bench",
+        "CAT-high-inc-bb-bench",
+        "CAT-db-bench",
+        "CAT-dips-chest",
+        "CAT-assisted-dip",
+        "CAT-inc-cable-fly",
+        "CAT-pec-deck",
+        "CAT-smith-bench",
+        "CAT-db-fly",
+        "CAT-pushup",
+        "CAT-lat-pulldown",
+        "CAT-seated-row",
+        "CAT-tbar-row",
+        "CAT-machine-row",
+        "CAT-deadlift",
+        "CAT-straight-pulldown",
+        "CAT-inv-row",
+        "CAT-superman",
+        "CAT-ohp",
+        "CAT-db-shoulder",
+        "CAT-rear-fly",
+        "CAT-face-pull",
+        "CAT-arnold",
+        "CAT-front-raise",
+        "CAT-pike-pushup",
+        "CAT-inc-curl",
+        "CAT-bayesian-curl",
+        "CAT-ez-curl",
+        "CAT-hammer",
+        "CAT-bb-curl",
+        "CAT-chinup",
+        "CAT-assisted-chinup",
+        "CAT-band-curl",
+        "CAT-oh-cable-ext",
+        "CAT-pushdown",
+        "CAT-rope-pushdown",
+        "CAT-ez-pushdown",
+        "CAT-cgbp",
+        "CAT-skullcrusher",
+        "CAT-db-oh-ext",
+        "CAT-dips-tri",
+        "CAT-diamond-pushup",
+        "CAT-bench-dip",
+        "CAT-front-squat",
+        "CAT-bulgarian",
+        "CAT-smith-squat",
+        "CAT-goblet",
+        "CAT-walking-lunge",
+        "CAT-bw-squat",
+        "CAT-bw-lunge",
+        "CAT-bw-bulgarian",
+        "CAT-lying-curl",
+        "CAT-db-rdl",
+        "CAT-good-morning",
+        "CAT-slrdl",
+        "CAT-nordic",
+        "CAT-hip-thrust",
+        "CAT-db-hip-thrust",
+        "CAT-cable-kickback",
+        "CAT-sl-hip-thrust",
+        "CAT-glute-bridge",
+        "CAT-sumo-dl",
+        "CAT-seated-calf",
+        "CAT-smith-calf",
+        "CAT-bw-calf",
+        "CAT-hanging-raise",
+        "CAT-leg-raise",
+        "CAT-crunch",
+        "CAT-bicycle",
+        "CAT-russian-twist",
+        "CAT-plank",
+        "CAT-cable-woodchop",
+        "CAT-oblique-crunch",
+        "CAT-hanging-oblique",
+        "CAT-serratus-pushup",
+        "CAT-cable-serratus",
+        "CAT-banded-tib-raise",
+        "CAT-bb-shrug",
+        "CAT-db-shrug",
+        "CAT-cable-shrug",
+        "CAT-wrist-curl",
+        "CAT-reverse-curl",
+        "CAT-farmers",
+        "CAT-decline-bench",
+        "CAT-decline-db-press",
+        "CAT-incline-machine-press",
+        "CAT-floor-press",
+        "CAT-machine-dip",
+        "CAT-high-cable-fly",
+        "CAT-incline-pushup",
+        "CAT-decline-pushup",
+        "CAT-cable-press",
+        "CAT-pendlay-row",
+        "CAT-meadows-row",
+        "CAT-seal-row",
+        "CAT-inc-db-row",
+        "CAT-wide-pulldown",
+        "CAT-close-pulldown",
+        "CAT-one-arm-pulldown",
+        "CAT-assisted-pullup",
+        "CAT-rack-pull",
+        "CAT-kroc-row",
+        "CAT-db-pullover",
+        "CAT-floor-db-pullover",
+        "CAT-bent-db-pullover",
+        "CAT-seated-ohp",
+        "CAT-seated-db-press",
+        "CAT-smith-ohp",
+        "CAT-landmine-press",
+        "CAT-machine-lat-raise",
+        "CAT-leaning-lat-raise",
+        "CAT-cable-rear-fly",
+        "CAT-cable-front-raise",
+        "CAT-upright-row",
+        "CAT-db-upright-row",
+        "CAT-concentration-curl",
+        "CAT-spider-curl",
+        "CAT-machine-curl",
+        "CAT-rope-hammer-curl",
+        "CAT-cross-hammer",
+        "CAT-zottman-curl",
+        "CAT-drag-curl",
+        "CAT-v-bar-pushdown",
+        "CAT-straight-bar-pushdown",
+        "CAT-dual-rope-pushdown",
+        "CAT-single-pushdown",
+        "CAT-jm-press",
+        "CAT-tricep-kickback",
+        "CAT-machine-ext",
+        "CAT-ez-oh-ext",
+        "CAT-pendulum-squat",
+        "CAT-belt-squat",
+        "CAT-box-squat",
+        "CAT-split-squat",
+        "CAT-step-up",
+        "CAT-reverse-lunge",
+        "CAT-single-leg-press",
+        "CAT-sissy-squat",
+        "CAT-stiff-deadlift",
+        "CAT-standing-curl",
+        "CAT-ghr",
+        "CAT-pull-through",
+        "CAT-kb-swing",
+        "CAT-machine-hip-thrust",
+        "CAT-smith-hip-thrust",
+        "CAT-hip-abduction",
+        "CAT-cable-abduction",
+        "CAT-reverse-hyper",
+        "CAT-frog-pump",
+        "CAT-leg-press-calf",
+        "CAT-donkey-calf",
+        "CAT-single-calf",
+        "CAT-ab-wheel",
+        "CAT-hanging-knee",
+        "CAT-machine-crunch",
+        "CAT-decline-situp",
+        "CAT-toes-to-bar",
+        "CAT-side-plank",
+        "CAT-pallof",
+        "CAT-woodchopper",
+        "CAT-v-up",
+        "CAT-mountain-climber",
+        "CAT-smith-shrug",
+        "CAT-machine-shrug",
+        "CAT-behind-shrug",
+        "CAT-reverse-wrist-curl",
+        "CAT-behind-wrist-curl",
+        "CAT-wrist-roller",
+        "CAT-hammer-radial-dev",
+        "CAT-hammer-ulnar-dev",
+        "CAT-cable-radial-dev",
+        "CAT-band-ulnar-dev",
+        "CAT-plate-pinch",
+        "CAT-push-press",
+        "CAT-side-lying-raise",
+        "CAT-single-cable-raise",
+        "CAT-underhand-row",
+        "CAT-underhand-pulldown",
+        "CAT-single-cable-row",
+        "CAT-close-cable-row",
+        "CAT-wide-cable-row",
+        "CAT-underhand-cable-row",
+        "CAT-rope-cable-row",
+        "CAT-dual-cable-row",
+        "CAT-wide-machine-row",
+        "CAT-neutral-machine-row",
+        "CAT-wide-tbar-row",
+        "CAT-kelso-shrug",
+        "CAT-single-cable-curl",
+        "CAT-incline-hammer",
+        "CAT-neck-extension",
+        "CAT-neck-curl",
+        "CAT-neck-harness",
+        "CAT-neck-lateral",
+        "CAT-cable-crossover",
+        "CAT-squeeze-press",
+        "CAT-tate-press",
+        "CAT-z-press",
+        "CAT-cable-y-raise",
+        "CAT-bstance-hip-thrust",
+        "CAT-curtsy-lunge",
+        "CAT-lateral-walk",
+        "CAT-band-leg-curl",
+        "CAT-jefferson-curl",
+        "CAT-bw-single-calf",
+        "CAT-trap-bar-shrug",
+        "CAT-power-shrug",
+        "CAT-dead-hang",
+        "CAT-suitcase-carry",
+        "CAT-dead-bug",
+        "CAT-hollow-hold",
+        "CAT-dragon-flag",
+        "CAT-cable-side-bend",
+        "CAT-copenhagen",
+        "CAT-cyclist-squat",
+        "CAT-spanish-squat",
+        "CAT-incline-cable-press",
+        "CAT-smith-incline",
+        "CAT-low-incline-db",
+        "CAT-band-pushup",
+        "CAT-svend-press",
+        "CAT-yates-row",
+        "CAT-cs-db-row",
+        "CAT-cable-pullover",
+        "CAT-machine-pullover",
+        "CAT-trap-bar-deadlift",
+        "CAT-snatch-deadlift",
+        "CAT-renegade-row",
+        "CAT-band-pulldown",
+        "CAT-cable-upright-row",
+        "CAT-bradford-press",
+        "CAT-viking-press",
+        "CAT-rear-band-pull-apart",
+        "CAT-plate-front-raise",
+        "CAT-prone-y-raise",
+        "CAT-ez-cable-curl",
+        "CAT-waiter-curl",
+        "CAT-seated-incline-curl",
+        "CAT-rev-grip-curl",
+        "CAT-pinwheel-curl",
+        "CAT-underhand-pushdown",
+        "CAT-pjr-pullover",
+        "CAT-lying-db-ext",
+        "CAT-cable-tri-kickback",
+        "CAT-california-press",
+        "CAT-zercher-squat",
+        "CAT-lm-squat",
+        "CAT-heels-up-goblet",
+        "CAT-wall-sit",
+        "CAT-pistol-squat",
+        "CAT-v-squat",
+        "CAT-cable-rdl",
+        "CAT-slider-curl",
+        "CAT-band-good-morning",
+        "CAT-single-lying-curl",
+        "CAT-kas-glute-bridge",
+        "CAT-band-hip-thrust",
+        "CAT-glute-kickback-machine",
+        "CAT-sumo-squat",
+        "CAT-step-through-lunge",
+        "CAT-hack-calf",
+        "CAT-tibialis-raise",
+        "CAT-single-leg-press-calf",
+        "CAT-reverse-crunch",
+        "CAT-cable-reverse-crunch",
+        "CAT-l-sit",
+        "CAT-weighted-plank",
+        "CAT-windshield-wiper",
+        "CAT-stir-pot",
+        "CAT-incline-shrug",
+        "CAT-cable-face-shrug",
+        "CAT-cable-wrist-curl",
+        "CAT-gripper",
+        "CAT-towel-hang",
+        "CAT-back-ext-45",
+        "CAT-situp",
+        "CAT-adduction-machine",
+        "CAT-cable-adduction",
+        "CAT-band-adduction",
+        "CAT-cossack-squat",
+        "CAT-adductor-sumo",
+        "CAT-standing-cable-abduction",
+        "CAT-side-lying-abduction",
+        "CAT-band-abduction",
+        "CAT-db-floor-press",
+        "CAT-db-neutral-press",
+        "CAT-db-incline-fly",
+        "CAT-bodyweight-deficit-pushup",
+        "CAT-helms-row",
+        "CAT-kb-gorilla-row",
+        "CAT-t-bar-chest-supported",
+        "CAT-bodyweight-doorway-row",
+        "CAT-doorway-biceps-curl",
+        "CAT-prone-rear-delt-raise",
+        "CAT-db-lu-raise",
+        "CAT-prone-db-rear-fly",
+        "CAT-cable-behind-back-lateral",
+        "CAT-db-6-way-raise",
+        "CAT-cable-rear-delt-row",
+        "CAT-bands-face-pull",
+        "CAT-db-deficit-lunge",
+        "CAT-smith-reverse-lunge",
+        "CAT-db-deficit-step-up",
+        "CAT-jefferson-squat",
+        "CAT-bodyweight-reverse-nordic",
+        "CAT-bands-squat",
+        "CAT-deficit-db-rdl",
+        "CAT-db-good-morning",
+        "CAT-deficit-barbell-deadlift",
+        "CAT-cable-behind-back-curl",
+        "CAT-cable-cross-body-extension",
+        "CAT-bands-tricep-ext",
+        "CAT-db-weighted-crunch",
+        "CAT-bands-chest-press",
+        "CAT-db-incline-shrug",
+        "CAT-high-bar-squat",
+        "CAT-low-bar-squat",
+        "CAT-paused-squat",
+        "CAT-pin-squat",
+        "CAT-tempo-squat",
+        "CAT-spoto-press",
+        "CAT-larsen-press",
+        "CAT-board-press",
+        "CAT-pin-bench",
+        "CAT-pause-bench",
+        "CAT-paused-deadlift",
+        "CAT-pin-press-ohp",
+        "CAT-barbell-skullover",
+        "CAT-seated-db-lat-raise",
+        "CAT-single-db-lat-raise",
+        "CAT-chest-supported-lat-raise",
+        "CAT-seated-cable-lat-raise",
+        "CAT-cuff-cable-lat-raise",
+        "CAT-seated-rear-fly",
+        "CAT-single-cable-rear-fly",
+        "CAT-chest-supported-rear-fly",
+        "CAT-high-inc-db-press",
+        "CAT-bottom-half-db-fly",
+        "CAT-deficit-pendlay-row",
+        "CAT-low-to-high-face-pull",
+        "CAT-leaning-cable-ohext",
+        "CAT-ad-press-barbell",
+        "CAT-ad-press-smith",
+        "SHELL-bb-bench",
+        "SHELL-inc-db-press",
+        "SHELL-inc-bb-bench",
+        "SHELL-low-inc-bb-bench",
+        "SHELL-high-inc-bb-bench",
+        "SHELL-machine-press",
+        "SHELL-db-bench",
+        "SHELL-dips-chest",
+        "SHELL-assisted-dip",
+        "SHELL-cable-fly",
+        "SHELL-inc-cable-fly",
+        "SHELL-pec-deck",
+        "SHELL-smith-bench",
+        "SHELL-db-fly",
+        "SHELL-pushup",
+        "SHELL-pullup",
+        "SHELL-lat-pulldown",
+        "SHELL-chest-row",
+        "SHELL-bb-row",
+        "SHELL-seated-row",
+        "SHELL-db-row",
+        "SHELL-tbar-row",
+        "SHELL-machine-row",
+        "SHELL-deadlift",
+        "SHELL-straight-pulldown",
+        "SHELL-inv-row",
+        "SHELL-superman",
+        "SHELL-ohp",
+        "SHELL-db-shoulder",
+        "SHELL-lat-raise",
+        "SHELL-cable-lat-raise",
+        "SHELL-band-lateral-raise",
+        "SHELL-machine-shoulder",
+        "SHELL-rear-fly",
+        "SHELL-reverse-pec",
+        "SHELL-face-pull",
+        "SHELL-arnold",
+        "SHELL-front-raise",
+        "SHELL-pike-pushup",
+        "SHELL-inc-curl",
+        "SHELL-db-curl",
+        "SHELL-bayesian-curl",
+        "SHELL-ez-curl",
+        "SHELL-preacher",
+        "SHELL-cable-curl",
+        "SHELL-hammer",
+        "SHELL-bb-curl",
+        "SHELL-chinup",
+        "SHELL-assisted-chinup",
+        "SHELL-band-curl",
+        "SHELL-oh-cable-ext",
+        "SHELL-pushdown",
+        "SHELL-rope-pushdown",
+        "SHELL-ez-pushdown",
+        "SHELL-cgbp",
+        "SHELL-skullcrusher",
+        "SHELL-db-oh-ext",
+        "SHELL-dips-tri",
+        "SHELL-diamond-pushup",
+        "SHELL-bench-dip",
+        "SHELL-back-squat",
+        "SHELL-hack-squat",
+        "SHELL-leg-press",
+        "SHELL-front-squat",
+        "SHELL-bulgarian",
+        "SHELL-leg-ext",
+        "SHELL-smith-squat",
+        "SHELL-goblet",
+        "SHELL-walking-lunge",
+        "SHELL-bw-squat",
+        "SHELL-bw-lunge",
+        "SHELL-bw-bulgarian",
+        "SHELL-rdl",
+        "SHELL-lying-curl",
+        "SHELL-seated-curl",
+        "SHELL-db-rdl",
+        "SHELL-good-morning",
+        "SHELL-slrdl",
+        "SHELL-nordic",
+        "SHELL-hip-thrust",
+        "SHELL-db-hip-thrust",
+        "SHELL-cable-kickback",
+        "SHELL-sl-hip-thrust",
+        "SHELL-glute-bridge",
+        "SHELL-sumo-dl",
+        "SHELL-standing-calf",
+        "SHELL-seated-calf",
+        "SHELL-smith-calf",
+        "SHELL-db-calf",
+        "SHELL-bw-calf",
+        "SHELL-cable-crunch",
+        "SHELL-hanging-raise",
+        "SHELL-leg-raise",
+        "SHELL-crunch",
+        "SHELL-dumbbell-crunch",
+        "SHELL-bicycle",
+        "SHELL-russian-twist",
+        "SHELL-plank",
+        "SHELL-cable-woodchop",
+        "SHELL-oblique-crunch",
+        "SHELL-hanging-oblique",
+        "SHELL-serratus-pushup",
+        "SHELL-cable-serratus",
+        "SHELL-banded-tib-raise",
+        "SHELL-bb-shrug",
+        "SHELL-db-shrug",
+        "SHELL-cable-shrug",
+        "SHELL-wrist-curl",
+        "SHELL-reverse-curl",
+        "SHELL-farmers",
+        "SHELL-decline-bench",
+        "SHELL-decline-db-press",
+        "SHELL-incline-machine-press",
+        "SHELL-floor-press",
+        "SHELL-machine-dip",
+        "SHELL-high-cable-fly",
+        "SHELL-incline-pushup",
+        "SHELL-decline-pushup",
+        "SHELL-cable-press",
+        "SHELL-pendlay-row",
+        "SHELL-meadows-row",
+        "SHELL-seal-row",
+        "SHELL-inc-db-row",
+        "SHELL-wide-pulldown",
+        "SHELL-close-pulldown",
+        "SHELL-neutral-pulldown",
+        "SHELL-one-arm-pulldown",
+        "SHELL-assisted-pullup",
+        "SHELL-rack-pull",
+        "SHELL-kroc-row",
+        "SHELL-db-pullover",
+        "SHELL-floor-db-pullover",
+        "SHELL-bent-db-pullover",
+        "SHELL-seated-ohp",
+        "SHELL-seated-db-press",
+        "SHELL-smith-ohp",
+        "SHELL-landmine-press",
+        "SHELL-machine-lat-raise",
+        "SHELL-leaning-lat-raise",
+        "SHELL-cable-rear-fly",
+        "SHELL-cable-front-raise",
+        "SHELL-upright-row",
+        "SHELL-db-upright-row",
+        "SHELL-concentration-curl",
+        "SHELL-spider-curl",
+        "SHELL-machine-curl",
+        "SHELL-rope-hammer-curl",
+        "SHELL-cross-hammer",
+        "SHELL-zottman-curl",
+        "SHELL-drag-curl",
+        "SHELL-v-bar-pushdown",
+        "SHELL-straight-bar-pushdown",
+        "SHELL-dual-rope-pushdown",
+        "SHELL-single-pushdown",
+        "SHELL-jm-press",
+        "SHELL-tricep-kickback",
+        "SHELL-machine-ext",
+        "SHELL-ez-oh-ext",
+        "SHELL-pendulum-squat",
+        "SHELL-belt-squat",
+        "SHELL-box-squat",
+        "SHELL-split-squat",
+        "SHELL-step-up",
+        "SHELL-reverse-lunge",
+        "SHELL-single-leg-press",
+        "SHELL-sissy-squat",
+        "SHELL-stiff-deadlift",
+        "SHELL-standing-curl",
+        "SHELL-ghr",
+        "SHELL-pull-through",
+        "SHELL-kb-swing",
+        "SHELL-machine-hip-thrust",
+        "SHELL-smith-hip-thrust",
+        "SHELL-hip-abduction",
+        "SHELL-cable-abduction",
+        "SHELL-reverse-hyper",
+        "SHELL-frog-pump",
+        "SHELL-leg-press-calf",
+        "SHELL-donkey-calf",
+        "SHELL-single-calf",
+        "SHELL-ab-wheel",
+        "SHELL-hanging-knee",
+        "SHELL-machine-crunch",
+        "SHELL-decline-situp",
+        "SHELL-toes-to-bar",
+        "SHELL-side-plank",
+        "SHELL-pallof",
+        "SHELL-woodchopper",
+        "SHELL-v-up",
+        "SHELL-mountain-climber",
+        "SHELL-smith-shrug",
+        "SHELL-machine-shrug",
+        "SHELL-behind-shrug",
+        "SHELL-reverse-wrist-curl",
+        "SHELL-behind-wrist-curl",
+        "SHELL-wrist-roller",
+        "SHELL-hammer-radial-dev",
+        "SHELL-hammer-ulnar-dev",
+        "SHELL-cable-radial-dev",
+        "SHELL-band-ulnar-dev",
+        "SHELL-plate-pinch",
+        "SHELL-push-press",
+        "SHELL-side-lying-raise",
+        "SHELL-single-cable-raise",
+        "SHELL-underhand-row",
+        "SHELL-underhand-pulldown",
+        "SHELL-single-cable-row",
+        "SHELL-close-cable-row",
+        "SHELL-wide-cable-row",
+        "SHELL-underhand-cable-row",
+        "SHELL-rope-cable-row",
+        "SHELL-dual-cable-row",
+        "SHELL-wide-machine-row",
+        "SHELL-neutral-machine-row",
+        "SHELL-wide-tbar-row",
+        "SHELL-kelso-shrug",
+        "SHELL-single-cable-curl",
+        "SHELL-incline-hammer",
+        "SHELL-neck-extension",
+        "SHELL-neck-curl",
+        "SHELL-neck-harness",
+        "SHELL-neck-lateral",
+        "SHELL-cable-crossover",
+        "SHELL-squeeze-press",
+        "SHELL-tate-press",
+        "SHELL-z-press",
+        "SHELL-cable-y-raise",
+        "SHELL-bstance-hip-thrust",
+        "SHELL-curtsy-lunge",
+        "SHELL-lateral-walk",
+        "SHELL-band-leg-curl",
+        "SHELL-jefferson-curl",
+        "SHELL-bw-single-calf",
+        "SHELL-trap-bar-shrug",
+        "SHELL-power-shrug",
+        "SHELL-dead-hang",
+        "SHELL-suitcase-carry",
+        "SHELL-dead-bug",
+        "SHELL-hollow-hold",
+        "SHELL-dragon-flag",
+        "SHELL-cable-side-bend",
+        "SHELL-copenhagen",
+        "SHELL-cyclist-squat",
+        "SHELL-spanish-squat",
+        "SHELL-incline-cable-press",
+        "SHELL-smith-incline",
+        "SHELL-low-incline-db",
+        "SHELL-band-pushup",
+        "SHELL-svend-press",
+        "SHELL-yates-row",
+        "SHELL-cs-db-row",
+        "SHELL-cable-pullover",
+        "SHELL-machine-pullover",
+        "SHELL-trap-bar-deadlift",
+        "SHELL-snatch-deadlift",
+        "SHELL-renegade-row",
+        "SHELL-band-pulldown",
+        "SHELL-cable-upright-row",
+        "SHELL-bradford-press",
+        "SHELL-viking-press",
+        "SHELL-rear-band-pull-apart",
+        "SHELL-plate-front-raise",
+        "SHELL-prone-y-raise",
+        "SHELL-ez-cable-curl",
+        "SHELL-waiter-curl",
+        "SHELL-seated-incline-curl",
+        "SHELL-rev-grip-curl",
+        "SHELL-pinwheel-curl",
+        "SHELL-underhand-pushdown",
+        "SHELL-pjr-pullover",
+        "SHELL-lying-db-ext",
+        "SHELL-cable-tri-kickback",
+        "SHELL-california-press",
+        "SHELL-zercher-squat",
+        "SHELL-lm-squat",
+        "SHELL-heels-up-goblet",
+        "SHELL-wall-sit",
+        "SHELL-pistol-squat",
+        "SHELL-v-squat",
+        "SHELL-cable-rdl",
+        "SHELL-slider-curl",
+        "SHELL-band-good-morning",
+        "SHELL-single-lying-curl",
+        "SHELL-kas-glute-bridge",
+        "SHELL-band-hip-thrust",
+        "SHELL-glute-kickback-machine",
+        "SHELL-sumo-squat",
+        "SHELL-step-through-lunge",
+        "SHELL-hack-calf",
+        "SHELL-tibialis-raise",
+        "SHELL-single-leg-press-calf",
+        "SHELL-reverse-crunch",
+        "SHELL-cable-reverse-crunch",
+        "SHELL-l-sit",
+        "SHELL-weighted-plank",
+        "SHELL-windshield-wiper",
+        "SHELL-stir-pot",
+        "SHELL-incline-shrug",
+        "SHELL-cable-face-shrug",
+        "SHELL-cable-wrist-curl",
+        "SHELL-gripper",
+        "SHELL-towel-hang",
+        "SHELL-bw-pullup",
+        "SHELL-back-ext-45",
+        "SHELL-situp",
+        "SHELL-adduction-machine",
+        "SHELL-cable-adduction",
+        "SHELL-band-adduction",
+        "SHELL-cossack-squat",
+        "SHELL-adductor-sumo",
+        "SHELL-standing-cable-abduction",
+        "SHELL-side-lying-abduction",
+        "SHELL-band-abduction",
+        "SHELL-db-floor-press",
+        "SHELL-db-neutral-press",
+        "SHELL-db-incline-fly",
+        "SHELL-bodyweight-deficit-pushup",
+        "SHELL-helms-row",
+        "SHELL-kb-gorilla-row",
+        "SHELL-t-bar-chest-supported",
+        "SHELL-bodyweight-doorway-row",
+        "SHELL-doorway-biceps-curl",
+        "SHELL-prone-rear-delt-raise",
+        "SHELL-db-lu-raise",
+        "SHELL-prone-db-rear-fly",
+        "SHELL-cable-behind-back-lateral",
+        "SHELL-db-6-way-raise",
+        "SHELL-cable-rear-delt-row",
+        "SHELL-bands-face-pull",
+        "SHELL-db-deficit-lunge",
+        "SHELL-smith-reverse-lunge",
+        "SHELL-db-deficit-step-up",
+        "SHELL-jefferson-squat",
+        "SHELL-bodyweight-reverse-nordic",
+        "SHELL-bands-squat",
+        "SHELL-deficit-db-rdl",
+        "SHELL-db-good-morning",
+        "SHELL-deficit-barbell-deadlift",
+        "SHELL-cable-behind-back-curl",
+        "SHELL-cable-cross-body-extension",
+        "SHELL-bands-tricep-ext",
+        "SHELL-db-weighted-crunch",
+        "SHELL-bands-chest-press",
+        "SHELL-db-incline-shrug",
+        "SHELL-high-bar-squat",
+        "SHELL-low-bar-squat",
+        "SHELL-paused-squat",
+        "SHELL-pin-squat",
+        "SHELL-tempo-squat",
+        "SHELL-spoto-press",
+        "SHELL-larsen-press",
+        "SHELL-board-press",
+        "SHELL-pin-bench",
+        "SHELL-pause-bench",
+        "SHELL-paused-deadlift",
+        "SHELL-pin-press-ohp",
+        "SHELL-barbell-skullover",
+        "SHELL-seated-db-lat-raise",
+        "SHELL-single-db-lat-raise",
+        "SHELL-chest-supported-lat-raise",
+        "SHELL-seated-cable-lat-raise",
+        "SHELL-cuff-cable-lat-raise",
+        "SHELL-seated-rear-fly",
+        "SHELL-single-cable-rear-fly",
+        "SHELL-chest-supported-rear-fly",
+        "SHELL-high-inc-db-press",
+        "SHELL-bottom-half-db-fly",
+        "SHELL-deficit-pendlay-row",
+        "SHELL-low-to-high-face-pull",
+        "SHELL-leaning-cable-ohext",
+        "SHELL-ad-press-barbell",
+        "SHELL-ad-press-smith"
+      ],
+      "checks": [
+        "CHECK-WORK-MEASURE",
+        "CHECK-ADJUST-SWAP",
+        "CHECK-CAT-SEARCH",
+        "CHECK-CAT-VARIANTS",
+        "CHECK-CAT-RANK",
+        "CHECK-CAT-EXCLUDE",
+        "CHECK-CAT-USER",
+        "CHECK-GYM-SWITCH"
+      ]
+    },
+    {
+      "id": "S3C",
+      "title": "Techniques and supersets",
+      "dependencies": [
+        "S3A",
+        "S3B"
+      ],
+      "exit": "Generated/custom amplifier placement, activation actual, stage rest, early stop, corrections and replay; warmups and supersets.",
+      "canonical": [
+        "SET-WARMUP",
+        "AMP-MYO",
+        "AMP-DROP",
+        "AMP-RESTPAUSE",
+        "AMP-CLUSTER",
+        "AMP-PARTIAL",
+        "AMP-AUTO",
+        "AMP-REPLAY",
+        "SUPERSET-AUTHOR",
+        "SUPERSET-EXEC"
+      ],
+      "checks": [
+        "CHECK-WORK-WARMUP",
+        "CHECK-WORK-SUPERSET-AUTHOR",
+        "CHECK-WORK-SUPERSET-LIVE",
+        "CHECK-AMP-SELECT",
+        "CHECK-AMP-MYO-CUSTOM",
+        "CHECK-AMP-MYO-GENERATED",
+        "CHECK-AMP-DROP-CUSTOM",
+        "CHECK-AMP-DROP-GENERATED",
+        "CHECK-AMP-PARTIAL-CUSTOM",
+        "CHECK-AMP-PARTIAL-GENERATED",
+        "CHECK-AMP-RESTPAUSE",
+        "CHECK-AMP-CLUSTER",
+        "CHECK-AMP-ACCOUNT"
+      ]
+    },
+    {
+      "id": "S3D",
+      "title": "Session tools and restrictions",
+      "dependencies": [
+        "S3A",
+        "S3B"
+      ],
+      "exit": "Free session routine lifecycle, notes/timers, injury/shortening/mid-session consent, undo; preserve completed work.",
+      "canonical": [
+        "SET-FREESTYLE",
+        "TIME-TRIM",
+        "INJURY",
+        "REST-TIMER",
+        "WORKOUT-NOTES"
+      ],
+      "checks": [
+        "CHECK-WORK-REST",
+        "CHECK-WORK-NOTES",
+        "CHECK-ADJUST-INJURY",
+        "CHECK-ADJUST-SHORT",
+        "CHECK-ADJUST-MID"
+      ]
+    },
+    {
+      "id": "S4A",
+      "title": "Athlete inputs and constraints",
+      "dependencies": [
+        "S2E"
+      ],
+      "exit": "2–6 days, six time choices, four experience values, goals, constraints, locks and focus.",
+      "canonical": [
+        "INPUT-GOAL",
+        "INPUT-EXPERIENCE",
+        "INPUT-TIME",
+        "INPUT-SCHEDULE",
+        "INPUT-FOCUS",
+        "INPUT-CONSTRAINTS"
+      ],
+      "checks": [
+        "CHECK-SETUP-PROFILE",
+        "CHECK-SETUP-FREQUENCY",
+        "CHECK-SETUP-TIME",
+        "CHECK-SETUP-CONSTRAINTS",
+        "CHECK-TIME-S20",
+        "CHECK-TIME-S40",
+        "CHECK-TIME-S60",
+        "CHECK-TIME-S90",
+        "CHECK-TIME-S120",
+        "CHECK-TIME-S120P",
+        "CHECK-EXP-NONE",
+        "CHECK-EXP-BEGINNER",
+        "CHECK-EXP-INTERMEDIATE",
+        "CHECK-EXP-ADVANCED"
+      ]
+    },
+    {
+      "id": "S4B",
+      "title": "Program and template generation",
+      "dependencies": [
+        "S4A",
+        "S3B"
+      ],
+      "exit": "All 26 families and 75 templates, feasible muscle dose, time and stock; actual generated outputs.",
+      "canonical": [
+        "PROGRAM-DURATION",
+        "PROGRAM-DOSE",
+        "PROGRAM-COMPOSER",
+        "PROGRAM-TEMPLATE",
+        "SPLIT-FULL_BODY",
+        "SPLIT-UPPER_LOWER",
+        "SPLIT-CUSTOM",
+        "SPLIT-PPL",
+        "SPLIT-ULPPL",
+        "SPLIT-PPLUL",
+        "SPLIT-HYBRID",
+        "SPLIT-PHAT",
+        "SPLIT-BRO",
+        "SPLIT-GLUTE_FOCUS",
+        "SPLIT-TORSO_LIMBS",
+        "SPLIT-PPLA",
+        "SPLIT-ULA",
+        "SPLIT-ARNOLD",
+        "SPLIT-FULL_BODY_PATTERNS",
+        "SPLIT-PHUL",
+        "SPLIT-FIVE_THREE_ONE",
+        "SPLIT-ACADEMY_PREP",
+        "SPLIT-GZCLP",
+        "SPLIT-RIPPLER",
+        "SPLIT-JT",
+        "SPLIT-SBD_POWER",
+        "SPLIT-FIVE31_BEGINNER",
+        "SPLIT-STRENGTH_FB",
+        "SPLIT-TEXAS",
+        "SPLIT-UPPER_LOWER_ALT",
+        "TEMPLATE-ppl6",
+        "TEMPLATE-ppl3",
+        "TEMPLATE-ul4",
+        "TEMPLATE-ul2",
+        "TEMPLATE-ul6",
+        "TEMPLATE-fb3",
+        "TEMPLATE-fb2",
+        "TEMPLATE-fb4",
+        "TEMPLATE-fb5",
+        "TEMPLATE-ulppl5",
+        "TEMPLATE-hybrid5",
+        "TEMPLATE-phul",
+        "TEMPLATE-phat",
+        "TEMPLATE-arnold",
+        "TEMPLATE-bro5",
+        "TEMPLATE-bro6",
+        "TEMPLATE-p531",
+        "TEMPLATE-p531beg",
+        "TEMPLATE-p531bbb",
+        "TEMPLATE-academy",
+        "TEMPLATE-academy4",
+        "TEMPLATE-stronglifts",
+        "TEMPLATE-madcow",
+        "TEMPLATE-nsuns",
+        "TEMPLATE-redditppl",
+        "TEMPLATE-ppl5",
+        "TEMPLATE-texas",
+        "TEMPLATE-gzclp",
+        "TEMPLATE-greyskull",
+        "TEMPLATE-gvt",
+        "TEMPLATE-rippler",
+        "TEMPLATE-jt2",
+        "TEMPLATE-dbhome",
+        "TEMPLATE-bwanywhere",
+        "TEMPLATE-glutebuilder",
+        "TEMPLATE-armspec",
+        "TEMPLATE-deltspec",
+        "TEMPLATE-backspec",
+        "TEMPLATE-chestspec",
+        "TEMPLATE-kbhome",
+        "TEMPLATE-machines",
+        "TEMPLATE-fierce5",
+        "TEMPLATE-lylegbr",
+        "TEMPLATE-omnistrength",
+        "TEMPLATE-express_fb",
+        "TEMPLATE-express_ul",
+        "TEMPLATE-glutes3",
+        "TEMPLATE-glutes4",
+        "TEMPLATE-glutes5",
+        "TEMPLATE-deltglute",
+        "TEMPLATE-lowerlean",
+        "TEMPLATE-fbsculpt",
+        "TEMPLATE-coreback",
+        "TEMPLATE-bwzero3",
+        "TEMPLATE-bwzerogl",
+        "TEMPLATE-bwband3",
+        "TEMPLATE-bwbar4",
+        "TEMPLATE-bwppl",
+        "TEMPLATE-bwglute",
+        "TEMPLATE-bwul4",
+        "TEMPLATE-db1pair",
+        "TEMPLATE-dbppl",
+        "TEMPLATE-dbglute",
+        "TEMPLATE-garage4",
+        "TEMPLATE-dbul2",
+        "TEMPLATE-fbpat3",
+        "TEMPLATE-fbpat5",
+        "TEMPLATE-torso4",
+        "TEMPLATE-torso5",
+        "TEMPLATE-ppla4",
+        "TEMPLATE-ppla5",
+        "TEMPLATE-ulalt3",
+        "TEMPLATE-ula5",
+        "TEMPLATE-sbd3",
+        "TEMPLATE-sbd4"
+      ],
+      "checks": [
+        "CHECK-GEN-ALLOCATE",
+        "CHECK-GEN-CAPACITY",
+        "CHECK-GEN-TRACE",
+        "CHECK-GEN-REVIEW",
+        "CHECK-VOL-ACCOUNT"
+      ]
+    },
+    {
+      "id": "S4C",
+      "title": "Cycle and phase construction",
+      "dependencies": [
+        "S4B"
+      ],
+      "exit": "All phase contracts, strength/peak dose and skill, authored edits/transitions and stable identity.",
+      "canonical": [
+        "PROGRAM-EDIT",
+        "PROGRAM-REORDER",
+        "PROGRAM-LIFT-PRACTICE",
+        "PROGRAM-STRENGTH-DOSE",
+        "CYCLE-PHASE",
+        "CYCLE-AUTHOR"
+      ],
+      "checks": [
+        "CHECK-CUSTOM-EDITOR",
+        "CHECK-CUSTOM-WEEK",
+        "CHECK-CUSTOM-SCHEDULE",
+        "CHECK-CUSTOM-CONVERT",
+        "CHECK-CYCLE-TEMPLATE",
+        "CHECK-CYCLE-TRANSITION",
+        "CHECK-CYCLE-FREQUENCY",
+        "CHECK-CYCLE-CUSTOM-BOUNDS",
+        "CHECK-CYCLE-PRESET-POWERBUILDING",
+        "CHECK-CYCLE-PRESET-STRENGTH_PEAK",
+        "CHECK-CYCLE-PRESET-FOUNDATION",
+        "CHECK-CYCLE-PRESET-HYPERTROPHY_SPEC",
+        "CHECK-PHASE-HYPERTROPHY_ACCUMULATION",
+        "CHECK-PHASE-STRENGTH_ACCUMULATION",
+        "CHECK-PHASE-MIXED_ACCUMULATION",
+        "CHECK-PHASE-INTENSIFICATION",
+        "CHECK-PHASE-PEAK",
+        "CHECK-PHASE-FOUNDATION"
+      ]
+    },
+    {
+      "id": "S5A",
+      "title": "Readiness and fatigue",
+      "dependencies": [
+        "S2E",
+        "S4B"
+      ],
+      "exit": "Verified effort/readiness/fatigue proposals and coaching-off independence.",
+      "canonical": [
+        "SET-FATIGUE",
+        "READINESS"
+      ],
+      "checks": [
+        "CHECK-LIVE-FATIGUE",
+        "CHECK-ADJUST-READINESS"
+      ]
+    },
+    {
+      "id": "S5B",
+      "title": "Adaptive cycles and existing Endless Plan",
+      "dependencies": [
+        "S4C",
+        "S5A"
+      ],
+      "exit": "Permissioned adaptation, existing continuous plan, justified recovery and explicit future consent.",
+      "canonical": [
+        "CYCLE-ADAPT",
+        "CYCLE-ENDLESS",
+        "CYCLE-DELOAD",
+        "CYCLE-APPROVAL"
+      ],
+      "checks": [
+        "CHECK-CYCLE-ADAPT",
+        "CHECK-CYCLE-RECOVERY",
+        "CHECK-CYCLE-ENDLESS",
+        "CHECK-CYCLE-CONSENT"
+      ]
+    },
+    {
+      "id": "S5C",
+      "title": "Longitudinal coaching",
+      "dependencies": [
+        "S5B"
+      ],
+      "exit": "16+ weeks plus next cycle as applicable, misses, stalls, fatigue, corrections, gym changes, consent refusal.",
+      "canonical": [
+        "CYCLE-LONGITUDINAL"
+      ],
+      "checks": [
+        "CHECK-LIVE-PLATEAU",
+        "CHECK-CYCLE-LONG"
+      ]
+    },
+    {
+      "id": "S6A",
+      "title": "Onboarding, Today and Plan",
+      "dependencies": [
+        "S4C"
+      ],
+      "exit": "All core controls connect to real state.",
+      "canonical": [
+        "UI-TODAY",
+        "UI-PLAN"
+      ],
+      "checks": [
+        "CHECK-UI-HOME",
+        "CHECK-UI-PLAN"
+      ]
+    },
+    {
+      "id": "S6B",
+      "title": "Train and exercise UI",
+      "dependencies": [
+        "S3C",
+        "S3D"
+      ],
+      "exit": "Focus/full, Last/Target, library and tools wired.",
+      "canonical": [
+        "WORKOUT-FOCUS",
+        "WORKOUT-REFERENCE",
+        "UI-TRAIN",
+        "UI-INFO",
+        "EXERCISE-LIBRARY"
+      ],
+      "checks": [
+        "CHECK-WORK-FOCUS",
+        "CHECK-WORK-LAST",
+        "CHECK-WORK-INFO",
+        "CHECK-CAT-GUIDE",
+        "CHECK-UI-TRAIN"
+      ]
+    },
+    {
+      "id": "S6C",
+      "title": "History, Progress and Profile",
+      "dependencies": [
+        "S3A",
+        "S5B"
+      ],
+      "exit": "Factual history/volume/strength standards/club/settings.",
+      "canonical": [
+        "HISTORY-CALENDAR",
+        "PROGRESS-VOLUME",
+        "PROGRESS-TRENDS",
+        "PROGRESS-STANDARDS",
+        "PROGRESS-CLUB",
+        "PROGRESS-BODY",
+        "UI-PROFILE",
+        "UI-SETTINGS",
+        "UI-OPTIONAL-SHARING"
+      ],
+      "checks": [
+        "CHECK-HIST-SEARCH",
+        "CHECK-HIST-RECAP",
+        "CHECK-VOL-CHART",
+        "CHECK-VOL-FAVORITES",
+        "CHECK-VOL-STANDARDS",
+        "CHECK-VOL-CLUB",
+        "CHECK-BODY-TRACK",
+        "CHECK-PROFILE-PREFS",
+        "CHECK-PROFILE-LEVEL",
+        "CHECK-PROFILE-SHARE",
+        "CHECK-PROFILE-SETTINGS"
+      ]
+    },
+    {
+      "id": "S6D",
+      "title": "M3 Expressive and feedback",
+      "dependencies": [
+        "S6A",
+        "S6B",
+        "S6C"
+      ],
+      "exit": "Shared design tokens, responsive light/dark, accessible source UI and feedback.",
+      "canonical": [
+        "UI-M3E",
+        "UI-FEEDBACK"
+      ],
+      "checks": [
+        "CHECK-PROFILE-THEME",
+        "CHECK-UI-NAV"
+      ]
+    },
+    {
+      "id": "S7A",
+      "title": "Durable history and ownership",
+      "dependencies": [
+        "S3A",
+        "S5B"
+      ],
+      "exit": "Exactly-once finish, correction/PR, owner isolation, full record families and crash windows.",
+      "canonical": [
+        "GYM-OLD-MACHINE",
+        "HISTORY-IDENTITY",
+        "HISTORY-PR",
+        "DATA-OWNER"
+      ],
+      "checks": [
+        "CHECK-GYM-HISTORY-ASSOC",
+        "CHECK-HIST-CORRECT",
+        "CHECK-HIST-PR",
+        "CHECK-DATA-RECOVERY",
+        "CHECK-DATA-OWNER"
+      ]
+    },
+    {
+      "id": "S7B",
+      "title": "Backup, restore, import and updates",
+      "dependencies": [
+        "S7A",
+        "S6D"
+      ],
+      "exit": "Whole-store encrypted export/restore, user-facing controls, no overwrite, tamper/foreign rejection and compatibility.",
+      "canonical": [
+        "PROGRAM-IMPORT",
+        "DATA-BACKUP",
+        "DATA-MERGE",
+        "DATA-UPDATE"
+      ],
+      "checks": [
+        "CHECK-CUSTOM-IMPORT",
+        "CHECK-BACKUP-EXPORT",
+        "CHECK-BACKUP-RESTORE",
+        "CHECK-BACKUP-MERGE"
+      ]
+    },
+    {
+      "id": "S8A",
+      "title": "Current parity and Kotlin runtime",
+      "dependencies": [
+        "S2E",
+        "S3C",
+        "S3D",
+        "S4C",
+        "S5C",
+        "S6D",
+        "S7B"
+      ],
+      "exit": "All mandatory source rows source-certified; pinned behavioral comparison, no legacy runtime or P0/P1.",
+      "canonical": [
+        "CERT-COMPARISON"
+      ],
+      "checks": [
+        "CHECK-RUNTIME-ONE",
+        "CHECK-CERT-PAIRED"
+      ]
+    },
+    {
+      "id": "S8B",
+      "title": "Integrated source gate",
+      "dependencies": [
+        "S8A"
+      ],
+      "exit": "Exact integrated CI and complete source/UI; all device checks queued, no APK.",
+      "canonical": [],
+      "checks": []
+    },
+    {
+      "id": "S9A",
+      "title": "Private device install/UI",
+      "dependencies": [
+        "S8B"
+      ],
+      "exit": "Explicit APK authorization, signed exact revision, real accessibility/navigation/device tests.",
+      "canonical": [
+        "CERT-DEVICE"
+      ],
+      "checks": [
+        "CHECK-UI-A11Y"
+      ]
+    },
+    {
+      "id": "S9B",
+      "title": "Private device training and recovery",
+      "dependencies": [
+        "S9A"
+      ],
+      "exit": "All required device evidence; training, offline, process death, backup/restore, updates; full acceptance.",
+      "canonical": [],
+      "checks": [
+        "CHECK-DATA-UPDATE"
+      ]
+    },
+    {
+      "id": "S10A",
+      "title": "Controlled beta",
+      "dependencies": [
+        "S9B"
+      ],
+      "exit": "Separate beta authorization and several months of training/feedback.",
+      "canonical": [],
+      "checks": []
+    },
+    {
+      "id": "S10B",
+      "title": "Production decision",
+      "dependencies": [
+        "S10A"
+      ],
+      "exit": "Sustained stability and review, objective evidence, explicit owner production decision.",
+      "canonical": [],
+      "checks": []
+    }
+  ],
+  "rollups": [
+    {
+      "id": "E01",
+      "oldStage": "S4",
+      "milestones": [
+        "S4A",
+        "S6C"
+      ]
+    },
+    {
+      "id": "E02",
+      "oldStage": "S4",
+      "milestones": [
+        "S4A",
+        "S4B"
+      ]
+    },
+    {
+      "id": "E03",
+      "oldStage": "S2",
+      "milestones": [
+        "S2A"
+      ]
+    },
+    {
+      "id": "E04",
+      "oldStage": "S2",
+      "milestones": [
+        "S4A"
+      ]
+    },
+    {
+      "id": "E05",
+      "oldStage": "S4",
+      "milestones": [
+        "S3B",
+        "S4A"
+      ]
+    },
+    {
+      "id": "E06",
+      "oldStage": "S5",
+      "milestones": [
+        "S2A",
+        "S4A",
+        "S6C",
+        "S7A"
+      ]
+    },
+    {
+      "id": "E07",
+      "oldStage": "S2",
+      "milestones": [
+        "S2A"
+      ]
+    },
+    {
+      "id": "E08",
+      "oldStage": "S3",
+      "milestones": [
+        "S3B",
+        "S6B"
+      ]
+    },
+    {
+      "id": "E09",
+      "oldStage": "S3",
+      "milestones": [
+        "S3B",
+        "S6B"
+      ]
+    },
+    {
+      "id": "E10",
+      "oldStage": "S3",
+      "milestones": [
+        "S3B",
+        "S3D",
+        "S6B"
+      ]
+    },
+    {
+      "id": "E11",
+      "oldStage": "S4",
+      "milestones": [
+        "S4A",
+        "S4B",
+        "S4C"
+      ]
+    },
+    {
+      "id": "E12",
+      "oldStage": "S4",
+      "milestones": [
+        "S4A",
+        "S4B",
+        "S4C",
+        "S6C"
+      ]
+    },
+    {
+      "id": "E13",
+      "oldStage": "S4",
+      "milestones": [
+        "S3B",
+        "S4B",
+        "S4C"
+      ]
+    },
+    {
+      "id": "E14",
+      "oldStage": "S4",
+      "milestones": [
+        "S4A",
+        "S4B"
+      ]
+    },
+    {
+      "id": "E15",
+      "oldStage": "S4",
+      "milestones": [
+        "S4A",
+        "S4B"
+      ]
+    },
+    {
+      "id": "E16",
+      "oldStage": "S4",
+      "milestones": [
+        "S3B",
+        "S3C",
+        "S3D",
+        "S4B",
+        "S4C",
+        "S6A",
+        "S7B"
+      ]
+    },
+    {
+      "id": "E17",
+      "oldStage": "S2",
+      "milestones": [
+        "S2A",
+        "S2B",
+        "S2C",
+        "S3A",
+        "S3C",
+        "S3D",
+        "S6B"
+      ]
+    },
+    {
+      "id": "E18",
+      "oldStage": "S2",
+      "milestones": [
+        "S2A",
+        "S2B",
+        "S2C",
+        "S2D"
+      ]
+    },
+    {
+      "id": "E19",
+      "oldStage": "S4",
+      "milestones": [
+        "S2B",
+        "S2D",
+        "S5A"
+      ]
+    },
+    {
+      "id": "E20",
+      "oldStage": "S3",
+      "milestones": [
+        "S3C",
+        "S3D"
+      ]
+    },
+    {
+      "id": "E21",
+      "oldStage": "S3",
+      "milestones": [
+        "S3C",
+        "S3D",
+        "S4C"
+      ]
+    },
+    {
+      "id": "E22",
+      "oldStage": "S5",
+      "milestones": [
+        "S2A",
+        "S3A",
+        "S3B",
+        "S3C",
+        "S4B",
+        "S6A",
+        "S6B"
+      ]
+    },
+    {
+      "id": "E23",
+      "oldStage": "S5",
+      "milestones": [
+        "S3A",
+        "S3C",
+        "S3D",
+        "S6C",
+        "S7A",
+        "S9A"
+      ]
+    },
+    {
+      "id": "E24",
+      "oldStage": "S2",
+      "milestones": [
+        "S2B",
+        "S2D",
+        "S3A",
+        "S5A",
+        "S6B"
+      ]
+    },
+    {
+      "id": "E25",
+      "oldStage": "S4",
+      "milestones": [
+        "S5A",
+        "S5B"
+      ]
+    },
+    {
+      "id": "E26",
+      "oldStage": "S3",
+      "milestones": [
+        "S3D"
+      ]
+    },
+    {
+      "id": "E27",
+      "oldStage": "S3",
+      "milestones": [
+        "S3D"
+      ]
+    },
+    {
+      "id": "E28",
+      "oldStage": "S3",
+      "milestones": [
+        "S2A",
+        "S2B",
+        "S2E",
+        "S3A",
+        "S3B",
+        "S3C",
+        "S3D",
+        "S6B"
+      ]
+    },
+    {
+      "id": "E29",
+      "oldStage": "S6",
+      "milestones": [
+        "S5A",
+        "S6A",
+        "S6B",
+        "S6D"
+      ]
+    },
+    {
+      "id": "E30",
+      "oldStage": "S2",
+      "milestones": [
+        "S2B",
+        "S2C",
+        "S2D",
+        "S2E",
+        "S3B",
+        "S3D",
+        "S7A"
+      ]
+    },
+    {
+      "id": "E31",
+      "oldStage": "S4",
+      "milestones": [
+        "S5A",
+        "S5B",
+        "S5C"
+      ]
+    },
+    {
+      "id": "E32",
+      "oldStage": "S4",
+      "milestones": [
+        "S2C",
+        "S3C",
+        "S4C",
+        "S5C",
+        "S6A"
+      ]
+    },
+    {
+      "id": "E33",
+      "oldStage": "S4",
+      "milestones": [
+        "S4C",
+        "S5B",
+        "S5C"
+      ]
+    },
+    {
+      "id": "E34",
+      "oldStage": "S4",
+      "milestones": [
+        "S5B",
+        "S5C"
+      ]
+    },
+    {
+      "id": "E35",
+      "oldStage": "S4",
+      "milestones": [
+        "S4A",
+        "S4C",
+        "S5B",
+        "S5C",
+        "S6A",
+        "S6C"
+      ]
+    },
+    {
+      "id": "E36",
+      "oldStage": "S5",
+      "milestones": [
+        "S2A",
+        "S2D",
+        "S3A",
+        "S3B",
+        "S3C",
+        "S3D",
+        "S6B",
+        "S6C",
+        "S7A"
+      ]
+    },
+    {
+      "id": "E37",
+      "oldStage": "S5",
+      "milestones": [
+        "S2A",
+        "S2D",
+        "S3A",
+        "S6B",
+        "S6C",
+        "S7A"
+      ]
+    },
+    {
+      "id": "E38",
+      "oldStage": "S6",
+      "milestones": [
+        "S3C",
+        "S4B",
+        "S6C",
+        "S7A"
+      ]
+    },
+    {
+      "id": "E39",
+      "oldStage": "S5",
+      "milestones": [
+        "S7A",
+        "S7B",
+        "S9A",
+        "S9B"
+      ]
+    },
+    {
+      "id": "E40",
+      "oldStage": "S6",
+      "milestones": [
+        "S6A",
+        "S6B",
+        "S6C",
+        "S6D",
+        "S9A"
+      ]
+    },
+    {
+      "id": "E41",
+      "oldStage": "S7",
+      "milestones": [
+        "S2E",
+        "S4B",
+        "S5B",
+        "S6C",
+        "S6D",
+        "S7A",
+        "S7B",
+        "S8A",
+        "S9A",
+        "S9B"
+      ]
+    }
+  ],
+  "findings": {
+    "FND-S1-001": "S4A",
+    "FND-S1-002": "S4B",
+    "FND-S1-003": "S4A",
+    "FND-S1-004": "S4A",
+    "FND-S1-005": "S2C",
+    "FND-S1-006": "S3C",
+    "FND-S1-007": "S3D",
+    "FND-S1-008": "S5B",
+    "FND-S1-009": "S7B",
+    "FND-S1-010": "S7A",
+    "FND-S1-011": "S6C",
+    "FND-S1-012": "S3B",
+    "FND-S1-013": "S8A",
+    "FND-S1-014": "S4B",
+    "FND-S1-015": "S6B",
+    "FND-S1-016": "S6A",
+    "FND-S2-001": "S2C"
+  },
+  "optionalReviewCandidates": [
+    "CHECK-OPT-SOCIAL",
+    "CHECK-OPT-GALLERY-ART",
+    "CHECK-OPT-ANALYTICS-VISUAL",
+    "CHECK-OPT-DEV-DEMO",
+    "CHECK-OPT-ENDLESS-UPGRADE"
+  ],
+  "crossDependencies": [
+    {
+      "milestone": "S2E",
+      "requiresMinimum": [
+        "CHECK-WORK-ISSUE",
+        "CHECK-WORK-ENTRY",
+        "CHECK-HIST-FINISH",
+        "CHECK-HIST-CORRECT",
+        "CHECK-DATA-RECOVERY"
+      ],
+      "note": "Prove numerical vertical routes now, broader certification remains with owners."
+    },
+    {
+      "milestone": "S2C",
+      "requiresMinimum": [
+        "CHECK-CYCLE-CONSENT",
+        "CHECK-WORK-ISSUE"
+      ],
+      "note": "Specialist approval/issue prerequisite, not all adaptive/storage certification."
+    }
+  ]
+}

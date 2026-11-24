@@ -37,7 +37,8 @@ assert.equal(s90Request.schedule.days[0].targetExercises, 7, 'request cloning mu
 const index = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const main = fs.readFileSync(new URL('../modules/main.js', import.meta.url), 'utf8');
 const sw = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-assert.doesNotMatch(index, /app-shell-adapter/, 'browser must use the same canonical adapter as Node without an import-map substitution');
+// The modulepreload list names the canonical adapter by path; only the import map could substitute it.
+assert.doesNotMatch(index.match(/<script type="importmap">[\s\S]*?<\/script>/)?.[0] ?? '', /app-shell-adapter/, 'browser must use the same canonical adapter as Node without an import-map substitution');
 assert.match(main, /wizard-stability\.js/, 'wizard stability guard must load before App');
 for (const asset of ['capacity-policy.js', 'app-shell-adapter.js', 'wizard-stability.js'])
   assert.ok(sw.includes(asset), `service worker must precache ${asset}`);

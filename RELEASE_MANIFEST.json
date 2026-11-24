@@ -2,10 +2,10 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 1034,
+  "build": 1035,
   "engineVersion": "0.65.10",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "dfd28c5e983902e02de0d78343cba65006d5328b566b76441e9f5ef5c1a2492d",
+  "runtimeAggregate": "94e64aeea2521d86ebba15f0e23fbf2d1bf3686c02f57857227bbf0f9558b3b6",
   "runtimeFiles": {
     "modules/app-storage-ownership.js": "765ef4d37d4f73967fee7ef1942de229e905e112c7735b53de86a8e7106b3e39",
     "modules/backup-restore-panel.js": "194d953c2478a300c21e303c19fd7dd27ac436ddef21bcacaa7b8299d60123df",
@@ -18,7 +18,7 @@
     "modules/generation-runtime.js": "a8375d92b33d226ef25fce6a2efddb3b84cfbb93e7327a92a4d749ca3071fb76",
     "modules/generation-worker.js": "098d2de152993933990ea44ff0faf6b828b9c579aff53ecbffddb716599899b6",
     "modules/gym-load-fields.js": "8fa0b62646c90783dd5f4aacb8dc52a69a86224406cc0a48e28c0da0754d587c",
-    "modules/gym-machine-variants.js": "1f005abd4d671823424fb7d34c2620389344352596162aa1cfe045f28d90a164",
+    "modules/gym-machine-variants.js": "d597aff69713e08efc0bf0d40fc9f8bcca2d11318365b5461eb185eed0a13f6c",
     "modules/history-editor.js": "778010f9e794674e1dcf8bdb55ebea0adb1ce0cb002d4c5b8e1a48c56a866562",
     "modules/home-week.js": "f5112db02379af10bd5e66bdeeae3ead9085b23f4d62c00d6caca6f32335c5b7",
     "modules/injury-tools.js": "54a14efe3d96a41d2f6288bb59889f43807232c3a93998740553895c8db43688",
@@ -162,18 +162,18 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "8d0363d62094a527c0f5fb9f4574281899a2a96ae6b16a6292eed34aff381944",
-    "index.html": "c81a5fdbfd169c79250507a388e6173834bdef824bac197c5d3e1772a2cb4d26",
-    "sw.js": "5dbade5ee4f9dc0b47cb7ff00815764bad2587611190db519286cee52784bf05",
-    "BUILD_PROFILE.json": "0fe18298ca5c946e09d3b5408ac9138c8b3d601b0d9cfe7a69bca4cc3e2ca4ff",
+    "modules/App.js": "ec216932ad2fbf5d663da599db01e685481aa8a3f78706b10f7bea147787d0d3",
+    "index.html": "c7ce992e2b1bf2f3644885c48502ae059c0d850df6f75e70c9df251fba8f7f59",
+    "sw.js": "005edf7d8864849a459c9c615674d5c825bfa09c265537d38c22a90bd56919ae",
+    "BUILD_PROFILE.json": "663fb3afa7afa6ee7d3403ffb0be5e7de6bcb93fcabfd73fab691a7d1dc92f34",
     "CHANGELOG.md": "b2652caa581ef510ddbf292f8422749da1a1616e8c07b2de372922a2782a2539",
-    "app.css": "6499d5e26db649924a671ed80fd9e71cc527207825c55b65b1c42b2cfe3e2166",
+    "app.css": "9092a4f14b777495346d27d70fa883b2443ab2c2b3144aa2157bcd058a6a104e",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1034-re45b14183faff98a",
-  "uiMilestone": "Build 1034 · M3 type scale (14/16 body) and 48px touch targets"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1035-r8cff63d4f6e966d5",
+  "uiMilestone": "Build 1035 · M3 type scale (14/16 body) and 48px touch targets"
 }

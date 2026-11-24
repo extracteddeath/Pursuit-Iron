@@ -348,9 +348,9 @@ try{
             assert.ok(await page.$('.wpb-training-calendar'),'Training calendar is immediately available');
             assert.deepEqual(await page.$$eval('.wpb-calendar-weekdays abbr',
               items=>items.map(item=>[item.textContent,item.title])),
-              [['Sun','Sunday'],['Mon','Monday'],['Tue','Tuesday'],['Wed','Wednesday'],
-                ['Thu','Thursday'],['Fri','Friday'],['Sat','Saturday']],
-              'Weekday headings are distinct and expose their full names');
+              [['Mon','Monday'],['Tue','Tuesday'],['Wed','Wednesday'],
+                ['Thu','Thursday'],['Fri','Friday'],['Sat','Saturday'],['Sun','Sunday']],
+              'Weekday headings are distinct, Monday-first like Home and Plan, and expose their full names');
             const monthFacts=await page.$eval('.wpb-calendar-month-stats',
               el=>el.textContent);
             assert.match(monthFacts,/Training days this month/,

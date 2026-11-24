@@ -355,9 +355,9 @@ try{
             assert.ok(enlarged.rootTitle?.text==='Profile'&&enlarged.rootTitle.lines===1&&
               !enlarged.rootTitle.overlapsAction,
               'Profile root title stays one intact word and Edit remains separate at 200%: '+JSON.stringify({theme,width,title:enlarged.rootTitle}));
-          if(route==='home'&&width===320)
+          if(route==='home')
             assert.equal(enlarged.homeOrbitVisible,false,
-              '320px Home day orbit must never overlap the workout heading: '+JSON.stringify({theme,width,enlarged}));
+              'B1035: Home has no unlabeled rotation dial competing with the workout heading: '+JSON.stringify({theme,width}));
           if(route==='plan'&&width===320){
             assert.ok(enlarged.planReading?.titleFits,
               '200% Plan title wraps within the page instead of clipping: '+JSON.stringify({theme,width,enlarged}));

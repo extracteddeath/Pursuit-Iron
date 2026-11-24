@@ -19,10 +19,13 @@ assert.ok(laterWizard.includes('border-radius:19px 25px 25px 25px!important;') &
  'Selected wizard keeps its actual final shape and accent edge');
 
 const librarySurface='#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-header{';
-const libraryPaint=css.split(librarySurface)[1]?.split('}')[0]||'';
-assert.ok(libraryPaint.includes('background-image:none!important;') &&
- libraryPaint.includes('background-color:var(--pi-m3e-surface-container)!important;'),
- 'Library header keeps the original first shared surface painter');
+// B1046: the early surface-container painter was always overridden by the later R11 list owner
+// with the identical selector, so it was removed; the R11 owner is the one that paints.
+const libraryOwner='#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-header,\n';
+const libraryPaint=css.split(libraryOwner)[1]?.split('}')[0]||'';
+assert.ok(!css.includes(librarySurface) && libraryPaint.includes('background-image:none!important;') &&
+ libraryPaint.includes('background-color:var(--pi-r11-quiet)!important;'),
+ 'Library header has one painter: the R11 owner');
 assert.ok(!css.includes(librarySurface.replace(/\{$/,'')+',\n#root[data-pi-motion="expressive"] .wpb-exercise-detail'),
  'Exercise Detail is no longer redundantly included in the early Library owner');
 

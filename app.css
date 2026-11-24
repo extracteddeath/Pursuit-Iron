@@ -415,17 +415,12 @@ display:block!important;
 /* Progress: legible statistics and tab selection; the existing graph owns the data. */
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs,
 #root[data-pi-motion="expressive"] .wpb .wpb-exercise-tabs{
-  border-radius:16px!important;
-  padding:3px!important;
   gap:var(--pi-segment-gap,3px)!important;
   overflow:visible;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs>button,
 #root[data-pi-motion="expressive"] .wpb .wpb-exercise-tabs>button{
-  min-height:40px!important;
-  border-radius:12px!important;
   border-bottom:0!important;
-  line-height:1.15;
 }
 
 #root[data-pi-motion="expressive"] .wpb-progress [data-progress-glance]{
@@ -497,9 +492,6 @@ display:block!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs>button[aria-selected="true"]{
   font-weight:760!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item>.mono{
-  letter-spacing:-.04em;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
   font-weight:700!important;
@@ -650,8 +642,6 @@ display:block!important;
 #root[data-pi-motion="expressive"] .wpb .wpb-pop,#root[data-pi-motion="expressive"] .wpb .wpb-dialog{
   border-radius:28px!important;
   border-color:var(--pi-m3-overlay-stroke)!important;
-  box-shadow:0 12px 45px rgba(0,0,0,.19)!important;
-  background-image:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb :is(.wpb-pop,.wpb-dialog)>:first-child{
   min-width:0;
@@ -828,9 +818,7 @@ display:block!important;
    only the fixed-width chart range and history group selectors use moving tracks. */
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filters input,
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filters select{
-  min-height:48px!important;
   min-width:0;
-  border-radius:12px!important;
   font-size:14px!important;
   transition:border-color 150ms var(--pi-ease), box-shadow 150ms var(--pi-ease)!important;
 }
@@ -1568,9 +1556,6 @@ display:block!important;
 #root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-option-icon{
   border-radius:16px!important;
 }
-#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-primary{
-  border-radius:20px!important;
-}
 /* Filter chips belong to the full-pill family; Library rows remain tight. */
 #root[data-pi-motion="expressive"] .wpb-library .wpb-library-flag-filter{
   border-radius:20px!important;
@@ -1701,10 +1686,6 @@ display:block!important;
   scroll-snap-type:x proximity;
 }
 #root[data-pi-motion="expressive"] .wpb-program .wpb-week-rail>button{scroll-snap-align:center;}
-
-#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card[data-next="true"]{
-  background-image:none!important;
-}
 #root[data-pi-motion="expressive"] .wpb-program .wpb-day-card[data-next="true"]::before{
   width:4px!important;
   opacity:.46!important;
@@ -1842,7 +1823,6 @@ display:block!important;
   gap:4px;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile[data-featured="true"]{
-  background-image:none!important;
   border-color:color-mix(in srgb,currentColor 21%,transparent);
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile>div:first-child{
@@ -1904,22 +1884,7 @@ display:block!important;
    supporting facts, not three interchangeable badges. */
 
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child{
-  grid-column:1;grid-row:1 / span 2;
-  min-height:126px;
   background-image:none!important;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:flex-start;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child>.mono{
-  letter-spacing:-.05em;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:nth-child(2){
-  grid-column:2;grid-row:1;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:nth-child(3){
-  grid-column:2;grid-row:2;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:not(:first-child)>.mono{
   font-size:22px!important;
@@ -1985,10 +1950,6 @@ display:block!important;
 }
 /* The primary page headers are solid tonal containers that become quieter
    with the existing real scroll state, without adding screen height. */
-#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-header{
-  background-image:none!important;
-  background-color:var(--pi-m3e-surface-container)!important;
-}
 /* Plan: current week and next workout are the only high-emphasis containers.
    Calendar entries, program text and completion markers keep original data. */
 
@@ -2053,7 +2014,6 @@ display:block!important;
 #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results>.wpb-library-row:is(:active,:focus-visible){
   border-radius:var(--pi-m3e-list-compressed) 23px 23px var(--pi-m3e-list-compressed)!important;
   border-color:color-mix(in srgb,var(--pi-m3e-primary) 44%,transparent)!important;
-  background-color:var(--pi-m3e-surface-container-high)!important;
 }
 /* Responsive 2026 list height: long names can wrap, and the actual content
    determines the row height. No rigid cropping or a second inaccessible title. */
@@ -2081,7 +2041,6 @@ display:block!important;
 }
 @media(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb .wpb-library-row,#root[data-pi-motion="expressive"] .wpb .wpb-settings-card,#root[data-pi-motion="expressive"] .wpb .wpb-history-session{
-    border-color:CanvasText!important;
     background-color:Canvas!important;
   }
 }
@@ -2179,16 +2138,8 @@ display:block!important;
 /* PLAN. A current week and next session are distinct, but the background
    doesn't shout in pink. The existing 4-way animated view selector and
    upcoming-day accordion retain exactly their measured hit geometry. */
-#root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile,
-#root[data-pi-motion="expressive"] .wpb .wpb-plan-panes,
-#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card{
-  background-image:none!important;
-  background-color:var(--pi-r11-quiet)!important;
-  box-shadow:none!important;
-}
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile[data-featured="true"],#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card[data-next="true"]{
   background-image:none!important;
-  background-color:var(--pi-r11-hero)!important;
   border-color:var(--pi-r11-accent-stroke)!important;
   box-shadow:none!important;
 }
@@ -2703,19 +2654,13 @@ display:block!important;
 }
 #root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
   .wpb-exercise-tabs{
-  min-height:52px!important;
   padding:4px!important;
   gap:3px!important;
-  border:1px solid var(--pi-r11-edge)!important;
   border-radius:20px!important;
-  background-color:var(--pi-r11-quiet)!important;
-  background-image:none!important;
-  box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
   .wpb-exercise-tabs>button{
   min-width:0!important;
-  min-height:48px!important;
   padding:9px 3px!important;
   border-radius:16px!important;
   line-height:1.2!important;
@@ -2723,14 +2668,10 @@ display:block!important;
 }
 #root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
   .wpb-exercise-window-tabs{
-  border:1px solid var(--pi-r11-edge)!important;
   border-radius:16px!important;
-  background-color:var(--pi-r11-quiet)!important;
-  background-image:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
   .wpb-exercise-window-tabs>button{
-  min-height:48px!important;
   min-width:0!important;
   border-radius:12px!important;
 }
@@ -2979,7 +2920,6 @@ display:block!important;
    exactly as authored. Only clarify tonal hierarchy and touch affordances. */
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session{
   box-sizing:border-box;
-  min-width:0;
   overflow-wrap:anywhere;
   transition:border-radius 200ms var(--pi-ease),border-color 160ms var(--pi-ease),background-color 160ms var(--pi-ease)!important;
 }
@@ -3464,7 +3404,6 @@ display:block!important;
 /* Related history tools share one clear rhythm without amplifying empty
    periods with giant, decorative cards. Semantic search/filters untouched. */
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filters{
-  min-width:0;
   margin-bottom:var(--pi-space-2)!important;
   padding-bottom:10px!important;
   gap:7px!important;
@@ -3596,7 +3535,6 @@ display:block!important;
 #root[data-pi-motion="expressive"] .wpb .wpb-profile,
 #root[data-pi-motion="expressive"] .wpb .wpb-settings{
   background-color:light-dark(var(--pi-m3e-base),var(--pi-r41-page))!important;
-  background-image:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
   background-color:light-dark(var(--pi-m3e-surface-container-low),var(--pi-r41-surface-1))!important;
@@ -3609,10 +3547,8 @@ display:block!important;
   box-shadow:none!important;
   padding:4px!important;
   margin:0!important;
-  min-height:52px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs>button{
-  min-height:48px!important;
   padding-inline:var(--pi-progress-tab-pad,5px)!important;
   border-radius:16px!important;
 }
@@ -3623,7 +3559,6 @@ display:block!important;
   width:max-content;
   max-width:100%;
   margin:0 0 var(--pi-space-3)!important;
-  min-height:48px!important;
   padding:3px!important;
   gap:var(--pi-space-1)!important;
   border:1px solid var(--pi-r11-edge)!important;
@@ -3633,7 +3568,6 @@ display:block!important;
   box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-grouping>button{
-  min-height:48px!important;
   padding:7px 13px!important;
   border-radius:12px!important;
   font-weight:650!important;
@@ -3815,7 +3749,6 @@ display:block!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes{
   box-sizing:border-box;
-  min-height:52px!important;
   border-radius:16px!important;
   border:1px solid var(--pi-r11-edge)!important;
   background-color:var(--pi-r11-raised)!important;
@@ -3823,7 +3756,6 @@ display:block!important;
   box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>button{
-  min-height:var(--pi-plan-tab-min-height,44px)!important;
   min-width:0;
   border-radius:12px!important;
 }
@@ -3897,7 +3829,6 @@ display:block!important;
    search focus morph, R12 linked-entry motion, lift history or active workout. */
 #root[data-pi-motion="expressive"] .wpb .wpb-library{
   background-color:light-dark(var(--pi-m3e-base),var(--pi-r41-page))!important;
-  background-image:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-search{
   box-sizing:border-box;
@@ -3910,7 +3841,6 @@ display:block!important;
 }
 #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-flag-filter{
   box-sizing:border-box;
-  min-height:50px!important;
   background-color:var(--pi-r11-raised)!important;
   background-image:none!important;
   border:1px solid var(--pi-r11-edge)!important;

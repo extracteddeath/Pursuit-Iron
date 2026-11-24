@@ -107,6 +107,22 @@ object KotlinFutureLoadNumberAuthorityDomain {
             return no(KotlinFutureLoadRefusal.INVALID_NUMBER_OR_BUDGET)
         if(stock==null || stock.unit!=unit || stock.basis!=basis)
             return no(KotlinFutureLoadRefusal.UNVERIFIED_UNIT_OR_BASIS)
+        // Physical stock can contain a zero machine selector, but it is
+        // NOT automatically a valid issued working weight. Only a basis
+        // defined as zero ADDED load may issue zero. Future-load reviews
+        // must not reauthorize a malformed current workout or silently
+        // turn zero into a machine/cable/assistance progression.
+        if(!KotlinSetNumberAuthorityDomain.validPrescribedLoad(issuedLoad,basis))
+            return no(KotlinFutureLoadRefusal.UNVERIFIED_ISSUED_LOAD)
+        // The zero-assisted selector has its own explicit refusal below;
+        // never present it as an earned move to unassisted bodyweight.
+        val zeroAssistanceTerminal=
+            basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT &&
+            source==KotlinFutureLoadSource.EARNED_ASSISTANCE_DECREMENT &&
+            candidateLoad.signum()==0
+        if(!zeroAssistanceTerminal &&
+            !KotlinSetNumberAuthorityDomain.validPrescribedLoad(candidateLoad,basis))
+            return no(KotlinFutureLoadRefusal.UNVERIFIED_CANDIDATE_LOAD)
         val current=EquipmentLoadDomain.inspect(stock,issuedLoad,unit)
             as? LoadInspection.Confirmed
             ?:return no(KotlinFutureLoadRefusal.UNVERIFIED_ISSUED_LOAD)

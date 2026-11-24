@@ -33,7 +33,11 @@ assert.match(rest,/var observedEvent by remember\(workoutId,ownerId\).*mutableSt
 assert.match(rest,/restStore\.save\(scopeKey,latestReceiptOperationId,checkpoint\)/);
 assert.match(rest,/NativeRestCountdownPolicy\.valid\(/);
 assert.match(rest,/NativeRestCountdownPolicy\.adjust\(/);
-assert.match(rest,/onLongClick = \{publish\(null\)\}/);
+assert.match(rest,/onLongClick = \{acknowledgeManualAction\(\);publish\(null\)\}/);
+assert.match(rest,/onClick = \{ acknowledgeManualAction\(\);begin\(prescribedSeconds\) \}/);
+assert.match(rest,/fun acknowledgeManualAction\(\) \{[\s\S]*?observedEvent=latestReceiptOperationId/);
+assert.match(rest,/NativeRestReceiptCuePolicy\.needsPendingClear\(/);
+assert.match(rest,/TextButton\(onClick=\{acknowledgeManualAction\(\);publish\(null\)\}/);
 assert.match(rest,/Text\("−30 s"\)/);
 assert.match(rest,/Text\("\+30 s"\)/);
 assert.match(rest,/Text\("Clear"\)/);

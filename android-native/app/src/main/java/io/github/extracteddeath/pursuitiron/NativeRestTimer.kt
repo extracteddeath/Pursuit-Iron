@@ -27,6 +27,13 @@ internal data class NativeKotlinRestCue(
  * acknowledged by the timer; neither an older cue nor a remounted prior
  * receipt may restart an elapsed countdown. */
 internal object NativeRestReceiptCuePolicy {
+    /** A cue-less receipt invalidates the preceding countdown only once.
+     * A matching delayed cue can still arrive until an explicit manual action. */
+    fun needsPendingClear(
+        observedReceiptId:String?,clearedReceiptId:String?,latestReceiptId:String?
+    ):Boolean = latestReceiptId!=null &&
+        latestReceiptId!=observedReceiptId && latestReceiptId!=clearedReceiptId
+
     fun newCue(
         observedReceiptId:String?,
         latestReceiptId:String?,
@@ -84,6 +91,14 @@ internal fun NativeRestTimer(
     }
     var now by remember(workoutId,ownerId) { mutableLongStateOf(SystemClock.elapsedRealtime()) }
     var observedEvent by remember(workoutId,ownerId) { mutableStateOf(latestReceiptOperationId) }
+    var clearedPendingEvent by remember(workoutId,ownerId) { mutableStateOf<String?>(null) }
+    fun acknowledgeManualAction() {
+        // A manual start, adjustment or clear supersedes any automatic cue
+        // already associated with this exact durable receipt. A later set
+        // receipt can still start its own normal countdown.
+        observedEvent=latestReceiptOperationId
+        clearedPendingEvent=latestReceiptOperationId
+    }
     fun publish(checkpoint:NativeRestCountdownCheckpoint?) {
         active=checkpoint
         restStore.save(scopeKey,latestReceiptOperationId,checkpoint)
@@ -110,7 +125,11 @@ internal fun NativeRestTimer(
                 // A skip/correction has no rest cue. Clear stale rest from
                 // the previous receipt, but leave this ID unacknowledged:
                 // a delayed matching cue may still arrive in a later frame.
-                publish(null)
+                if(NativeRestReceiptCuePolicy.needsPendingClear(
+                        observedEvent,clearedPendingEvent,latestReceiptOperationId)) {
+                    clearedPendingEvent=latestReceiptOperationId
+                    publish(null)
+                }
             } else {
                 observedEvent=latestReceiptOperationId
                 // Immediate amplifier stages clear the preceding countdown.
@@ -163,8 +182,8 @@ internal fun NativeRestTimer(
             enabled = enabled,
             onClickLabel = "Start or restart rest timer",
             onLongClickLabel = "Reset rest timer",
-            onClick = { begin(prescribedSeconds) },
-            onLongClick = {publish(null)}
+            onClick = { acknowledgeManualAction();begin(prescribedSeconds) },
+            onLongClick = {acknowledgeManualAction();publish(null)}
         ) else Modifier.fillMaxWidth().heightIn(min = 64.dp)
 
     Surface(
@@ -187,16 +206,16 @@ internal fun NativeRestTimer(
             if(valid && remaining>0L) {
                 Row(Modifier.fillMaxWidth(),
                     horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick={adjust(-30)},enabled=enabled,
+                    TextButton(onClick={acknowledgeManualAction();adjust(-30)},enabled=enabled,
                         modifier=Modifier.weight(1f).heightIn(min=48.dp)) {
                         Text("−30 s")
                     }
-                    TextButton(onClick={adjust(30)},enabled=enabled &&
+                    TextButton(onClick={acknowledgeManualAction();adjust(30)},enabled=enabled &&
                         activeSeconds<NativeRestCountdownPolicy.MAX_SECONDS,
                         modifier=Modifier.weight(1f).heightIn(min=48.dp)) {
                         Text("+30 s")
                     }
-                    TextButton(onClick={publish(null)},enabled=enabled,
+                    TextButton(onClick={acknowledgeManualAction();publish(null)},enabled=enabled,
                         modifier=Modifier.weight(1f).heightIn(min=48.dp)) {
                         Text("Clear")
                     }

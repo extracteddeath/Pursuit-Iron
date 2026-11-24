@@ -351,7 +351,7 @@ assert.ok(train.includes('NativeRestTimer(plan.session.workoutId, activeExtensio
   rest.includes('LaunchedEffect(workoutId,ownerId,active)') &&
   rest.includes('delay(250L)') &&
   rest.includes('onLongClickLabel = "Reset rest timer"') &&
-  rest.includes('onLongClick = {publish(null)}') &&
+  rest.includes('onLongClick = {acknowledgeManualAction();publish(null)}') &&
   rest.includes('enabled = enabled') &&
   rest.includes('ownerId: String? = null') && 
   !rest.includes('onRecord(') && !rest.includes('journal.'),

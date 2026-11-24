@@ -133,8 +133,7 @@ object CustomExerciseAuthoringDomain {
         set: CustomAuthoredSet,
         selection: CustomExercisePickerOption
     ): CustomAuthoringRefusal? {
-        if (set.reps.minimum !in 1..100 ||
-            set.reps.maximum !in set.reps.minimum..100 ||
+        if (!KotlinSetNumberAuthorityDomain.validIssuedRepBand(set.reps) ||
             (set.targetRir != null && set.targetRir !in 0..10) ||
             set.activeSeconds !in 1..3600 ||
             set.restSeconds !in 0..3600 ||

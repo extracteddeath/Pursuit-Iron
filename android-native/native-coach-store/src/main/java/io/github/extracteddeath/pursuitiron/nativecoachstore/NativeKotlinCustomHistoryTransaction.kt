@@ -180,12 +180,19 @@ class NativeKotlinCustomHistoryTransaction(
         if(draft.finishedByEventId!=null)
             return@fenced NativeCustomFinishResult.Rejected(
                 NativeCustomFinishRefusal.FINISH_EVENT_MISMATCH)
-        if(draft.revision!=operation.expectedRevision ||
-            !draft.canProposeFinish ||
-            CustomWorkoutJournalDomain.reduce(draft,operation)
-                !is CustomWorkoutJournalDecision.Proposed)
+        if(draft.revision!=operation.expectedRevision || !draft.canProposeFinish)
             return@fenced NativeCustomFinishResult.Rejected(
                 NativeCustomFinishRefusal.FINISH_NOT_READY)
+        val preview=CustomWorkoutJournalDomain.reduce(draft,operation)
+        if(preview !is CustomWorkoutJournalDecision.Proposed || preview.replayed ||
+            CustomWorkoutHistoryEvidenceDomain.project(preview.draft)
+                !is CustomHistoryEvidenceResult.Candidate)
+            return@fenced NativeCustomFinishResult.Rejected(
+                NativeCustomFinishRefusal.FINISH_NOT_READY)
+        val receipt=NativeCustomFinishReceipt.compute(owner,athlete,preview.draft)
+        if(recovered.completions.any{it.storedReceiptId==receipt})
+            return@fenced NativeCustomFinishResult.Rejected(
+                NativeCustomFinishRefusal.FINISH_EVENT_MISMATCH)
         val intent=NativeHistoryWriteIntent.CustomFinish(workoutId,operation,completionClock.observe())
         val prepared=history.prepare(owner,athlete,recovered.revision,intent)
         if(prepared !is NativeHistoryLedgerResult.Durable)

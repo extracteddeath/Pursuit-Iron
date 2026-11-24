@@ -1,6 +1,9 @@
 package io.github.extracteddeath.pursuitiron
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import java.math.BigDecimal
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -23,20 +26,29 @@ internal fun NativeRecoveryRecipePanel(
     var expanded by rememberSaveable(cycle.cycleId,cycle.revision){mutableStateOf(false)}
     var cap by rememberSaveable(cycle.cycleId,cycle.revision){mutableIntStateOf(2)}
     var rir by rememberSaveable(cycle.cycleId,cycle.revision){mutableIntStateOf(4)}
+    val unit=state.reviewedSourceSetup?.reviewed?.gym?.unit
+    var adjustLoad by rememberSaveable(cycle.cycleId,cycle.revision){mutableStateOf(false)}
+    var budgetText by rememberSaveable(cycle.cycleId,cycle.revision,unit){mutableStateOf("")}
+    val budget=budgetText.toBigDecimalOrNull()?.takeIf{
+        it.signum()>0 && KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(it)
+    }
+    val validBudget=!adjustLoad || (budget!=null && unit!=null)
     val reviewed=state.recoveryRecipeReview?.takeIf{
         it.request.cycleId==cycle.cycleId &&
             it.request.expectedCycleRevision==cycle.revision &&
             it.request.expectedSourceRevision==state.sourceRevision &&
             it.request.coaching==state.reviewedCoachInputs &&
             it.request.maximumWorkingSetsPerSlot==cap &&
-            it.request.minimumTargetRir==rir
+            it.request.minimumTargetRir==rir && validBudget &&
+            it.request.maximumEasierStep==(if(adjustLoad)budget else null) &&
+            it.request.stepUnit==(if(adjustLoad)unit else null)
     }
     PursuitCard {
         PursuitDisclosureRow(title="Plan a recovery week",
             subtitle="Append after ${anchor.label} · no existing weeks move",
             expanded=expanded,onToggle={expanded=!expanded})
         if(expanded) {
-            Text("Choose a set cap and minimum reserve. Retained weights stay the same; amplifiers are removed only with permission. This is a draft proposal, not a scheduled automatic deload.",
+            Text("Choose a set cap, minimum reserve and optional easier equipment setting. Amplifiers are removed only with permission. This is a draft proposal, not a scheduled automatic deload.",
                 style=MaterialTheme.typography.bodySmall)
             Text("Maximum working sets per exercise",style=MaterialTheme.typography.labelLarge)
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
@@ -48,8 +60,24 @@ internal fun NativeRecoveryRecipePanel(
                 for(value in 3..5) FilterChip(selected=rir==value,
                     onClick={rir=value},enabled=!busy,label={Text(value.toString())})
             }
-            OutlinedButton(onClick={controller.reviewRecoveryRecipe(cap,rir)},
-                enabled=ready && !busy,
+            Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+                Text("Use one easier verified setting",modifier=Modifier.weight(1f),
+                    style=MaterialTheme.typography.bodyMedium)
+                Switch(checked=adjustLoad,onCheckedChange={adjustLoad=it},enabled=!busy && unit!=null)
+            }
+            if(adjustLoad) {
+                OutlinedTextField(value=budgetText,onValueChange={input->
+                    if(input.length<=10 && input.all{it.isDigit()||it=='.'})budgetText=input
+                },label={Text("Maximum setting change (${unit?.name?.lowercase().orEmpty()})")},
+                    singleLine=true,enabled=!busy,isError=budgetText.isNotBlank() && !validBudget,
+                    keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
+                    modifier=Modifier.fillMaxWidth())
+                Text("One attainable easier setting per weighted working set. Assisted movements use more counterweight. If any setting cannot be verified within your limit, no partial proposal is saved.",
+                    style=MaterialTheme.typography.bodySmall)
+            }
+            OutlinedButton(onClick={controller.reviewRecoveryRecipe(cap,rir,
+                if(adjustLoad)budget else null,if(adjustLoad)unit else null)},
+                enabled=ready && !busy && validBudget,
                 modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {Text("Preview recovery week")}
             if(!ready)Text("Review the full cycle and enable fatigue coaching first.",
                 style=MaterialTheme.typography.bodySmall,
@@ -86,7 +114,7 @@ internal fun NativeRecoveryRecipePanel(
                     Text("I reviewed this recovery week",style=MaterialTheme.typography.bodyMedium)
                 }
                 Button(onClick={controller.acceptRecoveryRecipe(confirmed)},
-                    enabled=ready && !busy && confirmed,
+                    enabled=ready && !busy && confirmed && validBudget,
                     modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {Text("Save reviewed recovery week")}
             }
         }

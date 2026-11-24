@@ -78,7 +78,7 @@ assert.match(candidate,/minimizedGeneratedId=null\s*selectedId=null\s*onReviewNe
 // by a hard-coded 20-record limit, including after a refresh.
 assert.match(candidate,/result\.workouts\.take\(visibleUnfinishedCount\)/);
 assert.match(candidate,/\(visibleUnfinishedCount\+20\)\.coerceAtMost\(result\.workouts\.size\)/);
-assert.match(candidate,/visibleUnfinishedCount=20\s*resumable=null/);
+assert.match(candidate,/visibleUnfinishedCount=20\s*visibleMeasuredCount=20\s*visibleApprovedMeasuredCount=20\s*resumable=null/);
 assert.doesNotMatch(candidate,/more navigation is still needed/);
 assert.match(candidate,/onOpenCustomWorkout\(item\.workoutId\)/);
 // Shortened-session review must use exact Kotlin-staged set evidence and

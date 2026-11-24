@@ -1,0 +1,727 @@
+{
+  "schemaVersion": 1,
+  "webCommit": "29faa204212a4d54088b4870341350e605939185",
+  "scope": "All files in pinned modules/, modules/next-engine/ and modules/training-domain/. Primary requirement is an investigation owner, not the sole behavioral dependency or a claim every line is verified. App.js crosscuts all screen and workout routes; see behavior inventory for exact anchors. Data-only retired compatibility is assigned DATA-MERGE; do not port retired trial runtime.",
+  "records": [
+    {
+      "path": "modules/App.js",
+      "blobSha": "10cb8691b0d3f2e0de27d78c5991de53141c08b8",
+      "primaryRequirement": "UI-TRAIN"
+    },
+    {
+      "path": "modules/app-storage-ownership.js",
+      "blobSha": "f05c97e8d0ae62e1b744d7adc14fd9312de67323",
+      "primaryRequirement": "DATA-OWNER"
+    },
+    {
+      "path": "modules/backup-restore-panel.js",
+      "blobSha": "f377ea43c50d0bb91ef427dba817723254cf607a",
+      "primaryRequirement": "DATA-BACKUP"
+    },
+    {
+      "path": "modules/cycle-setup-drafts.js",
+      "blobSha": "e1c98b677ed5d4dde3e2b913a550adea648e51af",
+      "primaryRequirement": "CYCLE-AUTHOR"
+    },
+    {
+      "path": "modules/engine-api.js",
+      "blobSha": "73a674465337b609238dc0f52cf7ff15efb6c572",
+      "primaryRequirement": "SET-AUTHORITY"
+    },
+    {
+      "path": "modules/engine-shell.js",
+      "blobSha": "9f2eff16d871cff01ad5adc3646859bf387fa750",
+      "primaryRequirement": "SET-AUTHORITY"
+    },
+    {
+      "path": "modules/exercise-notes.js",
+      "blobSha": "f8beb4a01251279a34ae387764b376e8876254dd",
+      "primaryRequirement": "WORKOUT-NOTES"
+    },
+    {
+      "path": "modules/exercise-picker-sheet.js",
+      "blobSha": "c40189c60e96656ee2023915fb4f225ab554ba1a",
+      "primaryRequirement": "SWAP-RANK"
+    },
+    {
+      "path": "modules/exercise-variant-browse.js",
+      "blobSha": "c84a312c9cbc9f57e25ac4baed786c21a21f0758",
+      "primaryRequirement": "EXERCISE-ATTACHMENT"
+    },
+    {
+      "path": "modules/generation-runtime.js",
+      "blobSha": "41b42c314317ce5223797629b6ffeb05b6a31646",
+      "primaryRequirement": "PROGRAM-COMPOSER"
+    },
+    {
+      "path": "modules/generation-worker.js",
+      "blobSha": "5bcc9ede256682cc9da9ba3d99173da7658db738",
+      "primaryRequirement": "PROGRAM-COMPOSER"
+    },
+    {
+      "path": "modules/gym-load-fields.js",
+      "blobSha": "032d41d2502a311cb3e536fa8236f80042a7ce77",
+      "primaryRequirement": "GYM-ROSTER"
+    },
+    {
+      "path": "modules/gym-machine-variants.js",
+      "blobSha": "cfe167a0a490bcbad540f11f9636b567e5247d7d",
+      "primaryRequirement": "GYM-MACHINE"
+    },
+    {
+      "path": "modules/history-editor.js",
+      "blobSha": "895356c920ca59623e9320e21bc761697150e28f",
+      "primaryRequirement": "HISTORY-CORRECT"
+    },
+    {
+      "path": "modules/home-week.js",
+      "blobSha": "dbefecfb62647843e2905ef99b221b9eeb794334",
+      "primaryRequirement": "UI-TODAY"
+    },
+    {
+      "path": "modules/injury-tools.js",
+      "blobSha": "78afacbed94ea2f291d7f0429a9db6a60c14c16a",
+      "primaryRequirement": "INJURY"
+    },
+    {
+      "path": "modules/legacy-research-data.js",
+      "blobSha": "29cfdb96b13cd7b98b40c8061c6927778d2cbcce",
+      "primaryRequirement": "DATA-MERGE"
+    },
+    {
+      "path": "modules/loading-calculator.js",
+      "blobSha": "59266c769680b12620c1320dbb8bce996a783a84",
+      "primaryRequirement": "GYM-PLATES"
+    },
+    {
+      "path": "modules/machine-chart-scope.js",
+      "blobSha": "cc249b0689eec52bb1ba8100f5dfba581c31297d",
+      "primaryRequirement": "HISTORY-PR"
+    },
+    {
+      "path": "modules/main.js",
+      "blobSha": "263d92b3d6ef3a0049a47b436b00f4cc6c2955ec",
+      "primaryRequirement": "UI-M3E"
+    },
+    {
+      "path": "modules/mobile-lifecycle.js",
+      "blobSha": "c82ba69f40b5a2090bfd2cda76750567fb0c7462",
+      "primaryRequirement": "WORKOUT-RESUME"
+    },
+    {
+      "path": "modules/pain-check.js",
+      "blobSha": "8e6f794b8d7a6d82aced32e5a4aba8971537f10f",
+      "primaryRequirement": "INJURY"
+    },
+    {
+      "path": "modules/plan-session-surfaces.js",
+      "blobSha": "7a520a0efb292bdb84c27846f5f9052d2f750c6e",
+      "primaryRequirement": "UI-PLAN"
+    },
+    {
+      "path": "modules/program-code.js",
+      "blobSha": "92e2c9a46f3a4c633e3aa9ee79352a0b087977e3",
+      "primaryRequirement": "PROGRAM-IMPORT"
+    },
+    {
+      "path": "modules/program-duration.js",
+      "blobSha": "936e05ac0f4c9c767ab772a7210eeed47a216ab7",
+      "primaryRequirement": "PROGRAM-DURATION"
+    },
+    {
+      "path": "modules/program-exercise-options.js",
+      "blobSha": "16e188c7c560fe73b6dc8c5079a8146e7a3c3ed8",
+      "primaryRequirement": "PROGRAM-EDIT"
+    },
+    {
+      "path": "modules/program-import-sheet.js",
+      "blobSha": "8cdf07b0049285cb4b56e30ec9d2b460dc60727a",
+      "primaryRequirement": "PROGRAM-IMPORT"
+    },
+    {
+      "path": "modules/program-last-performance.js",
+      "blobSha": "55454de3a79cd0b0964052323bed74e9c7065de0",
+      "primaryRequirement": "WORKOUT-REFERENCE"
+    },
+    {
+      "path": "modules/program-load-wave.js",
+      "blobSha": "b1dd2eefd1e0538b9377d1bbb90e7bb607266a79",
+      "primaryRequirement": "PROGRAM-SPECIAL-TARGET"
+    },
+    {
+      "path": "modules/program-manual-targets.js",
+      "blobSha": "4a927d5d3e603653b980d4ca106aaaa0563fd919",
+      "primaryRequirement": "PROGRAM-EDIT"
+    },
+    {
+      "path": "modules/program-reference-surfaces.js",
+      "blobSha": "9ae683b6a51ab92b912aa22ca5fbe0153e466a8f",
+      "primaryRequirement": "UI-PLAN"
+    },
+    {
+      "path": "modules/program-review-surfaces.js",
+      "blobSha": "381bb458e50f03631c66a3f86ac5996f91703bdb",
+      "primaryRequirement": "UI-PLAN"
+    },
+    {
+      "path": "modules/program-review.js",
+      "blobSha": "d52e7ff02215eae6b61d2e6d6146672512be95b5",
+      "primaryRequirement": "UI-PLAN"
+    },
+    {
+      "path": "modules/program-schedule-sheet.js",
+      "blobSha": "b5855442caf369df279983c1f6654a4b462bdeaa",
+      "primaryRequirement": "PROGRAM-EDIT"
+    },
+    {
+      "path": "modules/program-settings-sheet.js",
+      "blobSha": "455664b97871c4095bfc8ef6c9d637a069d8a352",
+      "primaryRequirement": "PROGRAM-EDIT"
+    },
+    {
+      "path": "modules/program-share-sheet.js",
+      "blobSha": "beb9e69fe80342949ca7ffdf82f5753ed9ba95c0",
+      "primaryRequirement": "UI-OPTIONAL-SHARING"
+    },
+    {
+      "path": "modules/program-sheet-focus.js",
+      "blobSha": "b6fc0309cd9cc7f0cf7849ddf59554c988f365f0",
+      "primaryRequirement": "PROGRAM-EDIT"
+    },
+    {
+      "path": "modules/program-training-maxes.js",
+      "blobSha": "c5808af445b005a8af63e8fdefa7ef55b2d38dcb",
+      "primaryRequirement": "PROGRAM-SPECIAL-TARGET"
+    },
+    {
+      "path": "modules/program-volume-surfaces.js",
+      "blobSha": "4f7816f25947c934ccbef1a02f9839b8dd97ebcc",
+      "primaryRequirement": "PROGRAM-DOSE"
+    },
+    {
+      "path": "modules/release-notes.js",
+      "blobSha": "ec391d300ee45bfc0146cf30504e6bd628edda9a",
+      "primaryRequirement": "UI-SETTINGS"
+    },
+    {
+      "path": "modules/routine-picker.js",
+      "blobSha": "a9a7ce1cceef38f1ba81badf9dd2cce5a1ac5873",
+      "primaryRequirement": "SET-FREESTYLE"
+    },
+    {
+      "path": "modules/session-choice-dialog.js",
+      "blobSha": "28e83a72f8d8d9f6d0782f355fd69e7555a06a42",
+      "primaryRequirement": "UI-TODAY"
+    },
+    {
+      "path": "modules/session-plan.js",
+      "blobSha": "ba627936e192284cf87f94fc7dd3f5b917728259",
+      "primaryRequirement": "UI-TODAY"
+    },
+    {
+      "path": "modules/session-tools.js",
+      "blobSha": "c5c4495da9c75de1276fa7105d5b3f4419a0be4d",
+      "primaryRequirement": "TIME-TRIM"
+    },
+    {
+      "path": "modules/training-domain.js",
+      "blobSha": "1d0826f9f91c47241bdedd55a94b8947c44921fc",
+      "primaryRequirement": "SET-AUTHORITY"
+    },
+    {
+      "path": "modules/ui-choice-navigation.js",
+      "blobSha": "7ecd62fbbb53bcd1844bcac1c4ac65f42cb785a4",
+      "primaryRequirement": "UI-M3E"
+    },
+    {
+      "path": "modules/ui-disclosure.js",
+      "blobSha": "fe68188853ab01fbf7bd9b0aeb26187552529842",
+      "primaryRequirement": "UI-M3E"
+    },
+    {
+      "path": "modules/ui-layout.js",
+      "blobSha": "8315dd761b49b069d0a79e0258df11ea9d649721",
+      "primaryRequirement": "UI-M3E"
+    },
+    {
+      "path": "modules/ui-menu.js",
+      "blobSha": "73712460e70077f4e74083b4b04ded7b1dea3e89",
+      "primaryRequirement": "UI-M3E"
+    },
+    {
+      "path": "modules/ui-motion.js",
+      "blobSha": "abe47480bf9d8c1afced629c7430813c79ad4003",
+      "primaryRequirement": "UI-M3E"
+    },
+    {
+      "path": "modules/ui-primitives.js",
+      "blobSha": "61f8d4cc77c8b6f1414662202e2d3844ac9575eb",
+      "primaryRequirement": "UI-M3E"
+    },
+    {
+      "path": "modules/ui-sheet.js",
+      "blobSha": "5cd5fdaf7721423680fa560709dcd821a03b082e",
+      "primaryRequirement": "UI-M3E"
+    },
+    {
+      "path": "modules/wizard-stability.js",
+      "blobSha": "3f4ae5549e4ebdd89461da45ee5cc4a0b573875b",
+      "primaryRequirement": "PROGRAM-COMPOSER"
+    },
+    {
+      "path": "modules/workout-context.js",
+      "blobSha": "979fbc3e8f3766b2ec604364706188c1df566a70",
+      "primaryRequirement": "UI-TRAIN"
+    },
+    {
+      "path": "modules/workout-machine-runtime.js",
+      "blobSha": "9ee1f045c45795f092aa76af0312777ee02d62b0",
+      "primaryRequirement": "GYM-MACHINE"
+    },
+    {
+      "path": "modules/workout-machine-switch.css",
+      "blobSha": "6b966e887cf3b54fe1fdb4e5972d7a6ecc6b41b3",
+      "primaryRequirement": "GYM-MACHINE"
+    },
+    {
+      "path": "modules/workout-nav-labels.js",
+      "blobSha": "bf598474734fc8d932bddad457a5c36d6e54d593",
+      "primaryRequirement": "UI-TRAIN"
+    },
+    {
+      "path": "modules/workout-pr.js",
+      "blobSha": "4873af34fe59ee05e81e3d3ff48e36dd4ed8e1c5",
+      "primaryRequirement": "HISTORY-PR"
+    },
+    {
+      "path": "modules/workout-readiness.js",
+      "blobSha": "7f1a304fccd94b0f6b02e34d3444e8c6f911abcc",
+      "primaryRequirement": "READINESS"
+    },
+    {
+      "path": "modules/workout-session-controls.js",
+      "blobSha": "e2df89d0020bd0779df05b6b5b2ff093eda280c3",
+      "primaryRequirement": "UI-TRAIN"
+    },
+    {
+      "path": "modules/next-engine/adaptive-cycle-upgrade.js",
+      "blobSha": "121dabc444e7200ede10a660b9c2e183a3b00f5b",
+      "primaryRequirement": "CYCLE-ADAPT"
+    },
+    {
+      "path": "modules/next-engine/allocator.js",
+      "blobSha": "d016f6fd41a35e7f9a7223f597e5336772829d07",
+      "primaryRequirement": "PROGRAM-DOSE"
+    },
+    {
+      "path": "modules/next-engine/app-shell-adapter.js",
+      "blobSha": "d43d8bff23dcd80adf0a64eed377a42c9f17b9fd",
+      "primaryRequirement": "SET-AUTHORITY"
+    },
+    {
+      "path": "modules/next-engine/arbiter.js",
+      "blobSha": "2ffe628a8ec305a6a4d144b78a401b05dd248e8e",
+      "primaryRequirement": "PROGRAM-COMPOSER"
+    },
+    {
+      "path": "modules/next-engine/arm-coverage.js",
+      "blobSha": "bfc65c8c804fbc46d939b9351f5da9abb73665ca",
+      "primaryRequirement": "PROGRAM-DOSE"
+    },
+    {
+      "path": "modules/next-engine/athlete-response.js",
+      "blobSha": "0b891cba798004eef1918baba0ddb7af08a2220f",
+      "primaryRequirement": "SET-FATIGUE"
+    },
+    {
+      "path": "modules/next-engine/candidate-optimization.js",
+      "blobSha": "601d762f046487d3cb291dbc4e1ce5405c75bdc0",
+      "primaryRequirement": "PROGRAM-COMPOSER"
+    },
+    {
+      "path": "modules/next-engine/capacity-generation.js",
+      "blobSha": "3247957925b3f12532c327ee0e15f8d5a3acf78e",
+      "primaryRequirement": "PROGRAM-COMPOSER"
+    },
+    {
+      "path": "modules/next-engine/capacity-policy.js",
+      "blobSha": "117354c6bdde09c023e5f0999c146fa89b21f777",
+      "primaryRequirement": "PROGRAM-COMPOSER"
+    },
+    {
+      "path": "modules/next-engine/coach-regression.js",
+      "blobSha": "5731c543e7a85e3973e8231899d0141f7b6628c8",
+      "primaryRequirement": "CERT-COMPARISON"
+    },
+    {
+      "path": "modules/next-engine/config.js",
+      "blobSha": "5055020597fbe5512fb7de46539f22afacc16db3",
+      "primaryRequirement": "CERT-COMPARISON"
+    },
+    {
+      "path": "modules/next-engine/cycle-runtime-adapter.js",
+      "blobSha": "0e90d2630d1b998ade47a9151fc79a14a4e86a42",
+      "primaryRequirement": "CYCLE-ADAPT"
+    },
+    {
+      "path": "modules/next-engine/cycles.js",
+      "blobSha": "4cbe15cb18922528ea309ecfa0d3a93f6d8fe3ff",
+      "primaryRequirement": "CYCLE-PHASE"
+    },
+    {
+      "path": "modules/next-engine/domain-contracts.d.ts",
+      "blobSha": "aeb00226bb60a48e0dac681df7461e6f31b20d1f",
+      "primaryRequirement": "CERT-COMPARISON"
+    },
+    {
+      "path": "modules/next-engine/domain-contracts.js",
+      "blobSha": "cc3c57aa22aea842d55fccb17b551915ca385a23",
+      "primaryRequirement": "CERT-COMPARISON"
+    },
+    {
+      "path": "modules/next-engine/dose-reconciliation.js",
+      "blobSha": "168eb1a2fe69319898516bf485e2fb6a337c5d0d",
+      "primaryRequirement": "PROGRAM-DOSE"
+    },
+    {
+      "path": "modules/next-engine/engine-context.js",
+      "blobSha": "94f2b9901db872d858a838ab83b745ee0a517492",
+      "primaryRequirement": "CERT-COMPARISON"
+    },
+    {
+      "path": "modules/next-engine/events.js",
+      "blobSha": "a2169f0a50f38b371081b0ca59fe0c2e0cf07eae",
+      "primaryRequirement": "CERT-COMPARISON"
+    },
+    {
+      "path": "modules/next-engine/exercise-db.js",
+      "blobSha": "a190890819eb60836ede443d081a70851a5d5e1f",
+      "primaryRequirement": "EXERCISE-ATTACHMENT"
+    },
+    {
+      "path": "modules/next-engine/exercise-economy.js",
+      "blobSha": "339a21c20c99a6c4c5fb2dc678528359cfc327cf",
+      "primaryRequirement": "PROGRAM-COMPOSER"
+    },
+    {
+      "path": "modules/next-engine/exercise-selection-intelligence.js",
+      "blobSha": "4f10e8035640cfb6a646b78404dbb4048fcb977f",
+      "primaryRequirement": "SWAP-RANK"
+    },
+    {
+      "path": "modules/next-engine/explainability.js",
+      "blobSha": "f73c20ff3c481e4f64bb26186ae66412f54a2c94",
+      "primaryRequirement": "CERT-COMPARISON"
+    },
+    {
+      "path": "modules/next-engine/extended-exercise-catalog.js",
+      "blobSha": "0bd5c98824deb2a091396b6d371d7172f73882cb",
+      "primaryRequirement": "EXERCISE-ATTACHMENT"
+    },
+    {
+      "path": "modules/next-engine/focus-intent.js",
+      "blobSha": "4f98b5644e8e7950a9bfc1a1fe856f20e9a256a0",
+      "primaryRequirement": "PROGRAM-DOSE"
+    },
+    {
+      "path": "modules/next-engine/functional-coverage-repair.js",
+      "blobSha": "7826da520fd708905992b48e05f926e3c0c53fff",
+      "primaryRequirement": "PROGRAM-DOSE"
+    },
+    {
+      "path": "modules/next-engine/functional-coverage.js",
+      "blobSha": "7d5673c6dfb309040beec8e080cec5da7c2935e0",
+      "primaryRequirement": "PROGRAM-DOSE"
+    },
+    {
+      "path": "modules/next-engine/generate.js",
+      "blobSha": "748f6b55398ea8f36a3e7a9325c48133bf2a775b",
+      "primaryRequirement": "PROGRAM-COMPOSER"
+    },
+    {
+      "path": "modules/next-engine/generation-recovery.js",
+      "blobSha": "0c64ae445a46560e800049a83a70b70e5f12dedc",
+      "primaryRequirement": "PROGRAM-COMPOSER"
+    },
+    {
+      "path": "modules/next-engine/history-contract.js",
+      "blobSha": "b4d3859db851732530d280a8a4b24731d4389311",
+      "primaryRequirement": "HISTORY-IDENTITY"
+    },
+    {
+      "path": "modules/next-engine/history.js",
+      "blobSha": "11178948a358badb6a5c58b3126981ce4386a3f9",
+      "primaryRequirement": "HISTORY-IDENTITY"
+    },
+    {
+      "path": "modules/next-engine/ledgers.js",
+      "blobSha": "c0e43e784f8138ef9cb313a278a7fa04a297f92b",
+      "primaryRequirement": "PROGRAM-DOSE"
+    },
+    {
+      "path": "modules/next-engine/live-autoregulation.js",
+      "blobSha": "14ef59325be7606e71750dae84d79a32fd8a08ca",
+      "primaryRequirement": "SET-FATIGUE"
+    },
+    {
+      "path": "modules/next-engine/loading.js",
+      "blobSha": "9f53bbd936f12e49234ca7c5534a0e6ac2ec9b0e",
+      "primaryRequirement": "GYM-UNITS"
+    },
+    {
+      "path": "modules/next-engine/machine-instances.js",
+      "blobSha": "670ae66fe5e9a8986eb8a32b1ee35765379a52a5",
+      "primaryRequirement": "GYM-MACHINE"
+    },
+    {
+      "path": "modules/next-engine/method-policy.js",
+      "blobSha": "701b93ca174b7bd41ed576728166385a62d6123d",
+      "primaryRequirement": "INPUT-SCHEDULE"
+    },
+    {
+      "path": "modules/next-engine/observed-volume-response.js",
+      "blobSha": "27d84d098b485b7269ec106d56c0edbff3b2d2e0",
+      "primaryRequirement": "CYCLE-LONGITUDINAL"
+    },
+    {
+      "path": "modules/next-engine/percentage-protocols.js",
+      "blobSha": "13fd9e84461aa8d78fad59fee3dd4f3d2364945b",
+      "primaryRequirement": "PROGRAM-SPECIAL-TARGET"
+    },
+    {
+      "path": "modules/next-engine/performance.js",
+      "blobSha": "5306ba4fefac074b0de24a02117e0b25f462b554",
+      "primaryRequirement": "SET-FATIGUE"
+    },
+    {
+      "path": "modules/next-engine/phase-policy.js",
+      "blobSha": "71cc0e2d8f3de07f555c9bd2b54bda91a82f3831",
+      "primaryRequirement": "CYCLE-PHASE"
+    },
+    {
+      "path": "modules/next-engine/phase-transition.js",
+      "blobSha": "a70946f3323ddd0916f9b36c82f23b6ae1759f3b",
+      "primaryRequirement": "CYCLE-PHASE"
+    },
+    {
+      "path": "modules/next-engine/prescription.js",
+      "blobSha": "984b1f92dd8614f19866a7b4a2015d405d5df080",
+      "primaryRequirement": "SET-AUTHORITY"
+    },
+    {
+      "path": "modules/next-engine/progression-style.js",
+      "blobSha": "22f839ea65766b98d37a226a929505d2f02c1297",
+      "primaryRequirement": "PROGRAM-SPECIAL-TARGET"
+    },
+    {
+      "path": "modules/next-engine/public-mev.js",
+      "blobSha": "41bc04f0adb6479278cccc972ab66d63bdb16c5d",
+      "primaryRequirement": "PROGRAM-DOSE"
+    },
+    {
+      "path": "modules/next-engine/realizer-arm-repair.js",
+      "blobSha": "c4db8886d9135f634e07299bad33face0e7a52af",
+      "primaryRequirement": "PROGRAM-DOSE"
+    },
+    {
+      "path": "modules/next-engine/realizer-capacity-repair.js",
+      "blobSha": "7b0cd5cd6a94dae6631bd09f112350c31b68327b",
+      "primaryRequirement": "PROGRAM-COMPOSER"
+    },
+    {
+      "path": "modules/next-engine/realizer-dose-ledger.js",
+      "blobSha": "1b19881f55662f76c0705f50b9e52a615d3fdffa",
+      "primaryRequirement": "PROGRAM-DOSE"
+    },
+    {
+      "path": "modules/next-engine/realizer-dose-repair.js",
+      "blobSha": "dbfe6199175b1685bd589d08804d014abb06761e",
+      "primaryRequirement": "PROGRAM-DOSE"
+    },
+    {
+      "path": "modules/next-engine/realizer-fragment-repair.js",
+      "blobSha": "b4d2a736d01c7183e02f2ce7a8c5b04e2b5d2d45",
+      "primaryRequirement": "PROGRAM-COMPOSER"
+    },
+    {
+      "path": "modules/next-engine/realizer-hypertrophy.js",
+      "blobSha": "bccc3b60869ecab7761e87da35a98d2abd54439e",
+      "primaryRequirement": "PROGRAM-DOSE"
+    },
+    {
+      "path": "modules/next-engine/realizer-math.js",
+      "blobSha": "41417184db0cfe41d05c315160b6d0d7b73b636f",
+      "primaryRequirement": "PROGRAM-COMPOSER"
+    },
+    {
+      "path": "modules/next-engine/realizer-pairing.js",
+      "blobSha": "e1c77389f77959aa4c9a28c6be7772b327f97446",
+      "primaryRequirement": "SUPERSET-AUTHOR"
+    },
+    {
+      "path": "modules/next-engine/realizer-prescriptions.js",
+      "blobSha": "5a95ae87ec606ebef0318409288d199c89d8bd8c",
+      "primaryRequirement": "SET-AUTHORITY"
+    },
+    {
+      "path": "modules/next-engine/realizer-public-dose-repair.js",
+      "blobSha": "8023e5119fa6c6d6983561b8333883d49a7914d1",
+      "primaryRequirement": "PROGRAM-DOSE"
+    },
+    {
+      "path": "modules/next-engine/realizer-ranking.js",
+      "blobSha": "d8ea63780940af3aff0e08dd7f9c03975d11d0df",
+      "primaryRequirement": "PROGRAM-COMPOSER"
+    },
+    {
+      "path": "modules/next-engine/realizer-sequence.js",
+      "blobSha": "377d0524ac3cce99807b9bd11255f3570a69c460",
+      "primaryRequirement": "PROGRAM-COMPOSER"
+    },
+    {
+      "path": "modules/next-engine/realizer-session-builder.js",
+      "blobSha": "86d0ff38975da3b18af1e4ad2db733931b3db9bb",
+      "primaryRequirement": "PROGRAM-COMPOSER"
+    },
+    {
+      "path": "modules/next-engine/realizer-strength.js",
+      "blobSha": "cf7220c335382fb6993a310bcc29bf6ecfd67b4d",
+      "primaryRequirement": "PROGRAM-LIFT-PRACTICE"
+    },
+    {
+      "path": "modules/next-engine/realizer-structure-repair.js",
+      "blobSha": "053403eafe6c5efa111e7635445fb440ade38644",
+      "primaryRequirement": "PROGRAM-COMPOSER"
+    },
+    {
+      "path": "modules/next-engine/realizer-time-budget.js",
+      "blobSha": "1f73de0ca1754da7310e48bde91787331c7561b6",
+      "primaryRequirement": "PROGRAM-DURATION"
+    },
+    {
+      "path": "modules/next-engine/realizer.js",
+      "blobSha": "7a33b609a3598eb7653c895437428c62543923fa",
+      "primaryRequirement": "PROGRAM-COMPOSER"
+    },
+    {
+      "path": "modules/next-engine/recovery-realization.js",
+      "blobSha": "fd84d2062b05c19f4179e468f7230e040c58705a",
+      "primaryRequirement": "CYCLE-DELOAD"
+    },
+    {
+      "path": "modules/next-engine/recovery.js",
+      "blobSha": "7d496460238fb951d9e898d69e23ae7b0f47fc5c",
+      "primaryRequirement": "CYCLE-DELOAD"
+    },
+    {
+      "path": "modules/next-engine/response.js",
+      "blobSha": "11f6137c370140a5f48f7e01dba5e19fec2df6bb",
+      "primaryRequirement": "SET-FATIGUE"
+    },
+    {
+      "path": "modules/next-engine/semantic-exercise-graph.js",
+      "blobSha": "66f01cc971f2dbb49ef3e4e9fb2010293c511b96",
+      "primaryRequirement": "SWAP-RANK"
+    },
+    {
+      "path": "modules/next-engine/session-shortening.js",
+      "blobSha": "3535a1ed1cb70b24115b293c55e7c2ddf2ccc912",
+      "primaryRequirement": "TIME-TRIM"
+    },
+    {
+      "path": "modules/next-engine/setup-economy.js",
+      "blobSha": "85373b829f5b4503a1fb150ac2f601ab0a9ca2cd",
+      "primaryRequirement": "PROGRAM-COMPOSER"
+    },
+    {
+      "path": "modules/next-engine/shell-equipment.js",
+      "blobSha": "02c52011e9e019c227e7341dc3decc79eab0ed82",
+      "primaryRequirement": "GYM-UNITS"
+    },
+    {
+      "path": "modules/next-engine/shell-projection.js",
+      "blobSha": "2ad7c51d3919ca01e38928e56b3f50697a16588a",
+      "primaryRequirement": "SET-AUTHORITY"
+    },
+    {
+      "path": "modules/next-engine/simulation.js",
+      "blobSha": "0310cde38684d1bb92401029921479be9de2c895",
+      "primaryRequirement": "CYCLE-LONGITUDINAL"
+    },
+    {
+      "path": "modules/next-engine/techniques.js",
+      "blobSha": "bf8ae9e77a3e347244c51ac75d82f57ea799c498",
+      "primaryRequirement": "AMP-AUTO"
+    },
+    {
+      "path": "modules/next-engine/topology.js",
+      "blobSha": "0ecf44f3285f6d57a870c73de605f444da49a104",
+      "primaryRequirement": "INPUT-SCHEDULE"
+    },
+    {
+      "path": "modules/next-engine/volume-repair.js",
+      "blobSha": "672e0155f434928014e8a3356f8cf11f2aa2ed68",
+      "primaryRequirement": "PROGRAM-DOSE"
+    },
+    {
+      "path": "modules/next-engine/weekly-recovery.js",
+      "blobSha": "2ee5b2b8589d686b32b691c9c4623f4ba1c22b51",
+      "primaryRequirement": "CYCLE-DELOAD"
+    },
+    {
+      "path": "modules/next-engine/workout-history-adapter.js",
+      "blobSha": "d4eca61d5b05c1107aa08fe7812b6ce18fec87e1",
+      "primaryRequirement": "HISTORY-IDENTITY"
+    },
+    {
+      "path": "modules/next-engine/workout-replay.js",
+      "blobSha": "d673a6bd78403bc17556106b8ae9d43423060bc9",
+      "primaryRequirement": "WORKOUT-RESUME"
+    },
+    {
+      "path": "modules/next-engine/workout-runtime.js",
+      "blobSha": "8552ce59f8c82d17096f090ec678dc0a6c8a2908",
+      "primaryRequirement": "SET-INPUT"
+    },
+    {
+      "path": "modules/training-domain/analytics.js",
+      "blobSha": "a28f0c2fc0ab26e00b7dbe2b933294a09812b543",
+      "primaryRequirement": "PROGRESS-TRENDS"
+    },
+    {
+      "path": "modules/training-domain/catalog.js",
+      "blobSha": "c53a5ca940beb4f4896a25ad31c842aa0bc4dfea",
+      "primaryRequirement": "EXERCISE-ATTACHMENT"
+    },
+    {
+      "path": "modules/training-domain/history-import.js",
+      "blobSha": "eb5824310ba6b471e118a67fac52ab98bba15095",
+      "primaryRequirement": "DATA-MERGE"
+    },
+    {
+      "path": "modules/training-domain/loading-tools.js",
+      "blobSha": "2fba4841656fa881787e5faf203cf420bf30635c",
+      "primaryRequirement": "GYM-PLATES"
+    },
+    {
+      "path": "modules/training-domain/prescriptions.js",
+      "blobSha": "edd9304928cbbb8280549cefe0b58855db1462c7",
+      "primaryRequirement": "SET-AUTHORITY"
+    },
+    {
+      "path": "modules/training-domain/programs.js",
+      "blobSha": "80c61d966f5276611d8aa009fb19e96be52b6b10",
+      "primaryRequirement": "CYCLE-ENDLESS"
+    },
+    {
+      "path": "modules/training-domain/records.js",
+      "blobSha": "22be72a030aee0bb61a0d3f7aa519773b73cbbd6",
+      "primaryRequirement": "HISTORY-PR"
+    },
+    {
+      "path": "modules/training-domain/starting-load.js",
+      "blobSha": "f39353b7aeb64fb704b2fb2a3e8a80fb955ed07d",
+      "primaryRequirement": "SET-START"
+    }
+  ]
+}

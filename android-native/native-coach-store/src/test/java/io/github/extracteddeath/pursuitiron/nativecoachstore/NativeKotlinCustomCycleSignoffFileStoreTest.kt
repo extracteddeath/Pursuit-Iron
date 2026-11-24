@@ -2026,6 +2026,32 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertTrue(fixture.handoff.blocksNewIssuance("owner-1"))
     }
 
+    @Test fun firstBlockRequiresVerifiedEmptyActivationInventoriesNotMissingCommitAlone() {
+        val empty=NativeKotlinFutureActivationCommitTransaction(
+            temp.root.toPath(),fence,identity,sources,drafts,futureStore(),
+            approvalCheckpoint(),newHandoff())
+        // read() is a commit reader, not a proof of absence.
+        assertEquals(NativeFutureCommitReview.Rejected(
+            NativeFutureCommitRefusal.HANDOFF_MISSING),empty.read("owner-1"))
+        assertTrue(empty.verifiesNoActivation("owner-1"))
+        assertFalse(empty.verifiesNoActivation("other-owner"))
+        val orphan=temp.root.toPath().resolve("future-activation-commit-orphan.pending")
+        Files.write(orphan,byteArrayOf(1))
+        assertFalse(empty.verifiesNoActivation("owner-1"))
+        Files.delete(orphan)
+        val handoffOrphan=temp.root.toPath().resolve("future-handoff-orphan.pending")
+        Files.write(handoffOrphan,byteArrayOf(1))
+        assertFalse(empty.verifiesNoActivation("owner-1"))
+        Files.delete(handoffOrphan)
+        assertTrue(empty.verifiesNoActivation("owner-1"))
+        val fixture=activationFixture()
+        val tx=activationTransaction(fixture)
+        assertEquals(NativeFutureCommitReview.Missing,tx.read("owner-1"))
+        assertFalse(tx.verifiesNoActivation("owner-1"))
+        assertTrue(tx.commit("owner-1") is NativeFutureCommitReview.Applied)
+        assertFalse(activationTransaction(fixture).verifiesNoActivation("owner-1"))
+    }
+
     @Test fun futureActivationSourceAndCoachingSurviveColdRestart() {
         val fixture=activationFixture()
         val tx=activationTransaction(fixture)

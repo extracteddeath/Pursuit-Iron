@@ -22,6 +22,20 @@ sealed interface NativeSavedNamedReview {
         val mayIssueWorkout:Boolean get()=false
         val mayModifyHistory:Boolean get()=false
     }
+    /** A verified current named signoff, NOT a workout grant. */
+    data class Signed(
+        val draft:CustomTrainingCycle,
+        val stamp:CustomWorkoutSourceStamp,
+        val receipts:List<NativeNamedPercentageDraftReceipt>,
+        val consent:NativeKotlinCustomCycleSignoff,
+        val evidence:List<CustomNamedPercentageWeekEvidence>,
+        val inputs:CustomCoachAuditInputs,
+        val audit:CustomCoachAudit,
+        val historyRevision:Long
+    ):NativeSavedNamedReview {
+        val mayIssueWorkout:Boolean get()=false
+        val mayModifyHistory:Boolean get()=false
+    }
     data class Rejected(val reason:NativeSavedNamedReviewRefusal,
         val audit:CustomCoachAudit?=null):NativeSavedNamedReview
 }
@@ -45,7 +59,17 @@ class NativeKotlinSavedNamedPercentageReview(
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
-    fun review(ownerKey:String,cycleId:String,inputs:CustomCoachAuditInputs):NativeSavedNamedReview {
+    fun review(ownerKey:String,cycleId:String,inputs:CustomCoachAuditInputs):NativeSavedNamedReview =
+        evaluate(ownerKey,cycleId,inputs,signed=false)
+
+    /** Reopen current signed fixed prescriptions after cold restart.
+     * History may legitimately advance after approval. The eventual session
+     * issuer must separately check that its selected session is not protected. */
+    fun reviewSigned(ownerKey:String,cycleId:String,inputs:CustomCoachAuditInputs):NativeSavedNamedReview =
+        evaluate(ownerKey,cycleId,inputs,signed=true)
+
+    private fun evaluate(ownerKey:String,cycleId:String,inputs:CustomCoachAuditInputs,
+        signed:Boolean):NativeSavedNamedReview {
         fun deny(reason:NativeSavedNamedReviewRefusal,audit:CustomCoachAudit?=null)=
             NativeSavedNamedReview.Rejected(reason,audit)
         if(!id.matches(ownerKey)||!id.matches(cycleId))
@@ -65,8 +89,9 @@ class NativeKotlinSavedNamedPercentageReview(
             val prior=(signoffs.read(ownerKey,cycleId) as? NativeCustomSignoffRead.Found)?.receipt
                 ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
             if(prior.ownerKey!=ownerKey || prior.athleteId!=owner.athleteId ||
-                prior.cycleId!=cycleId || prior.cycleRevision!=oldStamp.cycleRevision ||
-                prior.recordRevision!=first.consentRevision ||
+                prior.cycleId!=cycleId ||
+                prior.cycleRevision!=(if(signed)candidate.revision else oldStamp.cycleRevision) ||
+                prior.recordRevision!=(if(signed)first.consentRevision+1 else first.consentRevision) ||
                 prior.sourceRevision!=oldStamp.gymCatalogSourceRevision)
                 return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
             val source=(sources.read(ownerKey) as? NativeAuthoringSourceRead.Found)?.source
@@ -88,7 +113,14 @@ class NativeKotlinSavedNamedPercentageReview(
             val baseOptions=listOf(clean,stripped).distinct().map{
                 candidate.copy(revision=oldStamp.cycleRevision,weekOverrides=it)
             }
-            val base=baseOptions.singleOrNull{
+            val base=if(signed) {
+                if(NativeCustomCycleSignoffFingerprint.calculateNamed(candidate,source,inputs,receipts)
+                    !=prior.fingerprintSha256)
+                    return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
+                // Signed fingerprint already binds the complete candidate and
+                // receipts. Empty map entries have no effect on base targets.
+                baseOptions.first()
+            } else baseOptions.singleOrNull{
                 NativeCustomCycleSignoffFingerprint.calculate(it,source,inputs)==prior.fingerprintSha256
             } ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
 
@@ -101,7 +133,8 @@ class NativeKotlinSavedNamedPercentageReview(
             val timeline=(history.read(ownerKey,owner.athleteId)
                 as? NativeKotlinMixedHistoryReadResult.Review)?.timeline
                 ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
-            if(timeline.manifestRevision!=first.historyRevision)
+            if(if(signed)timeline.manifestRevision<first.historyRevision
+                else timeline.manifestRevision!=first.historyRevision)
                 return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
             val completed=timeline.completions.filterIsInstance<NativeKotlinMixedHistoryCompletion.Custom>()
                 .map{it.manifest.workoutId}.toSet()
@@ -111,8 +144,8 @@ class NativeKotlinSavedNamedPercentageReview(
             val evidence=ArrayList<CustomNamedPercentageWeekEvidence>()
             for(receipt in receipts) {
                 val selection=receipt.selection
-                if(NativeFutureWeekProposalInventoryPolicy.blocks(census.sessions,cycleId,selection.absoluteWeek) ||
-                    census.sessions.any{it.cycleId==cycleId && it.absoluteWeek>=selection.absoluteWeek})
+                if(!signed && (NativeFutureWeekProposalInventoryPolicy.blocks(census.sessions,cycleId,selection.absoluteWeek) ||
+                    census.sessions.any{it.cycleId==cycleId && it.absoluteWeek>=selection.absoluteWeek}))
                     return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.PROTECTED_WEEK)
                 val original=(CustomWorkoutSnapshotDomain.reviewForConsent(base,source.setup,
                     source.catalog,source.revision,inputs,selection.absoluteWeek,selection.weekday)
@@ -151,7 +184,12 @@ class NativeKotlinSavedNamedPercentageReview(
                 return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.FULL_CYCLE_AUDIT_FAILED,audit)
             if(identity.signedInIdentity()!=owner)
                 return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.NOT_AUTHORIZED)
-            NativeSavedNamedReview.Ready(candidate,stamp,receipts.toList(),prior,evidence.toList(),inputs,audit)
+            if(signed) {
+                if(audit.coachingPolicyRevisions!=prior.policyReferences)
+                    return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
+                NativeSavedNamedReview.Signed(candidate,stamp,receipts.toList(),prior,
+                    evidence.toList(),inputs,audit,timeline.manifestRevision)
+            } else NativeSavedNamedReview.Ready(candidate,stamp,receipts.toList(),prior,evidence.toList(),inputs,audit)
         }}.getOrElse{deny(NativeSavedNamedReviewRefusal.STORAGE_UNAVAILABLE)}
     }
 }

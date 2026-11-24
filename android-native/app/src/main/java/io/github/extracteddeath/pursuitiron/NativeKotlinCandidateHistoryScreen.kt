@@ -1089,15 +1089,20 @@ private fun NativeKotlinSavedCustomHistoryVisitRow(
                             as? NativeCustomSavedCorrectionResult.Opened
                         if(currentFact==null || correction==null ||
                             currentFact.effectiveEventId!=fact.effectiveEventId ||
+                            currentFact.prescribedLoad!=fact.prescribedLoad ||
+                            currentFact.prescribedReps!=fact.prescribedReps ||
+                            currentFact.prescribedRir!=fact.prescribedRir ||
                             current?.manifest?.savedCorrectionRevision!=
-                                correction.state.correctionRevision)
+                                entry.manifest.savedCorrectionRevision ||
+                            correction.state.correctionRevision!=
+                                entry.manifest.savedCorrectionRevision)
                             null
                         else host.correctFinishedCustomWorkout(
                             entry.manifest.workoutId,
                             CustomSavedVisitCorrection(
                                 "custom-correction-"+java.util.UUID.randomUUID()
                                     .toString().replace("-",""),
-                                correction.state.correctionRevision,
+                                entry.manifest.savedCorrectionRevision,
                                 CustomWorkoutVisitKey(fact.setKey,fact.part,fact.stage),
                                 fact.effectiveEventId,selectedOutcome,actual))
                         }.getOrNull()

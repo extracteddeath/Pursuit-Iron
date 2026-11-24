@@ -1090,8 +1090,9 @@ assert.ok(sharedFocus.includes('onInfo:(()->Unit)?=null') &&
   journal.includes('onInfo={infoSlotId=slot.slotId}') &&
   journal.includes('journal?.snapshot?.slots?.firstOrNull{it.slotId==slotId}') &&
   journal.includes('sets=customWorkoutInfoSets(slot.sets)') &&
-  composer.includes('infoExerciseId=set.target.exerciseId') &&
-  composer.includes('journal?.snapshot?.targets.orEmpty().filter') &&
+  composer.includes('infoSetKey=set.target.setKey') &&
+  composer.includes('val occurrence=occurrenceBySetKey[key]') &&
+  composer.includes('val targets=occurrence?.sets.orEmpty().map{it.target}') &&
   composer.includes('sets=composerWorkoutInfoSets(targets)') &&
   infoSheet.includes('internal fun composerWorkoutInfoSets(') &&
   infoSheet.includes('internal fun customWorkoutInfoSets(') &&

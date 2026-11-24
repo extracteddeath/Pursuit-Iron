@@ -107,6 +107,10 @@ class NativeKotlinCustomWorkoutJournalFileStore(
             }
         }.toByteArray()
     }
+    /** Exact proposed wrapper; no file write or authorization. */
+    internal fun canEncodeProposal(record:NativeCustomIssuedJournal):Boolean =
+        runCatching{encode(record)}.isSuccess
+
     private fun decode(file:Path):NativeCustomIssuedJournal? {
         if(!Files.exists(file))return null
         if(Files.isSymbolicLink(file) || !Files.isRegularFile(file) ||

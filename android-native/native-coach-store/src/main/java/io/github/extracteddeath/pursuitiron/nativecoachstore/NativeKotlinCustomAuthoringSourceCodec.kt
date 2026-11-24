@@ -124,6 +124,25 @@ internal object NativeKotlinCustomAuthoringSourceCodec {
         }
         else -> throw IOException("Unknown gym stock")
     }
+    /** Archived gym payload contains only physical facts, not a second
+     * athlete profile or catalog. Same exact stock grammar as active setup. */
+    internal fun writeSavedGym(out:DataOutputStream,gym:ReviewedGymProfile) {
+        with(out) {
+            word(gym.gymId);enum(gym.unit)
+            items(gym.confirmedStock.entries.sortedBy{it.key}) {
+                word(it.key);stock(it.value)
+            }
+            words(gym.availableFacilities);words(gym.availableAttachments)
+        }
+    }
+
+    internal fun readSavedGym(input:DataInputStream):GymProfileDraft=with(input) {
+        val gymId=readUTF();val unit=enum<LoadUnit>()
+        val entries=items(128){readUTF() to stock(VERSION)}
+        require(entries.map{it.first}.distinct().size==entries.size)
+        GymProfileDraft(gymId,unit,entries.toMap(),words(128),words(128))
+    }
+
     private fun DataOutputStream.setup(athlete: ReviewedAthleteSetup) {
         word(athlete.profileRevision);word(athlete.athleteProfileId)
         enum(athlete.goal);enum(athlete.experience);enum(athlete.split)

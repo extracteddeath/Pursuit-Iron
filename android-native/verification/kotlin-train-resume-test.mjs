@@ -78,7 +78,7 @@ assert.match(candidate,/minimizedGeneratedId=null\s*selectedId=null\s*onReviewNe
 // by a hard-coded 20-record limit, including after a refresh.
 assert.match(candidate,/result\.workouts\.take\(visibleUnfinishedCount\)/);
 assert.match(candidate,/\(visibleUnfinishedCount\+20\)\.coerceAtMost\(result\.workouts\.size\)/);
-assert.match(candidate,/visibleUnfinishedCount=20\s*resumable=null/);
+assert.match(candidate,/visibleUnfinishedCount=20\s*visibleMeasuredCount=20\s*visibleApprovedMeasuredCount=20\s*resumable=null/);
 assert.doesNotMatch(candidate,/more navigation is still needed/);
 assert.match(candidate,/onOpenCustomWorkout\(item\.workoutId\)/);
 // Shortened-session review must use exact Kotlin-staged set evidence and
@@ -163,3 +163,30 @@ assert.match(restore,/Confirm restore Full/);
 assert.match(restore,/Inspect every original set target/);
 assert.match(customController,/fun dismissCustomTimeUndoReview\(\)/);
 console.log('PASS custom Full-restoration preview, explicit confirmation and stale-view fences');
+
+for(const needle of ['visibleMeasuredCount','visibleApprovedMeasuredCount']) {
+  assert.ok(candidate.includes('var '+needle+' by rememberSaveable(host)'));
+  assert.ok(candidate.includes(needle+'=20'));
+}
+assert.match(candidate,/review\.workouts\.take\(visibleMeasuredCount\)/);
+assert.match(candidate,/confirmed\.confirmed\.take\(visibleApprovedMeasuredCount\)/);
+assert.match(candidate,/visibleMeasuredCount\+=minOf\(20,remaining\)/);
+assert.match(candidate,/visibleApprovedMeasuredCount\+=minOf\(20,remaining\)/);
+assert.doesNotMatch(candidate,/review\.workouts\.take\(20\)|confirmed\.confirmed\.take\(20\)/);
+assert.match(candidate,/host\.openMeasuredWorkout\(item\.workoutId\)/);
+assert.match(candidate,/host\.issueMeasuredWorkout\(item\.workoutId\)/);
+console.log('PASS all verified unfinished and approved measured sessions are independently pageable; resume and issuance owner gates preserved.');
+
+const timeHost=readFileSync(
+ 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt','utf8');
+const timeReview=timeHost.slice(timeHost.indexOf('fun reviewCurrentKotlinShortSession('),
+  timeHost.indexOf('fun acceptCurrentKotlinShortSession('));
+assert.match(timeReview,/existing is NativeJournalFileResult\.Durable &&\s*existing\.journal\.finishedByEventId!=null\)\s*return@withOwnerTransaction null/);
+const directTimeStart=candidate.slice(candidate.indexOf('if(available.alreadyIssued ||\n'),
+  candidate.indexOf('val updated=withContext(Dispatchers.IO)'));
+assert.match(directTimeStart,/host\.currentlyApprovedKotlinWorkoutId\(\)==available\.workoutId/);
+assert.match(directTimeStart,/host\.reviewCurrentKotlinShortSession\(/);
+assert.match(directTimeStart,/currentUnfinishedGeneratedWorkoutId\(host\)==available\.workoutId/);
+assert.match(directTimeStart,/selectedTimeBudget==selection && timePreview==available/);
+assert.match(directTimeStart,/finally \{resumeChecking=false\}/);
+console.log('PASS generated time-choice shortcut revalidates the exact approved review and refuses finished journals.');

@@ -1,0 +1,14 @@
+# id|tier|ordered exposures (stage,issuedLoad,actualReps,setCount,kind separated by semicolon)|expected web stage,load|expected Kotlin stage,load or REFUSED:reason|classification
+initial|t1|-|0,100|0,100|matched
+primary-success|t1|0,100,4,5,normal|0,105|0,105|matched
+primary-success-twice|t1|0,100,3,5,normal;0,105,4,5,normal|0,110|0,110|matched
+primary-stall|t1|0,100,2,5,normal|1,100|1,100|matched
+primary-explicit-failure|t1|0,100,3,5,failed|1,100|1,100|matched
+primary-reset|t1|0,100,2,5,normal;1,100,1,6,normal;2,100,1,10,failed|0,85|0,85|matched
+secondary-success|t2|0,100,10,3,normal|0,105|0,105|matched
+secondary-stage-two|t2|0,100,9,3,normal;1,100,7,3,normal|2,100|2,100|matched
+budget-adapted|t1|0,100,3,2,normal|0,105|0,105|matched
+latest-skipped|t1|0,100,3,5,normal;0,105,3,5,skipped|0,105|REFUSED:INVALID_ATTEMPT|incomplete-latest
+latest-interrupted|t1|0,100,3,5,normal;0,105,3,5,interrupted|0,105|REFUSED:NONCOMPARABLE_LATEST|interrupted-latest
+stale-stage|t1|0,100,2,5,normal;0,100,3,5,normal|0,105|REFUSED:INCONSISTENT_ISSUED_STATE|stale-issued-chain
+stale-load|t1|0,100,3,5,normal;0,100,3,5,normal|0,105|REFUSED:INCONSISTENT_ISSUED_STATE|stale-issued-chain

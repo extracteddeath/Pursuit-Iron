@@ -24,6 +24,38 @@ class BasicProgrammedPercentageLoadDomainTest {
     )=BasicProgrammedLoadRequest(
         scope,n(tm),confirmed,weeks.size,weeks,stock)
 
+    @Test fun genericWaveRefusesMachineTaggedFreeBarButAllowsVerifiedFreeBar() {
+        val bar=VerifiedLoadStock.Barbell(LoadUnit.LB,n("45"),mapOf(
+            n("25") to 2,n("5") to 2,n("2.5") to 2))
+        val valid=scope.copy(basis=LoadBasis.BARBELL_TOTAL,machineInstanceId=null)
+        val week=listOf(BasicProgrammedWeek(1,n("50"),3,RepBand(5,5)))
+        val candidate=BasicProgrammedPercentageLoadDomain.review(request(
+            weeks=week,stock=bar,scope=valid)) as BasicProgrammedLoadResult.Candidate
+        assertEquals(n("100"),candidate.weeks.single().verifiedLoad)
+        assertEquals(BasicProgrammedLoadResult.Refused(
+            BasicProgrammedLoadRefusal.INCOMPATIBLE_ASSISTANCE_OR_LOAD_BASIS),
+            BasicProgrammedPercentageLoadDomain.review(request(
+                weeks=week,stock=bar,scope=valid.copy(machineInstanceId="machine-A"))))
+    }
+
+    @Test fun knownPhantomWeightsAreDownOnlyForProgrammedIntentAndNeverEarnedStock() {
+        for((raw,lower,upper) in listOf(Triple("38.5","35","40"),Triple("159.5","155","160"))) {
+            val physical=BasicProgrammedPercentageLoadDomain.verifiedPhysicalLoad(scope,inventory,n(raw))
+            assertEquals(ProgrammedPhysicalLoadReview.Confirmed(n(lower)),physical)
+            val bracket=EquipmentLoadDomain.inspect(inventory,n(raw),scope.unit) as LoadInspection.Confirmed
+            assertFalse(bracket.exact)
+            assertEquals(n(lower),bracket.atOrBelow)
+            assertEquals(n(upper),bracket.nextAbove)
+            assertEquals(KotlinFutureLoadReview.Rejected(KotlinFutureLoadRefusal.UNVERIFIED_CANDIDATE_LOAD),
+                KotlinFutureLoadNumberAuthorityDomain.review(n(lower),n(raw),scope.unit,
+                    scope.basis,inventory,n("5"),KotlinFutureLoadSource.EARNED_NEXT_INCREMENT))
+            val earned=KotlinFutureLoadNumberAuthorityDomain.review(n(lower),n(upper),scope.unit,
+                scope.basis,inventory,n("5"),KotlinFutureLoadSource.EARNED_NEXT_INCREMENT)
+                as KotlinFutureLoadReview.Accepted
+            assertEquals(n(upper),earned.fact.proposedLoad)
+        }
+    }
+
     @Test fun fourWeekSourceWaveProducesExactVerifiedLoadsAndRespectsDeload() {
         val plan=BasicProgrammedPercentageLoadDomain.review(request())
             as BasicProgrammedLoadResult.Candidate

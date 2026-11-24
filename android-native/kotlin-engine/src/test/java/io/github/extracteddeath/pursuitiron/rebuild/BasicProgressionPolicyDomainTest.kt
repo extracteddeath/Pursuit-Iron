@@ -53,6 +53,32 @@ class BasicProgressionPolicyDomainTest {
     private fun candidate(request:BasicProgressionRequest)=
         BasicProgressionPolicyDomain.review(request) as BasicProgressionResult.Candidate
 
+    @Test fun basicProgressionNeverEarnsFromMachineTaggedFreeBarButManualRepeatRemainsNonwriting() {
+        val freeBar=VerifiedLoadStock.Barbell(LoadUnit.LB,n("45"),mapOf(
+            n("25") to 1,n("5") to 1,n("2.5") to 1))
+        val correct=scope.copy(basis=LoadBasis.BARBELL_TOTAL,machineInstanceId=null)
+        val invalid=correct.copy(machineInstanceId="machine-A")
+        for(mode in listOf(BasicProgressionStrategy.MANUAL_LOGGING,
+            BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,
+            BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION)) {
+            val base=request(mode,reps=listOf(10,10,10),
+                nextScope=correct,previousScope=correct,verifiedStock=freeBar)
+            val good=candidate(base)
+            assertEquals(List(3){n(if(mode==BasicProgressionStrategy.MANUAL_LOGGING)
+                "100" else "105")},good.proposedWorkingLoads)
+            val bad=base.copy(nextScope=invalid,previousScope=invalid)
+            if(mode==BasicProgressionStrategy.MANUAL_LOGGING) {
+                val manual=candidate(bad.copy(previous=null,previousScope=null,verifiedStock=null))
+                assertEquals(List(3){n("100")},manual.proposedWorkingLoads)
+                assertEquals(BasicProgressionDecision.MANUAL_REPEAT,manual.decision)
+                assertTrue(manual.increasedOrdinals.isEmpty())
+                assertFalse(manual.maySaveFutureProgram)
+                assertFalse(manual.mayModifyIssuedWorkout)
+            } else assertEquals(BasicProgressionResult.Refused(BasicProgressionRefusal.INVALID_SOURCE_OR_LOAD),
+                BasicProgressionPolicyDomain.review(bad))
+        }
+    }
+
     @Test fun manualLoggingKeepsApprovedNumbersWithoutHistoryStockOrCoaching() {
         val r=candidate(request(BasicProgressionStrategy.MANUAL_LOGGING,
             previous=null,previousScope=null,verifiedStock=null,

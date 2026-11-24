@@ -110,9 +110,6 @@ object CoachSessionPrescriptionDomain {
         }.distinct().size==policies.size)
         val ids=request.exercises.map {it.exerciseId}.toSet()
         require(policies.all {p->
-            val equipment=request.exercises.singleOrNull{
-                it.exerciseId==p.exerciseId
-            }?.equipment as? ComposerEquipment.Verified
             p.exerciseId in ids &&
                 (p.dayIndex==null || (
                     p.dayIndex in request.days.indices &&
@@ -122,11 +119,11 @@ object CoachSessionPrescriptionDomain {
                     })) &&
                 (p.targetRir==null || p.targetRir in 0..10) &&
                 (p.backoffRir==null || p.backoffRir in 0..10) &&
+                // Numeric shape errors are malformed input; unissuable
+                // exercise/basis combinations instead remain an UNRESOLVED
+                // non-destructive draft, via the central load() gate below.
                 (p.purposeWorkingLoad==null ||
-                    equipment?.inventory?.let {stock ->
-                        KotlinSetNumberAuthorityDomain.validPrescribedLoad(
-                            p.purposeWorkingLoad,stock.basis)
-                    }==true) &&
+                    validLoad(p.purposeWorkingLoad)) &&
                 p.activeSecondsPerSet in 1..3600 && p.restSecondsPerSet in 0..3600 &&
                 p.warmups.size<=12 &&
                 (p.maximumAuthorizedBackoff==null ||

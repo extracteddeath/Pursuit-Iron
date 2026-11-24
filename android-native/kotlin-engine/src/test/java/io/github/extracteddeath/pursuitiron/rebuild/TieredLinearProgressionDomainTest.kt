@@ -119,6 +119,29 @@ class TieredLinearProgressionDomainTest {
         assertTrue(recovery.recovery)
     }
 
+    @Test fun completedRecoveryReplaysWithoutChangingTheUnderlyingTier() {
+        val a=exposure("a",1)
+        val light=exposure("light",2,load="60",reps=15,count=3).let {
+            it.copy(comparableTraining=false,recoveryReference=n("105"),
+                issuedTargets=it.issuedTargets.map{target->target.copy(repOut=false)})
+        }
+        val recovered=review(request(listOf(a,light)))
+        assertEquals(TieredLinearState(0,n("105")),recovered.state)
+        assertEquals(listOf("a"),recovered.transitions.map{it.workoutId})
+        val next=exposure("b",3,load="105")
+        assertEquals(TieredLinearState(0,n("110")),review(request(listOf(a,light,next))).state)
+        assertEquals(TieredLinearResult.Refused(TieredLinearRefusal.INCONSISTENT_ISSUED_STATE),
+            TieredLinearProgressionDomain.review(request(listOf(a,light.copy(recoveryReference=n("100"))))))
+        assertEquals(TieredLinearResult.Refused(TieredLinearRefusal.INCONSISTENT_ISSUED_STATE),
+            TieredLinearProgressionDomain.review(request(listOf(a,light.copy(
+                issuedTargets=light.issuedTargets.map{it.copy(load=n("65"))})))))
+        assertEquals(TieredLinearResult.Refused(TieredLinearRefusal.INCONSISTENT_ISSUED_STATE),
+            TieredLinearProgressionDomain.review(request(listOf(a,light.copy(comparableTraining=true)))))
+        assertEquals(TieredLinearResult.Refused(TieredLinearRefusal.INCONSISTENT_ISSUED_STATE),
+            TieredLinearProgressionDomain.review(request(listOf(a,light.copy(
+                issuedTargets=light.issuedTargets.map{it.copy(repOut=true)})))))
+    }
+
     @Test fun limitsAndStockNeverInventLoadOrImplicitReset() {
         val base=exposure("a",1)
         val held=review(request(listOf(base)).copy(maximumAuthorizedIncrease=n("2.5")))

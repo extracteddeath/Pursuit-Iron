@@ -59,6 +59,40 @@ class ReviewedRecoveryBlockRecipeDomainTest {
         assertEquals(result,ReviewedRecoveryBlockRecipeDomain.propose(request(source)))
     }
 
+    @Test fun optionalLoadReductionRequiresPermissionAndAnExactEasierStepWithinBudget() {
+        val source=cycle()
+        val base=request(source)
+        val step=fixture.n("5")
+        val denied=ReviewedRecoveryBlockRecipeDomain.propose(base.copy(maximumEasierStep=step))
+        assertEquals(ReviewedRecoveryBlockRecipeStatus.PERMISSION_REQUIRED,denied.status)
+        val allowed=base.copy(source=base.source.copy(permissions=
+            base.source.permissions.copy(adaptLoads=true)),maximumEasierStep=step)
+        val candidate=ReviewedRecoveryBlockRecipeDomain.propose(allowed)
+        assertEquals(candidate.explanation,ReviewedRecoveryBlockRecipeStatus.READY_FOR_REVIEW,
+            candidate.status)
+        val proposed=candidate.candidate!!.proposedCycle
+        assertEquals(source.blocks.first(),proposed.blocks.first())
+        for(set in proposed.blocks.last().days.flatMap{it.slots}.flatMap{it.sets}) {
+            assertEquals(fixture.n("20"),(set.load as DraftSetLoad.Verified).value)
+            assertEquals(4,set.targetRir)
+        }
+        val tooSmall=ReviewedRecoveryBlockRecipeDomain.propose(
+            allowed.copy(maximumEasierStep=fixture.n("4")))
+        assertEquals(ReviewedRecoveryBlockRecipeStatus.LOAD_STEP_UNAVAILABLE,tooSmall.status)
+        assertNull(tooSmall.candidate)
+        val atFloor=source.copy(blocks=source.blocks.map{block->
+            block.copy(days=block.days.map{day->day.copy(slots=day.slots.map{slot->
+                slot.copy(sets=slot.sets.map{set->set.copy(load=
+                    (set.load as DraftSetLoad.Verified).copy(value=fixture.n("20")))})
+            })})
+        })
+        val floor=ReviewedRecoveryBlockRecipeDomain.propose(
+            allowed.copy(source=allowed.source.copy(approvedCycle=atFloor)))
+        assertEquals(ReviewedRecoveryBlockRecipeStatus.LOAD_STEP_UNAVAILABLE,floor.status)
+        assertNull(floor.candidate)
+        assertFalse(candidate.mayIssueWorkout)
+    }
+
     @Test fun eachChangedDimensionNeedsPermissionAndOnlyRecoveryMayBeTargeted() {
         for(permissions in listOf(
             CustomCycleCoachPermissions(adaptRir=true),

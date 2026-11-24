@@ -139,6 +139,54 @@ class CoachFirstProgramDraftConversionDomainTest {
         assertFalse(proposal.mayIssueWorkout)
     }
 
+    @Test fun optionalFinisherPreviewUsesFullCycleAuditTimeAndExactCalendarMapping() {
+        val candidate=reviewed()
+        val source=GeneratedAdaptiveBlockFixture.generation()
+        val inputs=checkNotNull(CoachFirstProgramDraftConversionDomain
+            .policyForInitialFullCycleReview(candidate,source.setup))
+        val baseline=CoachFirstProgramDraftConversionDomain.propose(
+            candidate,source.setup,source.catalog,"timing-cycle","Timing",4)
+        assertTrue(baseline.auditedMinutesByDayIndex.isEmpty())
+        val cycle=checkNotNull(baseline.cycle)
+        val block=cycle.blocks.single()
+        val day=block.days.first()
+        val slot=day.slots.last()
+        val index=slot.sets.indexOfLast{it.type==DraftSetType.WORKING}
+        assertTrue(index>=0)
+        val amp=CoachFirstProgramMyoFinisherDomain.prescribedTechnique()
+        val amplified=cycle.copy(blocks=listOf(block.copy(days=block.days.map{d->
+            if(d.weekday!=day.weekday)d else d.copy(slots=d.slots.map{s->
+                if(s.slotId!=slot.slotId)s else s.copy(sets=s.sets.mapIndexed{i,set->
+                    if(i!=index)set else set.copy(amplifier=amp)
+                })
+            })
+        })))
+        val normalAudit=CustomCycleCoachAuditDomain.review(
+            cycle,source.setup,source.catalog,inputs)
+        val withTechnique=CustomCycleCoachAuditDomain.review(
+            amplified,source.setup,source.catalog,inputs)
+        assertEquals(withTechnique.issues.toString(),
+            CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,withTechnique.status)
+        // The generated display index is not necessarily its weekday.
+        val dayIndexToWeekday=checkNotNull(candidate.generation?.candidate
+            ?.catalogReview?.composedRequest).days.mapIndexed{i,d->i to d.calendarDay}.toMap()
+        val before=checkNotNull(CoachFirstProgramDraftConversionDomain
+            .auditedFirstWeekMinutes(normalAudit,dayIndexToWeekday))
+        val after=checkNotNull(CoachFirstProgramDraftConversionDomain
+            .auditedFirstWeekMinutes(withTechnique,dayIndexToWeekday))
+        val selected=dayIndexToWeekday.entries.single{it.value==day.weekday}.key
+        val seconds=checkNotNull(withTechnique.weeks.first().estimatedSecondsByDay[day.weekday])
+        val originalSeconds=checkNotNull(normalAudit.weeks.first().estimatedSecondsByDay[day.weekday])
+        assertEquals(140L,seconds-originalSeconds)
+        assertEquals((seconds+59L)/60L,after[selected])
+        assertTrue(checkNotNull(after[selected])>checkNotNull(before[selected]))
+        assertEquals(before-selected,after-selected)
+        assertNull(CoachFirstProgramDraftConversionDomain.auditedFirstWeekMinutes(
+            withTechnique,dayIndexToWeekday-selected))
+        assertNull(CoachFirstProgramDraftConversionDomain.auditedFirstWeekMinutes(
+            withTechnique.copy(status=CustomCoachAuditStatus.UNRESOLVED),dayIndexToWeekday))
+    }
+
     @Test fun changedOrMissingGeneratedPolicyDoesNotTransferToApprovalAudit() {
         val candidate=reviewed()
         val source=GeneratedAdaptiveBlockFixture.generation()

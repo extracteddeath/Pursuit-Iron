@@ -533,7 +533,7 @@ assert.ok(!header.includes('onClick=onSkip,enabled=enabled,modifier=Modifier.fil
 
 const localDrafts=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinPendingWorkoutDrafts.kt');
 assert.ok(journal.includes('saved?.performed?.actualRir?.toString().orEmpty()') &&
-  localDrafts.includes('val rir=rememberSaveable(identity.value,receiptRevision,committed)') &&
+  localDrafts.includes('val rir=rememberSaveable(identity.value,receiptRevision,committed,stateSaver=fieldSaver)') &&
   localDrafts.includes('if(committed)null else store.read(identity)'),
   'Unknown actual RIR must stay blank and a committed receipt must override any restored UI draft');
 assert.ok(journal.includes('activationPerformed=main?.performed') &&
@@ -547,8 +547,8 @@ assert.ok(journal.includes('activationPerformed=main?.performed') &&
 assert.ok(journal.includes('val draftIdentity=NativePendingWorkoutDraftIdentity.make(') &&
   journal.includes('set.setKey,visitDraftIdentity,machineInstanceId,target,expectedReps,') &&
   journal.includes('":activation:"+(activationReceiptRevision?.toString() ?: "none")') &&
-  localDrafts.includes('val load=rememberSaveable(identity.value,receiptRevision,committed)') &&
-  localDrafts.includes('val reps=rememberSaveable(identity.value,receiptRevision,committed)') &&
+  localDrafts.includes('val load=rememberSaveable(identity.value,receiptRevision,committed,stateSaver=fieldSaver)') &&
+  localDrafts.includes('val reps=rememberSaveable(identity.value,receiptRevision,committed,stateSaver=fieldSaver)') &&
   localDrafts.includes('if(committed)store.discard(identity)'),
   'Uncommitted edit fields must survive configuration and cold reopen while remaining machine- and receipt-scoped');
 assert.match(journal,/onRecord\(KotlinJournalSetOutcome.COMPLETED,\s*actual\)/,

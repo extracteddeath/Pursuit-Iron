@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.ui.platform.LocalContext
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import java.security.MessageDigest
@@ -119,6 +120,25 @@ internal fun rememberNativePendingWorkoutDraftStore():NativeKotlinPendingWorkout
     return remember(context){NativeKotlinPendingWorkoutDraftStore(context)}
 }
 
+/**
+ * rememberSaveable inputs reset live composition but are not a validation
+ * boundary for restored Android bundles. Include the full current scope in
+ * the serialized field; an older receipt or different target must not
+ * restore its unsaved editor over the independently recovered journal.
+ */
+internal data class NativePendingWorkoutDraftRestoreScope(
+    val identity:NativePendingWorkoutDraftKey,
+    val receiptRevision:String?,
+    val committed:Boolean
+) {
+    fun save(value:String):List<String> =
+        listOf(identity.value,receiptRevision.orEmpty(),committed.toString(),value)
+    fun restore(fields:List<String>):String? =
+        fields.takeIf{it.size==4 && it[0]==identity.value &&
+            it[1]==receiptRevision.orEmpty() && it[2]==committed.toString()}
+            ?.get(3)
+}
+
 /** Shared Compose editor for both native workout journals. */
 internal class NativeKotlinPendingWorkoutDraftEditor(
     private val loadState:MutableState<String>,
@@ -169,16 +189,22 @@ internal fun rememberNativePendingWorkoutDraftEditor(
     }
     // A newly committed receipt outranks previously typed, unsubmitted
     // fields immediately, even if a caller's revision token has not changed.
-    val load=rememberSaveable(identity.value,receiptRevision,committed) {
+    val scope=NativePendingWorkoutDraftRestoreScope(identity,receiptRevision,committed)
+    val fieldSaver=listSaver<String,String>(
+        save={scope.save(it)},restore={scope.restore(it)})
+    val labelSaver=listSaver<Boolean,String>(
+        save={scope.save(it.toString())},
+        restore={scope.restore(it)?.toBooleanStrictOrNull()})
+    val load=rememberSaveable(identity.value,receiptRevision,committed,stateSaver=fieldSaver) {
         mutableStateOf(recovered?.load ?: baseline.load)
     }
-    val reps=rememberSaveable(identity.value,receiptRevision,committed) {
+    val reps=rememberSaveable(identity.value,receiptRevision,committed,stateSaver=fieldSaver) {
         mutableStateOf(recovered?.reps ?: baseline.reps)
     }
-    val rir=rememberSaveable(identity.value,receiptRevision,committed) {
+    val rir=rememberSaveable(identity.value,receiptRevision,committed,stateSaver=fieldSaver) {
         mutableStateOf(recovered?.rir ?: baseline.rir)
     }
-    val recoveredLabel=rememberSaveable(identity.value,receiptRevision,committed) {
+    val recoveredLabel=rememberSaveable(identity.value,receiptRevision,committed,stateSaver=labelSaver) {
         mutableStateOf(recovered!=null)
     }
     LaunchedEffect(identity.value,committed,receiptRevision) {

@@ -22,7 +22,10 @@ assert.match(store,/NativePendingWorkoutDraftCodec\.encode\(/);
 assert.match(store,/if\(parts\.any\{it\.length>MAX_FIELD \|\| !utf8RoundTrips\(it\)\}\)return null/);
 assert.match(store,/return encoded\.takeIf\{it\.length<=MAX_RECORD\}/);
 assert.match(store,/it\.toByteArray\(Charsets\.UTF_8\)\.contentEquals\(bytes\)/);
-assert.match(store,/rememberSaveable\(identity\.value,receiptRevision,committed\)/);
+assert.match(store,/rememberSaveable\(identity\.value,receiptRevision,committed,stateSaver=fieldSaver\)/);
+assert.match(store,/it\[0\]==identity\.value/);
+assert.match(store,/it\[1\]==receiptRevision\.orEmpty\(\) && it\[2\]==committed\.toString\(\)/);
+assert.match(tests,/savedEditorFieldsCannotOverrideNewerDurableReceiptsOrMachineScope/);
 assert.match(tests,/draftEncodingMustAlwaysBeRecoverableWithoutTextReplacement/);
 assert.doesNotMatch(store,/KotlinPerformedSet\(|RecordSet\(|recordIssuedCustomSet\(|issueWorkout\(/);
 

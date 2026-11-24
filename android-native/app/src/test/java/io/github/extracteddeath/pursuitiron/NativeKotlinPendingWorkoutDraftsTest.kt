@@ -56,6 +56,22 @@ class NativeKotlinPendingWorkoutDraftsTest {
             identity(set="a",part="b:c"))
     }
 
+    @Test fun savedEditorFieldsCannotOverrideNewerDurableReceiptsOrMachineScope() {
+        val original=NativePendingWorkoutDraftRestoreScope(identity(),null,false)
+        val fields=original.save("38.5")
+        assertEquals("38.5",original.restore(fields))
+        assertNull(original.copy(receiptRevision="1",committed=true).restore(fields))
+        assertNull(original.copy(identity=identity(machine="machine-B")).restore(fields))
+        assertNull(original.copy(identity=identity(part="FOLLOW_UP")).restore(fields))
+        assertNull(original.restore(listOf("38.5")))
+        val correction=original.copy(receiptRevision="2",committed=true)
+        val editing=correction.save("150")
+        assertEquals("150",correction.restore(editing))
+        assertNull(correction.copy(receiptRevision="3").restore(editing))
+        assertNull(correction.copy(committed=false).restore(editing))
+        assertEquals("",original.restore(original.save("")))
+    }
+
     @Test fun codecRoundTripsPartialTypingAndUnknownActualRir() {
         for(draft in listOf(
             NativePendingWorkoutDraft("200","8",""),

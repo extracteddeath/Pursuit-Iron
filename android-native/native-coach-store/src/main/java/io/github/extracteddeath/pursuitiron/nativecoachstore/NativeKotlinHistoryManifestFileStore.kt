@@ -116,6 +116,11 @@ private object NativeHistoryLedgerBinary {
 
     fun validId(text: String): Boolean = validId.matches(text)
 
+    // Match the mixed-history reader's namespace routing. A generated
+    // correction must never reserve a pending intent for another journal kind.
+    fun composerReceipt(id:String):Boolean =
+        !id.startsWith("custom-") && !id.startsWith("measured-")
+
     private fun DataOutputStream.time(value:Long?) {
         writeBoolean(value!=null)
         if(value!=null)writeLong(value)
@@ -572,6 +577,11 @@ class NativeKotlinHistoryManifestFileStore(private val directory: Path) {
             addsCompletion && old.completions.size >= NativeHistoryLedgerBinary.MAX_SESSIONS)
             return@transition NativeHistoryLedgerResult.Rejected(
                 NativeHistoryLedgerRefusal.INVALID_MANIFEST_TRANSITION)
+        if(intent is NativeHistoryWriteIntent.Correct &&
+            old.completions.none{it.workoutId==intent.workoutId &&
+                NativeHistoryLedgerBinary.composerReceipt(it.storedReceiptId)})
+            return@transition NativeHistoryLedgerResult.Rejected(
+                NativeHistoryLedgerRefusal.INVALID_MANIFEST_TRANSITION)
         val proposal = old.copy(pending = intent)
         if (runCatching { NativeHistoryLedgerBinary.check(proposal) }.isFailure)
             return@transition NativeHistoryLedgerResult.Rejected(
@@ -598,6 +608,7 @@ class NativeKotlinHistoryManifestFileStore(private val directory: Path) {
                 if (resolved.completionOrder != ordinal ||
                     resolved.workoutId != intent.workoutId ||
                     resolved.finishEventId != intent.operation.eventId ||
+                    !NativeHistoryLedgerBinary.composerReceipt(resolved.storedReceiptId) ||
                     resolved.completedAtEpochMillis!=intent.completedAtEpochMillis ||
                     resolved.savedCorrectionRevision != 0L ||
                     resolved.originalJournalRevision !=
@@ -636,7 +647,8 @@ class NativeKotlinHistoryManifestFileStore(private val directory: Path) {
             }
             is NativeHistoryWriteIntent.Correct -> {
                 val existing = old.completions.singleOrNull {
-                    it.workoutId == intent.workoutId
+                    it.workoutId == intent.workoutId &&
+                        NativeHistoryLedgerBinary.composerReceipt(it.storedReceiptId)
                 } ?: return@transition NativeHistoryLedgerResult.Rejected(
                     NativeHistoryLedgerRefusal.INVALID_MANIFEST_TRANSITION)
                 if (resolved.copy(savedCorrectionRevision = existing.savedCorrectionRevision) !=

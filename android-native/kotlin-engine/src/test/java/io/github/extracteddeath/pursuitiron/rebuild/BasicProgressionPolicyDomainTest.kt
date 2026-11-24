@@ -53,7 +53,7 @@ class BasicProgressionPolicyDomainTest {
     private fun candidate(request:BasicProgressionRequest)=
         BasicProgressionPolicyDomain.review(request) as BasicProgressionResult.Candidate
 
-    @Test fun basicProgressionNeverTreatsMachineTaggedFreeBarAsAValidScope() {
+    @Test fun basicProgressionNeverEarnsFromMachineTaggedFreeBarButManualRepeatRemainsNonwriting() {
         val freeBar=VerifiedLoadStock.Barbell(LoadUnit.LB,n("45"),mapOf(
             n("25") to 1,n("5") to 1,n("2.5") to 1))
         val correct=scope.copy(basis=LoadBasis.BARBELL_TOTAL,machineInstanceId=null)
@@ -66,8 +66,16 @@ class BasicProgressionPolicyDomainTest {
             val good=candidate(base)
             assertEquals(List(3){n(if(mode==BasicProgressionStrategy.MANUAL_LOGGING)
                 "100" else "105")},good.proposedWorkingLoads)
-            assertEquals(BasicProgressionResult.Refused(BasicProgressionRefusal.INVALID_SOURCE_OR_LOAD),
-                BasicProgressionPolicyDomain.review(base.copy(nextScope=invalid,previousScope=invalid)))
+            val bad=base.copy(nextScope=invalid,previousScope=invalid)
+            if(mode==BasicProgressionStrategy.MANUAL_LOGGING) {
+                val manual=candidate(bad.copy(previous=null,previousScope=null,verifiedStock=null))
+                assertEquals(List(3){n("100")},manual.proposedWorkingLoads)
+                assertEquals(BasicProgressionDecision.MANUAL_REPEAT,manual.decision)
+                assertTrue(manual.increasedOrdinals.isEmpty())
+                assertFalse(manual.maySaveFutureProgram)
+                assertFalse(manual.mayModifyIssuedWorkout)
+            } else assertEquals(BasicProgressionResult.Refused(BasicProgressionRefusal.INVALID_SOURCE_OR_LOAD),
+                BasicProgressionPolicyDomain.review(bad))
         }
     }
 

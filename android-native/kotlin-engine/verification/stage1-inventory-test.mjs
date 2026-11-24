@@ -4,7 +4,7 @@ import {fileURLToPath} from 'node:url';
 // Inventory structure validation only. This neither executes coaching nor grants parity/release approval.
 function validateInventory(data) {
     const require=(ok,message)=>{if(!ok)throw new Error(message)};
-    const {matrix,behavior,findings,canonical,shell,sourceMap,fixtureNames}=data;
+    const {matrix,behavior,findings,canonical,shell,sourceMap,supplemental,fixtureNames}=data;
     const web="29faa204212a4d54088b4870341350e605939185";
     const kotlin="05c02ff2362736439ca1fcabfd7d477bfb2fa366";
     const rows=(doc,pattern)=>doc.split("\n").filter(line=>line.startsWith("| ")&&pattern.test(line.split("|")[1].trim())).map(line=>line.split("|").slice(1,-1).map(x=>x.trim()));
@@ -50,9 +50,27 @@ function validateInventory(data) {
     const childIds=new Set(ids(child));
     require(sourceMap.records.length===144&&new Set(sourceMap.records.map(x=>x.path)).size===144,"web source map count");
     for(const x of sourceMap.records)require(x.path.startsWith("modules/")&&/^[a-f0-9]{40}$/.test(x.blobSha)&&childIds.has(x.primaryRequirement),"unassigned source "+x.path);
-    return {inherited:e.length,child:child.length,progression:prog.length,topology:split.length,percentage:pct.length,canonical:canonical.rows.length,shell:shell.shellRows.length,templates:shell.templates.length,sourceFiles:sourceMap.records.length,findings:issues.length,acceptedBehavior:0};
+    require(supplemental.schemaVersion===1&&supplemental.webCommit===web&&supplemental.kotlinCommit===kotlin,"supplemental source pins");
+    unique(supplemental.rows,"supplemental check",125);
+    const groups=new Set(), parentIds=new Set(ids(e));
+    for(const x of supplemental.rows){
+        require(x.id.startsWith("CHECK-")&&childIds.has(x.behaviorRequirement)&&x.group&&x.webSource&&x.acceptance&&x.evidence,"unassigned supplemental check "+x.id);
+        require(x.parents.length>0&&x.parents.every(y=>parentIds.has(y)),"invalid inherited parent "+x.id);
+        groups.add(x.group);
+        if(x.scope==="required"){
+            require(validStage.test(x.stage)&&["MAP","GAP","REVIEW"].includes(x.state)&&x.candidateFixtures.length>0&&x.deviceRequired===true,"incomplete required check "+x.id);
+            fixtures(x.candidateFixtures.join(";"));
+        }else require(x.scope==="optional-candidate"&&x.stage==="POST-BETA"&&x.state==="SCOPE_REVIEW","unapproved optional waiver "+x.id);
+    }
+    require(groups.size===14,"supplemental product group count");
+    require(supplemental.counts.requiredChecks===120&&supplemental.rows.filter(x=>x.scope==="required").length===120&&supplemental.counts.optionalReviewChecks===5&&supplemental.rows.filter(x=>x.scope==="optional-candidate").length===5&&supplemental.counts.accepted===0,"supplemental evidence counts");
+    const denominator=child.length+prog.length+split.length+pct.length+canonical.rows.length+shell.shellRows.length+shell.templates.length;
+    require(denominator===965&&matrix.includes("| Total acceptance work items | 965 |"),"inventory denominator double count or omission");
+    const allIds=[...ids(e),...ids(child),...ids(prog),...ids(split),...ids(pct),...ids(canonical.rows),...ids(shell.shellRows),...ids(shell.templates),...ids(supplemental.rows)];
+    require(new Set(allIds).size===allIds.length,"cross-inventory duplicate ID");
+    return {denominator,supplementalChecks:supplemental.rows.length,inherited:e.length,child:child.length,progression:prog.length,topology:split.length,percentage:pct.length,canonical:canonical.rows.length,shell:shell.shellRows.length,templates:shell.templates.length,sourceFiles:sourceMap.records.length,findings:issues.length,acceptedBehavior:0};
 }
 const root=join(dirname(fileURLToPath(import.meta.url)),'../..');
 const read=name=>readFileSync(join(root,name),'utf8');
-const data={matrix:read('STAGE1_PARITY_MATRIX.md'),behavior:read('STAGE1_BEHAVIOR_INVENTORY.md'),findings:read('STAGE1_FINDINGS.md'),canonical:JSON.parse(read('STAGE1_CATALOG_INVENTORY.json')),shell:JSON.parse(read('STAGE1_WEB_SHELL_INVENTORY.json')),sourceMap:JSON.parse(read('STAGE1_WEB_SOURCE_MAP.json')),fixtureNames:["kotlin-engine/src/test/java/io/github/extracteddeath/pursuitiron/rebuild","native-coach-store/src/test/java/io/github/extracteddeath/pursuitiron/nativecoachstore","verification"].flatMap(dir=>readdirSync(join(root,dir)))};
+const data={matrix:read('STAGE1_PARITY_MATRIX.md'),behavior:read('STAGE1_BEHAVIOR_INVENTORY.md'),findings:read('STAGE1_FINDINGS.md'),canonical:JSON.parse(read('STAGE1_CATALOG_INVENTORY.json')),shell:JSON.parse(read('STAGE1_WEB_SHELL_INVENTORY.json')),sourceMap:JSON.parse(read('STAGE1_WEB_SOURCE_MAP.json')),supplemental:JSON.parse(read('STAGE1_BEHAVIOR_INVENTORY.json')),fixtureNames:["kotlin-engine/src/test/java/io/github/extracteddeath/pursuitiron/rebuild","native-coach-store/src/test/java/io/github/extracteddeath/pursuitiron/nativecoachstore","verification"].flatMap(dir=>readdirSync(join(root,dir)))};
 console.log('PASS Stage 1 inventory structure (not behavior acceptance):',JSON.stringify(validateInventory(data)));

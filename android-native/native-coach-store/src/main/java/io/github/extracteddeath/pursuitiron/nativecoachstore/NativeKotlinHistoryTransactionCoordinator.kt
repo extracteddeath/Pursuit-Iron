@@ -194,6 +194,8 @@ class NativeKotlinHistoryTransactionCoordinator(
             KotlinWorkoutHistoryEvidenceDomain.projectSaved(preview.state)
                 !is KotlinHistoryProjectionResult.Candidate)
             return@fenced denied(NativeHistoryTransactionRefusal.OPERATION_REJECTED)
+        if(!correctionStore.canEncodeProposal(owner,workoutId,preview.state))
+            return@fenced denied(NativeHistoryTransactionRefusal.OPERATION_REJECTED)
         val intent = NativeHistoryWriteIntent.Correct(workoutId, operation)
         val prepared = ledgerStore.prepare(
             owner, athlete, base.ledger.revision, intent)

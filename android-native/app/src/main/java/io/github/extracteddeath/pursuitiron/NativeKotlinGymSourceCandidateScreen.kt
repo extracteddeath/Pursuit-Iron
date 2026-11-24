@@ -76,6 +76,12 @@ internal fun NativeKotlinGymSourceCandidateScreen(
     fun clearStockFields() {
         exact="";min="";step="";max="";bar="";plates=""
     }
+    // An editor opened for one physical gym must never submit another gym's
+    // old input after the active source changes (including cold restoration).
+    LaunchedEffect(reviewed?.gym?.gymId) {
+        equipmentEditor=false;editingFixtures=false;removeTarget=null
+        equipmentId="";equipmentSearch="";manualEquipmentId=false;clearStockFields()
+    }
 
     PursuitScreenContent {
         PageHeading("YOUR GYM",
@@ -114,6 +120,9 @@ internal fun NativeKotlinGymSourceCandidateScreen(
             return@PursuitScreenContent
         }
         val gym=reviewed.gym
+        state.savedGyms?.takeIf{it.sourceRevision==source.revision && it.active==gym}?.let {
+            NativeKotlinSavedGymSelector(controller,it,state.busy)
+        }
         PursuitCard(highlighted=true) {
             Text("Your equipment",style=MaterialTheme.typography.titleLarge)
             Text("${gym.confirmedStock.size} confirmed weight sources · " +
@@ -516,4 +525,81 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                 Text("Keep equipment")
             }})
     }
+}
+
+
+/** Selection changes the reviewed source only. The UI never invents stock
+ * or changes the weight of any issued set. Each confirmation captures the
+ * exact displayed source revision, even if the saved list changes meanwhile. */
+@Composable
+private fun NativeKotlinSavedGymSelector(
+    controller:NativeKotlinGymSourceController,
+    gyms:io.github.extracteddeath.pursuitiron.nativecoachstore.NativeSavedGymRead.Ready,
+    busy:Boolean
+) {
+    var pending by remember(gyms.sourceRevision){mutableStateOf<ReviewedGymProfile?>(null)}
+    var adding by remember(gyms.sourceRevision){mutableStateOf(false)}
+    var name by remember(gyms.sourceRevision){mutableStateOf("")}
+    var unit by remember(gyms.sourceRevision){mutableStateOf<LoadUnit?>(null)}
+    fun label(id:String)=id.replace('-',' ').replace('_',' ').replaceFirstChar{it.uppercase()}
+    val id=name.trim().lowercase(java.util.Locale.ROOT).replace(Regex("\\s+"),"-")
+    val validId=Regex("^[a-z0-9][a-z0-9_-]{0,79}$").matches(id) &&
+        id !in (gyms.inactive.map{it.gymId}+gyms.active.gymId)
+    PursuitCard {
+        Text("Saved gyms",style=MaterialTheme.typography.titleMedium)
+        Text(label(gyms.active.gymId)+" · "+gyms.active.unit.name,
+            style=MaterialTheme.typography.titleSmall)
+        Text("Current gym",color=MaterialTheme.colorScheme.primary,
+            style=MaterialTheme.typography.labelMedium)
+        gyms.inactive.forEach{gym->
+            key(gym.gymId) {
+                OutlinedButton(onClick={pending=gym},enabled=!busy,
+                    modifier=Modifier.fillMaxWidth()){
+                    Column(Modifier.fillMaxWidth()){
+                        Text(label(gym.gymId))
+                        Text("${gym.unit.name} · ${gym.confirmedStock.size} confirmed weight sources",
+                            style=MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        }
+        OutlinedButton(onClick={name="";unit=null;adding=true},
+            enabled=!busy && gyms.inactive.size<15,modifier=Modifier.fillMaxWidth()){
+            Text("Add gym")
+        }
+    }
+    pending?.let{gym->
+        AlertDialog(onDismissRequest={if(!busy)pending=null},
+            title={Text("Switch to ${label(gym.gymId)}?")},
+            text={Text("Your current gym's equipment will be saved. Review your plan for the selected gym before starting a new workout. Existing workout targets and history stay unchanged.")},
+            confirmButton={Button(onClick={
+                pending=null
+                controller.selectSavedGym(gyms.sourceRevision,gym.gymId,true)
+            },enabled=!busy){Text("Switch gym")}},
+            dismissButton={TextButton(onClick={pending=null},enabled=!busy){Text("Cancel")}})
+    }
+    if(adding)AlertDialog(onDismissRequest={if(!busy)adding=false},
+        title={Text("Add a gym")},
+        text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
+            OutlinedTextField(name,{name=it.take(80)},singleLine=true,
+                label={Text("Gym name")},modifier=Modifier.fillMaxWidth(),
+                supportingText={Text("Use a unique name with letters, numbers, spaces or hyphens.")})
+            Text("Weight units",style=MaterialTheme.typography.labelLarge)
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                LoadUnit.entries.forEach{choice->
+                    FilterChip(selected=unit==choice,onClick={unit=choice},
+                        label={Text(choice.name)})
+                }
+            }
+            Text("Starts with no confirmed equipment. Add the weights and facilities you actually have. Your previous gym is retained.",
+                style=MaterialTheme.typography.bodySmall)
+        }},
+        confirmButton={Button(onClick={
+            val chosen=unit
+            if(chosen!=null && validId){
+                adding=false
+                controller.addSavedGym(gyms.sourceRevision,id,chosen,true)
+            }
+        },enabled=!busy && validId && unit!=null){Text("Create and select")}},
+        dismissButton={TextButton(onClick={adding=false},enabled=!busy){Text("Cancel")}})
 }

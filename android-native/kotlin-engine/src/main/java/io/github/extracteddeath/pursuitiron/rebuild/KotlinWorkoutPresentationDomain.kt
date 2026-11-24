@@ -10,6 +10,8 @@ data class KotlinWorkoutSetPresentation(
     val currentReceipt:KotlinJournalReceipt?,
     val outcome:KotlinJournalSetOutcome?,
     val actual:KotlinPerformedSet?,
+    /** Immediate prior effective receipt, if this entry was an explicit correction.
+     * This is NOT the current receipt's own eventId (available via currentReceipt). */
     val correctsEventId:String?,
     val canEdit:Boolean
 ) {
@@ -52,7 +54,7 @@ object KotlinWorkoutPresentationDomain {
             val record=receipt?.operation as? KotlinJournalOperation.RecordSet
             KotlinWorkoutSetPresentation(
                 target,receipt,record?.outcome,record?.performed,
-                record?.eventId,
+                record?.correctsEventId,
                 !finished
             )
         }

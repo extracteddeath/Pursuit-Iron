@@ -104,6 +104,10 @@ object BasicProgrammedPercentageLoadDomain {
         scope:BasicProgressionScope,stock:VerifiedLoadStock,raw:BigDecimal
     ):ProgrammedPhysicalLoadReview {
         fun no(reason:BasicProgrammedLoadRefusal)=ProgrammedPhysicalLoadReview.Refused(reason)
+        if(scope.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT ||
+            KotlinSetNumberAuthorityDomain.machineTagContradictsFreeBarbell(
+                scope.basis,scope.machineInstanceId))
+            return no(BasicProgrammedLoadRefusal.INCOMPATIBLE_ASSISTANCE_OR_LOAD_BASIS)
         if(stock.unit!=scope.unit || stock.basis!=scope.basis)
             return no(BasicProgrammedLoadRefusal.UNVERIFIED_GYM_STOCK)
         // DOWN-only search envelope. Exact implement inventory is the only

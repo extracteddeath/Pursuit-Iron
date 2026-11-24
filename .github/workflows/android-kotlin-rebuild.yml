@@ -66,6 +66,8 @@ jobs:
         run: node android-native/kotlin-engine/verification/offline-only-test.mjs
       - name: Verify entire engine feature scope and native UX documentation
         run: node android-native/kotlin-engine/verification/feature-scope-contract.mjs
+      - name: Verify pinned Stage 1 parity inventory structure and fixture references
+        run: node android-native/kotlin-engine/verification/stage1-inventory-test.mjs
       - name: Validate web vs Kotlin superiority scorecard without assuming success
         run: |
           node android-native/kotlin-engine/verification/engine-superiority-gate.mjs --self-test

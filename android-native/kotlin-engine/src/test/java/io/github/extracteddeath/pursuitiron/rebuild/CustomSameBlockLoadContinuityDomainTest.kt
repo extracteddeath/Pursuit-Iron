@@ -200,6 +200,54 @@ class CustomSameBlockLoadContinuityDomainTest {
         assertEquals(CustomSameBlockLoadStatus.CHANGED_RECIPE,review(next=changed).status)
     }
 
+    @Test fun recoveryCannotCarryInvalidZeroWorkingSelector() {
+        val withZero=stock.copy(loads=listOf(n(0))+stock.loads)
+        val result=review(next=snapshot(3,listOf(0,45)),physical=withZero)
+        assertEquals(CustomSameBlockLoadStatus.EQUIPMENT_UNVERIFIED,result.status)
+        assertNull(result.proposedWorkout)
+        assertTrue(result.sets.isEmpty())
+        assertFalse(result.mayApplyAutomatically)
+    }
+
+    @Test fun recoveryValidatesRetainedWarmupNumbersAgainstExactStock() {
+        fun withWarmup(day:CustomWorkoutDaySnapshot,weight:Int)=day.copy(
+            slots=day.slots.map {slot->
+                val warm=CustomWorkoutSetSnapshot(
+                    "warmup-${day.absoluteWeek}",slot.slotId,1,
+                    CustomAuthoredSet(DraftSetType.WARMUP,
+                        DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.MACHINE_STACK,n(weight)),
+                        RepBand(5,5),null,30,60))
+                slot.copy(sets=listOf(warm)+slot.sets.map {
+                    it.copy(ordinalInSlot=it.ordinalInSlot+1)
+                })
+            })
+        val withZero=stock.copy(loads=listOf(n(0))+stock.loads)
+        for(weight in listOf(0,22,20,35)) {
+            val old=completed()
+            val previous=withWarmup(old.snapshot,weight)
+            val warm=previous.slots.single().sets.first()
+            val receipt=CustomHistoricalVisitFact("main","chest_press",warm.setKey,
+                CustomWorkoutVisitPart.MAIN,DraftSetType.WARMUP,
+                warm.prescription.load,warm.prescription.reps,null,null,
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n(weight),LoadUnit.LB,5,null),
+                "warmup-receipt-${previous.absoluteWeek}")
+            val history=old.copy(snapshot=previous,evidence=old.evidence.copy(
+                visits=listOf(receipt)+old.evidence.visits,
+                journalRevision=old.evidence.journalRevision+1))
+            val result=review(next=withWarmup(snapshot(3,listOf(40,45)),weight),
+                history=listOf(history),physical=withZero)
+            val expected=when(weight) {
+                0,22 -> CustomSameBlockLoadStatus.EQUIPMENT_UNVERIFIED
+                35 -> CustomSameBlockLoadStatus.WARMUP_EXCEEDS_LOAD
+                else -> CustomSameBlockLoadStatus.REVIEW_LOWER_REPEAT
+            }
+            assertEquals("Warmup $weight",expected,result.status)
+            assertEquals(weight==20,result.proposedWorkout!=null)
+            assertFalse(result.mayIssueWorkout)
+        }
+    }
+
     @Test fun gymRestrictionsAndPhysicalInventoryRefuseUnapprovedLoads() {
         assertEquals(CustomSameBlockLoadStatus.RESTRICTED_OR_LOW_READINESS,
             review(readiness=CoachReadiness.LOW).status)

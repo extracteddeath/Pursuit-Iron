@@ -402,6 +402,55 @@ internal fun PursuitSessionMetrics(logged:Int,skipped:Int,remaining:Int) {
 }
 
 /** One reusable 52dp high primary action across the real native journeys. */
+/** Shared set action layout. The caller owns validation, confirmation and
+ * persistence; this component never changes a set or chooses an outcome. */
+@Composable
+internal fun PursuitSetEntryActions(
+    completeLabel:String,
+    skipLabel:String,
+    canComplete:Boolean,
+    canSkip:Boolean,
+    canFail:Boolean,
+    onComplete:()->Unit,
+    onSkip:()->Unit,
+    onFail:()->Unit
+) {
+    val complete:@Composable (Modifier)->Unit={modifier->
+        Button(onClick=onComplete,enabled=canComplete,
+            modifier=modifier.heightIn(min=48.dp)) {Text(completeLabel)}
+    }
+    val skip:@Composable (Modifier)->Unit={modifier->
+        androidx.compose.material3.OutlinedButton(onClick=onSkip,enabled=canSkip,
+            modifier=modifier.heightIn(min=48.dp)) {Text(skipLabel)}
+    }
+    val fail:@Composable (Modifier)->Unit={modifier->
+        androidx.compose.material3.OutlinedButton(onClick=onFail,enabled=canFail,
+            modifier=modifier.heightIn(min=48.dp)) {Text("Failed")}
+    }
+    val largeText=LocalDensity.current.fontScale>=1.35f
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        if(largeText || maxWidth<400.dp) {
+            Column(Modifier.fillMaxWidth(),
+                verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                complete(Modifier.fillMaxWidth())
+                if(largeText || maxWidth<240.dp) {
+                    skip(Modifier.fillMaxWidth())
+                    fail(Modifier.fillMaxWidth())
+                } else Row(Modifier.fillMaxWidth(),
+                    horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                    skip(Modifier.weight(1f))
+                    fail(Modifier.weight(1f))
+                }
+            }
+        } else Row(Modifier.fillMaxWidth(),
+            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+            skip(Modifier.weight(1f))
+            fail(Modifier.weight(1f))
+            complete(Modifier.weight(1.5f))
+        }
+    }
+}
+
 @Composable
 internal fun PursuitPrimaryAction(label:String,enabled:Boolean=true,onClick:()->Unit) {
     Button(onClick=onClick,enabled=enabled,

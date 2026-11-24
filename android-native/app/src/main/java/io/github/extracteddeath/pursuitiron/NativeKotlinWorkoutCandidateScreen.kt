@@ -954,6 +954,9 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             // are still authoritative after the saved receipt revision moves.
             val occurrenceTypeSets=occurrenceBySetKey[set.target.setKey]
                 ?.sets.orEmpty().filter{it.target.type==set.target.type}
+            val previousWorking=if(set.target.type==DraftSetType.WORKING)
+                occurrenceTypeSets.getOrNull(occurrenceTypeSets.indexOf(set)-1)
+            else null
             editorStates.SaveableStateProvider(
                 "composer-set:${set.target.setKey}:station:"+
                     (recordedMachineId?.let{"id:$it"} ?: "none")
@@ -986,6 +989,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         set.target.setKey in levelSetKeys)
                         CurrentWorkoutLevelingDraft(levelVersion,levelWeight,levelReps)
                     else null,
+                    previousWorking=previousWorking,
                     position=occurrenceTypeSets.indexOf(set)+1,
                     setCount=occurrenceTypeSets.size,
                     plannedBackoffNote=NativeKotlinPlannedBackoffNote.fromIssuedTargets(
@@ -1375,6 +1379,7 @@ private fun NativeKotlinSetCard(
     levelingDraft:CurrentWorkoutLevelingDraft?,
     onCurrentDraftChanged:(String,String)->Unit,
     position:Int,
+    previousWorking:KotlinWorkoutSetPresentation?,
     setCount:Int,
     plannedBackoffNote:String?,
     showExerciseHeading:Boolean,
@@ -1524,6 +1529,9 @@ private fun NativeKotlinSetCard(
         PursuitWorkoutSetReference(referenceMode,target.load,target.reps,target.targetRir,
             physicalMachineLastReferences(lastReferences,machineInstanceId),
             WorkoutReferenceKey(target.setKey))
+        if(!set.isResolved && !finished && working)
+            PursuitPreviousWorkingSetRir(previousWorking?.actual,
+                previousWorking?.outcome,machineInstanceId)
         plannedBackoffNote?.let { note ->
             Text(note,style=MaterialTheme.typography.labelMedium,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)

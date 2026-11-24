@@ -378,8 +378,8 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                 singleLine=true,enabled=!busy,
                                 modifier=Modifier.fillMaxWidth())
                             if(targetExternalLoad.isNotBlank() && !exactLoad)
-                                Text("This load is not an exact value in the "+
-                                    "confirmed gym equipment stock.",
+                                Text("Enter a positive weight that is exactly selectable "+
+                                    "on the confirmed gym equipment.",
                                     color=MaterialTheme.colorScheme.error,
                                     style=MaterialTheme.typography.bodySmall)
                             if(definition?.exerciseId=="farmers")

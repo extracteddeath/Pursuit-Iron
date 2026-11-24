@@ -297,6 +297,60 @@ class CustomBlockTransitionLoadDomainTest {
         assertFalse(result.mayApplyAutomatically)
     }
 
+    @Test fun crossBlockWarmupsMustUseExactValidPhysicalLoads() {
+        fun withWarmup(day:CustomWorkoutDaySnapshot,value:Int,
+            basis:LoadBasis=LoadBasis.MACHINE_STACK)=day.copy(slots=
+            day.slots.map{slot->slot.copy(sets=listOf(
+                CustomWorkoutSetSnapshot(
+                    "warmup-${day.absoluteWeek}","main",3,
+                    CustomAuthoredSet(DraftSetType.WARMUP,
+                        DraftSetLoad.Verified(LoadUnit.LB,basis,n(value)),
+                        RepBand(10,10),null,30,60))
+            )+slot.sets)})
+        fun check(value:Int,inventory:VerifiedLoadStock=stock)=
+            review(withWarmup(snapshot(true,listOf(215,215)),value),
+                listOf(completed(withWarmup(snapshot(),value))),
+                physical=inventory)
+        // A genuine lighter warmup remains a factual part of the proposal.
+        val okay=check(195)
+        assertEquals(CustomBlockTransitionLoadStatus.READY_FOR_REVIEW,okay.status)
+        assertEquals(n(195),(
+            okay.proposedWorkout!!.slots.single().sets.first()
+                .prescription.load as DraftSetLoad.Verified).value)
+        // The selector can truly include 0 but that is not a machine warmup.
+        val zeroStock=VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.MACHINE_STACK,
+            listOf(n(0),n(195),n(200),n(205),n(215)))
+        val zero=check(0,zeroStock)
+        assertEquals(CustomBlockTransitionLoadStatus.EQUIPMENT_UNVERIFIED,zero.status)
+        assertNull(zero.proposedWorkout)
+        assertTrue(zero.sets.isEmpty())
+        // A positive weight absent from the exact inventory is equally
+        // invalid even if it is lower than every proposed working set.
+        assertEquals(CustomBlockTransitionLoadStatus.EQUIPMENT_UNVERIFIED,
+            check(197).status)
+        // A real but heavier warmup must not be silently kept after a
+        // lower-block transition; the specific ordering warning still wins.
+        assertEquals(CustomBlockTransitionLoadStatus.WARMUP_ABOVE_STARTING_LOAD,
+            check(205).status)
+
+        // Zero added plates is a verified landmine warmup, not a machine zero.
+        fun landmine(day:CustomWorkoutDaySnapshot)=day.copy(slots=
+            day.slots.map{slot->slot.copy(sets=slot.sets.map{set->
+                set.copy(prescription=set.prescription.copy(load=
+                    (set.prescription.load as DraftSetLoad.Verified)
+                        .copy(basis=LoadBasis.LANDMINE_ADDED_PLATES)))
+            })})
+        val landmineStock=VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.LANDMINE_ADDED_PLATES,
+            listOf(n(0),n(195),n(200),n(205),n(215)))
+        val former=landmine(withWarmup(snapshot(),0))
+        val future=landmine(withWarmup(snapshot(true,listOf(215,215)),0))
+        val allowed=review(future,listOf(completed(former)),physical=landmineStock)
+        assertEquals(CustomBlockTransitionLoadStatus.READY_FOR_REVIEW,allowed.status)
+        assertEquals(n(0),(allowed.proposedWorkout!!.slots.single().sets.first()
+            .prescription.load as DraftSetLoad.Verified).value)
+    }
+
     @Test fun malformedOrdinalsFailClosedInsteadOfThrowingOrDuplicatingFacts() {
         val old=snapshot().let {s->s.copy(slots=s.slots.map{slot->
             slot.copy(sets=slot.sets.map{it.copy(ordinalInSlot=1)})})}

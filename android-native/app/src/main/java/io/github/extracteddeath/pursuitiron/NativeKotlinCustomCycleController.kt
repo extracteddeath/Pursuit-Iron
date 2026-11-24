@@ -1996,8 +1996,13 @@ internal class NativeKotlinCustomCycleController(
         // A strength repair changed physical working-set prescriptions
         // against a particular verified gym source. Its Undo must obey
         // the same source-revision fence, never restore an obsolete stack.
-        val write = if(receipt.operation in setOf("strength-dose-repair",
-            "strength-menu-recovery","recovery-recipe")) {
+        val write = if(receipt.operation=="recovery-recipe") {
+            val source=current.value.sourceRevision
+            if(source==null)NativeCustomDraftWriteResult.Rejected(
+                NativeCustomDraftRefusal.STALE_REVISION)
+            else host.undoRecoveryRecipe(receipt,source)
+        } else if(receipt.operation in setOf("strength-dose-repair",
+            "strength-menu-recovery")) {
             val source= current.value.sourceRevision
             if(source==null)NativeCustomDraftWriteResult.Rejected(
                 NativeCustomDraftRefusal.STALE_REVISION)

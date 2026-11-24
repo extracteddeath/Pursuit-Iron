@@ -125,8 +125,8 @@ object AdvancedAmplifierProtocolDomain {
             followUpReps = 1..4,
             followUpRounds = 2..5,
             intraSetRestSeconds = 15..45,
-            loadRule = AmplifierLoadRule.AUTHORED_LOAD,
-            techniqueCue = "Planned small groups of quality reps separated by short rests; " +
+            loadRule = AmplifierLoadRule.SAME_LOAD,
+            techniqueCue = "Planned small groups of quality reps at the activation load, separated by short rests; " +
                 "unlike myo-reps, do not turn the clusters into repeated failure attempts.",
             selectionCue = "A separately planned quality or strength method, not a " +
                 "default hypertrophy finisher."
@@ -480,11 +480,16 @@ object AdvancedAmplifierProtocolDomain {
             observedMiniSets.size > plannedLimit ||
             observedMiniSets.any { it !in 0..100 })
             return MyoRepNextStep.INVALID_SEQUENCE
+        fun terminalRepCount(reps:Int):Boolean =
+            reps < minimumAcceptableReps ||
+                (stopOnTargetDrop && reps < targetReps) ||
+                (targetReps > minimumAcceptableReps && reps == minimumAcceptableReps)
+        // A later high-rep mini-set cannot erase an earlier terminal stage.
+        // Replay and direct policy callers must agree on reachability.
+        if (observedMiniSets.dropLast(1).any(::terminalRepCount))
+            return MyoRepNextStep.INVALID_SEQUENCE
         if (techniqueCompromised) return MyoRepNextStep.STOP_TECHNIQUE
-        if (observedMiniSets.any { it < minimumAcceptableReps } ||
-            stopOnTargetDrop && observedMiniSets.any { it < targetReps } ||
-            targetReps > minimumAcceptableReps &&
-            observedMiniSets.lastOrNull() == minimumAcceptableReps)
+        if (observedMiniSets.lastOrNull()?.let(::terminalRepCount) == true)
             return MyoRepNextStep.STOP_REP_DROP
         if (observedMiniSets.size == plannedLimit)
             return MyoRepNextStep.PLANNED_LIMIT_REACHED

@@ -27,6 +27,24 @@ class AdvancedAmplifierProtocolDomainTest {
             step(4, listOf(4), 5, compromised = true))
     }
 
+    @Test fun terminalMyoStageCannotBeErasedByLaterRepRecovery() {
+        val policy=AdvancedAmplifierProtocolDomain
+        assertEquals(MyoRepNextStep.STOP_REP_DROP,
+            policy.nextMyoRepStep(5,listOf(5,3)))
+        assertEquals(MyoRepNextStep.INVALID_SEQUENCE,
+            policy.nextMyoRepStep(5,listOf(5,3,5)))
+        assertEquals(MyoRepNextStep.INVALID_SEQUENCE,
+            policy.nextMyoRepStep(5,listOf(5,2,5)))
+        assertEquals(MyoRepNextStep.INVALID_SEQUENCE,
+            policy.nextMyoRepStep(5,listOf(5,4,5),stopOnTargetDrop=true))
+        assertEquals(MyoRepNextStep.KEEP_GOING,
+            policy.nextMyoRepStep(5,listOf(5,4,5)))
+        assertEquals(MyoRepNextStep.KEEP_GOING,
+            policy.nextMyoRepStep(3,listOf(3,3,3)))
+        assertEquals(MyoRepNextStep.INVALID_SEQUENCE,
+            policy.nextMyoRepStep(5,listOf(5,4,5),minimumAcceptableReps=4))
+    }
+
     @Test fun rangeBoundaryAndCapAreExplicit() {
         fun step(target: Int, reps: List<Int>, cap: Int = 5, compromised: Boolean = false) =
             AdvancedAmplifierProtocolDomain.nextMyoRepStep(
@@ -77,7 +95,8 @@ class AdvancedAmplifierProtocolDomainTest {
         assertFalse(drop.oneLine.contains("mini-sets"))
         assertTrue(cluster.oneLine.contains("clusters"))
         assertEquals(0..15, drop.intraSetRestSeconds)
-        assertEquals(AmplifierLoadRule.AUTHORED_LOAD, cluster.loadRule)
+        assertEquals(AmplifierLoadRule.SAME_LOAD, cluster.loadRule)
+        assertTrue(cluster.techniqueCue.contains("activation load"))
         assertTrue(cluster.techniqueCue.contains("unlike myo-reps"))
     }
 

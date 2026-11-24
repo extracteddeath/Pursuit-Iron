@@ -70,6 +70,38 @@ class NativeCustomCycleDraftFileStoreTest {
         NativeKotlinCurrentIdentity { signedIn })
     private fun saved(revision: Long) = NativeCustomDraftWriteResult.Committed(revision)
 
+    @Test fun percentageIntentSurvivesBaseOverridesAndColdOwnerReadWithoutGrantingIssuance() {
+        val original=original()
+        val ordinary=NativeCustomCycleDraftCodec.encode(original)
+        assertEquals(8,java.nio.ByteBuffer.wrap(ordinary).getInt(4))
+        val block=original.blocks.first()
+        val day=block.days.first()
+        val slot=day.slots.first()
+        val intent=CustomPercentageSetIntent(NamedPercentageScheme.FIVE_THREE_ONE,
+            PercentageTier.PRIMARY,PercentageDayRole.STANDARD,1,4,3,3,
+            BigDecimal("220.00"),BigDecimal("85"),BigDecimal("85.000"),null,true,false)
+        val protocol=working(185).copy(reps=RepBand(5,5),exactRepTarget=5,percentageIntent=intent)
+        val overridden=protocol.copy(reps=RepBand(1,1),exactRepTarget=1,
+            percentageIntent=intent.copy(weekInBlock=3,sourcePercent=BigDecimal("95"),
+                effectivePercent=BigDecimal("95")))
+        val draft=original.copy(blocks=listOf(block.copy(days=listOf(day.copy(
+            slots=listOf(slot.copy(sets=listOf(protocol)),day.slots.last())))),original.blocks.last()),
+            weekOverrides=mapOf("base" to listOf(CustomWeekSlotOverride(3,0,slot.slotId,listOf(overridden)))))
+        val bytes=NativeCustomCycleDraftCodec.encode(draft)
+        assertEquals(9,java.nio.ByteBuffer.wrap(bytes).getInt(4))
+        assertEquals(draft,NativeCustomCycleDraftCodec.decode(bytes))
+        assertArrayEquals(bytes,NativeCustomCycleDraftCodec.encode(NativeCustomCycleDraftCodec.decode(bytes)))
+        assertEquals(saved(1),repository().save("owner-1","cycle-1",0,draft))
+        val cold=repository().read("owner-1","cycle-1") as NativeCustomDraftReadResult.Found
+        assertEquals(draft,cold.draft)
+        val review=CustomTrainingCycleDomain.review(cold.draft,listOf(
+            CustomExerciseAvailability("bench",stock,false,setOf("straight-bar")),
+            CustomExerciseAvailability("pullup",null,true)))
+        assertNull(review.verifiedDraft)
+        assertTrue(review.issues.any{it.explanation.contains("dedicated reviewed issuance")})
+        assertArrayEquals(ordinary,NativeCustomCycleDraftCodec.encode(original))
+    }
+
     @Test fun exactTargetsSurviveBaseWeekOverrideAndColdOwnerRead() {
         val start=original()
         val first=start.blocks.first()
@@ -126,7 +158,7 @@ class NativeCustomCycleDraftFileStoreTest {
         val before=NativeCustomCycleDraftCodec.encode(baseline)
         assertEquals(8,java.nio.ByteBuffer.wrap(before).getInt(4))
         assertEquals(baseline,NativeCustomCycleDraftCodec.decode(before))
-        for (unsupported in listOf(0, 1, 2, 3, 4, 5, 6, 9)) {
+        for (unsupported in listOf(0, 1, 2, 3, 4, 5, 6, 10)) {
             val bytes = before.copyOf()
             java.nio.ByteBuffer.wrap(bytes).putInt(4, unsupported)
             assertThrows(java.io.IOException::class.java) {

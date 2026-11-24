@@ -40,6 +40,43 @@ class NativeKotlinCustomWorkoutSnapshotCodecTest {
             listOf(first,second),3L*145+15+20,240
         )
     }
+    @Test fun percentageMetadataSurvivesFullAndSwapSnapshotWithoutOrdinaryVersionDrift() {
+        val original=fixture()
+        val ordinary=NativeKotlinCustomWorkoutSnapshotCodec.encode(original)
+        assertEquals(8,ordinary[7].toInt())
+        val slot=original.slots.first()
+        val last=slot.sets.last()
+        val intent=CustomPercentageSetIntent(NamedPercentageScheme.FIVE_THREE_ONE,
+            PercentageTier.PRIMARY,PercentageDayRole.STANDARD,2,4,3,3,
+            BigDecimal("25.000"),BigDecimal("90"),BigDecimal("90.00"),null,true,false)
+        val protocol=last.prescription.copy(reps=RepBand(3,3),exactRepTarget=3,
+            amplifier=null,percentageIntent=intent)
+        val selected=slot.copy(sets=slot.sets.dropLast(1)+last.copy(prescription=protocol))
+        val snapshot=original.copy(slots=listOf(selected,original.slots.last()),
+            knownSetAndRestSeconds=original.knownSetAndRestSeconds-15)
+        val bytes=NativeKotlinCustomWorkoutSnapshotCodec.encode(snapshot)
+        assertEquals(9,bytes[7].toInt())
+        assertEquals(snapshot,NativeKotlinCustomWorkoutSnapshotCodec.decode(bytes))
+        assertArrayEquals(bytes,NativeKotlinCustomWorkoutSnapshotCodec.encode(
+            NativeKotlinCustomWorkoutSnapshotCodec.decode(bytes)))
+        val swap=NativeKotlinCustomWorkoutSnapshotCodec.encodeSlot(selected)
+        assertEquals(9,swap[7].toInt())
+        assertEquals(selected,NativeKotlinCustomWorkoutSnapshotCodec.decodeSlot(swap))
+        assertFalse(snapshot.isIssued)
+        assertArrayEquals(ordinary,NativeKotlinCustomWorkoutSnapshotCodec.encode(original))
+        for(invalid in listOf(protocol.copy(percentageIntent=intent.copy(recovery=true)),
+            protocol.copy(percentageIntent=intent.copy(weekInBlock=1)),
+            protocol.copy(percentageIntent=intent.copy(sourceOrdinal=4)),
+            protocol.copy(exactRepTarget=4),
+            protocol.copy(load=weight("25")))) {
+            val bad=selected.copy(sets=selected.sets.dropLast(1)+last.copy(prescription=invalid))
+            assertThrows(IllegalArgumentException::class.java){
+                NativeKotlinCustomWorkoutSnapshotCodec.encode(snapshot.copy(
+                    slots=listOf(bad,original.slots.last())))
+            }
+        }
+    }
+
     @Test fun exactTargetsSurviveFullAndSwapSnapshotsAndRejectOutsideBand() {
         val original=fixture()
         val slot=original.slots.first()

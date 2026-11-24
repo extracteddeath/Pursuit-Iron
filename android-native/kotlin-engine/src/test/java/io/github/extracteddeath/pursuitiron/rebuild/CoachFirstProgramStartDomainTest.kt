@@ -29,6 +29,32 @@ class CoachFirstProgramStartDomainTest {
         assertFalse(reviewed.maySaveProgram)
     }
 
+    @Test fun firstProgramCalibrationCannotTurnZeroSelectorIntoDumbbellWeight() {
+        val verified=checkNotNull(source.reviewed)
+        val stock=VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.DUMBBELL_PER_HAND,
+            listOf(n("0"),n("20"),n("25"),n("30")))
+        val gym=verified.gym.copy(confirmedStock=
+            verified.gym.confirmedStock+("dumbbells" to stock))
+        val fixture=source.copy(reviewed=verified.copy(gym=gym))
+        val zero=request(mapOf("bench" to n("0.000"))).copy(setup=fixture)
+        val invalid=CoachFirstProgramStartDomain.review(zero)
+        assertEquals(FirstProgramStartStatus.INVALID_CALIBRATION,invalid.status)
+        assertTrue(invalid.issues.any{it.contains("exact, confirmed physical weight")})
+        assertNull(invalid.policy)
+        assertNull(invalid.generation)
+        assertNull(invalid.prescription)
+        assertFalse(invalid.mayIssueWorkout)
+
+        // A positive, actually selected weight on the SAME stock remains
+        // eligible; the guard is about issued physical meaning, not an
+        // arbitrary exclusion of equipment containing a zero selector.
+        val real=CoachFirstProgramStartDomain.review(
+            zero.copy(startingLoads=mapOf("bench" to n("25"))))
+        assertNotEquals(FirstProgramStartStatus.INVALID_CALIBRATION,real.status)
+        assertTrue("bench" in real.chosenExerciseIds)
+    }
+
     @Test fun calibrationMustBeExactAndEquipmentSpecific() {
         val invalid=CoachFirstProgramStartDomain.review(request(
             mapOf("bench" to n("27.5"))))

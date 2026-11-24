@@ -382,8 +382,11 @@ object CoachFirstProgramStartDomain {
                 val checked=chosenLoad?.let {
                     EquipmentLoadDomain.inspect(stock,it,athlete.gym.unit)
                 }
-                if(chosenLoad==null || chosenLoad<zero ||
-                    chosenLoad.signum()==0 && movement.expectedLoadBasis?.permitsZeroAddedLoad!=true ||
+                if(chosenLoad==null ||
+                    movement.expectedLoadBasis?.let{basis->
+                        KotlinSetNumberAuthorityDomain.validPrescribedLoad(
+                            chosenLoad,basis)
+                    }!=true ||
                     checked !is LoadInspection.Confirmed || !checked.exact) {
                     issues+="The selected starting load for ${id} is not an exact, confirmed physical weight. Review the actual equipment; nothing was rounded."
                     return output(FirstProgramStartStatus.INVALID_CALIBRATION)

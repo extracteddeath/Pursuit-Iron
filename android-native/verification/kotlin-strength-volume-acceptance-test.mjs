@@ -163,8 +163,17 @@ assert.match(recoveryModel,/val expectedRosterRevision:Long\?/);
 assert.match(preview,/request\.stepUnit!=gym\.unit/);
 assert.match(preview,/machineRosters\.read\(owner\.ownerKey\)/);
 assert.match(preview,/verifiedMachineConfigurations=roster\?\.configurations/);
-assert.match(preview,/assistance\.revision,roster\?\.revision,candidate/);
+assert.match(preview,/assistance\.revision,roster\?\.revision,\s*schedule\.historyRevision,candidate/);
 assert.match(recoveryPanel,/it\.request\.maximumEasierStep==\(if\(adjustLoad\)budget else null\)/);
 assert.match(recoveryPanel,/it\.request\.stepUnit==\(if\(adjustLoad\)unit else null\)/);
 assert.match(recoveryPanel,/enabled=ready && !busy && confirmed && validBudget/);
 console.log('PASS optional recovery equipment-step preview requires exact unit, current machine roster and fresh reviewed budget.');
+
+const recoveryFence=readFileSync(root+'native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinRecoveryScheduleFence.kt','utf8');
+assert.match(recoveryModel,/expectedHistoryRevision:Long/);
+assert.match(preview,/recoveryScheduleFence\.review\(/);
+assert.match(recoveryFence,/history\.read\(ownerKey,owner\.athleteId\)/);
+assert.match(recoveryFence,/inventory\.inspect\(ownerKey,owner\.athleteId,completed\)/);
+assert.match(recoveryFence,/!it\.completed \|\| it\.absoluteWeek>=firstChangedWeek/);
+assert.match(recoveryFence,/NativeRecoveryScheduleReview\.Ready\(timeline\.manifestRevision\)/);
+console.log('PASS recovery schedule review binds verified history and refuses any unfinished same-cycle workout or shifted observed week.');

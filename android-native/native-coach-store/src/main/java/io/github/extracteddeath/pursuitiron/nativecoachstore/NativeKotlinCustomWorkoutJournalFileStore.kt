@@ -275,6 +275,7 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                 val ledger=history.open(ownerKey,current.athleteId)
                 if(ledger !is NativeHistoryLedgerResult.Durable ||
                     !ledger.ledger.readyForHistoryReads ||
+                    !ledger.ledger.hasCompletionCapacity ||
                     ledger.ledger.ownerKey!=ownerKey ||
                     ledger.ledger.athleteId!=current.athleteId ||
                     ledger.ledger.completions.any{it.workoutId==workoutId})
@@ -529,6 +530,7 @@ class NativeKotlinCustomWorkoutJournalFileStore(
             val ledger=history.open(ownerKey,current.athleteId)
             if(ledger !is NativeHistoryLedgerResult.Durable ||
                 !ledger.ledger.readyForHistoryReads ||
+                    !ledger.ledger.hasCompletionCapacity ||
                 ledger.ledger.ownerKey!=ownerKey ||
                 ledger.ledger.athleteId!=current.athleteId ||
                 // A reset/replaced manifest must not satisfy a future-block

@@ -8,7 +8,9 @@ class CustomCycleCoachAuditDomainTest {
     private fun n(s:String)=BigDecimal(s)
     private fun setup(
         selected:Set<Int> = setOf(0,2,4),
-        excluded:Set<String> = emptySet()
+        excluded:Set<String> = emptySet(),
+        gym:GymProfileDraft=GymProfileDraft("gym-1",LoadUnit.LB,emptyMap(),emptySet(),emptySet()),
+        maxBarbells:Int=0
     ):AthleteSetupReview = CoachAthleteSetupDomain.review(AthleteSetupDraft(
         profileRevision="rev-1",athleteProfileId="athlete-1",
         goal=AthleteTrainingGoal.HYPERTROPHY,
@@ -17,10 +19,9 @@ class CustomCycleCoachAuditDomainTest {
         trainingWeekdays=selected,timezoneId="America/New_York",
         sessionTimeBucket=SessionTimeBucket.FORTY_TO_SIXTY,
         hardSessionLimit=HardSessionLimit.Minutes(60),
-        gym=GymProfileDraft("gym-1",LoadUnit.LB,emptyMap(),
-            emptySet(),emptySet()),
+        gym=gym,
         allowBodyweight=true,allowSupersets=false,
-        allowTricepsOnLower=false,maxBarbellExercisesPerDay=0,
+        allowTricepsOnLower=false,maxBarbellExercisesPerDay=maxBarbells,
         focusedMuscles=emptySet(),reducedMuscles=emptySet(),
         excludedExerciseIds=excluded,lockedTrainingDays=emptySet(),
         hardTrainingDays=emptySet(),longTrainingDays=emptySet(),
@@ -191,6 +192,42 @@ class CustomCycleCoachAuditDomainTest {
             it.kind==CustomCoachIssueKind.CATALOG_UNVERIFIED})
         assertNotEquals(CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,
             tooLarge.status)
+    }
+
+    @Test fun namedReviewStillEnforcesOrdinaryFullCycleTimeAndStockChecks() {
+        val stock=VerifiedLoadStock.Barbell(LoadUnit.LB,n("10"),
+            mapOf(n("5") to 4,n("2.5") to 2))
+        val reviewedSetup=setup(gym=GymProfileDraft("gym-1",LoadUnit.LB,
+            mapOf("straight-bar" to stock),setOf("flat-bench","rack"),emptySet()),
+            maxBarbells=1)
+        val base=cycle(days=listOf(0,2,4).map{day->authoredDay(day).copy(
+            slots=listOf(CustomExerciseSlot("slot-$day","barbell_bench",ComposerRole.PRIMARY,
+                listOf(authoredSet().copy(load=DraftSetLoad.Verified(LoadUnit.LB,
+                    LoadBasis.BARBELL_TOTAL,n("20")))))))})
+        val stamp=CustomWorkoutSourceStamp("athlete-1","rev-1","cycle-1",base.revision,"gym-1",1)
+        val key=CustomNamedPercentageWeekKey("block-1",1,0,"slot-0")
+        val request=NamedPercentageRequest(BasicProgressionScope("athlete-1","cycle-1","gym-1",
+            "block-1","block-1:d0","barbell_bench",null,LoadUnit.LB,LoadBasis.BARBELL_TOTAL),
+            NamedPercentageScheme.FIVE_THREE_ONE,PercentageTier.PRIMARY,PercentageDayRole.STANDARD,
+            PercentageReferenceKind.TRAINING_MAX,n("30"),true,1,3,1,stock)
+        val draft=(CustomPercentageDraftDomain.review(CustomPercentageDraftSource(
+            base,stamp,"block-1",1,0,"slot-0"),request) as CustomPercentageDraftResult.Proposed)
+            .proposal.draft
+        val evidence=listOf(CustomNamedPercentageWeekEvidence(key,request))
+        val catalog=StarterExerciseTranche.movements()
+        val tooLong=inputs(nonSet=mapOf(0 to 3600,2 to 200,4 to 200))
+        val exact=CustomCycleCoachAuditDomain.reviewNamedForReview(draft,reviewedSetup,catalog,
+            tooLong,stamp.copy(cycleRevision=draft.revision),evidence)
+        assertEquals(exact.issues.toString(),draft,exact.structuralReview?.verifiedDraft)
+        assertEquals(listOf(3,3,3),exact.weeks.map{it.workingSets})
+        assertTrue(exact.issues.any{it.kind==CustomCoachIssueKind.SESSION_HARD_LIMIT})
+        assertNotEquals(CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,exact.status)
+        assertFalse(exact.mayIssueWorkout)
+        val ordinary=CustomCycleCoachAuditDomain.review(draft,reviewedSetup,catalog,tooLong)
+        assertNull(ordinary.structuralReview?.verifiedDraft)
+        val missing=CustomCycleCoachAuditDomain.reviewNamedForReview(draft,reviewedSetup,catalog,
+            tooLong,stamp.copy(cycleRevision=draft.revision),emptyList())
+        assertNull(missing.structuralReview?.verifiedDraft)
     }
 
     @Test fun noAuthoredPolicyOrTimeEvidenceMeansNeverApproved() {

@@ -22,6 +22,9 @@ object PiIcons {
     val Library = icon("library", "M6.5 6.5v11M17.5 6.5v11M3 9.5v5M21 9.5v5M6.5 12h11")
     val You = icon("you", "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0")
     val ChevronDown = icon("down", "M6 9l6 6 6-6")
+    // Readiness levels: a battery that empties as the lifter reports feeling worse.
+    val BatteryMedium = icon("battery-medium", "M4 6h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2zM22 14v-4M6 14v-4M10 14v-4")
+    val BatteryLow = icon("battery-low", "M4 6h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2zM22 14v-4M6 14v-4")
     val ChevronUp = icon("up", "M6 15l6-6 6 6")
     val Pin = icon("pin", "M12 16v5M8.5 3h7l-1 6 3.5 4H6l3.5-4z")
     val ChevronRight = icon("right", "M9 6l6 6-6 6", 2.4f)

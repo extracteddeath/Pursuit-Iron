@@ -88,14 +88,14 @@ fun ReadinessCheckSheet(vm: AppViewModel) {
     val cs = MaterialTheme.colorScheme
     val pick = { label: String, factor: Double -> vm.act("readiness", "label" to label, "factor" to factor) }
     ModalBottomSheet(onDismissRequest = { pick("—", 1.0) }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("How are you feeling?", style = MaterialTheme.typography.headlineSmall)
             Text("Today's loads adjust to match. Logged sets never change.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             READINESS.forEachIndexed { k, (label, sub, factor) ->
                 Surface(onClick = { pick(label, factor) }, color = cs.surfaceContainerHigh, shape = RoundedCornerShape(20.dp),
                     modifier = Modifier.fillMaxWidth().semantics { role = Role.Button }) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Icon(if (k == 0) PiIcons.Flame else PiIcons.Timer, null, tint = cs.primary)
+                        Icon(when (k) { 0 -> PiIcons.Flame; 1 -> PiIcons.BatteryMedium; else -> PiIcons.BatteryLow }, null, tint = cs.primary)
                         Column(Modifier.weight(1f)) {
                             Text(label, style = MaterialTheme.typography.titleSmall)
                             Text(sub, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)

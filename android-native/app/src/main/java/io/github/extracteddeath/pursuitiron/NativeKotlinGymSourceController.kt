@@ -26,6 +26,7 @@ internal data class NativeKotlinGymSourceState(
     val refusal: NativeAuthoringSourceRefusal? = null,
     val savedAthleteId: String? = null,
     val machineRoster: NativeMachineRosterSnapshot? = null,
+    val savedGyms:NativeSavedGymRead.Ready?=null,
     val lastExclusionEdit:NativeKotlinExerciseExclusionCommit?=null
 )
 
@@ -85,6 +86,13 @@ internal class NativeKotlinGymSourceController(
         }
         current.value=loaded.copy(busy=pending.get())
         if(current.value.source!=null) {
+            val gymRead=host.readSavedPhysicalGyms() as? NativeSavedGymRead.Ready
+            val shown=current.value.source
+            if(gymRead!=null && shown!=null && gymRead.sourceRevision==shown.revision &&
+                gymRead.active==shown.setup.reviewed?.gym)
+                current.value=current.value.copy(savedGyms=gymRead)
+            else current.value=current.value.copy(savedGyms=null,
+                message="Saved gyms could not be matched to the current source. Refresh before switching.")
             when(val roster=host.readMachineRoster()) {
                 is NativeMachineRosterResult.Saved ->
                     current.value=current.value.copy(machineRoster=roster.snapshot)
@@ -157,6 +165,29 @@ internal class NativeKotlinGymSourceController(
             }
         }
     }
+
+    private fun switchGym(expectedRevision:Long,operation:()->NativeAuthoringSourceWrite)=run {
+        val shown=current.value.savedGyms
+        if(shown?.sourceRevision!=expectedRevision || current.value.source?.revision!=expectedRevision) {
+            load("The saved gym list changed. Review the current equipment before switching.")
+            return@run
+        }
+        when(val result=operation()) {
+            is NativeAuthoringSourceWrite.Committed ->
+                load("Saved gym selected. Review your plan for this equipment before starting a new workout; previous issued targets remain unchanged.")
+            is NativeAuthoringSourceWrite.Rejected -> {
+                load()
+                current.value=current.value.copy(refusal=result.reason,
+                    message="Gym switch rejected: ${result.reason.name.replace('_',' ').lowercase()}. Check the reloaded gym list.")
+            }
+        }
+    }
+
+    fun selectSavedGym(expectedRevision:Long,gymId:String,athleteConfirmed:Boolean)=
+        switchGym(expectedRevision){host.selectSavedPhysicalGym(expectedRevision,gymId,athleteConfirmed)}
+
+    fun addSavedGym(expectedRevision:Long,gymId:String,unit:LoadUnit,athleteConfirmed:Boolean)=
+        switchGym(expectedRevision){host.addSavedPhysicalGym(expectedRevision,gymId,unit,athleteConfirmed)}
 
     fun upsertStock(id:String,stock:VerifiedLoadStock) =
         change {host.upsertNativeGymStock(it,id,stock)}

@@ -2012,49 +2012,18 @@ private fun NativeKotlinCustomVisitEditor(
                     "entry or skip the optional stage; nothing was changed.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.error)
-            val completeButton:@Composable (Modifier)->Unit={buttonModifier->
-                Button(enabled=!locked && actual!=null &&
+            PursuitSetEntryActions(
+                completeLabel=if(saved!=null)"Save correction" else "Complete",
+                skipLabel=if(isStagedShortRestStop)"End sequence" else "Skip",
+                canComplete=!locked && actual!=null &&
                     !sameLoadInvalidCompletion && !invalidDropCompletion,
-                    modifier=buttonModifier,
-                    onClick={
-                        onRecord(KotlinJournalSetOutcome.COMPLETED,
-                            actual)
-                    }){Text(if(saved!=null)"Save correction" else "Complete")}
-            }
-            val skipButton:@Composable (Modifier)->Unit={buttonModifier->
-                OutlinedButton(enabled=!locked,modifier=buttonModifier,onClick={
-                    pendingExceptionalOutcome=KotlinJournalSetOutcome.SKIPPED
-                }){Text(if(isStagedShortRestStop)
-                    "End sequence" else "Skip")}
-            }
-            val failedButton:@Composable (Modifier)->Unit={buttonModifier->
-                OutlinedButton(enabled=!locked && failedActual!=null &&
+                canSkip=!locked,
+                canFail=!locked && failedActual!=null &&
                     !sameLoadInvalidFailure && !invalidDropFailure,
-                    modifier=buttonModifier,
-                    onClick={pendingExceptionalOutcome=KotlinJournalSetOutcome.FAILED_ATTEMPT}) {
-                    Text("Failed")
-                }
-            }
-            val largeText=LocalDensity.current.fontScale>=1.35f
-            BoxWithConstraints(Modifier.fillMaxWidth()) {
-                if(largeText || maxWidth<350.dp) {
-                    Column(verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-                        completeButton(Modifier.fillMaxWidth())
-                        Row(Modifier.fillMaxWidth(),
-                            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-                            skipButton(Modifier.weight(1f))
-                            failedButton(Modifier.weight(1f))
-                        }
-                    }
-                } else {
-                    Row(Modifier.fillMaxWidth(),
-                        horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-                        skipButton(Modifier.weight(1f))
-                        failedButton(Modifier.weight(1f))
-                        completeButton(Modifier.weight(1f))
-                    }
-                }
-            }
+                onComplete={onRecord(KotlinJournalSetOutcome.COMPLETED,actual)},
+                onSkip={pendingExceptionalOutcome=KotlinJournalSetOutcome.SKIPPED},
+                onFail={pendingExceptionalOutcome=KotlinJournalSetOutcome.FAILED_ATTEMPT}
+            )
             TextButton(enabled=!saving,onClick={editing=false}) {
                 Text(if(saved!=null)"Cancel correction" else "Collapse set")
             }

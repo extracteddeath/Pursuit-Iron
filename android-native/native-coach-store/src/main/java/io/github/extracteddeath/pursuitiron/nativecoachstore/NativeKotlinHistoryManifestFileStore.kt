@@ -101,7 +101,7 @@ private object NativeHistoryLedgerBinary {
     const val MAX_SESSIONS = KotlinHistoryCapacityPolicy.MAX_MANIFEST_COMPLETIONS
     private const val MAX_BYTES = KotlinHistoryCapacityPolicy.MAX_LEDGER_BYTES
     private val validId = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
-    private const val MAX_REV = 9_007_199_254_740_991L
+    const val MAX_REV = 9_007_199_254_740_991L
 
     fun hash(data: ByteArray): ByteArray =
         MessageDigest.getInstance("SHA-256").digest(data)
@@ -553,6 +553,21 @@ class NativeKotlinHistoryManifestFileStore(private val directory: Path) {
         if (old.revision != expectedRevision)
             return@transition NativeHistoryLedgerResult.Rejected(
                 NativeHistoryLedgerRefusal.REVISION_CONFLICT)
+        // Reserve capacity for the final manifest BEFORE a journal can be
+        // changed. At the session ceiling, corrections still fit because
+        // they replace an existing entry rather than adding a completion.
+        // Keep legacy pending manifests decodable for explicit recovery.
+        val addsCompletion = when (intent) {
+            is NativeHistoryWriteIntent.Finish,
+            is NativeHistoryWriteIntent.CustomFinish,
+            is NativeHistoryWriteIntent.MeasuredFinish -> true
+            is NativeHistoryWriteIntent.Correct,
+            is NativeHistoryWriteIntent.CustomCorrect -> false
+        }
+        if (old.revision >= NativeHistoryLedgerBinary.MAX_REV ||
+            addsCompletion && old.completions.size >= NativeHistoryLedgerBinary.MAX_SESSIONS)
+            return@transition NativeHistoryLedgerResult.Rejected(
+                NativeHistoryLedgerRefusal.INVALID_MANIFEST_TRANSITION)
         val proposal = old.copy(pending = intent)
         if (runCatching { NativeHistoryLedgerBinary.check(proposal) }.isFailure)
             return@transition NativeHistoryLedgerResult.Rejected(
@@ -579,7 +594,10 @@ class NativeKotlinHistoryManifestFileStore(private val directory: Path) {
                 if (resolved.completionOrder != ordinal ||
                     resolved.workoutId != intent.workoutId ||
                     resolved.finishEventId != intent.operation.eventId ||
-                    resolved.completedAtEpochMillis!=intent.completedAtEpochMillis)
+                    resolved.completedAtEpochMillis!=intent.completedAtEpochMillis ||
+                    resolved.savedCorrectionRevision != 0L ||
+                    resolved.originalJournalRevision !=
+                        intent.operation.expectedJournalRevision + 1)
                     return@transition NativeHistoryLedgerResult.Rejected(
                         NativeHistoryLedgerRefusal.INVALID_MANIFEST_TRANSITION)
                 old.completions + resolved

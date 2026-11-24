@@ -1218,6 +1218,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                     slot.sets,set),
                                 existing=observed,locked=busy||finished||!machineChoices.ready||machineChoices.busy,
                                 saving=busy,saveError=error,
+                                attemptAllowed=previouslyAttempted!=null || !requiresNewMachineChoice,
                                 machineInstanceId=mainMachineId,
                                 workoutId=workoutId,
                                 athleteId=current.originalSnapshot.stamp.athleteId,
@@ -1788,7 +1789,8 @@ private fun NativeKotlinCustomVisitEditor(
     precedingDropPerformed:KotlinPerformedSet?=null,
     precedingDropReceiptRevision:Long?=null,
     amplifierSummary:CustomAmplifierSetSummary?=null,
-    plannedLoadNote:String?=null
+    plannedLoadNote:String?=null,
+    attemptAllowed:Boolean=true
 ) {
     val prescription=set.prescription
     val follower=prescription.amplifier
@@ -2015,10 +2017,10 @@ private fun NativeKotlinCustomVisitEditor(
             PursuitSetEntryActions(
                 completeLabel=if(saved!=null)"Save correction" else "Complete",
                 skipLabel=if(isStagedShortRestStop)"End sequence" else "Skip",
-                canComplete=!locked && actual!=null &&
+                canComplete=!locked && attemptAllowed && actual!=null &&
                     !sameLoadInvalidCompletion && !invalidDropCompletion,
                 canSkip=!locked,
-                canFail=!locked && failedActual!=null &&
+                canFail=!locked && attemptAllowed && failedActual!=null &&
                     !sameLoadInvalidFailure && !invalidDropFailure,
                 onComplete={onRecord(KotlinJournalSetOutcome.COMPLETED,actual)},
                 onSkip={pendingExceptionalOutcome=KotlinJournalSetOutcome.SKIPPED},
@@ -2185,7 +2187,9 @@ private fun NativeKotlinCustomVisitEditor(
         else
             "A failed attempt records zero completed reps at your entered attempted load. It does not count as successful work or earned progression.")},
         confirmButton={
-            Button(enabled=!locked && (pending==KotlinJournalSetOutcome.SKIPPED||failedActual!=null),
+            Button(enabled=!locked && (pending==KotlinJournalSetOutcome.SKIPPED ||
+                (attemptAllowed && failedActual!=null &&
+                    !sameLoadInvalidFailure && !invalidDropFailure)),
                 onClick={
                     pendingExceptionalOutcome=null
                     when(pending) {

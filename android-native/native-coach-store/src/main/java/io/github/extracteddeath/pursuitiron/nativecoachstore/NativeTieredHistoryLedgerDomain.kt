@@ -70,9 +70,12 @@ internal object NativeTieredHistoryLedgerDomain {
                 return deny(NativeOwnerTieredLedgerRefusal.NONCHRONOLOGICAL_HISTORY, entry.workoutId)
             lastWeek = snap.absoluteWeek
             if (snap.stamp.gymId != scope.gymId) continue
-            // Do not guess whether a missing, replaced or alternate station
-            // is independent. A dedicated reviewed station/recovery policy
-            // must resolve it before this ledger may be used.
+            // A different station is independent only when every issued
+            // working receipt proves that physical station was used.
+            if (CustomTieredJournalEvidenceDomain.isVerifiedOtherStation(
+                    snap, session.effective, session.evidence, entry.completionOrder,
+                    scope, slotId)) continue
+            // Missing, swapped or ambiguously attributed visits still block.
             when (val projected = CustomTieredJournalEvidenceDomain.projectVerifiedFacts(
                 snap, session.effective, entry.workoutId, session.evidence,
                 entry.completionOrder, scope, slotId, tier)) {

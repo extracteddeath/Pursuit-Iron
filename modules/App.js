@@ -80,7 +80,7 @@ import {
     setsOf, setupFieldsFor, simulateAndAudit, splitBuildability, splitContractGaps,
     SPLITS, splitSupportsTrainingDays, starvedRegions, STD_LEVELS, STORE_VERSION, strengthClubSnapshot,
     strengthLevel, strengthScore, strengthScoreHistory, strengthSnapshot, styleFor, styleOverride, SUB_LANDMARKS,
-    SUBMUSCLE_LABEL, subRegionOf, summarizeSession, summarizeSets, swapNextSlotPrescriptions, swapOverlapNames,
+    SUBMUSCLE_LABEL, subRegionOf, daysInWeek, summarizeSession, summarizeSets, swapNextSlotPrescriptions, swapOverlapNames,
     syncSubSets, techExplain, techSetTag, TEMPLATE_CATS, templateConfig, templateIntent, TEMPLATES, tempoFor,
     todayISO, TOTAL_WEEKS, toUnit, trainingMaxForUnit, uid, underRecoveredWeekly, userOwnsRuntimeSet, VIEW_DEPTH,
     volumeAudit, volumeVerdicts, warmupRoutine, warmupSets, weekIntent, weeklyBodyweightTrend, weeklyRecap,
@@ -91,7 +91,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='1030';
+const __APP_VERSION__='4.0.0'; const __BUILD__='1031';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -5678,7 +5678,7 @@ function WizardReviewPane({ config, cycleMode, modeChosen, selectedCycle, cycleA
     const length = SESSIONS.find(x => x.id === config.session)?.label || "Not selected";
     const rows = [
         ["Format", modeChosen ? (cycleMode ? "Training cycle" : "Single program") : "Choose a format"],
-        ["Name", config.name.trim() || "Not named yet"],
+        ["Name", config.name.trim() || "After the split"],
         ["Goal", modeChosen ? (GOALS[goal]?.label || String(goal || "Not selected")) : "After choosing format"],
         ["Schedule", `${config.days} days per week`],
         ["Split", SPLITS[config.split]?.name || "Not selected"],
@@ -5945,7 +5945,7 @@ function Wizard({ buildTask = null, onCancelBuild, initialEquipment, initialExpe
         if (key === "mode")
             return true;
         if (key === "name")
-            return config.name.trim().length > 0;
+            return true; // optional: an unnamed build is named after its split and days
         if (key === "split")
             return !!config.split && buildable.__key === buildKey && !!buildable[config.split] && !blockedHere(config.split);
         if (key === "session")
@@ -5969,6 +5969,9 @@ function Wizard({ buildTask = null, onCancelBuild, initialEquipment, initialExpe
         Object.entries(config.focus).forEach(([p, n]) => { for (let i = 0; i < n; i++)
             focusList.push(p); });
         const final = { ...config, goal: effectiveGoal, focusList, reduce: config.reduce.filter(r => !(config.focus[r] > 0)) };
+        // A name is a label, not a training answer: one left blank becomes "Upper/Lower · 4 days".
+        if (!String(final.name || "").trim())
+            final.name = `${SPLITS[final.split]?.name || "My"} · ${final.days} ${Number(final.days) === 1 ? "day" : "days"}${cycleMode ? " cycle" : ""}`;
         if (cycleMode) {
             final.progression = "auto";
             final.cycleTemplate = cycleTemplate;
@@ -6238,7 +6241,7 @@ function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, com
         ] }));
     }
     if (stepKey === "name") {
-        return (_jsxs(_Fragment, { children: [_jsxs(Heading, { sub: "You can rename it any time after it's built.", children: ["Name your ", cycleMode ? "cycle" : "program"] }), _jsx("input", { "aria-label": cycleMode ? "Cycle name" : "Program name", autoFocus: true, value: config.name, maxLength: 60, onChange: (e) => set({ name: e.target.value }), placeholder: cycleMode ? "e.g. Summer Training Cycle" : "e.g. Summer Hypertrophy Block",
+        return (_jsxs(_Fragment, { children: [_jsxs(Heading, { sub: "Optional — leave it blank to name it after the split. You can rename it any time.", children: ["Name your ", cycleMode ? "cycle" : "program"] }), _jsx("input", { "aria-label": cycleMode ? "Cycle name" : "Program name", autoFocus: true, value: config.name, maxLength: 60, onChange: (e) => set({ name: e.target.value }), placeholder: cycleMode ? "e.g. Summer Training Cycle" : "e.g. Summer Hypertrophy Block",
                     className: "wpb-ui-control wpb-wizard-name-input", "data-has-value": config.name ? "true" : "false" })] }));
     }
     if (stepKey === "experience") {
@@ -6706,7 +6709,10 @@ function NextWorkoutView({ program, day: sourceDay, weekIndex, unit = "kg", perf
                     const cell = computeCell(program, day, id, slot, weekIndex);
                     if (!(cell.sets > 0)) return null;
                     const isPrimary = slot === day.primaryIndex;
-                    return (_jsxs("div", { "data-nextex": true, style: { display: "flex", alignItems: "flex-start", gap: 8, padding: "12px 14px", borderTop: slot === 0 ? "none" : `1px solid ${C.borderSoft || C.border}` }, children: [_jsx("span", { className: "mono", style: { flexShrink: 0, width: 20, paddingTop: 2, fontSize: 14, fontWeight: 700, color: C.faint }, children: slot + 1 }), _jsxs("div", { className: "wpb-s956-flex-1 wpb-s956-minwidth-0", children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-6", children: [_jsx("span", { className: "wpb-s956-fontsize-16 wpb-s956-fontweight-600 wpb-s956-overflow-hidden wpb-s956-textoverflow-ellipsis wpb-s960-whitespace-normal wpb-s960-overflowwrap-anywhere", children: ex.name }), isPrimary && _jsx("span", { style: { flexShrink: 0, fontSize: 11, fontWeight: 700, letterSpacing: .4, color: C.accentInk, background: C.accentDim, padding: "2px 5px", borderRadius: 8 }, children: "MAIN" })] }), _jsxs("div", { style: { fontSize: 14, color: C.faint, marginTop: 2 }, children: [PART_LABEL[ex.part], " \u00B7 ", ex.type] })] }), _jsxs("div", { className: "wpb-preview-prescription wpb-s956-flexshrink-0 wpb-s956-textalign-right wpb-s960-minwidth-74px", children: [_jsxs("div", { className: "mono wpb-type-value", children: [cell.sets, _jsx("span", { className: "wpb-type-faint", children: "\u00D7" }), cell.reps] }), _jsxs("div", { className: "mono", style: { fontSize: 12, fontWeight: 700, color: cell.note && cell.note.includes("Deload") ? C.warn : C.accentInk, marginTop: 2 }, children: ["@ ", effortLabel(cell.rir, loadMode)] })] })] }, `${id}:${slot}`));
+                    // The load sits on the row, so the game plan below only has to carry what is news.
+                    const firstSet = review?.exercises.find(row => row.slot === slot)?.effective?.[0];
+                    const startLoad = Number(firstSet?.weight) > 0 ? sessionLoadText(firstSet, unit) : null;
+                    return (_jsxs("div", { "data-nextex": true, style: { display: "flex", alignItems: "flex-start", gap: 8, padding: "12px 14px", borderTop: slot === 0 ? "none" : `1px solid ${C.borderSoft || C.border}` }, children: [_jsx("span", { className: "mono", style: { flexShrink: 0, width: 20, paddingTop: 2, fontSize: 14, fontWeight: 700, color: C.faint }, children: slot + 1 }), _jsxs("div", { className: "wpb-s956-flex-1 wpb-s956-minwidth-0", children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-6", children: [_jsx("span", { className: "wpb-s956-fontsize-16 wpb-s956-fontweight-600 wpb-s956-overflow-hidden wpb-s956-textoverflow-ellipsis wpb-s960-whitespace-normal wpb-s960-overflowwrap-anywhere", children: ex.name }), isPrimary && _jsx("span", { style: { flexShrink: 0, fontSize: 11, fontWeight: 700, letterSpacing: .4, color: C.accentInk, background: C.accentDim, padding: "2px 5px", borderRadius: 8 }, children: "MAIN" })] }), _jsxs("div", { style: { fontSize: 14, color: C.faint, marginTop: 2 }, children: [PART_LABEL[ex.part], " \u00B7 ", ex.type, startLoad ? _jsxs("span", { className: "wpb-preview-load", children: [" \u00B7 ", startLoad] }) : null] })] }), _jsxs("div", { className: "wpb-preview-prescription wpb-s956-flexshrink-0 wpb-s956-textalign-right wpb-s960-minwidth-74px", children: [_jsxs("div", { className: "mono wpb-type-value", children: [cell.sets, _jsx("span", { className: "wpb-type-faint", children: "\u00D7" }), cell.reps] }), _jsxs("div", { className: "mono", style: { fontSize: 12, fontWeight: 700, color: cell.note && cell.note.includes("Deload") ? C.warn : C.accentInk, marginTop: 2 }, children: ["@ ", effortLabel(cell.rir, loadMode)] })] })] }, `${id}:${slot}`));
                 }) }), _jsx(SessionGamePlan, { review, restScale, loadMode }), mv.length > 0 && (_jsx("div", { className: "wpb-s956-display-flex wpb-s956-flexwrap-wrap wpb-s956-gap-6 wpb-s956-margintop-12", children: mv.slice(0, 6).map(([part, sets], i) => (_jsxs("span", { style: { fontSize: 11, fontWeight: 700, padding: "4px 8px", borderRadius: 8, color: i === 0 ? C.accentInk : C.muted, background: i === 0 ? C.accentDim : C.card }, children: [PART_LABEL[part], " ", fmtSets(sets)] }, part))) })), _jsxs("button", { onClick: onOpenProgram, className: "pressable", style: { display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left", marginTop: 12, padding: "13px 14px", borderRadius: 16, background: C.card, border: `1px solid ${C.border}`, color: C.text, cursor: "pointer" }, children: [_jsx(Calendar, { size: 15, color: C.accentInk, className: "wpb-icon-no-shrink" }), _jsxs("div", { className: "wpb-s956-flex-1 wpb-s956-minwidth-0", children: [_jsx("div", { className: "wpb-s956-fontsize-14 wpb-s956-fontweight-700", children: "View full program" }), _jsxs("div", { className: "pi-t-caption-f1", children: ["Every day, all ", total, " weeks, and the plan behind it"] })] }), _jsx(ChevronRight, { size: 16, color: C.muted, className: "wpb-icon-no-shrink" })] }), alt && (_jsxs("button", { onClick: onStartAlt, className: "pressable", style: { display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", marginTop: 8, padding: "12px", borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.text, fontSize: 14, fontWeight: 600, cursor: "pointer" }, children: [_jsx(Activity, { size: 14 }), " Fresher today: ", alt.day.label, " (", alt.score, "%)"] }))] }), _jsxs("footer", { className: "wpb-next-workout-actions", "aria-label": "Start this session", children: [
         _jsx("div", { className: "wpb-preview-start-summary", "aria-live": "polite", children: targetIssues[0]?.message || (plan && !plan.fits
             ? "Choose a longer time to start" : `About ${mins} min · ${workingSets} working sets`) }),
@@ -6716,6 +6722,11 @@ function NextWorkoutView({ program, day: sourceDay, weekIndex, unit = "kg", perf
 }
 
 function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan, hasDraft = false, onDiscardDraft, saveUndo = null, loadMode = "rir", unit = "kg", history = [], pace = null, onSave, onBack, isSaved, onRegenerate, onNextCycle, onStartDay, onCreateCustom, initialWeek, cycleLink = null, onWeekChange, exNotes = {}, onSetExNote, exSetup = {}, onSetExSetup, perf = {}, onReset, onCommitProgram, onReviewProgram }) {
+    // The week chip's minutes are the day cards' own estimates summed (pace-aware, with transitions) —
+    // the engine's time budget read 64m beside two days showing ~38 and ~79 min.
+    const weekChipCaption = w => { const days = daysInWeek(program, w); let sets = 0, mins = 0;
+        for (const d of days) { const sm = summarizeSession(program, d, w, pace); sets += sm.sets; mins += sm.minutes; }
+        mins = Math.round(mins); return `${Math.round(sets)} sets · ${mins >= 60 ? `${Math.floor(mins / 60)}h${String(mins % 60).padStart(2, "0")}m` : `${mins}m`}`; };
     // The week to open on: the lifter's CURRENT training week, derived from their logged history
     // (the same cursor that decides "up next"), so opening a program you're on week 2 of shows week 2 —
     // not week 1. An explicit initialWeek (a remembered in-session selection) still wins if present.
@@ -7961,7 +7972,7 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                             })(), _jsx("div", { className: "wpb-program-upgrade-assurance", children: "Your logged sets and history are untouched. If you don't like the result, the version you have now will be saved under Earlier layouts in Plan info after you apply the preview." }), _jsxs("div", { className: "wpb-s956-display-flex wpb-s956-gap-8 wpb-s956-flexwrap-wrap", children: [_jsxs("button", { onClick: () => { if (hasEdits)
                                             setConfirmEngine(true);
                                         else
-                                            onRegenerate(program.seed, ENGINE_V); }, "aria-label": "Rebuild with the latest program logic", className: "pressable wpb-program-upgrade-apply", children: [_jsx(Zap, { size: 14 }), " Update program"] }), _jsx("button", { onClick: () => (onCommitProgram || setProgram)(p => ({ ...p, engineDeclined: ENGINE_V })), "aria-label": "Keep this program as it is", className: "pressable wpb-program-upgrade-keep", children: "Keep it as it is" })] })] })), program.config?.endless && !manual ? (_jsx(ContinuousWave, { weeks: weeks, deloadWeek: deloadWeek, activeWeek: activeWeek, nowWeek: endlessNowWeek, onPick: pickWeek, dim: manual })) : (_jsxs("div", { className: "wpb-hscroll wpb-choice-rail wpb-week-rail", "data-active-week": activeWeek, children: [weeks.map(w => (_jsx(UiChoice, { kind: "summary", className: "wpb-program-week-chip", label: `Week ${w}`, caption: (() => { const pw = plannedWeek(program, w); return `${pw.sets} sets · ${pw.mins}m`; })(), selected: activeWeek === w, onClick: () => pickWeek(w), "data-deload": "false" }, w))), deloadWeek && _jsx(UiChoice, { kind: "summary", className: "wpb-program-week-chip", label: "Deload", "data-deload": "true", caption: (() => { const pw = plannedWeek(program, deloadWeek); return `${pw.sets} sets · ${pw.mins}m`; })(), selected: activeWeek === deloadWeek, onClick: () => pickWeek(deloadWeek) })] })), program.config?.percentScheme === "531" && !manual && (() => {
+                                            onRegenerate(program.seed, ENGINE_V); }, "aria-label": "Rebuild with the latest program logic", className: "pressable wpb-program-upgrade-apply", children: [_jsx(Zap, { size: 14 }), " Update program"] }), _jsx("button", { onClick: () => (onCommitProgram || setProgram)(p => ({ ...p, engineDeclined: ENGINE_V })), "aria-label": "Keep this program as it is", className: "pressable wpb-program-upgrade-keep", children: "Keep it as it is" })] })] })), program.config?.endless && !manual ? (_jsx(ContinuousWave, { weeks: weeks, deloadWeek: deloadWeek, activeWeek: activeWeek, nowWeek: endlessNowWeek, onPick: pickWeek, dim: manual })) : (_jsxs("div", { className: "wpb-hscroll wpb-choice-rail wpb-week-rail", "data-active-week": activeWeek, children: [weeks.map(w => (_jsx(UiChoice, { kind: "summary", className: "wpb-program-week-chip", label: `Week ${w}`, caption: weekChipCaption(w), selected: activeWeek === w, onClick: () => pickWeek(w), "data-deload": "false" }, w))), deloadWeek && _jsx(UiChoice, { kind: "summary", className: "wpb-program-week-chip", label: "Deload", "data-deload": "true", caption: weekChipCaption(deloadWeek), selected: activeWeek === deloadWeek, onClick: () => pickWeek(deloadWeek) })] })), program.config?.percentScheme === "531" && !manual && (() => {
                         const total = weeksOf(program);
                         const wave = PCT_SCHEMES["531"].weeks[activeWeek > total ? 3 : (activeWeek - 1) % 4];
                         const pcts = wave.sets.map(s => `${Math.round(s[0] * 100)}%`).join(" · ");
@@ -12627,7 +12638,8 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                 { k: "session-note", hasNote: !!e.note, label: e.note ? "Edit session note" : "Session note", icon: Pencil, on: () => setSessionNotesOpen(true) },
                                 { k: "progression", hidden: !focus && !program.config?.percentScheme, label: "Progression", icon: TrendingUp, on: () => setProgressionEdit(true) },
                                 ...(exNotes[e.id] || exSetup[e.id] ? [] : [{ k: "pin", label: "Pin a note", icon: Pin, on: () => setPinEdit(true) }]),
-                                ...(barFor(ex) ? [{ k: "plates", label: "Plates", icon: Dumbbell, on: () => setCalc({ bar: barFor(ex), weight: plateSet?.weight || "" }) }] : []),
+                                // The plate strip under the sets already opens the calculator; the tool covers only when it is absent.
+                                ...(barFor(ex) && (focus || !(pl && pl.plates.length > 0)) ? [{ k: "plates", label: "Plates", icon: Dumbbell, on: () => setCalc({ bar: barFor(ex), weight: plateSet?.weight || "" }) }] : []),
                             ].filter(c => !c.hidden).map(c => (c.element || _jsx("button", { type: "button", onClick: c.on, className: "pressable wpb-workout-tool", "aria-label": c.label, title: c.label, "aria-pressed": c.active === undefined ? undefined : !!c.active, "data-selected": c.active ? "true" : undefined, "data-has-note": c.hasNote ? "true" : undefined, children: _jsx(c.icon, { size: 19, "aria-hidden": true }) }, c.k))) }), pinEdit ? _jsx(PinnedNoteEditor, { ex, note: exNotes[e.id], setup: exSetup[e.id], onNote: onSetExNote,
                                 onSetup: onSetExSetup, onClose: () => setPinEdit(false) }, e.id) : (exNotes[e.id] || exSetup[e.id]) ? (_jsxs("button", { className: "pressable wpb-workout-pinned-note", onClick: () => setPinEdit(true), "aria-label": `Edit pinned note for ${ex.name}`, children: [_jsx(Pin, { size: 12, color: C.accentInk, className: "wpb-icon-no-shrink" }), _jsxs("div", { className: "wpb-layout-grow-min", children: [_jsx(SetupFieldsDisplay, { ex: ex, value: exSetup[e.id] }), exNotes[e.id] && _jsx("div", { className: "wpb-workout-pinned-note-text", children: exNotes[e.id] })] }), _jsx(Pencil, { size: 11, color: C.faint, className: "wpb-icon-no-shrink" })] })) : null, !focus && (() => {
                             // Per-set DDP: when each set has its own weight, the session-level banner would be

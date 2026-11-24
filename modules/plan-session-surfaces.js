@@ -57,8 +57,9 @@ export function SessionGamePlan({ review, restScale = 1, home = false }) {
     if (!review?.exercises.length) return null;
     const score = row => (row.opportunity ? 8 : 0) + (row.change.undone ? 4 : 0)
         + (hasTechnique(row) ? 2 : 0) + (row.loadToCheck ? 2 : 0) + (row.change.changed ? 1 : 0);
-    // On Home the hero's outline already lists every lift, so the game plan carries only lifts
-    // with something to act on (a PR chance, a technique, a load to check, a changed or held load) — or nothing.
+    // Home is a glance: its outline already lists every lift, so there the game plan carries only
+    // lifts with something to act on (or nothing). The session preview is the full briefing and
+    // keeps a coaching note for its top lifts.
     const ranked = [...review.exercises].filter(row => !home || score(row) > 0)
         .sort((a, b) => score(b) - score(a)).slice(0, 3);
     if (!ranked.length) return null;

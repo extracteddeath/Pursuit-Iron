@@ -199,14 +199,10 @@ try{
         await page.click('[data-testid="set-0-0"] button[aria-label="Mark set done"]');
         await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
         await clickEffort(2);
-        const plateButton=(await page.$$('.wpb-workout-tool'));
-        let platesOpened=false;
-        for(const button of plateButton){
-          if(await button.evaluate(el=>el.getAttribute('aria-label')==='Plates')){
-            await button.click();platesOpened=true;break;
-          }
-        }
-        assert.equal(platesOpened,true,'Plate calculator remains reachable');
+        // B1032: with a plate strip under the sets, the strip is the one calculator entry (no duplicate tool icon).
+        assert.equal(await page.$('.wpb-workout-tool[aria-label="Plates"]'),null,'No duplicate Plates tool beside the plate strip');
+        assert.ok(await page.$('.wpb-workout-plate-strip'),'Plate calculator remains reachable');
+        await page.$eval('.wpb-workout-plate-strip',el=>el.click());
         await page.waitForSelector('.wpb-backdrop [data-sheet-drag]');
         assert.ok(await page.$eval('.wpb-backdrop',el=>el.textContent.includes('Calculators')&&
           el.textContent.includes('Barbell')&&!!el.querySelector('input')),

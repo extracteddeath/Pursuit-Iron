@@ -128,7 +128,8 @@ try{
    const shortState=await page.evaluate(()=>{
     const saved=JSON.parse(localStorage.getItem('wpb:v1')||'null');
     return { choice:saved?.saved?.[0]?.sessionPlanChoices?.['upper:0:bb-bench'],
-      bench:document.querySelector('[data-game-plan-exercise="bb-bench"]')?.innerText,
+      // B1032: the preview row carries each lift's load; the game plan only lists lifts with news.
+      bench:(document.querySelector('[data-game-plan-exercise="bb-bench"]')||[...document.querySelectorAll('[data-nextex]')].find(r=>/Barbell Bench Press/.test(r.innerText)))?.innerText,
       row:document.querySelector('[data-game-plan-exercise="bb-row"]')?.innerText };
    });
    assert.ok(shortState.choice?.key,

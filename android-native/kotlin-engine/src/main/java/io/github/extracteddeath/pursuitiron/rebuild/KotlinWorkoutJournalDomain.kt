@@ -120,7 +120,6 @@ sealed interface KotlinJournalDecision {
 object KotlinWorkoutJournalDomain {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val zero=BigDecimal.ZERO
-    private val max=BigDecimal("100000")
     // Preserve every legacy receipt. Once ordinary edits reach their limit,
     // the remaining bounded slots are for unresolved work and Finish only.
     internal const val EDIT_LIMIT = 2048
@@ -252,13 +251,14 @@ object KotlinWorkoutJournalDomain {
                         target.targetRir?.let{it !in 0..10}==true ||
                         target.activeSeconds !in 1..3600 ||
                         target.restSeconds !in 0..3600 ||
-                        when(val load=target.load){
-                            DraftSetLoad.ExplicitBodyweight->false
-                            is DraftSetLoad.Verified ->
-                                load.value<BigDecimal.ZERO ||
-                                load.value>max ||
-                                load.value.stripTrailingZeros().scale()>3
-                        }
+                        // Raw journal receipts, including cold replay,
+                        // must use the exact same issued-load envelope as
+                        // custom swaps, generation and future progression.
+                        // A confirmed zero stock selector is not permission
+                        // to issue zero on a machine or dumbbell. Actual gym
+                        // inventory and athlete approval remain host-owned.
+                        !KotlinSetNumberAuthorityDomain.validIssuedLoad(
+                            target.load)
                     })return KotlinJournalDecision.Rejected(
                         KotlinJournalRefusal.SWAP_INVALID_TARGET)
                 val start=journal.snapshot.targets.indexOfFirst{

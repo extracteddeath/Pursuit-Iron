@@ -11,7 +11,11 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
     @get:Rule val temp=TemporaryFolder()
     private var current:NativeKotlinOwnerIdentity?=
         NativeKotlinOwnerIdentity("owner-1","athlete-1")
-    private val identity=NativeKotlinCurrentIdentity {current}
+    private var onIdentityRead:(()->Unit)?=null
+    private val identity=NativeKotlinCurrentIdentity {
+        onIdentityRead?.invoke()
+        current
+    }
     private val fence by lazy {
         NativeKotlinApprovalRevisionFence(temp.root.toPath())
     }
@@ -1232,7 +1236,7 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
         assertEquals(before.issued,(issued.open("owner-1","workout-2") as NativeCustomJournalResult.Durable).issued)
     }
 
-    @Test fun remainingCustomSkipKeepsActualAndSkipsAmplifierPlusLaterSetAtomicallyPerReceipt() {
+    @Test fun remainingCustomSkipKeepsActualAndSkipsAmplifierPlusLaterSetAtomically() {
         val base=cycle()
         val sets=listOf(set(16).copy(amplifier=CustomSetAmplifier(
             CustomAmplifierKind.MYO_REPS,5,15,followUpActiveSeconds=50)),set(16))
@@ -1249,7 +1253,31 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
         assertEquals(audit.issues.toString(),CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,audit.status)
         approve();enroll();prepareWeek();issueWeek()
         val actual=issued.record("owner-1","workout-2",recordSet("done",0)) as NativeCustomJournalResult.Durable
-        val result=issued.skipRemainingExercise("owner-1","workout-2",1,"slot-0") as NativeCustomJournalResult.Durable
+        val file=java.nio.file.Files.list(temp.root.toPath()).use { paths ->
+            paths.filter { it.fileName.toString().startsWith("issued-custom-") &&
+                it.fileName.toString().endsWith(".bin") }.findFirst().get()
+        }
+        val before=java.nio.file.Files.readAllBytes(file)
+        val stale=issued.skipRemainingExercise("owner-1","workout-2",0,"slot-0")
+        assertEquals(CustomWorkoutJournalRefusal.STALE_REVISION,
+            (stale as NativeCustomJournalResult.Rejected).journalReason)
+        assertArrayEquals(before,java.nio.file.Files.readAllBytes(file))
+        // The final ownership check must precede any durable skip. A later
+        // authorization callback must never observe a partially saved batch.
+        var observedPartial=false
+        var checks=0
+        onIdentityRead={
+            checks++
+            if(!before.contentEquals(java.nio.file.Files.readAllBytes(file)))
+                observedPartial=true
+        }
+        val result=try {
+            issued.skipRemainingExercise("owner-1","workout-2",1,"slot-0")
+                as NativeCustomJournalResult.Durable
+        } finally {onIdentityRead=null}
+        assertTrue(checks>=2)
+        assertFalse("partial skip was visible during authorization",observedPartial)
+        assertFalse(result.replayed)
         val saved=result.issued.journal
         assertEquals(3L,saved.revision)
         assertTrue(saved.canProposeFinish)

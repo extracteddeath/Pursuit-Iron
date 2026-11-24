@@ -429,11 +429,12 @@ internal fun PursuitSetEntryActions(
     }
     val largeText=LocalDensity.current.fontScale>=1.35f
     BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val availableWidth=maxWidth
         if(largeText || maxWidth<400.dp) {
             Column(Modifier.fillMaxWidth(),
                 verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
                 complete(Modifier.fillMaxWidth())
-                if(largeText || maxWidth<240.dp) {
+                if(largeText || availableWidth<240.dp) {
                     skip(Modifier.fillMaxWidth())
                     fail(Modifier.fillMaxWidth())
                 } else Row(Modifier.fillMaxWidth(),

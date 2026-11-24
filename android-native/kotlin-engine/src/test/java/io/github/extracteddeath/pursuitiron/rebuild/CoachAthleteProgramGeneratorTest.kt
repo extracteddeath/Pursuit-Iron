@@ -82,6 +82,47 @@ class CoachAthleteProgramGeneratorTest {
         checkNotNull(s.reviewed).trainingWeekdays.associateWith {1200},
         3,1,extra)
 
+    @Test fun independentlyReviewedGoalCannotPromoteZeroSelectorFromCachedGreenWeek() {
+        val input=GeneratedAdaptiveBlockFixture.generation()
+        val generated=CoachAthleteProgramGenerator.generate(input)
+        assertEquals(AthleteGenerationStatus.GENERATED_FOR_REVIEW,generated.status)
+        val original=checkNotNull(generated.candidate?.catalogReview)
+        val template=checkNotNull(original.composedRequest)
+        val athlete=checkNotNull(input.setup.reviewed)
+        val validated=CoachGoalProgramRealizationDomain.review(
+            athlete,input.phase,generated.intents,checkNotNull(input.policy),original)
+        assertEquals(GoalRealizationStatus.DELIVERED_FOR_REVIEW,validated.status)
+
+        // Simulate an independently presented, formerly green source:
+        // the exact stock is real (and includes 0), but zero dumbbell load
+        // is not a valid issued workout. Keep the cached week/audit intact.
+        val prior=athlete.gym.confirmedStock.getValue("dumbbells")
+            as VerifiedLoadStock.Totals
+        val withZero=prior.copy(loads=listOf(n("0"))+prior.loads)
+        val rewritten=template.copy(exercises=
+            template.exercises.mapIndexed{index,option->
+                val equipment=option.equipment as ComposerEquipment.Verified
+                option.copy(equipment=equipment.copy(
+                    plannedLoad=if(index==0)n("0") else equipment.plannedLoad,
+                    inventory=withZero))
+            })
+        val current=athlete.copy(gym=athlete.gym.copy(
+            confirmedStock=athlete.gym.confirmedStock+
+                ("dumbbells" to withZero)))
+        val candidate=original.copy(composedRequest=rewritten)
+        val review=CoachGoalProgramRealizationDomain.review(
+            current,input.phase,generated.intents,
+            checkNotNull(input.policy),candidate)
+        assertEquals(GoalRealizationStatus.UNRESOLVED,review.status)
+        assertTrue("Cannot approve merely because stock has a zero setting: "+
+            review.issues,review.issues.any{
+                it.field=="week.gym" &&
+                it.kind==GoalRealizationIssueKind.UNVERIFIED_CANDIDATE
+            })
+        assertFalse(review.mayIssueWorkout)
+        assertFalse(review.maySaveProgram)
+    }
+
     @Test fun realizationRejectsUnverifiedOrSourceMismatchedWeeksEvenWhenDoseLooksGood() {
         val input=GeneratedAdaptiveBlockFixture.generation()
         val generated=CoachAthleteProgramGenerator.generate(input)

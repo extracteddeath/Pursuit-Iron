@@ -35,6 +35,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -114,9 +117,61 @@ internal fun NativeSetValueFields(unit:String,load:String,reps:String,rir:String
     enabled:Boolean,onLoad:(String)->Unit,onReps:(String)->Unit,onRir:(String)->Unit,
     allowFailedAttempt:Boolean=false,showLoad:Boolean=true,
     loadError:Boolean=false,repsError:Boolean=false,rirError:Boolean=false,
-    showFieldHelp:Boolean=true
+    showFieldHelp:Boolean=true,
+    loadStep:(suspend (String,Int,Int)->String?)?=null
 ) {
-    if(showLoad)OutlinedTextField(
+    val stepScope=rememberCoroutineScope()
+    val currentLoad by rememberUpdatedState(load)
+    val currentEnabled by rememberUpdatedState(enabled)
+    val currentOnLoad by rememberUpdatedState(onLoad)
+    val currentStep by rememberUpdatedState(loadStep)
+    var stepping by remember{mutableStateOf(false)}
+    var stepMessage by remember{mutableStateOf<String?>(null)}
+    var editToken by remember{mutableStateOf(0)}
+    fun editLoad(input:String) {
+        if(input.length<=10 && input.all{it.isDigit()||it=='.'}) {
+            editToken++
+            stepMessage=null
+            onLoad(input)
+        }
+    }
+    fun stepWeight(direction:Int,count:Int) {
+        val review=currentStep ?:return
+        if(!currentEnabled || stepping)return
+        val start=currentLoad
+        val token=editToken
+        stepping=true
+        stepMessage=null
+        stepScope.launch {
+            try {
+                val result=review(start,direction,count)
+                if(currentEnabled && currentLoad==start && editToken==token &&
+                    currentStep!=null) {
+                    if(result!=null)currentOnLoad(result)
+                    else stepMessage="No verified weight in that direction."
+                }
+            } catch(cancelled:CancellationException) {
+                throw cancelled
+            } catch(_:Exception) {
+                if(currentLoad==start && editToken==token)
+                    stepMessage="Verified weight adjustment unavailable."
+            } finally {stepping=false}
+        }
+    }
+    if(showLoad && loadStep!=null) {
+        NativeSetCounterField(
+            label="Load ($unit)",value=load,enabled=enabled,
+            onValueChange=::editLoad,
+            decrement={stepWeight(-1,1)},increment={stepWeight(1,1)},
+            longDecrement={stepWeight(-1,3)},longIncrement={stepWeight(1,3)},
+            longStepCount=3,canDecrement=!stepping && load.isNotBlank(),
+            canIncrement=!stepping && load.isNotBlank(),
+            isError=loadError,keyboardType=KeyboardType.Decimal)
+        if(stepping || stepMessage!=null)
+            Text(if(stepping)"Checking equipment…" else stepMessage.orEmpty(),
+                style=MaterialTheme.typography.labelSmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+    } else if(showLoad)OutlinedTextField(
         value=load,
         onValueChange={input->
             if(input.length<=10 && input.all{it.isDigit()||it=='.'})onLoad(input)
@@ -238,7 +293,8 @@ private fun NativeSetCounterField(
     label:String,value:String,enabled:Boolean,onValueChange:(String)->Unit,
     decrement:()->Unit,increment:()->Unit,
     longDecrement:()->Unit,longIncrement:()->Unit,longStepCount:Int,
-    canDecrement:Boolean,canIncrement:Boolean,isError:Boolean=false
+    canDecrement:Boolean,canIncrement:Boolean,isError:Boolean=false,
+    keyboardType:KeyboardType=KeyboardType.Number
 ) {
     val field:@Composable (Modifier)->Unit={modifier->
         OutlinedTextField(
@@ -247,7 +303,7 @@ private fun NativeSetCounterField(
             singleLine=true,enabled=enabled,isError=isError,
             textStyle=MaterialTheme.typography.titleMedium.copy(
                 textAlign=TextAlign.Center),
-            keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number)
+            keyboardOptions=KeyboardOptions(keyboardType=keyboardType)
         )
     }
     val minus:@Composable (Modifier)->Unit={modifier->

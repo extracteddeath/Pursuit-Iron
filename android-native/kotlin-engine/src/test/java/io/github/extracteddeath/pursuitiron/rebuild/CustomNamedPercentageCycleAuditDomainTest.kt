@@ -63,6 +63,31 @@ class CustomNamedPercentageCycleAuditDomainTest {
             CustomNamedPercentageCycleAuditDomain.review(candidate,stamp(base),listOf(a,b)))
     }
 
+    @Test fun verifiedNamedStructureRetainsExactMetadataAndDoesNotEnableOrdinaryReview() {
+        val inventory=listOf(CustomExerciseAvailability("press",a.request.verifiedStock,false))
+        val ordinary=CustomTrainingCycleDomain.review(candidate,inventory)
+        assertEquals(CustomCycleReviewStatus.UNRESOLVED,ordinary.status)
+        assertNull(ordinary.verifiedDraft)
+        val reviewed=CustomTrainingCycleDomain.reviewNamedForAudit(candidate,inventory,
+            stamp(candidate),listOf(a,b))
+        assertEquals(reviewed.issues.toString(),
+            CustomCycleReviewStatus.READY_FOR_COACH_REVIEW,reviewed.status)
+        assertEquals(candidate,reviewed.verifiedDraft)
+        val third=CustomTrainingCycleDomain.week(reviewed,3)!!
+        val issuedIntent=third.days.single{it.weekday==2}.slots.single().sets.last()
+        assertEquals(n("190"),(issuedIntent.load as DraftSetLoad.Verified).value)
+        assertTrue(issuedIntent.percentageIntent!!.repOut)
+        assertEquals(1,issuedIntent.exactRepTarget)
+        assertFalse(reviewed.canIssueWorkout)
+        val missing=CustomTrainingCycleDomain.reviewNamedForAudit(candidate,inventory,
+            stamp(candidate),listOf(a))
+        assertNull(missing.verifiedDraft)
+        val unavailable=CustomTrainingCycleDomain.reviewNamedForAudit(candidate,
+            emptyList(),stamp(candidate),listOf(a,b))
+        assertNull(unavailable.verifiedDraft)
+        assertTrue(unavailable.issues.any{it.kind==CustomCycleIssueKind.UNAVAILABLE_EXERCISE})
+    }
+
     @Test fun structurallyValidWrongLoadRepOutOrReferenceCannotBecomeConsent() {
         val lowered=changeSecond{s->s.copy(load=DraftSetLoad.Verified(
             LoadUnit.LB,LoadBasis.MACHINE_STACK,n("185")))}

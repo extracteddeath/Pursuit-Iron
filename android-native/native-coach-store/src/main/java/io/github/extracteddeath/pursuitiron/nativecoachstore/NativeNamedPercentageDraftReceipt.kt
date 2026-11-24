@@ -31,7 +31,39 @@ data class NativeNamedPercentageDraftReceipt(
 
 internal object NativeNamedPercentageDraftReceiptCodec {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
-    fun valid(r:NativeNamedPercentageDraftReceipt,owner:String,cycle:CustomTrainingCycle):Boolean {
+    const val MAX_RECEIPTS=3000
+    private fun key(r:NativeNamedPercentageDraftReceipt)=CustomNamedPercentageWeekKey(
+        r.blockId,r.weekInBlock,r.selection.weekday,r.selection.slotId)
+
+    fun valid(r:NativeNamedPercentageDraftReceipt,owner:String,cycle:CustomTrainingCycle):Boolean =
+        validBatch(listOf(r),owner,cycle)
+
+    /** Every named override must have one receipt from the same exact
+     * reviewed base transaction. Structural binding is not approval. */
+    fun validBatch(receipts:List<NativeNamedPercentageDraftReceipt>,owner:String,
+        cycle:CustomTrainingCycle):Boolean {
+        if(receipts.size !in 1..MAX_RECEIPTS ||
+            receipts.map(::key).distinct().size!=receipts.size ||
+            cycle.blocks.any{b->b.days.any{d->d.slots.any{v->
+                v.sets.any{it.percentageIntent!=null}}}})
+            return false
+        val first=receipts.first()
+        if(receipts.any{it.stamp!=first.stamp || it.consentRevision!=first.consentRevision ||
+            it.historyRevision!=first.historyRevision ||
+            it.machineRosterRevision!=first.machineRosterRevision})
+            return false
+        val named=cycle.weekOverrides.flatMap{(blockId,edits)->
+            edits.filter{e->e.sets.any{it.percentageIntent!=null}}.map{edit->
+                CustomNamedPercentageWeekKey(blockId,edit.weekInBlock,edit.weekday,edit.slotId) to edit
+            }}
+        if(named.size!=receipts.size || named.map{it.first}.toSet()!=receipts.map(::key).toSet())
+            return false
+        val byKey=named.toMap()
+        return receipts.all{validOne(it,owner,cycle,byKey.getValue(key(it)))}
+    }
+
+    private fun validOne(r:NativeNamedPercentageDraftReceipt,owner:String,
+        cycle:CustomTrainingCycle,edit:CustomWeekSlotOverride):Boolean {
         val s=r.selection
         val p=r.stamp
         if(s.ownerKey!=owner || s.cycleId!=cycle.cycleId || p.cycleId!=cycle.cycleId ||
@@ -56,16 +88,6 @@ internal object NativeNamedPercentageDraftReceiptCodec {
             ?.singleOrNull{it.slotId==s.slotId}?:return false
         if(slot.exerciseId!=r.exerciseId || slot.machineInstanceId!=r.machineInstanceId ||
             block.purpose!=CustomBlockPurpose.TRAINING)
-            return false
-        val named=cycle.weekOverrides.flatMap{(blockId,edits)->
-            edits.filter{e->e.sets.any{it.percentageIntent!=null}}.map{blockId to it}}
-        // V1 receipt supports only the single explicitly reviewed amendment.
-        if(named.size!=1 || named.single().first!=r.blockId ||
-            cycle.blocks.any{b->b.days.any{d->d.slots.any{v->
-                v.sets.any{it.percentageIntent!=null}}}})
-            return false
-        val edit=named.single().second
-        if(edit.weekInBlock!=r.weekInBlock || edit.weekday!=s.weekday || edit.slotId!=s.slotId)
             return false
         val work=edit.sets.filter{it.type==DraftSetType.WORKING}
         return work.isNotEmpty() && work.all{set->

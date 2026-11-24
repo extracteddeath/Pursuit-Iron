@@ -98,6 +98,9 @@ try {
     });
     assert.ok(sheet.onTop, 'The routine sheet sits above the tab bar');
     assert.match(sheet.text, /Hotel gym push/); assert.match(sheet.text, /Not trained yet/);
+    // The picker slides up; press its Start action once it has a box on screen.
+    await page.waitForSelector('[aria-label="Start Hotel gym push"]', { visible: true });
+    await page.waitForFunction(() => { const r = document.querySelector('[aria-label="Start Hotel gym push"]').getBoundingClientRect(); return r.width > 0 && r.height > 0; }, { timeout: 5000 });
     await page.click('[aria-label="Start Hotel gym push"]');
     await page.waitForSelector('.wpb-workout');
     assert.match(await page.$eval('.wpb-workout', w => w.innerText), /Exercise 1 of 2/);

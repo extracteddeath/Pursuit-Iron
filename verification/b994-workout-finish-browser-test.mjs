@@ -75,6 +75,9 @@ try{
    await page.click('.wpb-live-dock button[aria-label="Resume workout"]');
   }
   if(!(await page.$('.wpb-finish-sheet')))await openFinish();
+  // The sheet's height follows the visual-viewport variable, which updates on the resize event
+  // after setViewport returns; measure once the layout has caught up (bounded wait).
+  await page.waitForFunction(()=>{const p=document.querySelector('.wpb-finish-sheet');return p&&p.getBoundingClientRect().bottom<=innerHeight+1;},{timeout:3000}).catch(()=>{});
   const m=await readMetrics();
   assert.ok(m.left>=-1&&m.right<=width+1&&m.top>=-1&&m.bottom<=height+1,
     'finish sheet stays in visible viewport: '+JSON.stringify({width,height,font,m}));

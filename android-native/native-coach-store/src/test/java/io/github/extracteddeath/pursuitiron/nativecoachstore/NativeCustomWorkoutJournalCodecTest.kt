@@ -67,6 +67,37 @@ class NativeCustomWorkoutJournalCodecTest {
             CustomWorkoutJournalDomain.reduce(reopened,finish))
     }
 
+    @Test fun exponentActivationAndMyoActualsKeepExactIdentityAcrossColdReplay() {
+        val base=snapshot()
+        val slot=base.slots.single()
+        val set=slot.sets.single()
+        val weighted=base.copy(slots=listOf(slot.copy(sets=listOf(set.copy(
+            prescription=set.prescription.copy(load=DraftSetLoad.Verified(
+                LoadUnit.LB,LoadBasis.MACHINE_STACK,java.math.BigDecimal("30"))))))))
+        val start=CustomWorkoutJournalDomain.begin("workout-1",weighted,"a".repeat(64))
+        val main=event("decimal-main",0,CustomWorkoutVisitPart.MAIN,10).copy(
+            performed=KotlinPerformedSet(java.math.BigDecimal("3E+1"),LoadUnit.LB,10,2,"A"))
+        val mini=event("decimal-mini",1,CustomWorkoutVisitPart.FOLLOW_UP,4).copy(
+            performed=KotlinPerformedSet(java.math.BigDecimal("30.00"),LoadUnit.LB,4,1,"A"))
+        val afterMain=accept(start,main)
+        val cold=NativeCustomWorkoutJournalCodec.decode(
+            NativeCustomWorkoutJournalCodec.encode(record(afterMain))).journal
+        assertEquals(afterMain,cold)
+        assertEquals(CustomWorkoutJournalDecision.Proposed(cold,true),
+            CustomWorkoutJournalDomain.reduce(cold,main))
+        val done=accept(accept(cold,mini),CustomWorkoutJournalOperation.Finish("finish",2))
+        val bytes=NativeCustomWorkoutJournalCodec.encode(record(done))
+        assertEquals(6,java.nio.ByteBuffer.wrap(bytes,4,4).int)
+        val reopened=NativeCustomWorkoutJournalCodec.decode(bytes)
+        assertEquals(record(done),reopened)
+        assertArrayEquals(bytes,NativeCustomWorkoutJournalCodec.encode(reopened))
+        val facts=(CustomWorkoutHistoryEvidenceDomain.project(reopened.journal)
+            as CustomHistoryEvidenceResult.Candidate).evidence.visits
+        assertEquals(listOf(main.performed,mini.performed),facts.map{it.actual})
+        assertEquals(CustomWorkoutJournalDecision.Proposed(reopened.journal,true),
+            CustomWorkoutJournalDomain.reduce(reopened.journal,mini))
+    }
+
     @Test fun machineVariantsPersistIndependentlyInMainAndAmplifierV4Receipts() {
         val base=initial()
         val main=accept(base,CustomWorkoutJournalOperation.Record(

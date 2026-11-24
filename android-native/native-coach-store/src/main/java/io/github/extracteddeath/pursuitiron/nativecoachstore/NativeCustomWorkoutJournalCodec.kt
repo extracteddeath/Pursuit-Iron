@@ -25,7 +25,7 @@ internal data class NativeCustomWorkoutJournalRecord(
 
 internal object NativeCustomWorkoutJournalCodec {
     private const val MAGIC=0x5049434A // PICJ
-    private const val VERSION=5
+    private const val VERSION=6
     const val MAX_BYTES=2_000_000
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
@@ -46,7 +46,7 @@ internal object NativeCustomWorkoutJournalCodec {
         writeBoolean(value!=null)
         if(value==null)return
         writeBoolean(value.load!=null)
-        value.load?.let {writeUTF(it.toPlainString())}
+        value.load?.let {writeUTF(if(version>=6)it.toString() else it.toPlainString())}
         writeBoolean(value.unit!=null)
         value.unit?.let{writeUTF(it.name)}
         writeInt(value.reps)
@@ -224,7 +224,13 @@ internal object NativeCustomWorkoutJournalCodec {
             (it.operation as? CustomWorkoutJournalOperation.Record)
                 ?.visit?.stage?.let { stage->stage>1 }==true
         }
-        val version=if(stageTagged) VERSION else if(machineTagged) 4
+        // Plain decimal text loses negative scale; preserve the exact
+        // submitted observation for receipt equality and lost-ack retries.
+        val exactDecimal=state.receipts.any{
+            ((it.operation as? CustomWorkoutJournalOperation.Record)
+                ?.performed?.load?.scale() ?: 0)<0
+        }
+        val version=if(exactDecimal) VERSION else if(stageTagged) 5 else if(machineTagged) 4
             else if(notes) 3 else if(swapped) 2 else 1
         val snapshot=NativeKotlinCustomWorkoutSnapshotCodec.encode(state.snapshot)
         val original=if(swapped)

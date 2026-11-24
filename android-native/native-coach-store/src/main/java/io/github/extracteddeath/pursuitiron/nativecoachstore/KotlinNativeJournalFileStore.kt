@@ -79,7 +79,7 @@ private data class SavedReceipts(
 
 private object NativeJournalBinary {
     private const val MAGIC = 0x50494A32 // "PIJ2" (not a legacy JS journal)
-    private const val VERSION = 5
+    private const val VERSION = 6
     private const val MAX_BYTES = 2_000_000
 
     fun hash(raw: ByteArray): String =
@@ -115,7 +115,14 @@ private object NativeJournalBinary {
             (it.operation as? KotlinJournalOperation.RecordSet)
                 ?.performed?.machineInstanceId!=null
         }
-        val version=if(machineTagged) VERSION else if(notes) 4 else if(swapped) 3 else 2
+        // V2–V5 normalized decimal scale, so an exact lost-ack retry of
+        // 30.00 (or 3E+1) could become a same-ID collision after cold replay.
+        // Preserve earlier byte formats whenever they are already lossless.
+        val exactDecimal=saved.receipts.any {
+            val load=(it.operation as? KotlinJournalOperation.RecordSet)?.performed?.load
+            load!=null && load.scale()!=maxOf(0,load.stripTrailingZeros().scale())
+        }
+        val version=if(exactDecimal) VERSION else if(machineTagged) 5 else if(notes) 4 else if(swapped) 3 else 2
         val body=ByteArrayOutputStream()
         DataOutputStream(body).use { out ->
             with(out) {
@@ -167,7 +174,7 @@ private object NativeJournalBinary {
                                 val actualLoad=performed.load
                                 writeBoolean(actualLoad!=null)
                                 if(actualLoad!=null)
-                                    writeUTF(actualLoad.stripTrailingZeros().toPlainString())
+                                    writeUTF(if(version>=6)actualLoad.toString() else actualLoad.stripTrailingZeros().toPlainString())
                                 optional(performed.unit?.name)
                                 writeInt(performed.reps)
                                 val actualRir=performed.actualRir

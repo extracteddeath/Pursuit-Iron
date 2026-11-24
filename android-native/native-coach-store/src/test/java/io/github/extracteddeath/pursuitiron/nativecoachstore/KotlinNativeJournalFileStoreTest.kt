@@ -36,6 +36,34 @@ class KotlinNativeJournalFileStoreTest {
         return result as NativeJournalFileResult.Durable
     }
 
+    @Test fun submittedDecimalScaleAndMachineSurviveColdReopenAndExactRetry() {
+        val s=store()
+        ok(s.issue("owner-1",snapshot,identity))
+        val a=completed("decimal-a",0,"set-1",10).copy(performed=
+            KotlinPerformedSet(BigDecimal("30.00"),LoadUnit.LB,10,2,"A"))
+        val b=completed("decimal-b",1,"set-2",8).copy(performed=
+            KotlinPerformedSet(BigDecimal("3E+1"),LoadUnit.LB,8,2,"B"))
+        val first=ok(s.append("owner-1",snapshot,identity,a))
+        assertEquals(first.journal,ok(store().open("owner-1",snapshot,identity)).journal)
+        assertTrue(ok(store().append("owner-1",snapshot,identity,a)).replayed)
+        val second=ok(store().append("owner-1",snapshot,identity,b))
+        assertEquals(second.journal,ok(store().open("owner-1",snapshot,identity)).journal)
+        assertTrue(ok(store().append("owner-1",snapshot,identity,b)).replayed)
+        val different=b.copy(performed=b.performed!!.copy(reps=9))
+        assertEquals(NativeJournalFileResult.Rejected(
+            NativeJournalFileRefusal.JOURNAL_REJECTED,KotlinJournalRefusal.EVENT_ID_COLLISION),
+            store().append("owner-1",snapshot,identity,different))
+        val finish=KotlinJournalOperation.Finish("decimal-finish",2)
+        val saved=ok(store().append("owner-1",snapshot,identity,finish))
+        assertEquals(saved.journal,ok(store().open("owner-1",snapshot,identity)).journal)
+        assertTrue(ok(store().append("owner-1",snapshot,identity,finish)).replayed)
+        val bytes=Files.list(temporary.root.toPath()).use { paths ->
+            Files.readAllBytes(paths.filter{it.fileName.toString().endsWith(".bin")}
+                .findFirst().orElseThrow())
+        }
+        assertEquals(6,java.nio.ByteBuffer.wrap(bytes,8,4).int)
+    }
+
     @Test fun machineTaggedReceiptsAreV5DurableAndColdReplayPreservesAAndB() {
         val s=store()
         ok(s.issue("owner-1",snapshot,identity))

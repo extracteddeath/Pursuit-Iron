@@ -167,13 +167,21 @@ fun ProgramEditorScreen(vm: AppViewModel) {
                             val on = w.i("week") == e.i("weekIndex")
                             val r by animateDpAsState(if (on) 16.dp else 28.dp, Motion.spatialFast(), label = "wk")
                             val label = if (w.b("deload")) (if (w.i("week") <= e.i("weeksTotal")) "Week ${w.i("week")} · DL" else "Deload") else "Week ${w.i("week")}"
+                            // One dot per training day, filled once logged: the chips read as the block's weeks × days grid.
+                            val dots = w.optJSONArray("dayDots")?.let { a -> List(a.length()) { a.optBoolean(it) } } ?: emptyList()
                             Column(Modifier.widthIn(min = 104.dp).height(56.dp).clip(RoundedCornerShape(r)).background(if (on) cs.primary else androidx.compose.ui.graphics.Color.Transparent)
                                 .then(if (on) Modifier else Modifier.border(1.5.dp, cs.outlineVariant, RoundedCornerShape(r)))
                                 .clickable { vm.editWeek(w.i("week")) }
-                                .semantics { role = Role.RadioButton; selected = on; contentDescription = "$label: ${w.i("sets")} sets, ${w.i("minutes")} minutes" + if (w.i("week") == cur) ", this week" else "" }
+                                .semantics { role = Role.RadioButton; selected = on; contentDescription = "$label: ${w.i("sets")} sets, ${w.i("minutes")} minutes" +
+                                    (if (dots.isNotEmpty()) ", ${dots.count { it }} of ${dots.size} days done" else "") + if (w.i("week") == cur) ", this week" else "" }
                                 .padding(horizontal = 14.dp), verticalArrangement = Arrangement.Center) {
                                 val fg = if (on) cs.onPrimary else cs.onSurface
-                                Text(label, style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = fg)
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text(label, style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = fg)
+                                    if (dots.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                        dots.forEach { d -> Box(Modifier.size(6.dp).clip(CircleShape).background(if (d) (if (on) cs.onPrimary else cs.primary) else fg.copy(alpha = 0.25f))) }
+                                    }
+                                }
                                 Text(if (w.i("sets") == 0) "No sets yet" else "${w.i("sets")} sets · ${com.pursuitiron.app.ui.common.minutesLabel(w.i("minutes"))}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = fg.copy(alpha = 0.8f))
                             }
                         }

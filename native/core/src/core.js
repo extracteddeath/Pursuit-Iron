@@ -3534,7 +3534,15 @@ export function editor({ programId, weekIndex = 1 } = {}) {
     const weekTotals = (w) => p.days.reduce((acc, d) => { d.exercises.forEach((id, slot) => { let c = null; try { c = E.computeCell(p, d, id, slot, w); } catch { c = null; } acc.sets += Number(c?.sets) || 0; });
         try { acc.minutes += E.estimateMinutes(p, d, w) || 0; } catch { /* unknown */ } return acc; }, { sets: 0, minutes: 0 });
     const lastWeek = E.weeksOf(p) + (p.config?.deload && !p.config?.endless ? 1 : 0);
-    const weeks = Array.from({ length: Math.max(1, lastWeek) }, (_, k) => k + 1).map((w) => { const t = weekTotals(w); return { week: w, deload: w > E.weeksOf(p) || E.isSchemeDeloadWeek(p.config?.percentScheme, w, E.weeksOf(p)), sets: Math.round(t.sets), minutes: Math.round(t.minutes) }; });
+    // Which of each week's days are logged (the web's week-chip dots): sessions from this pass of the block only.
+    const loggedDays = new Set();
+    try {
+        const H = history(), earlier = E.earlierPassIds(p, H);
+        E.historyForProgram(H, p).forEach((h) => { if (!h || h.weekIndex == null || (h.id != null && earlier.has(h.id))) return;
+            const idx = E.historyDayIndex(p.days, h); const id = idx >= 0 ? p.days[idx].id : h.dayId; if (id) loggedDays.add(`${id}:${h.weekIndex}`); });
+    } catch { /* no history yet */ }
+    const dayDots = (w) => { let days = []; try { days = E.daysInWeek(p, w) || []; } catch { days = []; } return days.map((d) => loggedDays.has(`${d.id}:${w}`)); };
+    const weeks = Array.from({ length: Math.max(1, lastWeek) }, (_, k) => k + 1).map((w) => { const t = weekTotals(w); return { week: w, deload: w > E.weeksOf(p) || E.isSchemeDeloadWeek(p.config?.percentScheme, w, E.weeksOf(p)), sets: Math.round(t.sets), minutes: Math.round(t.minutes), dayDots: dayDots(w) }; });
     const strip = Object.keys(sched).length ? [1, 2, 3, 4, 5, 6, 0].map((k) => ({ weekday: WD[k], dayId: sched[k] || null, label: sched[k] ? (p.days.find((d) => d.id === sched[k])?.label || null) : null })) : [];
     return { programId: p.id, name: p.name, weekIndex: wk, weeksTotal: E.weeksOf(p), manual, cycleId: p.cycleId || null, percent: !!p.config?.percentScheme, weeks, strip, buildOwn: !!stored?.buildOwn,
         currentWeek: (() => { const nx = upNext(); return nx && nx.program.id === p.id ? nx.weekIndex : null; })(),

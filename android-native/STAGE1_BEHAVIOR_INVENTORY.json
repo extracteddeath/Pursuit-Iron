@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "webCommit": "29faa204212a4d54088b4870341350e605939185",
   "kotlinCommit": "05c02ff2362736439ca1fcabfd7d477b2fa366",
-  "notes": "Supplementary detailed fixture inventory subordinate to STAGE1_BEHAVIOR_INVENTORY.md (canonical stable behavior IDs). These are NOT additional denominator rows. Cross-links preserve original findings and web-source map. Stage-specific checks can span parent stages; pass only after applicable checks complete. Candidate test names are not verification. Optional candidates do not waive any parent requirement.",
+  "notes": "Supplementary detailed fixture inventory subordinate to STAGE1_BEHAVIOR_INVENTORY.md (canonical stable behavior IDs). These are NOT additional denominator rows. Cross-links preserve original findings and web-source map. Stage-specific checks can span parent stages; pass only after applicable checks complete. Candidate test names are not verification. Domain source and actual assertion anchors are maintained separately. Optional candidates do not waive any parent requirement.",
   "counts": {
     "requiredChecks": 120,
     "optionalReviewChecks": 5,
@@ -901,7 +901,7 @@
       "scope": "required",
       "webSource": "modules/next-engine/techniques.js",
       "candidateFixtures": [
-        "CustomWorkoutTimingDomain.kt",
+        "CustomWorkoutSnapshotDomainTest",
         "CustomHistoricalTechniqueGroupingDomainTest"
       ],
       "acceptance": "Correct active seconds/rest and dose credit; preserve across phase/weeks, no fabricated normal sets or silent extra fatigue.",
@@ -1043,7 +1043,7 @@
       "webSource": "modules/program-manual-targets.js",
       "candidateFixtures": [
         "CustomTrainingCycleDomainTest",
-        "CustomCoachWeekEditDomain.kt"
+        "NativeKotlinCustomAuthoringDraftCoordinatorTest"
       ],
       "acceptance": "Week-specific set/load/rep/RIR/rest/amplifier/percentage override persists through phase and issuance.",
       "state": "MAP",

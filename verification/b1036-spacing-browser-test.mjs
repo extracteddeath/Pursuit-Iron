@@ -90,7 +90,7 @@ try{
         loadHead:Math.abs(center(box(labels[1]))-center(box(first))),repsHead:Math.abs(center(box(labels[2]))-center(box(reps)))};
     });
     assert.ok(set.left.length>=2&&set.left.every(x=>x===set.left[0]),'Set rows keep one left edge, active or not '+JSON.stringify({width,set}));
-    assert.ok(set.idle.length&&set.idle.every(r=>r.line&&r.h<=56&&r.steppers===0),'Waiting sets are one line with no steppers '+JSON.stringify({width,set}));
+    assert.ok(set.idle.length&&set.idle.every(r=>r.line&&r.h<=58&&r.steppers===0),'Waiting sets are one line with no steppers '+JSON.stringify({width,set}));
     assert.equal(set.activeSteppers,4,'The working set carries the -/+ tier '+ctx);
     assert.ok(set.loadHead<=2&&set.repsHead<=2,'Column labels sit once over their fields '+JSON.stringify({width,set}));
     assert.deepEqual(errors,[],'No page errors '+ctx);

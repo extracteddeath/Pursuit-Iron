@@ -7224,7 +7224,7 @@ background:var(--pi-color-card)!important;
   grid-column:1;width:32px!important;min-width:32px!important;height:44px;min-height:44px!important;padding:0!important;
 }
 #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(2){
-  grid-column:2;min-height:44px;display:flex;align-items:center;padding:0!important;text-align:left!important;
+  grid-column:2;min-height:44px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:0!important;text-align:left!important;
 }
 #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(2) [data-reference-action]{min-height:44px;padding:0!important;}
 #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(3){grid-column:3;padding:0!important;}
@@ -7235,18 +7235,18 @@ background:var(--pi-color-card)!important;
 #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls .wpb-set-complete{width:40px!important;min-width:40px!important;height:44px!important;}
 #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(3)>div:first-child,
 #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(4)>div:first-child{
-  flex-wrap:wrap;justify-content:space-between;gap:4px!important;
+  flex-wrap:wrap;justify-content:center;gap:4px 8px!important;
 }
 #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls .wpb-num-input{order:-1;flex:1 1 100%!important;width:100%;}
 #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls .wpb-set-stepper{
-  width:40px!important;min-width:40px!important;flex:0 0 40px!important;height:32px!important;min-height:32px!important;
+  width:auto!important;min-width:26px!important;max-width:40px;flex:1 1 0!important;height:32px!important;min-height:32px!important;
   border-radius:16px!important;border-color:transparent!important;background:var(--pi-m3e-secondary-container,var(--pi-color-control))!important;
   color:var(--wpb-theme-text)!important;font-size:18px;line-height:1;
 }
 #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls .wpb-set-stepper::after{top:0;transform:none;height:40px;}
 #root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls>.wpb-set-index,
-#root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls>div:nth-child(2),
 #root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls .wpb-set-complete{height:36px!important;min-height:36px!important;}
+#root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls>div:nth-child(2){min-height:36px;}
 @media(max-width:360px){
   #root .wpb-workout[data-focus-mode="false"] .wpb-set-head,
   #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls{

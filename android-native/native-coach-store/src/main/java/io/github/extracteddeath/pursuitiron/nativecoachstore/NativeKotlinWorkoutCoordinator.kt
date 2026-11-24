@@ -360,6 +360,20 @@ class NativeKotlinWorkoutCoordinator(
     }.getOrElse {NativeJournalFileResult.Rejected(
         NativeJournalFileRefusal.STORAGE_UNAVAILABLE)}
 
+    internal fun skipRemainingExercise(
+        ownerKey:String,athleteId:String,workoutId:String,
+        expectedRevision:Long,exerciseId:String
+    ):NativeJournalFileResult = runCatching {
+        revisionFence.withOwnerTransaction(ownerKey) {
+            store.skipRemainingStored(ownerKey,workoutId,expectedRevision,exerciseId) { owner,source ->
+                source.athleteId==athleteId && runCatching {
+                    authority.canAccessIssuedWorkout(owner,source)
+                }.getOrDefault(false)
+            }
+        }
+    }.getOrElse {NativeJournalFileResult.Rejected(
+        NativeJournalFileRefusal.STORAGE_UNAVAILABLE)}
+
     fun append(
         ownerKey:String,workoutId:String,operation:KotlinJournalOperation
     ):NativeJournalFileResult =

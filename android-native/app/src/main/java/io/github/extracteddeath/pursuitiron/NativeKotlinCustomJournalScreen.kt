@@ -1219,6 +1219,18 @@ internal fun NativeKotlinCustomJournalScreen(
                                 existing=observed,locked=busy||finished||!machineChoices.ready||machineChoices.busy,
                                 saving=busy,saveError=error,
                                 machineInstanceId=mainMachineId,
+                                loadStep=if(observed==null && !finished &&
+                                    !requiresNewMachineChoice &&
+                                    set.prescription.load is DraftSetLoad.Verified) {
+                                    {text,direction,count->
+                                        withContext(Dispatchers.IO) {
+                                            val target=set.prescription.load as DraftSetLoad.Verified
+                                            val stock=host.reviewIssuedCustomLevelingStock(workoutId,
+                                                slot.slotId,mainMachineId,set.setKey)
+                                            KotlinSetDraftStepDomain.stepLoad(text,direction,count,target,stock)
+                                        }
+                                    }
+                                } else null,
                                 workoutId=workoutId,
                                 athleteId=current.originalSnapshot.stamp.athleteId,
                                 exerciseId=slot.exerciseId,
@@ -1788,7 +1800,8 @@ private fun NativeKotlinCustomVisitEditor(
     precedingDropPerformed:KotlinPerformedSet?=null,
     precedingDropReceiptRevision:Long?=null,
     amplifierSummary:CustomAmplifierSetSummary?=null,
-    plannedLoadNote:String?=null
+    plannedLoadNote:String?=null,
+    loadStep:(suspend (String,Int,Int)->String?)?=null
 ) {
     val prescription=set.prescription
     val follower=prescription.amplifier
@@ -1987,6 +2000,7 @@ private fun NativeKotlinCustomVisitEditor(
                     KotlinSetEntryRefusal.MISSING_REPS,KotlinSetEntryRefusal.INVALID_REPS),
                 rirError=invalid==KotlinSetEntryRefusal.INVALID_RIR,
                 allowFailedAttempt=saved?.outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT,
+                loadStep=loadStep,
                 showFieldHelp=false
             )
             if(verified!=null && KotlinVerifiedPlateLayoutDomain.supportsBasis(verified.basis)) {

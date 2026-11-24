@@ -282,13 +282,15 @@ object KotlinProgressionTimelineDomain {
                 latestStored.journal.snapshot.calendarDay)
             return rejected(KotlinTimelineReviewStatus.CHANGED_TRAINING_DAY, ids, count)
 
-        // Filtering by purpose cannot conceal a program, gym, athlete or
-        // coaching-rules revision that occurred BETWEEN the matched
-        // workouts. A later "return" to an old source is not continuity.
-        val between=appearances.dropWhile {
-            it.second.workoutId!=olderHistory.workoutId
-        }.takeWhile {it.second.workoutId!=latestHistory.workoutId}
-        if(between.any {it.second.source!=newestSource})
+        // Purpose/day/station filtering cannot conceal source drift inside
+        // OR AFTER the matched pair. A later exercise appearance under a
+        // different program/gym/profile is not proof that the older pair
+        // still belongs to the current coaching source. Two fresh matches
+        // under one source establish a new independent evidence window.
+        val sourceWindow=appearances.filter {
+            it.first.completionOrder>=olderStored.completionOrder
+        }
+        if(sourceWindow.any {it.second.source!=newestSource})
             return rejected(KotlinTimelineReviewStatus.CHANGED_INTERVENING_SOURCE,
                 ids,count)
 

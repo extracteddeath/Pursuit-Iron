@@ -27,7 +27,8 @@ enum class CustomCoachIssueKind {
     CONTINUITY_POLICY_MISSING, CONTINUITY_POLICY_INVALID,
     UNJUSTIFIED_BLOCK_VOLUME_DROP, UNJUSTIFIED_TRAINING_VOLUME_SPIKE,
     DIRECT_MUSCLE_DROP, DIRECT_MUSCLE_SPIKE, REVIEW_CAP_EXCEEDED,
-    PROSPECTIVE_CONTEXT_INVALID
+    PROSPECTIVE_CONTEXT_INVALID,
+    RECOVERY_MUSCLE_DOSE_INCREASE
 }
 
 data class CustomCoachIssue(
@@ -398,6 +399,33 @@ object CustomCycleCoachAuditDomain {
                 }
             }
         }
+        // A recovery label is not permission to increase training dose.
+        // Compare each recovery week with the last real training week,
+        // never with another recovery or performance-test bridge. Equal
+        // set counts are allowed (a deload may reduce load or effort instead);
+        // this is a volume ceiling, NOT proof of a complete deload.
+        var lastTraining:CustomCoachWeekMeasurement?=null
+        for(week in measurements) {
+            if(week.blockPurpose==CustomBlockPurpose.TRAINING) {
+                lastTraining=week
+                continue
+            }
+            if(week.blockPurpose!=CustomBlockPurpose.RECOVERY)continue
+            val baseline=lastTraining ?:continue
+            if(week.workingSets>baseline.workingSets)
+                add(CustomCoachIssueKind.UNJUSTIFIED_TRAINING_VOLUME_SPIKE,
+                    "week.${week.absoluteWeek}.block.${week.blockId}",
+                    "Recovery week increases working sets from ${baseline.workingSets} to ${week.workingSets} compared with training week ${baseline.absoluteWeek}. Review recovery volume before approval.")
+            for(muscle in baseline.totalSetCredits.keys.intersect(week.totalSetCredits.keys)) {
+                val prior=baseline.totalSetCredits.getValue(muscle)
+                val next=week.totalSetCredits.getValue(muscle)
+                if(next>prior)
+                    add(CustomCoachIssueKind.RECOVERY_MUSCLE_DOSE_INCREASE,
+                        "week.${week.absoluteWeek}.${muscle.name}",
+                        "Recovery week increases total muscle-credit dose above the last training week, including indirect work.")
+            }
+        }
+
         // Compare successive NORMAL training weeks, including overrides
         // and different phases. A RECOVERY or PERFORMANCE_TEST block is an
         // intentional short-lived workload change, not a new long-term

@@ -173,11 +173,11 @@ object CoachSessionPrescriptionDomain {
         if(workingValue<=zero)return null
         val result=EquipmentLoadDomain.inspect(eq.inventory,
             workingValue,eq.unit)
-        val lower=(result as? LoadInspection.Confirmed)?.nextBelow ?:return null
+        val lower=(result as? LoadInspection.Confirmed)?.nextEasier ?:return null
         if(!KotlinSetNumberAuthorityDomain.validPrescribedLoad(
                 lower,eq.inventory?.basis ?:return null) ||
-            lower>=workingValue ||
-            workingValue.subtract(lower)>maxDecrease)return null
+            result.basis.compareDifficulty(lower,workingValue)>=0 ||
+            workingValue.subtract(lower).abs()>maxDecrease)return null
         return load(option,lower)
     }
 
@@ -199,14 +199,14 @@ object CoachSessionPrescriptionDomain {
         // A lower counterweight makes the lift HARDER, not a back-off.
         // Never invert the load convention for a special loading scheme.
         val assistance=(option.equipment as? ComposerEquipment.Verified)
-            ?.inventory?.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT
+            ?.inventory?.basis?.higherSettingIncreasesDifficulty==false
         if(assistance && p.scheme==SetLoadScheme.LAST_SET_BACKOFF)return null
         if(p.scheme==SetLoadScheme.LAST_SET_BACKOFF && visit.sets<2)return null
 
         val warmups=p.warmups.mapIndexed {i,w->
             val verified=load(option,w.load) ?:return null
-            if(workingValue==null || (if(assistance)
-                    w.load<=workingValue else w.load>=workingValue))return null
+            if(workingValue==null ||
+                verified.basis.compareDifficulty(w.load,workingValue)>=0)return null
             DraftPrescribedSet(option.exerciseId+":d"+visit.dayIndex+":w"+i,
                 DraftSetType.WARMUP,i,verified,RepBand(w.reps,w.reps),null,
                 w.activeSeconds,w.restSeconds)

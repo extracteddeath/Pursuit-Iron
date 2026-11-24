@@ -30,7 +30,9 @@ data class TieredLinearExposure(
     /** Shortened, substituted, recovery or interrupted exposure is not a
      * normal tier attempt. Preserve it as history, not progression evidence. */
     val comparableTraining: Boolean,
-    val sourceSlotId: String? = null
+    val sourceSlotId: String? = null,
+    /** Verified recovery is replayed at 60% of this exact prior tier reference. */
+    val recoveryReference: BigDecimal? = null
 )
 data class TieredLinearRequest(
     val nextWorkoutId: String,
@@ -97,6 +99,14 @@ object TieredLinearProgressionDomain {
             !recovery && i==count-1)
     }
 
+    private fun recoveryLoad(scope:BasicProgressionScope,stock:VerifiedLoadStock,
+        reference:BigDecimal):BigDecimal? {
+        val light=BasicProgrammedPercentageLoadDomain.verifiedPhysicalLoad(
+            scope,stock,reference.multiply(recoveryFactor))
+            as? ProgrammedPhysicalLoadReview.Confirmed ?:return null
+        return light.value.takeIf{it>BigDecimal.ZERO && it<reference}
+    }
+
     fun review(request:TieredLinearRequest):TieredLinearResult {
         fun no(reason:TieredLinearRefusal)=TieredLinearResult.Refused(reason)
         if(request.nextWorkoutId.isBlank() || !request.scope.valid() ||
@@ -136,22 +146,30 @@ object TieredLinearProgressionDomain {
             return no(TieredLinearRefusal.INVALID_LEDGER)
         val comparable=if(request.sourceSlotId==null) sameScope
             else sameScope.filter{it.sourceSlotId==request.sourceSlotId}
-        if(comparable.lastOrNull()?.comparableTraining==false)
+        if(comparable.lastOrNull()?.let{!it.comparableTraining && it.recoveryReference==null}==true)
             return no(TieredLinearRefusal.NONCOMPARABLE_LATEST)
         for(exposure in comparable) {
-            if(!exposure.comparableTraining)continue
+            val isRecovery=exposure.recoveryReference!=null
+            if(isRecovery && (exposure.comparableTraining ||
+                    exposure.recoveryReference?.compareTo(state.load)!=0))
+                return no(TieredLinearRefusal.INCONSISTENT_ISSUED_STATE)
+            if(!exposure.comparableTraining && !isRecovery)continue
+            val expectedLoad=if(isRecovery) {
+                recoveryLoad(request.scope,stock,state.load)
+                    ?:return no(TieredLinearRefusal.NO_SAFE_RESET_OR_RECOVERY)
+            } else state.load
             val issued=exposure.issuedTargets
             val facts=exposure.observations.sortedBy{it.workingOrdinal}
             if(exposure.issuedStage!=state.stage || issued.size !in 1..20 ||
                 issued.map{it.ordinal}!=issued.indices.toList() ||
-                issued.any{it.load.compareTo(state.load)!=0 ||
+                issued.any{it.load.compareTo(expectedLoad)!=0 ||
                     it.minimumReps!=stageReps(request.tier,state.stage)} ||
-                issued.map{it.repOut}!=issued.indices.map{it==issued.lastIndex})
+                issued.map{it.repOut}!=issued.indices.map{!isRecovery && it==issued.lastIndex})
                 return no(TieredLinearRefusal.INCONSISTENT_ISSUED_STATE)
             if(facts.size!=issued.size || facts.map{it.workingOrdinal}!=issued.indices.toList() ||
                 facts.any{fact ->
-                    fact.issuedLoad?.compareTo(state.load)!=0 ||
-                    fact.actualLoad?.compareTo(state.load)!=0 ||
+                    fact.issuedLoad?.compareTo(expectedLoad)!=0 ||
+                    fact.actualLoad?.compareTo(expectedLoad)!=0 ||
                     (fact.actualRir!=null && fact.actualRir !in 0..10) ||
                     (fact.issuedRir!=null && fact.issuedRir !in 0..10) ||
                     when(fact.outcome) {
@@ -161,6 +179,9 @@ object TieredLinearProgressionDomain {
                     }
                 })
                 return no(TieredLinearRefusal.INVALID_ATTEMPT)
+            // A verified light exposure cannot earn a raise, trigger a stall,
+            // or replace the tier reference even when rep targets are exceeded.
+            if(isRecovery)continue
             val prior=state
             var proof:KotlinFutureLoadFact?=null
             val passed=facts.indices.all{i->
@@ -207,13 +228,9 @@ object TieredLinearProgressionDomain {
             transitions+=TieredLinearTransition(exposure.workoutId,prior,state,decision,proof)
         }
         val issuedState=if(request.recovery) {
-            val light=BasicProgrammedPercentageLoadDomain.verifiedPhysicalLoad(
-                request.scope,stock,state.load.multiply(recoveryFactor))
-                as? ProgrammedPhysicalLoadReview.Confirmed
+            val light=recoveryLoad(request.scope,stock,state.load)
                 ?:return no(TieredLinearRefusal.NO_SAFE_RESET_OR_RECOVERY)
-            if(light.value<=BigDecimal.ZERO || light.value>=state.load)
-                return no(TieredLinearRefusal.NO_SAFE_RESET_OR_RECOVERY)
-            state.copy(load=light.value)
+            state.copy(load=light)
         } else state
         return TieredLinearResult.Candidate(state,
             Collections.unmodifiableList(targets(request.tier,issuedState,

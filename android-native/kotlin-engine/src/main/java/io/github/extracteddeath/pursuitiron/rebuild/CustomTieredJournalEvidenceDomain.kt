@@ -62,7 +62,8 @@ object CustomTieredJournalEvidenceDomain {
         val authored = slot.machineInstanceId ?: return false
         if (slot.exerciseId != scope.exerciseId ||
             !KotlinMachineAlternativesDomain.validInstanceId(authored) ||
-            authored == requested) return false
+            KotlinMachineAlternativesDomain.normalizeMachineId(authored) ==
+                KotlinMachineAlternativesDomain.normalizeMachineId(requested)) return false
         return CustomVerifiedSwappedStationEvidenceDomain.machinesForVerifiedSlot(
             CustomCoachingHistoricalSession(completionOrder, original, evidence), slotId)
             ?.singleOrNull() == KotlinMachineAlternativesDomain.normalizeMachineId(authored)

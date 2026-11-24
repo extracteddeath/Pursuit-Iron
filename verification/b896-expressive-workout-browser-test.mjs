@@ -140,9 +140,7 @@ try {
     if(!heading||!first)return null;
     const labels=[...heading.querySelectorAll(':scope > span')];
     const fields=[...first.children];
-    if(window.innerWidth<=420)return {compact:true,
-      load:getComputedStyle(fields[2],'::before').textAlign,
-      reps:getComputedStyle(fields[3],'::before').textAlign};
+    // B1043: one header grid at every width, so the labels are checked against the fields everywhere.
     return {compact:false,loadOffset:trackCenter(labels[1])-trackCenter(fields[2]),
       repsOffset:trackCenter(labels[2])-trackCenter(fields[3]),
       header:{left:heading.getBoundingClientRect().left,width:heading.getBoundingClientRect().width,gap:getComputedStyle(heading).gap},

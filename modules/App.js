@@ -91,7 +91,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='1042';
+const __APP_VERSION__='4.0.0'; const __BUILD__='1043';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -828,17 +828,6 @@ function StyleTag({ theme } = {}) {
       @media(max-width:380px){
         .wpb-rest-top{flex-wrap:wrap;}
         .wpb-rest-actions{width:100%;justify-content:space-between;}
-        .wpb-set-head>span{display:none;}
-        .wpb-set-head>button{width:auto!important;min-height:28px;}
-        .wpb-set-controls{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 30px;gap:6px!important;padding-bottom:10px!important;}
-        .wpb-set-controls>.wpb-set-index{grid-column:1;grid-row:1;width:auto!important;padding-top:6px!important;}
-        .wpb-set-controls>.wpb-set-index::before{content:"Set ";font-size:11px;}
-        .wpb-set-controls>div:nth-child(2){grid-column:2/4;grid-row:1;width:auto!important;text-align:right;}
-        .wpb-set-controls>div:nth-child(3){grid-column:1;grid-row:2;}
-        .wpb-set-controls>div:nth-child(4){grid-column:2;grid-row:2;position:relative;padding-top:18px;}
-        .wpb-set-controls>div:nth-child(3)::before{content:"Load";display:block;font-size:11px;color:${C.muted};height:18px;}
-        .wpb-set-controls>div:nth-child(4)::before{content:"Reps";position:absolute;top:0;left:0;font-size:11px;color:${C.muted};}
-        .wpb-set-controls>.wpb-set-actions{grid-column:3;grid-row:2;align-self:start;margin-top:18px;}
       }
       .wpb-step-button{position:relative;min-width:0!important;min-height:0!important;}
       .wpb-step-button::after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;}
@@ -1832,17 +1821,6 @@ function StyleTag({ theme } = {}) {
       .wpb-workout [data-testid^="set-"][data-done="1"] .wpb-set-controls{opacity:.7!important;}
       .wpb-workout [data-testid^="set-"][data-done="1"] .wpb-num-input{
         padding-block:6px!important;background:transparent!important;border-color:transparent!important;color:${C.muted}!important;box-shadow:none!important;
-      }
-      @media(max-width:380px){
-        /* Locked values need no steppers, so completed sets fit the original single grid row. */
-        .wpb-workout [data-done="1"] .wpb-set-controls{display:flex!important;padding-bottom:2px!important;}
-        .wpb-workout [data-done="1"] .wpb-set-controls>.wpb-set-index{width:24px!important;padding-top:8px!important;}
-        .wpb-workout [data-done="1"] .wpb-set-controls>div:nth-child(2){width:60px!important;text-align:left;}
-        .wpb-workout [data-done="1"] .wpb-set-controls>div:nth-child(4){padding-top:0;}
-        .wpb-workout [data-done="1"] .wpb-set-controls>.wpb-set-index::before,
-        .wpb-workout [data-done="1"] .wpb-set-controls>div:nth-child(3)::before,
-        .wpb-workout [data-done="1"] .wpb-set-controls>div:nth-child(4)::before{content:none;}
-        .wpb-workout [data-done="1"] .wpb-set-controls>.wpb-set-actions{margin-top:0;}
       }
       .wpb-workout [data-testid^="set-"][data-done="1"] .wpb-set-actions>button[aria-pressed="true"]{
         background:${C.cardHi}!important;color:${C.muted}!important;border-color:${C.border}!important;box-shadow:none!important;
@@ -13047,14 +13025,15 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                                         fontWeight: 600, color: C.muted, lineHeight: 1.25 },
                                                     children: [_jsx("span", { className: "wpb-s956-display-block wpb-s956-whitespace-nowrap", children: tgtW ?? "Set load" }),
                                                         _jsxs("span", { className: "wpb-target-reps",
-                                                            children: [tgtW ? "\u00D7" : "", String(tgtR).replace(/(\d)-(?=\d)/g, "$1–")] })] }), statusTag && isActive && !s.done && !(s.target?.rir != null && statusTag.label.startsWith(effortLabel(s.target.rir, loadMode))) && (_jsx("div", { style: { fontSize: 11, fontWeight: 700, color: isActive && !s.done ? catInk(statusTag.color) : C.muted, marginTop: 1 }, children: statusTag.label })), !s.warm && !s.sub && s.target?.rir != null && _jsx("div", {
+                                                            children: [tgtW ? "\u00D7" : "", String(tgtR).replace(/(\d)-(?=\d)/g, "$1–")] })] }), statusTag && isActive && !s.done && !(s.target?.rir != null && statusTag.label.startsWith(effortLabel(s.target.rir, loadMode))) && (_jsx("div", { style: { fontSize: 11, fontWeight: 700, color: isActive && !s.done ? catInk(statusTag.color) : C.muted, marginTop: 1 }, children: statusTag.label })), !s.warm && !s.sub && s.target?.rir != null && (isActive || s.done || e.sets[si - 1]?.target?.rir !== s.target.rir) && _jsx("div", {
+                                                        // B1043: a waiting set repeats its effort target only when it differs from the set above.
                                                         "data-target-effort": true,
                                                         "aria-label": `Target effort for set ${label}: ${effortLabel(s.target.rir, loadMode)}`,
                                                         style: { fontSize: 11, fontWeight: isActive && !s.done ? 700 : 600,
                                                             color: isActive && !s.done ? C.accentInk : C.muted, marginTop: 1 },
                                                         children: effortLabel(s.target.rir, loadMode)
                                                     }), tunedApplied && isActive && (_jsx("div", { className: "wpb-type-micro-faint", style: { paddingTop: 2 }, children: "from last set" }))] }));
-                                                })() }), _jsxs("div", { className: "wpb-b965-layout-19", children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-5", children: [!s.done && _jsx(StepButton, { onStep: () => bumpWeight(ei, si, -1), label: "weight down", glyph: "\u2212" }), _jsx("input", { inputMode: "decimal", onFocus: selectNumericInput, onClick: selectNumericInput, enterKeyHint: "next", "aria-label": "weight", onKeyDown: event => workoutNumericEnter(event, "reps"), value: s.weight, placeholder: (s.target?.w === "0" || s.target?.w === 0) ? "BW" : "—", readOnly: s.done, onChange: ev => editWeight(ei, si, ev.target.value), className: "mono wpb-num-input", style: { flex: 1, minWidth: 0, padding: "8px 4px", textAlign: "center", borderRadius: 8, border: s.hint && !s.done ? `1px solid ${s.hint === "up" ? C.accent : C.warn}` : (s.warm || s.sub ? `1px dashed ${C.border}` : `1px solid ${C.border}`), background: C.bg2, color: C.text, fontSize: narrowSet ? Math.max(10, 15 - Math.max(0, String(s.weight).length - 5) * 1.5) : 15, fontWeight: 600 } }), !s.done && _jsx(StepButton, { onStep: () => bumpWeight(ei, si, 1), label: "weight up", glyph: "+" })] }), (() => {
+                                                })() }), _jsxs("div", { className: "wpb-b965-layout-19", children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-5", children: [!s.done && isActive && _jsx(StepButton, { onStep: () => bumpWeight(ei, si, -1), label: "weight down", glyph: "\u2212" }), _jsx("input", { inputMode: "decimal", onFocus: selectNumericInput, onClick: selectNumericInput, enterKeyHint: "next", "aria-label": "weight", onKeyDown: event => workoutNumericEnter(event, "reps"), value: s.weight, placeholder: (s.target?.w === "0" || s.target?.w === 0) ? "BW" : "—", readOnly: s.done, onChange: ev => editWeight(ei, si, ev.target.value), className: "mono wpb-num-input", style: { flex: 1, minWidth: 0, padding: "8px 4px", textAlign: "center", borderRadius: 8, border: s.hint && !s.done ? `1px solid ${s.hint === "up" ? C.accent : C.warn}` : (s.warm || s.sub ? `1px dashed ${C.border}` : `1px solid ${C.border}`), background: C.bg2, color: C.text, fontSize: narrowSet ? Math.max(10, 15 - Math.max(0, String(s.weight).length - 5) * 1.5) : 15, fontWeight: 600 } }), !s.done && isActive && _jsx(StepButton, { onStep: () => bumpWeight(ei, si, 1), label: "weight up", glyph: "+" })] }), (() => {
                                                         /* Plate maths sits under the WEIGHT BOX again. v485 moved it into a strip beneath
                                                            the whole row, which detached it from the number it describes — it is an
                                                            annotation on that weight, not a fact about the set, and it reads as one only
@@ -13076,7 +13055,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
     fontSize: 11, fontWeight: 600, color: C.accentInk, textAlign: "center", marginTop: 2,
     whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", cursor: "pointer" },
   children: [sp.plates.join("·"), "/side"] });
-                                                    })(), s.hint && !s.done && (_jsx("span", { title: "Set-to-set tuning \u2014 retuned from the set you just logged, separate from this lift's weekly progression style", style: { position: "absolute", top: -6, right: 18, width: 16, height: 16, borderRadius: 999, background: s.hint === "up" ? C.accent : C.warn, color: C.accentText, display: "flex", alignItems: "center", justifyContent: "center" }, children: s.hint === "up" ? _jsx(TrendingUp, { size: 10, strokeWidth: 3 }) : _jsx(TrendingDown, { size: 10, strokeWidth: 3 }) }))] }), _jsxs("div", { className: "wpb-set-reps wpb-layout-flex-one wpb-s956-minwidth-0", children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-5", children: [!s.done && _jsx(StepButton, { onStep: () => bumpReps(ei, si, -1), label: "reps down", glyph: "\u2212" }), _jsx("input", { inputMode: "numeric", onFocus: selectNumericInput, onClick: selectNumericInput, enterKeyHint: "done", "aria-label": "reps", onKeyDown: event => workoutNumericEnter(event), value: s.reps, placeholder: "\u2014", readOnly: s.done, onChange: ev => editSet(ei, si, "reps", ev.target.value), className: "mono wpb-num-input", style: { flex: 1, minWidth: 0, padding: "8px 4px", textAlign: "center", borderRadius: 8, border: s.warm || s.sub ? `1px dashed ${C.border}` : `1px solid ${C.border}`, background: C.bg2, color: C.text, fontSize: 16, fontWeight: 600 } }), !s.done && _jsx(StepButton, { onStep: () => bumpReps(ei, si, 1), label: "reps up", glyph: "+" })] }), s.done && !s.warm && !s.sub && parseFloat(s.weight) > 0 && _jsx("button", {
+                                                    })(), s.hint && !s.done && (_jsx("span", { title: "Set-to-set tuning \u2014 retuned from the set you just logged, separate from this lift's weekly progression style", style: { position: "absolute", top: -6, right: 18, width: 16, height: 16, borderRadius: 999, background: s.hint === "up" ? C.accent : C.warn, color: C.accentText, display: "flex", alignItems: "center", justifyContent: "center" }, children: s.hint === "up" ? _jsx(TrendingUp, { size: 10, strokeWidth: 3 }) : _jsx(TrendingDown, { size: 10, strokeWidth: 3 }) }))] }), _jsxs("div", { className: "wpb-set-reps wpb-layout-flex-one wpb-s956-minwidth-0", children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-5", children: [!s.done && isActive && _jsx(StepButton, { onStep: () => bumpReps(ei, si, -1), label: "reps down", glyph: "\u2212" }), _jsx("input", { inputMode: "numeric", onFocus: selectNumericInput, onClick: selectNumericInput, enterKeyHint: "done", "aria-label": "reps", onKeyDown: event => workoutNumericEnter(event), value: s.reps, placeholder: "\u2014", readOnly: s.done, onChange: ev => editSet(ei, si, "reps", ev.target.value), className: "mono wpb-num-input", style: { flex: 1, minWidth: 0, padding: "8px 4px", textAlign: "center", borderRadius: 8, border: s.warm || s.sub ? `1px dashed ${C.border}` : `1px solid ${C.border}`, background: C.bg2, color: C.text, fontSize: 16, fontWeight: 600 } }), !s.done && isActive && _jsx(StepButton, { onStep: () => bumpReps(ei, si, 1), label: "reps up", glyph: "+" })] }), s.done && !s.warm && !s.sub && parseFloat(s.weight) > 0 && _jsx("button", {
                                                     "data-effort-tag": true, onClick: () => setEffortOpen(o => ({ ...o, [effKey]: !o[effKey] })),
                                                     className: "pressable wpb-set-effort", "aria-label": s.actualRIR != null ? "Change the effort logged for this set" : "Log the effort for this set",
                                                     "aria-expanded": isEffort || !!effortOpen[effKey],

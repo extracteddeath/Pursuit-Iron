@@ -136,13 +136,22 @@ object CoachGoalProgramRealizationDomain {
                 visit.exerciseId in athlete.excludedExerciseIds ||
                 when(val equipment=option.equipment) {
                     ComposerEquipment.Bodyweight -> !athlete.allowBodyweight
-                    is ComposerEquipment.Verified ->
-                        equipment.inventory==null ||
-                            stock.none {it==equipment.inventory} ||
+                    is ComposerEquipment.Verified -> {
+                        val inventory=equipment.inventory
+                        inventory==null ||
+                            stock.none {it==inventory} ||
                             equipment.unit!=athlete.gym.unit ||
-                            EquipmentLoadDomain.inspect(equipment.inventory,
+                            // Real stock availability is not sufficient to
+                            // authorize an issued program weight. Recheck
+                            // the same basis-specific envelope as the native
+                            // program and durable workout, even on a cached
+                            // or externally supplied reviewed candidate.
+                            !KotlinSetNumberAuthorityDomain.validPrescribedLoad(
+                                equipment.plannedLoad,inventory.basis) ||
+                            EquipmentLoadDomain.inspect(inventory,
                                 equipment.plannedLoad,equipment.unit)
                                 .let {it !is LoadInspection.Confirmed || !it.exact}
+                    }
                 }
         }) {
             add(GoalRealizationIssueKind.UNVERIFIED_CANDIDATE,

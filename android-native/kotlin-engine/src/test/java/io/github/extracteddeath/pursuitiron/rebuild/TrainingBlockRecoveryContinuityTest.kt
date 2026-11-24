@@ -196,6 +196,14 @@ class TrainingBlockRecoveryContinuityTest {
             it.kind==CustomCoachIssueKind.RECOVERY_EFFORT_INCREASE &&
                 it.explanation.contains("introduces or changes an amplifier")})
         assertFalse(amplified.mayIssueWorkout)
+        val load=set.load as DraftSetLoad.Verified
+        val harderLoad=audit(set.copy(load=load.copy(value=n("30"))))
+        assertTrue(harderLoad.issues.toString(),harderLoad.issues.any{
+            it.kind==CustomCoachIssueKind.RECOVERY_EFFORT_INCREASE &&
+                it.explanation.contains("harder physical load")})
+        val easierLoad=audit(set.copy(load=load.copy(value=n("20"))))
+        assertFalse(easierLoad.issues.any{
+            it.kind==CustomCoachIssueKind.RECOVERY_EFFORT_INCREASE})
         val easier=audit(set.copy(targetRir=5))
         assertFalse(easier.issues.any{
             it.kind==CustomCoachIssueKind.RECOVERY_EFFORT_INCREASE})

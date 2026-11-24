@@ -54,6 +54,35 @@ class CustomWorkoutJournalDomainTest {
         return (result as CustomWorkoutJournalDecision.Proposed).draft
     }
 
+    @Test fun invalidIssuedRepRangeNeverBecomesCustomWork() {
+        for(band in listOf(RepBand(0,12),RepBand(15,10),RepBand(6,101))) {
+            val corrupt=makeSet(amplifier=null).copy(reps=band)
+            val journal=initial(corrupt)
+            assertEquals(CustomWorkoutJournalDecision.Rejected(
+                CustomWorkoutJournalRefusal.INVALID_ACTUAL),
+                CustomWorkoutJournalDomain.reduce(journal,
+                    record("completed-invalid",0,
+                        outcome=KotlinJournalSetOutcome.COMPLETED,
+                        performed=actual(8))))
+            assertEquals(CustomWorkoutJournalDecision.Rejected(
+                CustomWorkoutJournalRefusal.INVALID_ACTUAL),
+                CustomWorkoutJournalDomain.reduce(journal,
+                    record("attempt-invalid",0,
+                        outcome=KotlinJournalSetOutcome.FAILED_ATTEMPT,
+                        performed=actual(0))))
+            val skipped=accept(journal,record("skip-invalid",0,
+                outcome=KotlinJournalSetOutcome.SKIPPED,performed=null))
+            assertEquals(journal.snapshot,skipped.snapshot)
+            assertEquals(0L,journal.revision)
+            var replay=CustomWorkoutJournalDomain.begin(journal.workoutId,
+                journal.originalSnapshot,journal.preparedConsentFingerprint)
+            for(saved in skipped.receipts)
+                replay=(CustomWorkoutJournalDomain.reduce(replay,saved.operation)
+                    as CustomWorkoutJournalDecision.Proposed).draft
+            assertEquals(skipped,replay)
+        }
+    }
+
     @Test fun invalidIssuedCustomTargetCannotBecomeACompletedOrFailedFact() {
         val malformed=makeSet(load=DraftSetLoad.Verified(
             LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,BigDecimal("-5")),

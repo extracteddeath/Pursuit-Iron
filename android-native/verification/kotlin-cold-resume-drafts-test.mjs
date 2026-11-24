@@ -58,3 +58,11 @@ assert.match(tests,/swappedExerciseDifferentVisitOrChangedPrescriptionCannotResu
 assert.match(tests,/codecRoundTripsPartialTypingAndUnknownActualRir/);
 assert.match(tests,/corruptOversizeAndForeignVersionDraftsFailClosed/);
 console.log('PASS native cold-resume drafts: generated/custom main/follow-up scope; raw UI only; no journal changes.');
+
+const controls=readFileSync(dir+'NativeComponents.kt','utf8');
+assert.match(generated,/key\(draftIdentity\.value,set\.currentReceipt\?\.appliedRevision\)\s*\{\s*NativeSetValueFields\(/);
+assert.match(custom,/key\(draftIdentity\.value,existing\?\.appliedRevision\)\s*\{\s*NativeSetValueFields\(/);
+assert.match(controls,/val stepScope=rememberCoroutineScope\(\)/);
+assert.match(controls,/val result=review\(start,direction,count\)[\s\S]*?currentCoroutineContext\(\)\.ensureActive\(\)[\s\S]*?currentOnLoad\(result\)/);
+assert.match(controls,/catch\(_:\s*Exception\)\s*\{\s*currentCoroutineContext\(\)\.ensureActive\(\)/);
+console.log('PASS equipment step coroutine scoped to exact workout draft and receipt; cancelled results cannot edit a newer machine.');

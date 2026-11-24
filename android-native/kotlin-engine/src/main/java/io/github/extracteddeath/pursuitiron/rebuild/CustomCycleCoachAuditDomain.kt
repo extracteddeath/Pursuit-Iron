@@ -121,7 +121,38 @@ object CustomCycleCoachAuditDomain {
         inputs: CustomCoachAuditInputs = CustomCoachAuditInputs(),
         prospectiveByBlock:Map<String,ProspectiveBlockCoachingContext> =
             emptyMap()
-    ): CustomCoachAudit {
+    ): CustomCoachAudit = reviewInternal(cycle,setup,catalog,inputs,prospectiveByBlock,null)
+
+    /** Combined read-only numeric, structural and program-quality review.
+     * The caller must separately authenticate evidence, persist consent and
+     * revalidate before issuance. Existing ordinary review stays unchanged. */
+    fun reviewNamedForReview(
+        cycle:CustomTrainingCycle,
+        setup:AthleteSetupReview,
+        catalog:List<CatalogMovement>,
+        inputs:CustomCoachAuditInputs,
+        stamp:CustomWorkoutSourceStamp,
+        evidence:List<CustomNamedPercentageWeekEvidence>
+    ):CustomCoachAudit {
+        val profile=setup.reviewed
+        if(profile==null || profile.athleteProfileId!=stamp.athleteId ||
+            profile.profileRevision!=stamp.athleteProfileRevision ||
+            profile.gym.gymId!=stamp.gymId)
+            return CustomCoachAudit(CustomCoachAuditStatus.INVALID_SOURCE,
+                listOf(CustomCoachIssue(CustomCoachIssueKind.INVALID_CUSTOM_CYCLE,
+                    "weekOverrides","Named review source differs from reviewed setup.")),
+                null,emptyList(),profile?.profileRevision,cycle.revision,emptyMap())
+        return reviewInternal(cycle,setup,catalog,inputs,emptyMap(),stamp to evidence)
+    }
+
+    private fun reviewInternal(
+        cycle:CustomTrainingCycle,
+        setup:AthleteSetupReview,
+        catalog:List<CatalogMovement>,
+        inputs:CustomCoachAuditInputs,
+        prospectiveByBlock:Map<String,ProspectiveBlockCoachingContext>,
+        named:Pair<CustomWorkoutSourceStamp,List<CustomNamedPercentageWeekEvidence>>?
+    ):CustomCoachAudit {
         val issues = mutableListOf<CustomCoachIssue>()
         fun add(kind: CustomCoachIssueKind, where: String, why: String) {
             if (issues.size < MAX_REPORT_ISSUES)
@@ -191,8 +222,10 @@ object CustomCycleCoachAuditDomain {
         }
         // Entire structural review: EVERY week override, set and drop-load
         // must be attainable. This step never suggests replacements.
-        val structural = CustomTrainingCycleDomain.review(
+        val structural = if(named==null) CustomTrainingCycleDomain.review(
             cycle, options.map { it.availability })
+        else CustomTrainingCycleDomain.reviewNamedForAudit(
+            cycle,options.map{it.availability},named.first,named.second)
         if (structural.verifiedDraft == null) {
             structural.issues.take(40).forEach {
                 add(CustomCoachIssueKind.INVALID_CUSTOM_CYCLE,

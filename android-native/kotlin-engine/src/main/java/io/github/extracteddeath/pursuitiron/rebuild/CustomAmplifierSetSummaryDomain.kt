@@ -59,9 +59,22 @@ object CustomAmplifierSetSummaryDomain {
                 as? CustomWorkoutJournalOperation.Record
         }
         val completed=observed.count{it.outcome==KotlinJournalSetOutcome.COMPLETED}
+        // In a corrupted or stale view, a forged mini-set can have the right
+        // rep count while its physical load differs. Neither the completion
+        // label nor the actuals must declare that sequence valid.
+        val sameLoadMismatch=AdvancedAmplifierProtocolDomain
+            .requiresActivationLoad(amp.kind) &&
+            (main.performed==null || observed.any { receipt ->
+                receipt.outcome==KotlinJournalSetOutcome.COMPLETED &&
+                    (receipt.performed==null ||
+                        !CustomWorkoutExecutionDomain.sameActualLoadAndStation(
+                            main.performed,receipt.performed))
+            })
         val permitted=CustomWorkoutExecutionDomain.followUpVisits(journal,set)
         val next=permitted.firstOrNull{it !in journal.effectiveVisits}
         val progress=when {
+            sameLoadMismatch ->
+                "Recorded follow-up load/station mismatch · verify journal"
             next!=null ->
                 "$completed of ${amp.followUpRounds} logged · Next: "+
                     AdvancedAmplifierProtocolDomain.stageLabel(amp,next.stage)

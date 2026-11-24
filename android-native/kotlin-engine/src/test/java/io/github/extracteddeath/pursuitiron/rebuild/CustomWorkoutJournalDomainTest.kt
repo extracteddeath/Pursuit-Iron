@@ -187,9 +187,13 @@ class CustomWorkoutJournalDomainTest {
                     BigDecimal("30"),LoadUnit.LB,4,null)))
         val untrusted=current.copy(effectiveVisits=
             current.effectiveVisits+(secondKey to tamperedReceipt))
+        val untrustedSummary=CustomAmplifierSetSummaryDomain.review(
+            untrusted,set)!!
         assertEquals(
             "Follow-up load/station mismatch · review recorded technique",
-            CustomAmplifierSetSummaryDomain.review(untrusted,set)?.actuals)
+            untrustedSummary.actuals)
+        assertTrue(untrustedSummary.progress.contains("mismatch"))
+        assertFalse(untrustedSummary.progress.contains("Complete"))
         assertEquals(4,current.receipts.size)
     }
 

@@ -49,4 +49,6 @@ assert.ok(app.includes('caption: weekChipText(w),') && app.includes('return chip
 assert.ok(app.includes('className: "wpb-program-day-picker-label", children: openDayIdx >= 0 ? displayDayName(program.days[openDayIdx].label, program) : "Day"'),
     'The day picker names the open day');
 assert.ok(app.includes('background: !day.exercises.length ? C.border : isNext ? C.accent : C.accentDim'), 'Only the next day Start is filled');
+assert.ok(app.includes('"wpb-program-day-picker-short"') && css.includes('@container pi-program-actions (max-width:300px)'),
+    'The day picker falls back to its day number on the narrowest action row');
 console.log('PASS B1037 program day: one surface with divided exercise rows, compact chips, plain Day focus and shared actions.');

@@ -184,6 +184,25 @@ class AdvancedAmplifierProtocolDomainTest {
             true,true,false,true,false))
     }
 
+    @Test fun assistedCounterweightsCannotUseDescendingExternalResistanceDropProtocol() {
+        fun weight(value:String)=DraftSetLoad.Verified(LoadUnit.LB,
+            LoadBasis.ASSISTANCE_COUNTERWEIGHT,java.math.BigDecimal(value))
+        val amp=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+            followUpLoad=weight("40"),followUpActiveSeconds=30,
+            followUpRounds=2,secondDropLoad=weight("20"))
+        assertFalse(AdvancedAmplifierProtocolDomain.validDropSequence(weight("60"),amp))
+        assertFalse(AdvancedAmplifierProtocolDomain.validDropSequence(weight("60"),
+            amp.copy(followUpRounds=1,secondDropLoad=null)))
+        // Even a directionally easier assisted recipe is not a valid
+        // external-resistance drop; its own authoring policy is required.
+        assertFalse(AdvancedAmplifierProtocolDomain.validDropSequence(weight("60"),
+            amp.copy(followUpLoad=weight("80"),secondDropLoad=weight("100"))))
+        val entry=AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+            amp,weight("60"),KotlinPerformedSet(java.math.BigDecimal("60"),
+                LoadUnit.LB,8,1,"A"),"A",1)
+        assertEquals(AmplifierFollowUpEntryLoad.ActivationUnavailable,entry)
+    }
+
     @Test fun twoDropSequencesRequireTwoDistinctVerifiedDescendingWeights() {
         val policy=AdvancedAmplifierProtocolDomain
         fun weight(n:String)=DraftSetLoad.Verified(LoadUnit.LB,

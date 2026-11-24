@@ -1,0 +1,2002 @@
+{
+  "schemaVersion": 1,
+  "webCommit": "29faa204212a4d54088b4870341350e605939185",
+  "kotlinCommit": "05c02ff2362736439ca1fcabfd7d477b2fa366",
+  "notes": "Required rows are acceptance work packages, not assertions of functional completion. Kotlin fixture candidates are domain/test/source-contract names; source file candidates are not tests and require a dedicated test. No behavior marked accepted until actual evidence recorded. Optional exclusions apply only within launch scope.",
+  "counts": {
+    "required": 99,
+    "optional": 5,
+    "accepted": 0
+  },
+  "rows": [
+    {
+      "id": "SETUP-PROFILE",
+      "group": "program-builder",
+      "parents": [
+        "E01",
+        "E06"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/training-domain/catalog.js",
+      "candidateFixtures": [
+        "CoachAthleteSetupDomainTest",
+        "NativeKotlinGeneratedProgramJourneyTest"
+      ],
+      "acceptance": "Onboard novice/intermediate/advanced, each goal; persist and edit inputs; current verified source governs generation.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "SETUP-FREQUENCY",
+      "group": "program-builder",
+      "parents": [
+        "E01",
+        "E11"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/topology.js",
+      "candidateFixtures": [
+        "CoachWeekComposerTest",
+        "GeneratedProgramQualityMatrixTest"
+      ],
+      "acceptance": "Support exact declared 2–6 day family combinations; refuse incompatible days, never substitute silently.",
+      "state": "REVIEW",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "SETUP-TIME",
+      "group": "program-builder",
+      "parents": [
+        "E02",
+        "E14"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/realizer-time-budget.js",
+      "candidateFixtures": [
+        "GeneratedProgramQualityMatrixTest",
+        "CustomCycleCoachAuditDomainTest"
+      ],
+      "acceptance": "40–60,60–90,120+ and other active web time choices; actual warmup, rests, work, setup, unilateral timing and hard caps.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "SETUP-CONSTRAINTS",
+      "group": "program-builder",
+      "parents": [
+        "E05",
+        "E15"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/generate.js",
+      "candidateFixtures": [
+        "CoachWeekAthleteConstraintsTest"
+      ],
+      "acceptance": "Focus/reduced/excluded muscles, equipment, bodyweight, barbell limit, triceps/lower, supersets, hard/long/rest/locked day and conflict refusal.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "GEN-ALLOCATE",
+      "group": "program-builder",
+      "parents": [
+        "E11",
+        "E12",
+        "E13"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/allocator.js",
+      "candidateFixtures": [
+        "CoachWeekComposerTest",
+        "MuscleVolumeAccountingDomainTest"
+      ],
+      "acceptance": "Goal and experience based weekly direct/indirect muscle and movement balance; independently verify all required dose bounds.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "GEN-CAPACITY",
+      "group": "program-builder",
+      "parents": [
+        "E14",
+        "E15"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/capacity-generation.js",
+      "candidateFixtures": [
+        "WeeklyDoseFeasibilityDomainTest",
+        "GeneratedProgramQualityMatrixTest"
+      ],
+      "acceptance": "Realistic feasible allocation, no junk sets, explicit underfill/infeasibility and alternatives without overriding locks.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "GEN-TRACE",
+      "group": "program-builder",
+      "parents": [
+        "E11",
+        "E13",
+        "E41"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/explainability.js",
+      "candidateFixtures": [
+        "GeneratedUpstreamNumberTraceDomainTest"
+      ],
+      "acceptance": "Explain actual exercise, set, rep, rest, load and repair decisions from canonical inputs.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "GEN-REVIEW",
+      "group": "program-builder",
+      "parents": [
+        "E16",
+        "E22"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/program-review.js",
+      "candidateFixtures": [
+        "CoachFirstProgramDraftConversionDomainTest",
+        "NativeKotlinGeneratedProgramJourneyTest"
+      ],
+      "acceptance": "Review exact weeks, save explicit program, issue the same schedule and targets.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "GEN-RECOMMEND",
+      "group": "adaptive-progression",
+      "parents": [
+        "E17",
+        "E18",
+        "E30"
+      ],
+      "stage": "S2",
+      "scope": "required",
+      "webSource": "modules/next-engine/progression-style.js",
+      "candidateFixtures": [
+        "BasicProgramProgressionPlanDomainTest"
+      ],
+      "acceptance": "All seven styles plus manual override and equipment-appropriate auto selection; save/issue method not merely label.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "NUM-LOAD",
+      "group": "adaptive-progression",
+      "parents": [
+        "E07",
+        "E17",
+        "E18"
+      ],
+      "stage": "S2",
+      "scope": "required",
+      "webSource": "modules/next-engine/loading.js",
+      "candidateFixtures": [
+        "KotlinSetNumberAuthorityDomainTest",
+        "EquipmentLoadDomainTest"
+      ],
+      "acceptance": "All pathways exact physical load, per-hand/total/counterweight, no 38.5 or 159.5 when impossible, no silent rounding upward.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "NUM-FIRST",
+      "group": "adaptive-progression",
+      "parents": [
+        "E17",
+        "E18"
+      ],
+      "stage": "S2",
+      "scope": "required",
+      "webSource": "modules/training-domain/starting-load.js",
+      "candidateFixtures": [
+        "CoachFirstProgramStartDomainTest",
+        "GoalRealizationSourceScopeTest"
+      ],
+      "acceptance": "Initial loads from confirmed training max or verified history; refuse guessed physical load; no fabricated 1RM.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "NUM-EFFORT",
+      "group": "adaptive-progression",
+      "parents": [
+        "E19",
+        "E24",
+        "E30"
+      ],
+      "stage": "S2",
+      "scope": "required",
+      "webSource": "modules/training-domain/prescriptions.js",
+      "candidateFixtures": [
+        "ProgressionEffortDomainTest",
+        "BasicProgressionPolicyDomainTest"
+      ],
+      "acceptance": "Separate actual nullable RIR from target; assume target only in evaluation when absent; never write assumed observation.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "NUM-SCOPE",
+      "group": "adaptive-progression",
+      "parents": [
+        "E18",
+        "E30",
+        "E36"
+      ],
+      "stage": "S2",
+      "scope": "required",
+      "webSource": "modules/next-engine/history-contract.js",
+      "candidateFixtures": [
+        "CustomBasicHistoryProgressionDomainTest",
+        "NativeKotlinOwnedLoadCoachingIntegrationTest"
+      ],
+      "acceptance": "Same exercise repeated across days and gym/machine A/B has independent earned history; no cross-day borrowing.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "NUM-CORRECTION",
+      "group": "adaptive-progression",
+      "parents": [
+        "E30",
+        "E37"
+      ],
+      "stage": "S2",
+      "scope": "required",
+      "webSource": "modules/training-domain/history-import.js",
+      "candidateFixtures": [
+        "KotlinSavedHistoryCorrectionDomainTest",
+        "NativeKotlinHistoryTransactionCoordinatorTest"
+      ],
+      "acceptance": "Correct last/older actuals; recalculate future suggestion from correct receipt, no silent issued change.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "NUM-DP-REGRESSION",
+      "group": "adaptive-progression",
+      "parents": [
+        "E18",
+        "E24",
+        "E30"
+      ],
+      "stage": "S2",
+      "scope": "required",
+      "webSource": "modules/training-domain/prescriptions.js",
+      "candidateFixtures": [
+        "KotlinFourSetLoadInvarianceReleaseTest",
+        "NativeKotlinFourSetLoadStabilityTest"
+      ],
+      "acceptance": "200×3,205×3,210×2,215×2 for 5–8 never promotes all to 215; repeated near-failure two reps holds rather than earns.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "NUM-LEVELING",
+      "group": "adaptive-progression",
+      "parents": [
+        "E18",
+        "E28",
+        "E30"
+      ],
+      "stage": "S2",
+      "scope": "required",
+      "webSource": "modules/training-domain/prescriptions.js",
+      "candidateFixtures": [
+        "DoubleProgressionLevelingDomainTest",
+        "kotlin-workout-focus-leveling-scope-test.mjs"
+      ],
+      "acceptance": "Explicit Leveling fills current unsaved set fields only, exact stock; no future prescription/history mutation.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "NUM-OFF",
+      "group": "adaptive-progression",
+      "parents": [
+        "E19",
+        "E24",
+        "E30"
+      ],
+      "stage": "S2",
+      "scope": "required",
+      "webSource": "modules/next-engine/live-autoregulation.js",
+      "candidateFixtures": [
+        "NativeKotlinCoachAssistanceSettingsStoreTest",
+        "BasicProgressionPolicyDomainTest"
+      ],
+      "acceptance": "Global and individual opt-out; manual logging and basic progression independent of fatigue/adaptive coach.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "LIVE-FATIGUE",
+      "group": "adaptive-progression",
+      "parents": [
+        "E19",
+        "E24",
+        "E31"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/live-autoregulation.js",
+      "candidateFixtures": [
+        "KotlinJournalLiveSetCoachDomainTest",
+        "SessionFatigueEvidenceDomainTest"
+      ],
+      "acceptance": "Observe fatigue/rest/effort; justifiable per-set changes only after approval; no phantom RIR.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "LIVE-PLATEAU",
+      "group": "adaptive-progression",
+      "parents": [
+        "E31",
+        "E34"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/response.js",
+      "candidateFixtures": [
+        "LongitudinalCoachDomainTest",
+        "KotlinProgramPerformanceEvidenceDomainTest"
+      ],
+      "acceptance": "Distinguish insufficient evidence, normal progress, stall, volume response and fatigue; scoped recommendation and refusal.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "WORK-ISSUE",
+      "group": "workout-logging",
+      "parents": [
+        "E17",
+        "E22",
+        "E23"
+      ],
+      "stage": "S5",
+      "scope": "required",
+      "webSource": "modules/next-engine/workout-runtime.js",
+      "candidateFixtures": [
+        "NativeKotlinGeneratedProgramJourneyTest",
+        "NativeKotlinCustomWorkoutPreflightTest"
+      ],
+      "acceptance": "Immutable approved next session, exact original keys, gym, program and targets; no duplicate issue after interruption.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "WORK-ENTRY",
+      "group": "workout-logging",
+      "parents": [
+        "E17",
+        "E24",
+        "E28"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/next-engine/workout-runtime.js",
+      "candidateFixtures": [
+        "KotlinWorkoutEntryDomainTest",
+        "KotlinSetDraftStepDomainTest"
+      ],
+      "acceptance": "Weight/reps/RIR controls, manual replace, increments, distinct blank and zero; complete, failed and skip explicit.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "WORK-WARMUP",
+      "group": "workout-logging",
+      "parents": [
+        "E17",
+        "E20",
+        "E22"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/next-engine/workout-runtime.js",
+      "candidateFixtures": [
+        "CoachSessionPrescriptionDomainTest",
+        "CustomWorkoutSnapshotDomainTest"
+      ],
+      "acceptance": "Stock-aware ramp, no duplicate warmups, correct rest and full history classification; add/remove/collapse warmups.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "WORK-MEASURE",
+      "group": "workout-logging",
+      "parents": [
+        "E08",
+        "E22",
+        "E36"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/next-engine/exercise-db.js",
+      "candidateFixtures": [
+        "MeasuredExerciseEntryDomainTest",
+        "NativeMeasuredExerciseJournalFileStoreTest",
+        "NativeMeasuredWorkoutParentFileStoreTest"
+      ],
+      "acceptance": "All 14 typed exercises integrate whole issued parent, seconds/cm/band reps, corrections, completion and scoped progress.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "WORK-FOCUS",
+      "group": "workout-logging",
+      "parents": [
+        "E28",
+        "E29"
+      ],
+      "stage": "S6",
+      "scope": "required",
+      "webSource": "modules/workout-session-controls.js",
+      "candidateFixtures": [
+        "kotlin-workout-focus-leveling-scope-test.mjs",
+        "kotlin-lab-workout-ui-test.mjs"
+      ],
+      "acceptance": "Focus/All preserve draft and set state, next unresolved, active exercise, all required tool actions.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "WORK-LAST",
+      "group": "workout-logging",
+      "parents": [
+        "E36",
+        "E37"
+      ],
+      "stage": "S6",
+      "scope": "required",
+      "webSource": "modules/program-last-performance.js",
+      "candidateFixtures": [
+        "WorkoutLastReferenceDomainTest",
+        "WorkoutLastDraftDomainTest",
+        "kotlin-exercise-history-filters-test.mjs"
+      ],
+      "acceptance": "Target/Last toggle persists; exact set ordinal and station/day, no invented RIR or duplicate target values.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "WORK-REST",
+      "group": "workout-tools",
+      "parents": [
+        "E20",
+        "E21",
+        "E28"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/workout-session-controls.js",
+      "candidateFixtures": [
+        "KotlinWorkoutRestDomainTest",
+        "kotlin-rest-timer-cold-resume-test.mjs"
+      ],
+      "acceptance": "Rest per set/round/technique, pause/reset, elapsed-clock recovery, no automatic logging.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "WORK-NOTES",
+      "group": "workout-tools",
+      "parents": [
+        "E10",
+        "E28"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/exercise-notes.js",
+      "candidateFixtures": [
+        "NativeKotlinPinnedExerciseNoteFileStoreTest",
+        "kotlin-custom-session-note-test.mjs",
+        "kotlin-generated-session-note-test.mjs"
+      ],
+      "acceptance": "Session-only expiry, pinned note/setup persists and correct exercise association; no unrelated overwrite.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "WORK-PLATES",
+      "group": "workout-tools",
+      "parents": [
+        "E07",
+        "E28"
+      ],
+      "stage": "S2",
+      "scope": "required",
+      "webSource": "modules/loading-calculator.js",
+      "candidateFixtures": [
+        "KotlinVerifiedPlateLayoutDomainTest",
+        "NativeKotlinSmithLoadingJourneyTest"
+      ],
+      "acceptance": "Free bar, Smith and counterbalance, plate pairs, exact load, unsupported stock refusal; read-only.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "WORK-INFO",
+      "group": "workout-tools",
+      "parents": [
+        "E10",
+        "E29"
+      ],
+      "stage": "S6",
+      "scope": "required",
+      "webSource": "modules/workout-context.js",
+      "candidateFixtures": [
+        "kotlin-lab-workout-ui-test.mjs",
+        "kotlin-workout-station-evidence-test.mjs"
+      ],
+      "acceptance": "Why, actual working-set count, equipment, movement cues, progression and real history; no stale prescription note.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "WORK-SUPERSET-AUTHOR",
+      "group": "workout-tools",
+      "parents": [
+        "E21",
+        "E28"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/program-exercise-options.js",
+      "candidateFixtures": [
+        "CustomSupersetAuthoringTest",
+        "CustomSupersetPartnerRankingDomainTest"
+      ],
+      "acceptance": "Pair/triplet/unequal rounds, compatible partner, opt-out, explicit link/unlink and reorder intact.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "WORK-SUPERSET-LIVE",
+      "group": "workout-tools",
+      "parents": [
+        "E21",
+        "E22"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/next-engine/realizer-pairing.js",
+      "candidateFixtures": [
+        "CustomWorkoutExecutionDomainTest",
+        "NativeKotlinCustomHistoryTransactionTest",
+        "kotlin-superset-execution-test.mjs"
+      ],
+      "acceptance": "Generated and authored linked rounds, finish uneven solo, warmups separate, rest after round and amplifier pause.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "AMP-SELECT",
+      "group": "workout-tools",
+      "parents": [
+        "E20",
+        "E32"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/next-engine/techniques.js",
+      "candidateFixtures": [
+        "CoachFirstProgramMyoFinisherDomainTest",
+        "CoachFirstProgramDraftConversionDomainTest"
+      ],
+      "acceptance": "Generated myo/drop/partial eligibility, final set only, conservative opt-in; full-cycle audit and correct duration before save.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "AMP-MYO-CUSTOM",
+      "group": "workout-tools",
+      "parents": [
+        "E20",
+        "E36"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/next-engine/workout-runtime.js",
+      "candidateFixtures": [
+        "AdvancedAmplifierProtocolDomainTest",
+        "CustomWorkoutExecutionDomainTest",
+        "NativeKotlinCustomHistoryTransactionTest"
+      ],
+      "acceptance": "Authored 3–5 mini sets, 3–5 reps, same actual last activation load/station, exact short rest and stop; cold correction.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "AMP-MYO-GENERATED",
+      "group": "workout-tools",
+      "parents": [
+        "E20",
+        "E36"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/training-domain/prescriptions.js",
+      "candidateFixtures": [
+        "CoachFirstProgramMyoFinisherDomainTest",
+        "KotlinWorkoutJournalDomainTest"
+      ],
+      "acceptance": "Generated myo actual activation load never first set or drop-like after reps-only edit; independent actuals, timer and follow-up ownership.",
+      "state": "REVIEW",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "AMP-DROP-CUSTOM",
+      "group": "workout-tools",
+      "parents": [
+        "E20",
+        "E36"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/next-engine/workout-runtime.js",
+      "candidateFixtures": [
+        "AdvancedAmplifierProtocolDomainTest",
+        "CustomSavedHistoryCorrectionDomainTest",
+        "NativeCustomWorkoutJournalCodecTest"
+      ],
+      "acceptance": "One/two strictly lower stock-confirmed drops relative to actual prior stage, preserve skipped visits and station, no assisted reverse mistake.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "AMP-DROP-GENERATED",
+      "group": "workout-tools",
+      "parents": [
+        "E20",
+        "E36"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/training-domain/prescriptions.js",
+      "candidateFixtures": [
+        "AdvancedAmplifierProtocolDomainTest",
+        "KotlinWorkoutSnapshotDomainTest"
+      ],
+      "acceptance": "Generated reduction plans validated against actual station stock, no invented weights; early stop, correction and finish.",
+      "state": "REVIEW",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "AMP-PARTIAL-CUSTOM",
+      "group": "workout-tools",
+      "parents": [
+        "E20",
+        "E36"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/next-engine/techniques.js",
+      "candidateFixtures": [
+        "CustomWorkoutExecutionDomainTest",
+        "CustomHistoricalTechniqueGroupingDomainTest"
+      ],
+      "acceptance": "Final full-ROM set plus separate lengthened partial count, no extra normal set, PR or full-ROM reps; same load/station.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "AMP-PARTIAL-GENERATED",
+      "group": "workout-tools",
+      "parents": [
+        "E20",
+        "E36"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/next-engine/workout-runtime.js",
+      "candidateFixtures": [
+        "AdvancedAmplifierProtocolDomainTest",
+        "CoachFirstProgramDraftConversionDomainTest"
+      ],
+      "acceptance": "Generated final-set technique shown in Target/Last/after save; log partial separately and preserve actual full-ROM.",
+      "state": "REVIEW",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "AMP-RESTPAUSE",
+      "group": "workout-tools",
+      "parents": [
+        "E20",
+        "E36"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/next-engine/workout-runtime.js",
+      "candidateFixtures": [
+        "AdvancedAmplifierProtocolDomainTest",
+        "CustomWorkoutJournalDomainTest"
+      ],
+      "acceptance": "Approved native rest-pause staged protocol, same activation load, actual stop, timing and saved history; no claim web automatically selects it.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "AMP-CLUSTER",
+      "group": "workout-tools",
+      "parents": [
+        "E20",
+        "E36"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/next-engine/workout-runtime.js",
+      "candidateFixtures": [
+        "AdvancedAmplifierProtocolDomainTest",
+        "NativeCustomWorkoutJournalCodecTest"
+      ],
+      "acceptance": "Approved native same-load cluster protocol, stage count, rests, early stop and exact cold retry.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "AMP-ACCOUNT",
+      "group": "workout-tools",
+      "parents": [
+        "E20",
+        "E32",
+        "E38"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/next-engine/techniques.js",
+      "candidateFixtures": [
+        "CustomWorkoutTimingDomain.kt",
+        "CustomHistoricalTechniqueGroupingDomainTest"
+      ],
+      "acceptance": "Correct active seconds/rest and dose credit; preserve across phase/weeks, no fabricated normal sets or silent extra fatigue.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "ADJUST-READINESS",
+      "group": "session-adjustments",
+      "parents": [
+        "E25",
+        "E29"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/workout-readiness.js",
+      "candidateFixtures": [
+        "InWorkoutCoachDomainTest",
+        "NativeKotlinCurrentLoadCoachReviewTest"
+      ],
+      "acceptance": "Low/normal/strong choices scope actual advice, optional and no unsupported load change.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "ADJUST-INJURY",
+      "group": "session-adjustments",
+      "parents": [
+        "E26",
+        "E28"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/injury-tools.js",
+      "candidateFixtures": [
+        "InWorkoutCoachDomainTest",
+        "KotlinShorterSessionReviewDomainTest"
+      ],
+      "acceptance": "Quick report, affected muscle reduction/skip/substitute, preserve existing actuals; explicit non-diagnostic review.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "ADJUST-SHORT",
+      "group": "session-adjustments",
+      "parents": [
+        "E27",
+        "E28"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/next-engine/session-shortening.js",
+      "candidateFixtures": [
+        "KotlinShorterSessionReviewDomainTest",
+        "CustomShorterSessionReviewDomainTest",
+        "NativeKotlinCustomWorkoutPreflightTest"
+      ],
+      "acceptance": "Full/45/30/20 for generated/custom, preserve essential work, actual fit, reason, preissue Undo, no orphan supersets.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "ADJUST-SWAP",
+      "group": "session-adjustments",
+      "parents": [
+        "E09",
+        "E28"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/next-engine/exercise-selection-intelligence.js",
+      "candidateFixtures": [
+        "KotlinComposerSwapReviewDomainTest",
+        "CustomExerciseSwapRankingDomainTest"
+      ],
+      "acceptance": "Live swap, approved gym, no transferred old load or facts, new slot identity and undo.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "ADJUST-MID",
+      "group": "session-adjustments",
+      "parents": [
+        "E28",
+        "E30"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/session-tools.js",
+      "candidateFixtures": [
+        "NativeKotlinOwnedLoadCoachingIntegrationTest",
+        "kotlin-cold-resume-drafts-test.mjs"
+      ],
+      "acceptance": "Change permitted progression/sets/reps/rest mid-session; review permanent program update separately from one workout.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "CUSTOM-EDITOR",
+      "group": "custom-programs",
+      "parents": [
+        "E16",
+        "E33"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/training-domain/programs.js",
+      "candidateFixtures": [
+        "CustomCycleBuilderDomainTest",
+        "NativeKotlinCustomAuthoringDraftCoordinatorTest"
+      ],
+      "acceptance": "Create clone rename add/remove/reorder day/movement/set; explicit draft/save/discard, stable IDs, audit, Undo.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "CUSTOM-WEEK",
+      "group": "custom-programs",
+      "parents": [
+        "E16",
+        "E32"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/program-manual-targets.js",
+      "candidateFixtures": [
+        "CustomTrainingCycleDomainTest",
+        "CustomCoachWeekEditDomain.kt"
+      ],
+      "acceptance": "Week-specific set/load/rep/RIR/rest/amplifier/percentage override persists through phase and issuance.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "CUSTOM-SCHEDULE",
+      "group": "custom-programs",
+      "parents": [
+        "E16",
+        "E35"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/program-schedule-sheet.js",
+      "candidateFixtures": [
+        "NativeApprovedBlockWeekProjectionTest",
+        "KotlinObservedScheduleWeekDomainTest"
+      ],
+      "acceptance": "Explicit schedule weekdays, locks, reorder, next/prepared/resume, calendar consistency.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "CUSTOM-IMPORT",
+      "group": "custom-programs",
+      "parents": [
+        "E16",
+        "E39"
+      ],
+      "stage": "S5",
+      "scope": "required",
+      "webSource": "modules/program-code.js",
+      "candidateFixtures": [
+        "NativeKotlinCustomCycleDraftFileStoreTest",
+        "NativeKotlinCleanStoreRestoreTest"
+      ],
+      "acceptance": "Program code/file/shared template import review, validate unsupported data, avoid duplicates, no automatic application.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "CUSTOM-CONVERT",
+      "group": "custom-programs",
+      "parents": [
+        "E16",
+        "E32",
+        "E33"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/training-domain/programs.js",
+      "candidateFixtures": [
+        "CustomCycleTransitionDomainTest",
+        "GeneratedAdaptiveBlockConversionTest"
+      ],
+      "acceptance": "Convert standalone to cycle retaining original block exactly; append reviewed blocks with stable history.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "CYCLE-TEMPLATE",
+      "group": "adaptive-cycles",
+      "parents": [
+        "E32",
+        "E35"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/simulation.js",
+      "candidateFixtures": [
+        "GeneratedAdaptiveBlockSafetyTest",
+        "CoachReviewedWholeCycleDomainTest"
+      ],
+      "acceptance": "All active cycle presets, phases, week durations and goals; real multiweek actual issued sets.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "CYCLE-TRANSITION",
+      "group": "adaptive-cycles",
+      "parents": [
+        "E32",
+        "E33"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/phase-transition.js",
+      "candidateFixtures": [
+        "WholeCycleStrengthContinuityDomainTest",
+        "StrengthRosterBoundaryGuardDomainTest"
+      ],
+      "acceptance": "Hypertrophy to strength to peak; preserve legitimate roster/dose; taper only appropriate phase.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "CYCLE-FREQUENCY",
+      "group": "adaptive-cycles",
+      "parents": [
+        "E13",
+        "E32"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/cycle-runtime-adapter.js",
+      "candidateFixtures": [
+        "NamedLiftPracticeContinuityDomainTest",
+        "CoachFirstProgramFiveDayStrengthTest"
+      ],
+      "acceptance": "ULPPL/PPLUL mixed goal 2 bench/2 squat/1 deadlift practice if feasible and not overridden, correct incline stock.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "CYCLE-ADAPT",
+      "group": "adaptive-cycles",
+      "parents": [
+        "E33",
+        "E35"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/adaptive-cycle-upgrade.js",
+      "candidateFixtures": [
+        "AdaptiveCycleOptionReviewDomainTest",
+        "NativeKotlinAdaptiveCyclePermissionInventoryTest"
+      ],
+      "acceptance": "Independent adapt split/exercises toggles; existing cycle upgrade and future preview; no changed issued work.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "CYCLE-RECOVERY",
+      "group": "adaptive-cycles",
+      "parents": [
+        "E31",
+        "E34"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/recovery.js",
+      "candidateFixtures": [
+        "ReviewedRecoveryBlockRecipeDomainTest",
+        "NativeKotlinRecoveryScheduleFenceTest"
+      ],
+      "acceptance": "Deload on evidence, cap or stall; explicit review, once-only schedule, return to baseline, no unearned demand.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "CYCLE-ENDLESS",
+      "group": "adaptive-cycles",
+      "parents": [
+        "E31",
+        "E34",
+        "E35"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/training-domain/programs.js",
+      "candidateFixtures": [
+        "KotlinContinuousPlanEvidenceDomainTest",
+        "KotlinProgressionTimelineDomainTest"
+      ],
+      "acceptance": "Existing endless next day/absolute week, repeat cycle, soft cap or stalled deload, no duplicate scheduled recovery; improved goal-driven Endless Plan separate future enhancement.",
+      "state": "REVIEW",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "CYCLE-CONSENT",
+      "group": "adaptive-cycles",
+      "parents": [
+        "E33",
+        "E35",
+        "E41"
+      ],
+      "stage": "S5",
+      "scope": "required",
+      "webSource": "modules/next-engine/cycle-runtime-adapter.js",
+      "candidateFixtures": [
+        "NativeKotlinFutureWeekDraftAcceptanceTest",
+        "NativeFutureWeekLoadConsentFileStoreTest",
+        "NativeKotlinFutureBlockContextInventoryTest"
+      ],
+      "acceptance": "Scoped approvals and revocation, exact source/owner/context, future block atomic activation, reject stale or wrong gym.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "CYCLE-LONG",
+      "group": "adaptive-cycles",
+      "parents": [
+        "E31",
+        "E32",
+        "E34",
+        "E35"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/next-engine/simulation.js",
+      "candidateFixtures": [
+        "GeneratedAdaptiveBlockSafetyTest",
+        "TrainingBlockRecoveryContinuityTest"
+      ],
+      "acceptance": "16+ weeks and another full cycle where appropriate; missed days, stalls, injury, changed gym, correction and refusal; actual issuance not forecast-only.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "CAT-SEARCH",
+      "group": "exercise-discovery",
+      "parents": [
+        "E08",
+        "E09",
+        "E10"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/exercise-picker-sheet.js",
+      "candidateFixtures": [
+        "CoachExerciseChoiceSearchDomainTest",
+        "kotlin-exercise-library-test.mjs"
+      ],
+      "acceptance": "Complete search and paging, equipment/muscle/attachment/variant facets, no false availability.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "CAT-VARIANTS",
+      "group": "exercise-discovery",
+      "parents": [
+        "E08",
+        "E10"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/exercise-variant-browse.js",
+      "candidateFixtures": [
+        "RequestedWebVariantTrancheTest",
+        "kotlin-exercise-variant-facets-test.mjs"
+      ],
+      "acceptance": "Incline levels, rope/straight/V/dual rope, seated lateral, curls etc.; preserve stable distinct load history.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "CAT-RANK",
+      "group": "exercise-discovery",
+      "parents": [
+        "E09",
+        "E13"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/next-engine/semantic-exercise-graph.js",
+      "candidateFixtures": [
+        "CustomExerciseSwapWeeklyCoverageTest",
+        "CustomExerciseSwapRankingDomainTest"
+      ],
+      "acceptance": "Movement role/pattern, weekly direct gaps, athlete constraints and feasible stock; reason, no invented equivalent stimulus.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "CAT-EXCLUDE",
+      "group": "exercise-discovery",
+      "parents": [
+        "E05",
+        "E08",
+        "E09"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/training-domain/catalog.js",
+      "candidateFixtures": [
+        "NativeKotlinExerciseExclusionJourneyTest",
+        "NativeKotlinExerciseExclusionEditingTest"
+      ],
+      "acceptance": "Include/exclude, ban/unban, exact source approval and Undo; no changes to issued work.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "CAT-USER",
+      "group": "exercise-discovery",
+      "parents": [
+        "E08",
+        "E10"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/training-domain/catalog.js",
+      "candidateFixtures": [
+        "CustomExerciseAuthoringDomainTest",
+        "NativeKotlinCustomAuthoringSourceFileStoreTest"
+      ],
+      "acceptance": "Create custom exercise identity and metadata with verified load basis; persist, select, history and safe deletion.",
+      "state": "REVIEW",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "CAT-GUIDE",
+      "group": "exercise-discovery",
+      "parents": [
+        "E10",
+        "E29"
+      ],
+      "stage": "S6",
+      "scope": "required",
+      "webSource": "modules/exercise-variant-browse.js",
+      "candidateFixtures": [
+        "kotlin-reviewed-exercise-labels-test.mjs",
+        "kotlin-exercise-library-test.mjs"
+      ],
+      "acceptance": "Readable setup/cues and appropriate movement visuals or reviewed equivalent; no incorrect equipment instruction.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "GYM-EDIT",
+      "group": "gyms-and-equipment",
+      "parents": [
+        "E03",
+        "E06",
+        "E07"
+      ],
+      "stage": "S2",
+      "scope": "required",
+      "webSource": "modules/gym-load-fields.js",
+      "candidateFixtures": [
+        "NativeKotlinGymCatalogEditingDomainTest",
+        "OnboardingMachineStockDomainTest"
+      ],
+      "acceptance": "Multiple gyms, current gym, inventory, implements, fixtures, attachments, units, bar/Smith weight and per-exercise increment.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "GYM-MACHINE",
+      "group": "gyms-and-equipment",
+      "parents": [
+        "E07",
+        "E28",
+        "E36"
+      ],
+      "stage": "S2",
+      "scope": "required",
+      "webSource": "modules/gym-machine-variants.js",
+      "candidateFixtures": [
+        "NativeKotlinMachineRosterFileStoreTest",
+        "NativeKotlinWorkoutMachineChoiceFileStoreTest"
+      ],
+      "acceptance": "Machine A/B independently named/active/default per gym; exact stack and historical data.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "GYM-SWITCH",
+      "group": "gyms-and-equipment",
+      "parents": [
+        "E28",
+        "E30",
+        "E36"
+      ],
+      "stage": "S3",
+      "scope": "required",
+      "webSource": "modules/workout-machine-runtime.js",
+      "candidateFixtures": [
+        "NativeKotlinCustomMachineBindingPolicyTest",
+        "KotlinMachineAlternativesDomainTest",
+        "kotlin-machine-quick-chooser-test.mjs"
+      ],
+      "acceptance": "Quick mid-workout station switch, correct Last and target, original completed sets retain station, safe unavailable equipment.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "GYM-HISTORY-ASSOC",
+      "group": "gyms-and-equipment",
+      "parents": [
+        "E30",
+        "E36",
+        "E37"
+      ],
+      "stage": "S5",
+      "scope": "required",
+      "webSource": "modules/gym-machine-variants.js",
+      "candidateFixtures": [
+        "NativeKotlinMixedHistoryFactsReadTest",
+        "NativeKotlinMachineRosterFileStoreTest"
+      ],
+      "acceptance": "Explicit older unassigned facts associate to original machine, not new B; preserve raw receipts, chart/Last/progression station-scoped.",
+      "state": "REVIEW",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "GYM-UNIT",
+      "group": "gyms-and-equipment",
+      "parents": [
+        "E03",
+        "E07",
+        "E36"
+      ],
+      "stage": "S2",
+      "scope": "required",
+      "webSource": "modules/next-engine/loading.js",
+      "candidateFixtures": [
+        "EquipmentLoadDomainTest",
+        "NativeKotlinSmithLoadingJourneyTest"
+      ],
+      "acceptance": "Exact lb/kg, bar/Smith/dumbbell/cable stock, assistance inverse and typed measurement; reject unverified conversion.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "HIST-FINISH",
+      "group": "history-and-prs",
+      "parents": [
+        "E23",
+        "E36"
+      ],
+      "stage": "S5",
+      "scope": "required",
+      "webSource": "modules/next-engine/history.js",
+      "candidateFixtures": [
+        "NativeKotlinHistoryTransactionCoordinatorTest",
+        "NativeKotlinCustomHistoryTransactionTest"
+      ],
+      "acceptance": "Exactly once Finish, retry and process death before/after durable receipt, no duplicate completion, correct next day.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "HIST-CORRECT",
+      "group": "history-and-prs",
+      "parents": [
+        "E36",
+        "E37"
+      ],
+      "stage": "S5",
+      "scope": "required",
+      "webSource": "modules/history-editor.js",
+      "candidateFixtures": [
+        "NativeKotlinHistoryTransactionCoordinatorTest",
+        "NativeKotlinCustomHistoryTransactionTest"
+      ],
+      "acceptance": "Edit prior sets/reps/load/RIR/technique, factual skip/fail, receipt chain, recompute without mutating original issued targets.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "HIST-SEARCH",
+      "group": "history-and-prs",
+      "parents": [
+        "E36",
+        "E37"
+      ],
+      "stage": "S6",
+      "scope": "required",
+      "webSource": "modules/training-domain/records.js",
+      "candidateFixtures": [
+        "NativeKotlinGlobalHistoryReadCoordinatorTest",
+        "kotlin-exercise-history-filters-test.mjs"
+      ],
+      "acceptance": "Month/calendar, date, program/exercise search, working/all/skipped filters, correct order and undated handling.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "HIST-PR",
+      "group": "history-and-prs",
+      "parents": [
+        "E37",
+        "E38"
+      ],
+      "stage": "S5",
+      "scope": "required",
+      "webSource": "modules/workout-pr.js",
+      "candidateFixtures": [
+        "KotlinHistoryPerformanceSummaryDomainTest",
+        "NativeKotlinMixedHistoryFactsReadTest"
+      ],
+      "acceptance": "Only genuine eligible PR, no warmup/partial/failed false records, exact station scope and correction-aware recalculation.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "HIST-RECAP",
+      "group": "history-and-prs",
+      "parents": [
+        "E23",
+        "E37"
+      ],
+      "stage": "S6",
+      "scope": "required",
+      "webSource": "modules/plan-session-surfaces.js",
+      "candidateFixtures": [
+        "kotlin-verified-finish-recap-test.mjs",
+        "kotlin-canonical-finish-feedback-test.mjs"
+      ],
+      "acceptance": "Actual completion recap, feedback and next action use same saved receipt, no phantom PR or double save.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "VOL-ACCOUNT",
+      "group": "volume-and-trends",
+      "parents": [
+        "E12",
+        "E13",
+        "E38"
+      ],
+      "stage": "S4",
+      "scope": "required",
+      "webSource": "modules/program-volume-surfaces.js",
+      "candidateFixtures": [
+        "MuscleVolumeAccountingDomainTest",
+        "WeeklyDoseFeasibilityDomainTest"
+      ],
+      "acceptance": "Direct/indirect working dose, MEV/MAV/MRV, separate biceps/brachialis and wrist flex/ext, phase weekly changes and meaningful exclusions.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "VOL-CHART",
+      "group": "volume-and-trends",
+      "parents": [
+        "E37",
+        "E38"
+      ],
+      "stage": "S6",
+      "scope": "required",
+      "webSource": "modules/training-domain/analytics.js",
+      "candidateFixtures": [
+        "KotlinHistoryPerformanceSummaryDomainTest",
+        "kotlin-factual-trend-time-axis-test.mjs"
+      ],
+      "acceptance": "Factual history and trends, dates, exercise/day/machine scope, corrections update charts, no hidden equivalence.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "VOL-FAVORITES",
+      "group": "volume-and-trends",
+      "parents": [
+        "E38"
+      ],
+      "stage": "S6",
+      "scope": "required",
+      "webSource": "modules/training-domain/analytics.js",
+      "candidateFixtures": [
+        "kotlin-profile-layout-test.mjs",
+        "kotlin-exercise-library-test.mjs"
+      ],
+      "acceptance": "Ordered exercise/strength favorites, searchable chart selection, persisted owner preference.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "VOL-STANDARDS",
+      "group": "volume-and-trends",
+      "parents": [
+        "E38"
+      ],
+      "stage": "S6",
+      "scope": "required",
+      "webSource": "modules/training-domain/records.js",
+      "candidateFixtures": [
+        "StrengthStandardsMeasurementDomainTest",
+        "kotlin-strength-club-contract-test.mjs"
+      ],
+      "acceptance": "Strength standards accessible, exact source reference, barbell vs dumbbell/bodyweight scores, age/bodyweight context not fabricated percentile.",
+      "state": "REVIEW",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "VOL-CLUB",
+      "group": "volume-and-trends",
+      "parents": [
+        "E38"
+      ],
+      "stage": "S6",
+      "scope": "required",
+      "webSource": "modules/training-domain/records.js",
+      "candidateFixtures": [
+        "NativeStrengthClubDomainTest",
+        "kotlin-strength-club-contract-test.mjs"
+      ],
+      "acceptance": "Thousand-pound club actual singles vs projected total, correction-safe, exact physical barbell identity.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "BODY-TRACK",
+      "group": "bodyweight",
+      "parents": [
+        "E38",
+        "E40"
+      ],
+      "stage": "S6",
+      "scope": "required",
+      "webSource": "modules/training-domain/analytics.js",
+      "candidateFixtures": [
+        "kotlin-bodyweight-progress-test.mjs"
+      ],
+      "acceptance": "Dated bodyweight and active measurement features, edit/delete, trend units, owner, no hidden coaching input.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "BACKUP-EXPORT",
+      "group": "backup-restore",
+      "parents": [
+        "E39"
+      ],
+      "stage": "S5",
+      "scope": "required",
+      "webSource": "modules/backup-restore-panel.js",
+      "candidateFixtures": [
+        "NativeKotlinEncryptedTrainingSnapshotTest",
+        "NativeKotlinVerifiedHistoryCsvExportTest",
+        "kotlin-verified-training-archive-test.mjs"
+      ],
+      "acceptance": "User-facing encrypted whole-store export and factual CSV distinct; all owned record families and active sessions.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "BACKUP-RESTORE",
+      "group": "backup-restore",
+      "parents": [
+        "E39"
+      ],
+      "stage": "S5",
+      "scope": "required",
+      "webSource": "modules/backup-restore-panel.js",
+      "candidateFixtures": [
+        "NativeKotlinCleanStoreRestoreTest",
+        "NativeKotlinEncryptedTrainingSnapshotTest"
+      ],
+      "acceptance": "Explicit prehost restore, full cold reopen, corrupted/foreign rejection, interrupted staging rollback; no overwrite or reset.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "BACKUP-MERGE",
+      "group": "backup-restore",
+      "parents": [
+        "E39"
+      ],
+      "stage": "S5",
+      "scope": "required",
+      "webSource": "modules/training-domain/history-import.js",
+      "candidateFixtures": [
+        "NativeKotlinCleanStoreRestoreTest",
+        "NativeKotlinGlobalHistoryReadCoordinatorTest"
+      ],
+      "acceptance": "Explicit legacy/history import, review conflict/revision/tombstone, duplicates, Undo, source bytes unchanged; no silent migration.",
+      "state": "REVIEW",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "DATA-RECOVERY",
+      "group": "backup-restore",
+      "parents": [
+        "E23",
+        "E36",
+        "E39"
+      ],
+      "stage": "S5",
+      "scope": "required",
+      "webSource": "modules/app-storage-ownership.js",
+      "candidateFixtures": [
+        "KotlinNativeJournalFileStoreTest",
+        "NativeKotlinHistoryLedgerV2Test",
+        "NativeKotlinSegmentedRedoFileStoreTest"
+      ],
+      "acceptance": "Offline process-death/ack/crash/disk limits, exact journal and history identities, finish capacity, active resume.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "DATA-OWNER",
+      "group": "backup-restore",
+      "parents": [
+        "E36",
+        "E39",
+        "E41"
+      ],
+      "stage": "S5",
+      "scope": "required",
+      "webSource": "modules/app-storage-ownership.js",
+      "candidateFixtures": [
+        "NativeKotlinCandidateSegmentedRootFileStoreTest",
+        "NativeKotlinIndependentHistoryReceiptVerifierTest"
+      ],
+      "acceptance": "Cross-athlete/gym privacy, stale revisions, no orphan/corrupt files, atomic changes with recovery.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "DATA-UPDATE",
+      "group": "backup-restore",
+      "parents": [
+        "E39",
+        "E41"
+      ],
+      "stage": "S8",
+      "scope": "required",
+      "webSource": "modules/mobile-lifecycle.js",
+      "candidateFixtures": [
+        "NativeKotlinCleanStoreRestoreTest",
+        "no-apk-before-end-to-end-test.mjs"
+      ],
+      "acceptance": "Controlled signed install/update, device offline/reboot, old format migration and backup rollback; real Android required.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "PROFILE-PREFS",
+      "group": "profile",
+      "parents": [
+        "E01",
+        "E06",
+        "E40"
+      ],
+      "stage": "S6",
+      "scope": "required",
+      "webSource": "modules/training-domain/programs.js",
+      "candidateFixtures": [
+        "NativeKotlinCoachAssistanceSettingsStoreTest",
+        "kotlin-profile-layout-test.mjs"
+      ],
+      "acceptance": "Persist athlete profile, goals, coaching settings and custom sections; no cross-owner state.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "PROFILE-LEVEL",
+      "group": "profile",
+      "parents": [
+        "E38",
+        "E40"
+      ],
+      "stage": "S6",
+      "scope": "required",
+      "webSource": "modules/training-domain/analytics.js",
+      "candidateFixtures": [
+        "kotlin-profile-milestones-test.mjs",
+        "kotlin-profile-layout-test.mjs"
+      ],
+      "acceptance": "Coherent verified level/XP, milestones, history and consistency; no fabricated achievements.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "PROFILE-SHARE",
+      "group": "profile",
+      "parents": [
+        "E38",
+        "E40"
+      ],
+      "stage": "S6",
+      "scope": "required",
+      "webSource": "modules/release-notes.js",
+      "candidateFixtures": [
+        "kotlin-profile-share-test.mjs",
+        "kotlin-profile-share-image-test.mjs"
+      ],
+      "acceptance": "Private profile/share card and explicit user action; optional additional sharing/social breadth not core engine gate.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "PROFILE-THEME",
+      "group": "profile",
+      "parents": [
+        "E40"
+      ],
+      "stage": "S6",
+      "scope": "required",
+      "webSource": "modules/ui-motion.js",
+      "candidateFixtures": [
+        "native-original-theme-parity-test.mjs",
+        "m3e-version-test.mjs"
+      ],
+      "acceptance": "All required themes, non-neon default, light/dark and accessible tokens, smooth reduced-motion transitions.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "PROFILE-SETTINGS",
+      "group": "profile",
+      "parents": [
+        "E40",
+        "E41"
+      ],
+      "stage": "S6",
+      "scope": "required",
+      "webSource": "modules/release-notes.js",
+      "candidateFixtures": [
+        "kotlin-beta-feedback-share-test.mjs",
+        "kotlin-lab-navigation-test.mjs"
+      ],
+      "acceptance": "Settings, version/What's New, feedback/report, privacy and data controls, no silent upload.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "UI-HOME",
+      "group": "program-builder",
+      "parents": [
+        "E22",
+        "E29",
+        "E35"
+      ],
+      "stage": "S6",
+      "scope": "required",
+      "webSource": "modules/home-week.js",
+      "candidateFixtures": [
+        "kotlin-lab-navigation-test.mjs",
+        "kotlin-plan-hierarchy-test.mjs"
+      ],
+      "acceptance": "Today next action, Game Plan, expandable session, current program/day and identical Train targets; no duplicate coach banners.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "UI-PLAN",
+      "group": "custom-programs",
+      "parents": [
+        "E16",
+        "E32",
+        "E35"
+      ],
+      "stage": "S6",
+      "scope": "required",
+      "webSource": "modules/plan-session-surfaces.js",
+      "candidateFixtures": [
+        "kotlin-plan-hierarchy-test.mjs",
+        "kotlin-plan-superset-atomic-reorder-test.mjs"
+      ],
+      "acceptance": "Plan schedule/volume/progression/blueprint, full program, phase/week/day, actual issued preview, recoverable editor.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "UI-TRAIN",
+      "group": "workout-logging",
+      "parents": [
+        "E22",
+        "E28",
+        "E29"
+      ],
+      "stage": "S6",
+      "scope": "required",
+      "webSource": "modules/workout-session-controls.js",
+      "candidateFixtures": [
+        "kotlin-lab-workout-ui-test.mjs",
+        "kotlin-train-resume-test.mjs"
+      ],
+      "acceptance": "Train compact tools, steppers/long press/manual entry, set animation, target/last, focus dock, rest, skip/finish and resume.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "UI-NAV",
+      "group": "profile",
+      "parents": [
+        "E29",
+        "E40"
+      ],
+      "stage": "S6",
+      "scope": "required",
+      "webSource": "modules/ui-choice-navigation.js",
+      "candidateFixtures": [
+        "kotlin-lab-navigation-test.mjs",
+        "kotlin-profile-layout-test.mjs"
+      ],
+      "acceptance": "Stable single screen owner, bottom nav/rail, smooth profile morph and back, no sticky gaps or flashing.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "UI-A11Y",
+      "group": "profile",
+      "parents": [
+        "E40",
+        "E41"
+      ],
+      "stage": "S8",
+      "scope": "required",
+      "webSource": "verification/r74-accessibility-browser-test.mjs",
+      "candidateFixtures": [
+        "kotlin-lab-workout-ui-test.mjs",
+        "kotlin-lab-navigation-test.mjs"
+      ],
+      "acceptance": "Actual phone/tablet/foldable, large text/keyboard/TalkBack, 48dp targets, light/dark, rotation and reduced motion.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "RUNTIME-ONE",
+      "group": "profile",
+      "parents": [
+        "E41"
+      ],
+      "stage": "S7",
+      "scope": "required",
+      "webSource": "verification/engine-authority-test.mjs",
+      "candidateFixtures": [
+        "engine-sandbox-isolation-test.mjs",
+        "no-apk-before-end-to-end-test.mjs"
+      ],
+      "acceptance": "Resolved native app runtime Kotlin-only, no legacy policy or demo route, exact source verified and freeze.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "CERT-PAIRED",
+      "group": "adaptive-progression",
+      "parents": [
+        "E41"
+      ],
+      "stage": "S7",
+      "scope": "required",
+      "webSource": "verification/m235-engine-verification-test.mjs",
+      "candidateFixtures": [
+        "PairedFunctionalProbe.kt",
+        "PairedProgressionProbe.kt"
+      ],
+      "acceptance": "Fresh matched functional outputs and independent intended results; separate superiority, no claim from CI or source name.",
+      "state": "MAP",
+      "evidence": "candidate only; inspect exact test methods and run relevant fixture at assigned stage",
+      "deviceRequired": true
+    },
+    {
+      "id": "OPT-SOCIAL",
+      "group": "profile",
+      "parents": [
+        "E40"
+      ],
+      "stage": "POST-BETA",
+      "scope": "optional-policy",
+      "webSource": "android-native/LAUNCH_BETA_SCOPE.md",
+      "candidateFixtures": [],
+      "acceptance": "Optional social/leaderboard features beyond core private training, per LAUNCH_BETA_SCOPE. No engine exclusion.",
+      "state": "DEFERRED_OPTIONAL",
+      "evidence": "Existing beta scope policy; no change to mandatory engine parity",
+      "deviceRequired": false
+    },
+    {
+      "id": "OPT-GALLERY-ART",
+      "group": "custom-programs",
+      "parents": [
+        "E16"
+      ],
+      "stage": "POST-BETA",
+      "scope": "optional-policy",
+      "webSource": "android-native/LAUNCH_BETA_SCOPE.md",
+      "candidateFixtures": [],
+      "acceptance": "Decorative gallery and elaborate browse presentation may be deferred; actual template configuration and safe import remain required.",
+      "state": "DEFERRED_OPTIONAL",
+      "evidence": "Existing beta scope policy; no change to mandatory engine parity",
+      "deviceRequired": false
+    },
+    {
+      "id": "OPT-ANALYTICS-VISUAL",
+      "group": "volume-and-trends",
+      "parents": [
+        "E38"
+      ],
+      "stage": "POST-BETA",
+      "scope": "optional-policy",
+      "webSource": "android-native/LAUNCH_BETA_SCOPE.md",
+      "candidateFixtures": [],
+      "acceptance": "Elaborate charts beyond required factual volume/history/strength/consistency may be deferred; underlying analytics remain required.",
+      "state": "DEFERRED_OPTIONAL",
+      "evidence": "Existing beta scope policy; no change to mandatory engine parity",
+      "deviceRequired": false
+    },
+    {
+      "id": "OPT-DEV-DEMO",
+      "group": "profile",
+      "parents": [
+        "E41"
+      ],
+      "stage": "POST-BETA",
+      "scope": "optional-policy",
+      "webSource": "android-native/LAUNCH_BETA_SCOPE.md",
+      "candidateFixtures": [],
+      "acceptance": "Development demos, benchmarks and prototype screens excluded from distributable runtime; independent CI evidence remains required.",
+      "state": "DEFERRED_OPTIONAL",
+      "evidence": "Existing beta scope policy; no change to mandatory engine parity",
+      "deviceRequired": false
+    },
+    {
+      "id": "OPT-ENDLESS-UPGRADE",
+      "group": "adaptive-cycles",
+      "parents": [
+        "E35"
+      ],
+      "stage": "POST-BETA",
+      "scope": "optional-policy",
+      "webSource": "android-native/LAUNCH_BETA_SCOPE.md",
+      "candidateFixtures": [],
+      "acceptance": "New future goal-driven Endless Plan optimization beyond existing web behavior; existing CYCLE-ENDLESS mandatory.",
+      "state": "DEFERRED_OPTIONAL",
+      "evidence": "Existing beta scope policy; no change to mandatory engine parity",
+      "deviceRequired": false
+    }
+  ]
+}

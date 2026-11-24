@@ -39,7 +39,7 @@ class NativeKotlinHistoryTransactionCoordinatorTest {
         assertEquals(1L, accepted(coordinator().enroll(
             "owner-1", "athlete-1", { _, _ -> allowed })).manifest.revision)
     }
-    private fun issueResolved(id: Int): KotlinWorkoutJournalState {
+    private fun issueResolved(id: Int, machineId:String?=null): KotlinWorkoutJournalState {
         val workout = "workout-$id"
         val targets = (0..1).map { i ->
             KotlinWorkoutTarget("bench", ComposerRole.PRIMARY,
@@ -63,7 +63,7 @@ class NativeKotlinHistoryTransactionCoordinatorTest {
                 KotlinJournalOperation.RecordSet(
                     "event-$id-$i", i.toLong(), "slot-$id-$i",
                     KotlinJournalSetOutcome.COMPLETED,
-                    KotlinPerformedSet(BigDecimal("200"), LoadUnit.LB, 8, 2)
+                    KotlinPerformedSet(BigDecimal("200"), LoadUnit.LB, 8, 2,machineId)
                 ), { owner, revision -> auth.canAccessIssuedWorkout(owner, revision) })
             result = (accepted as NativeJournalFileResult.Durable).journal
         }
@@ -84,6 +84,66 @@ class NativeKotlinHistoryTransactionCoordinatorTest {
     private fun finished(id: Int) {
         assertEquals(id, accepted(coordinator().complete("owner-1", "athlete-1",
             "workout-$id", finish(id))).manifest.completions.size)
+    }
+
+    private fun ledgerFormat():Int {
+        val file=Files.list(root).use { stream ->
+            stream.filter { it.fileName.toString().startsWith("history-") &&
+                it.fileName.toString().endsWith(".bin") }.toList().single()
+        }
+        return java.nio.ByteBuffer.wrap(Files.readAllBytes(file)).getInt(8)
+    }
+
+    @Test fun exactCorrectionIntentSurvivesColdReopenForGeneratedAndCustomHistory() {
+        val generated=KotlinHistoryManifestEntry(1,"workout-1","storage-1","finish-1",3,0)
+        val custom=KotlinHistoryManifestEntry(2,"workout-2","custom-v2-"+"a".repeat(64),"finish-2",3,0)
+        val measured=KotlinHistoryManifestEntry(3,"workout-3","measured-v1-"+"b".repeat(64),"finish-3",3,0)
+        assertTrue(ledger().enrollVerifiedSnapshot("owner-1","athlete-1",
+            listOf(generated,custom,measured)){_,_->true} is NativeHistoryLedgerResult.Durable)
+        assertEquals(4,ledgerFormat())
+        fun roundTrip(intent:NativeHistoryWriteIntent,entry:KotlinHistoryManifestEntry,
+            expectedFormat:Int) {
+            val revision=manifest().ledger.revision
+            assertTrue(ledger().prepare("owner-1","athlete-1",revision,intent)
+                is NativeHistoryLedgerResult.Durable)
+            assertEquals(expectedFormat,ledgerFormat())
+            assertEquals(intent,manifest().ledger.pending)
+            assertFalse(manifest().ledger.readyForHistoryReads)
+            assertTrue(ledger().finalize("owner-1","athlete-1",intent,
+                entry.copy(savedCorrectionRevision=entry.savedCorrectionRevision+1))
+                is NativeHistoryLedgerResult.Durable)
+            assertEquals(4,ledgerFormat())
+            assertTrue(manifest().ledger.readyForHistoryReads)
+        }
+        val physical=KotlinPerformedSet(BigDecimal("200.00"),LoadUnit.LB,5,1,"machine-B")
+        roundTrip(NativeHistoryWriteIntent.Correct("workout-1",edit(1).copy(actual=physical)),generated,5)
+        // Exact decimal scale also matters for redo equality with the correction file.
+        val exponent=physical.copy(load=BigDecimal("2E+2"),machineInstanceId=null)
+        roundTrip(NativeHistoryWriteIntent.Correct("workout-1",
+            edit(1,"edit-scale",1,"edit-1").copy(actual=exponent)),
+            generated.copy(savedCorrectionRevision=1),5)
+        val stage=CustomSavedVisitCorrection("edit-stage",0,
+            CustomWorkoutVisitKey("set-2",CustomWorkoutVisitPart.FOLLOW_UP,3),
+            "old-stage",KotlinJournalSetOutcome.COMPLETED,physical.copy(reps=3))
+        roundTrip(NativeHistoryWriteIntent.CustomCorrect("workout-2",stage),custom,5)
+        // A skipped later visit has no actual load or station, but still owns its ordinal.
+        val skipped=stage.copy(eventId="skip-stage",expectedCorrectionRevision=1,
+            correctsEventId="edit-stage",outcome=KotlinJournalSetOutcome.SKIPPED,performed=null)
+        roundTrip(NativeHistoryWriteIntent.CustomCorrect("workout-2",skipped),
+            custom.copy(savedCorrectionRevision=1),5)
+        val legacy=stage.copy(eventId="edit-main",expectedCorrectionRevision=2,
+            visit=CustomWorkoutVisitKey("set-2",CustomWorkoutVisitPart.MAIN),
+            performed=physical.copy(machineInstanceId=null))
+        roundTrip(NativeHistoryWriteIntent.CustomCorrect("workout-2",legacy),
+            custom.copy(savedCorrectionRevision=2),4)
+        val before=manifest().ledger
+        val invalid=legacy.copy(expectedCorrectionRevision=3,
+            visit=legacy.visit.copy(stage=2))
+        assertEquals(NativeHistoryLedgerResult.Rejected(
+            NativeHistoryLedgerRefusal.INVALID_MANIFEST_TRANSITION),
+            ledger().prepare("owner-1","athlete-1",before.revision,
+                NativeHistoryWriteIntent.CustomCorrect("workout-2",invalid)))
+        assertEquals(before,manifest().ledger)
     }
 
     @Test fun generatedCorrectionCannotReserveAnotherJournalKindsHistory() {
@@ -349,6 +409,39 @@ class NativeKotlinHistoryTransactionCoordinatorTest {
         assertEquals(2, (corrections().openStored(
             "owner-1", "workout-1", ::ownedJournal)
             as NativeSavedCorrectionFileResult.Opened).state.receipts.size)
+    }
+
+    @Test fun machineCorrectionRecoversBothCrashWindowsAndRemainsIdempotent() {
+        enroll()
+        issueResolved(1,"machine-B")
+        finished(1)
+        val first=edit(1).copy(actual=KotlinPerformedSet(
+            BigDecimal("200.00"),LoadUnit.LB,5,1,"machine-B"))
+        val intent=NativeHistoryWriteIntent.Correct("workout-1",first)
+        assertTrue(ledger().prepare("owner-1","athlete-1",2,intent)
+            is NativeHistoryLedgerResult.Durable)
+        assertEquals(intent,manifest().ledger.pending)
+        assertEquals(3L,accepted(coordinator().recover(
+            "owner-1","athlete-1")).manifest.revision)
+        assertTrue(accepted(coordinator().correct(
+            "owner-1","athlete-1","workout-1",first)).replayed)
+        val second=edit(1,"edit-machine-2",1,"edit-1",4).copy(
+            actual=first.actual!!.copy(reps=4))
+        val pending=NativeHistoryWriteIntent.Correct("workout-1",second)
+        assertTrue(ledger().prepare("owner-1","athlete-1",3,pending)
+            is NativeHistoryLedgerResult.Durable)
+        assertTrue(corrections().appendStored("owner-1","workout-1",
+            second,::ownedJournal) is NativeSavedCorrectionFileResult.Durable)
+        assertEquals(4L,accepted(coordinator().recover(
+            "owner-1","athlete-1")).manifest.revision)
+        val saved=corrections().openStored("owner-1","workout-1",
+            ::ownedJournal) as NativeSavedCorrectionFileResult.Opened
+        assertEquals(listOf(first,second),saved.state.receipts.map{it.correction})
+        val evidence=(KotlinWorkoutHistoryEvidenceDomain.projectSaved(saved.state)
+            as KotlinHistoryProjectionResult.Candidate).evidence
+        assertEquals("machine-B",evidence.sets.last().actual?.machineInstanceId)
+        assertEquals(4,evidence.sets.last().actual?.reps)
+        assertTrue(manifest().ledger.readyForHistoryReads)
     }
 
     @Test fun pendingIntentBlocksHistoryAndFailedAuthCannotSilentlyEraseIt() {

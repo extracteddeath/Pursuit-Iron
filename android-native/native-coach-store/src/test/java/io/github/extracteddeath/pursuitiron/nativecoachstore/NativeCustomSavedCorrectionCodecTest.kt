@@ -55,6 +55,30 @@ class NativeCustomSavedCorrectionCodecTest {
         }
     }
 
+    @Test fun negativeScaleCorrectionRetainsExactRedoIdentityWithoutChangingEarlierFormats() {
+        val first=receipt(1)
+        val second=receipt(2,"A")
+        val earlier=receipt(3,"A")
+        val staged=earlier.copy(correction=earlier.correction.copy(
+            visit=earlier.correction.visit.copy(part=CustomWorkoutVisitPart.FOLLOW_UP,stage=3)))
+        val original=envelope(first,second,staged)
+        val originalBytes=NativeCustomSavedCorrectionCodec.encode(original)
+        assertEquals(3,originalBytes[11].toInt())
+        val fourth=receipt(4,"A")
+        val exact=fourth.copy(correction=fourth.correction.copy(
+            visit=staged.correction.visit,
+            performed=fourth.correction.performed!!.copy(load=n("2E+2"))))
+        val revised=envelope(first,second,staged,exact)
+        val wire=NativeCustomSavedCorrectionCodec.encode(revised)
+        assertEquals(4,wire[11].toInt())
+        val cold=NativeCustomSavedCorrectionCodec.decode(wire)
+        assertEquals(revised,cold)
+        assertEquals(-2,cold.receipts.last().correction.performed!!.load!!.scale())
+        assertArrayEquals(wire,NativeCustomSavedCorrectionCodec.encode(cold))
+        assertArrayEquals(originalBytes,NativeCustomSavedCorrectionCodec.encode(
+            NativeCustomSavedCorrectionCodec.decode(originalBytes)))
+    }
+
     @Test fun invalidStationIdIsRejectedWithoutWritingAmbiguousCorrection() {
         assertThrows(IllegalArgumentException::class.java) {
             NativeCustomSavedCorrectionCodec.encode(

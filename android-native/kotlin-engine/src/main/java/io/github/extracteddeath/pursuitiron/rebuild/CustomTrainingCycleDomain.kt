@@ -241,7 +241,30 @@ object CustomTrainingCycleDomain {
     fun review(
         input: CustomTrainingCycle,
         availableExercises: List<CustomExerciseAvailability>
-    ): CustomCycleReview {
+    ): CustomCycleReview = reviewInternal(input,availableExercises,false)
+
+    /** Only the dedicated numeric audit can enable structural review of
+     * named metadata; ordinary callers and issuance still refuse it. */
+    internal fun reviewNamedForAudit(
+        input:CustomTrainingCycle,
+        availableExercises:List<CustomExerciseAvailability>,
+        stamp:CustomWorkoutSourceStamp,
+        evidence:List<CustomNamedPercentageWeekEvidence>
+    ):CustomCycleReview {
+        val exact=CustomNamedPercentageCycleAuditDomain.review(input,stamp,evidence)
+        if(exact !is CustomNamedPercentageCycleAudit.Verified)
+            return CustomCycleReview(CustomCycleReviewStatus.UNRESOLVED,
+                listOf(CustomCycleIssue(CustomCycleIssueKind.INVALID_SET,
+                    "weekOverrides","Named percentage evidence is unresolved: "+exact)),
+                input.blocks.sumOf{it.weeks},null)
+        return reviewInternal(input,availableExercises,true)
+    }
+
+    private fun reviewInternal(
+        input:CustomTrainingCycle,
+        availableExercises:List<CustomExerciseAvailability>,
+        exactNamedEvidence:Boolean
+    ):CustomCycleReview {
         val issues = mutableListOf<CustomCycleIssue>()
         fun issue(kind: CustomCycleIssueKind, at: String, why: String) {
             if (issues.size < 256) issues += CustomCycleIssue(kind, at, why)
@@ -298,7 +321,8 @@ object CustomTrainingCycleDomain {
                 // until the owner-fenced issuance path replays its source
                 // recipe and displays rep-out semantics it must not execute
                 // as an ordinary custom set.
-                if(set.percentageIntent!=null)
+                if(set.percentageIntent!=null && (!exactNamedEvidence ||
+                        !set.percentageIntent.validForSet(set)))
                     issue(CustomCycleIssueKind.INVALID_SET, here,
                         "Named percentage protocol requires its dedicated reviewed issuance path.")
                 // Beyond-failure lengthened partials are an optional

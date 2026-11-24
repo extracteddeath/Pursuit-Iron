@@ -163,6 +163,31 @@ class CustomBlockTransitionLoadDomainTest {
         assertTrue(runCatching{(result.sets as MutableList<CustomBlockTransitionSet>).clear()}.isFailure)
     }
 
+    @Test fun assistedCounterweightCannotUseExternalLoadMinimumForNewBlock() {
+        val basis=LoadBasis.ASSISTANCE_COUNTERWEIGHT
+        fun assisted(day:CustomWorkoutDaySnapshot)=day.copy(slots=
+            day.slots.map{slot->slot.copy(sets=slot.sets.map{set->
+                set.copy(prescription=set.prescription.copy(load=
+                    (set.prescription.load as DraftSetLoad.Verified).copy(basis=basis)))
+            })})
+        val equipment=VerifiedLoadStock.Stack(LoadUnit.LB,basis,n(20),n(5),n(100))
+        val prior=completed(assisted(snapshot(loads=listOf(60,60))))
+        // Both a lower and higher authored assistance setting must avoid
+        // the external-load min rule. No harder counterweight is proposed.
+        for(load in listOf(40,60,80)) {
+            val next=assisted(snapshot(true,listOf(load,load)))
+            val result=review(next,listOf(prior),physical=equipment)
+            assertEquals(CustomBlockTransitionLoadStatus.UNSUPPORTED_PRESCRIPTION,
+                result.status)
+            assertTrue(result.sets.isEmpty())
+            assertNull(result.proposedWorkout)
+            assertFalse(result.mayApplyAutomatically)
+            assertEquals(listOf(n(load),n(load)),next.slots.single().sets.map {
+                (it.prescription.load as DraftSetLoad.Verified).value
+            })
+        }
+    }
+
     @Test fun alreadyLowerAuthoredWeightIsKeptAndUnchangedRecipeUsesOrdinaryReview() {
         val result=review(snapshot(true,listOf(195,195)))
         assertEquals(CustomBlockTransitionLoadStatus.READY_FOR_REVIEW,result.status)

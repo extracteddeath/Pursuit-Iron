@@ -64,6 +64,16 @@ object CustomBlockTransitionLoadDomain {
             return result(CustomBlockTransitionLoadStatus.BASELINE_UNAVAILABLE,
                 reference.explanation)
         val next=request.next.slots.single{it.slotId==request.slotId}
+        // Assisted counterweight has the opposite physical direction:
+        // a numerically smaller load means LESS assistance. The external-
+        // load minOf rule below must never create a harder starting setting.
+        // Retain the factual historical reference but require the separate
+        // assistance-aware prescription policy for a new block.
+        if((prior.sets+next.sets).any {
+            (it.prescription.load as? DraftSetLoad.Verified)?.basis==
+                LoadBasis.ASSISTANCE_COUNTERWEIGHT
+        })return result(CustomBlockTransitionLoadStatus.UNSUPPORTED_PRESCRIPTION,
+            "Assisted counterweight needs its own direction-aware new-block calibration. No starting load was proposed.")
         if(previous.snapshot.phase==request.next.phase &&
             previous.snapshot.sessionPurpose==request.next.sessionPurpose &&
             prior.sets.map{it.prescription}==next.sets.map{it.prescription} &&

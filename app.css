@@ -10246,3 +10246,10 @@ background:var(--pi-color-card)!important;
   #root .wpb .wpb-program-day-picker-label:has(+.wpb-program-day-picker-short){display:none;}
   #root .wpb .wpb-program-day-picker-short{display:inline;}
 }
+/* B1044 — An exercise's tools read as one quiet line, not a strip of three filled buttons under every
+   row: the progression method leads as a text action, Swap and More sit on the right as icon buttons.
+   All three keep their 44px targets. */
+#root[data-pi-motion] .wpb .wpb-program .wpb-program-exercise .wpb-exercise-actions:not([data-percentage="true"]){grid-template-columns:minmax(0,1fr) 44px 44px;gap:4px;margin-top:4px;}
+#root[data-pi-motion] .wpb .wpb-program .wpb-program-exercise .wpb-exercise-actions>button{min-height:44px;border-color:transparent;background:transparent;color:var(--wpb-theme-muted);}
+#root[data-pi-motion] .wpb .wpb-program .wpb-program-exercise .wpb-exercise-actions>button[aria-label^="How "]{order:-1;justify-content:flex-start;padding-inline:0;color:var(--wpb-theme-accent-ink);}
+#root[data-pi-motion] .wpb .wpb-program .wpb-program-exercise .wpb-exercise-actions>button[data-emphasis="accent"]{background:var(--wpb-theme-accent-dim);}

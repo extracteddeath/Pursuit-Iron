@@ -1995,25 +1995,29 @@ private fun NativeKotlinCustomVisitEditor(
                         rir=last.actualRir?.toString().orEmpty())
                 }
             )
-            NativeSetValueFields(
-                unit=verified?.unit?.name?.lowercase().orEmpty(),
-                load=actualLoad,
-                reps=actualReps,
-                rir=actualRir,
-                enabled=!locked,
-                onLoad={draftEditor.update(load=it)},
-                onReps={draftEditor.update(reps=it)},
-                onRir={draftEditor.update(rir=it)},
-                showLoad=verified!=null,
-                loadError=actualLoad.isNotBlank() && invalid in setOf(
-                    KotlinSetEntryRefusal.MISSING_WEIGHT,KotlinSetEntryRefusal.INVALID_WEIGHT),
-                repsError=actualReps.isNotBlank() && invalid in setOf(
-                    KotlinSetEntryRefusal.MISSING_REPS,KotlinSetEntryRefusal.INVALID_REPS),
-                rirError=invalid==KotlinSetEntryRefusal.INVALID_RIR,
-                allowFailedAttempt=saved?.outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT,
-                loadStep=loadStep,
-                showFieldHelp=false
-            )
+            // Cancel old equipment queries before a new set/receipt/station
+            // editor can accept their result, even when the displayed load matches.
+            key(draftIdentity.value,existing?.appliedRevision) {
+                NativeSetValueFields(
+                    unit=verified?.unit?.name?.lowercase().orEmpty(),
+                    load=actualLoad,
+                    reps=actualReps,
+                    rir=actualRir,
+                    enabled=!locked,
+                    onLoad={draftEditor.update(load=it)},
+                    onReps={draftEditor.update(reps=it)},
+                    onRir={draftEditor.update(rir=it)},
+                    showLoad=verified!=null,
+                    loadError=actualLoad.isNotBlank() && invalid in setOf(
+                        KotlinSetEntryRefusal.MISSING_WEIGHT,KotlinSetEntryRefusal.INVALID_WEIGHT),
+                    repsError=actualReps.isNotBlank() && invalid in setOf(
+                        KotlinSetEntryRefusal.MISSING_REPS,KotlinSetEntryRefusal.INVALID_REPS),
+                    rirError=invalid==KotlinSetEntryRefusal.INVALID_RIR,
+                    allowFailedAttempt=saved?.outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT,
+                    loadStep=loadStep,
+                    showFieldHelp=false
+                )
+            }
             if(verified!=null && KotlinVerifiedPlateLayoutDomain.supportsBasis(verified.basis)) {
                 OutlinedButton(
                     onClick={onShowPlates(actualLoad,verified.unit,verified.basis)},

@@ -37,6 +37,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Card
@@ -145,6 +147,10 @@ internal fun NativeSetValueFields(unit:String,load:String,reps:String,rir:String
         stepScope.launch {
             try {
                 val result=review(start,direction,count)
+                // The editor's scope is keyed to the exact draft/receipt.
+                // Even a callback that ignores cancellation must never
+                // write its previous station's result into a new editor.
+                currentCoroutineContext().ensureActive()
                 if(currentEnabled && currentLoad==start && editToken==token &&
                     currentStep!=null) {
                     if(result!=null)currentOnLoad(result)
@@ -153,6 +159,7 @@ internal fun NativeSetValueFields(unit:String,load:String,reps:String,rir:String
             } catch(cancelled:CancellationException) {
                 throw cancelled
             } catch(_:Exception) {
+                currentCoroutineContext().ensureActive()
                 if(currentLoad==start && editToken==token)
                     stepMessage="Verified weight adjustment unavailable."
             } finally {stepping=false}

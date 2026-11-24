@@ -1509,20 +1509,24 @@ private fun NativeKotlinSetCard(
                     rir=last.actualRir?.toString().orEmpty())
             }
         )
-        NativeSetValueFields(
-            unit=verifiedLoad?.unit?.name?.lowercase().orEmpty(),
-            load=weight,
-            reps=reps,
-            rir=effort,
-            enabled=!busy,
-            onLoad={draftEditor.update(load=it)},
-            onReps={draftEditor.update(reps=it)},
-            onRir={draftEditor.update(rir=it)},
-            showLoad=verifiedLoad!=null,
-            allowFailedAttempt=existing?.reps==0,
-            loadStep=loadStep,
-            showFieldHelp=false
-        )
+        // Cancel old equipment queries before a new set/receipt/station
+        // editor can accept their result, even when the displayed load matches.
+        key(draftIdentity.value,set.currentReceipt?.appliedRevision) {
+            NativeSetValueFields(
+                unit=verifiedLoad?.unit?.name?.lowercase().orEmpty(),
+                load=weight,
+                reps=reps,
+                rir=effort,
+                enabled=!busy,
+                onLoad={draftEditor.update(load=it)},
+                onReps={draftEditor.update(reps=it)},
+                onRir={draftEditor.update(rir=it)},
+                showLoad=verifiedLoad!=null,
+                allowFailedAttempt=existing?.reps==0,
+                loadStep=loadStep,
+                showFieldHelp=false
+            )
+        }
         if(verifiedLoad!=null && KotlinVerifiedPlateLayoutDomain.supportsBasis(verifiedLoad.basis)) {
             val amount=weight.toBigDecimalOrNull()
             OutlinedButton(

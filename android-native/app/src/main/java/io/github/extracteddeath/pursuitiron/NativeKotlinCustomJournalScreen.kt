@@ -1216,6 +1216,14 @@ internal fun NativeKotlinCustomJournalScreen(
                                 amplifierSummary=CustomAmplifierSetSummaryDomain.review(current,set),
                                 plannedLoadNote=NativeKotlinPlannedBackoffNote.fromCustomSlot(
                                     slot.sets,set),
+                                previousWorking=if(set.prescription.type==DraftSetType.WORKING) {
+                                    val working=slot.sets.filter{it.prescription.type==DraftSetType.WORKING}
+                                    working.getOrNull(working.indexOf(set)-1)?.let { previous ->
+                                        current.effectiveVisits[CustomWorkoutVisitKey(
+                                            previous.setKey,CustomWorkoutVisitPart.MAIN)]
+                                            ?.operation as? CustomWorkoutJournalOperation.Record
+                                    }
+                                } else null,
                                 existing=observed,locked=busy||finished||!machineChoices.ready||machineChoices.busy,
                                 saving=busy,saveError=error,
                                 machineInstanceId=mainMachineId,
@@ -1788,7 +1796,8 @@ private fun NativeKotlinCustomVisitEditor(
     precedingDropPerformed:KotlinPerformedSet?=null,
     precedingDropReceiptRevision:Long?=null,
     amplifierSummary:CustomAmplifierSetSummary?=null,
-    plannedLoadNote:String?=null
+    plannedLoadNote:String?=null,
+    previousWorking:CustomWorkoutJournalOperation.Record?=null
 ) {
     val prescription=set.prescription
     val follower=prescription.amplifier
@@ -2156,6 +2165,10 @@ private fun NativeKotlinCustomVisitEditor(
                 }
             }
         }
+        if(saved==null && !locked && (editing || initiallyExpanded) &&
+            part==CustomWorkoutVisitPart.MAIN && prescription.type==DraftSetType.WORKING)
+            PursuitPreviousWorkingSetRir(previousWorking?.performed,
+                previousWorking?.outcome,machineInstanceId)
         if(saved==null && (editing || initiallyExpanded)) {
             PursuitWorkoutSetReference(referenceMode,target,expectedReps,
                 if(part==CustomWorkoutVisitPart.FOLLOW_UP)null else prescription.targetRir,

@@ -9,9 +9,10 @@ class NativeKotlinTrainResumeGateTest {
     private fun canResume(
         resumeChecking:Boolean=false,
         lookupBusy:Boolean=false,
-        anotherOpen:Boolean=false
+        anotherOpen:Boolean=false,
+        acceptingTimeChoice:Boolean=false
     )=NativeKotlinTrainResumeGate.mayVerifyGenerated(
-        resumeChecking,lookupBusy,anotherOpen)
+        resumeChecking,lookupBusy,anotherOpen,acceptingTimeChoice)
 
     @Test fun idleGeneratedResumeIsAvailableRegardlessOfOptionalReviews() {
         assertTrue(canResume())
@@ -25,6 +26,7 @@ class NativeKotlinTrainResumeGateTest {
         assertFalse(canResume(resumeChecking=true))
         assertFalse(canResume(lookupBusy=true))
         assertFalse(canResume(anotherOpen=true))
+        assertFalse(canResume(acceptingTimeChoice=true))
         assertFalse(canResume(resumeChecking=true,lookupBusy=true,anotherOpen=true))
         assertTrue(canResume())
     }

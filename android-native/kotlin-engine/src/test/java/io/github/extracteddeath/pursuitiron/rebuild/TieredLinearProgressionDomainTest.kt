@@ -128,6 +128,10 @@ class TieredLinearProgressionDomainTest {
         val recovered=review(request(listOf(a,light)))
         assertEquals(TieredLinearState(0,n("105")),recovered.state)
         assertEquals(listOf("a"),recovered.transitions.map{it.workoutId})
+        val interrupted=exposure("interrupted",2,load="105").copy(comparableTraining=false)
+        assertEquals(TieredLinearResult.Refused(TieredLinearRefusal.NONCOMPARABLE_LATEST),
+            TieredLinearProgressionDomain.review(request(listOf(a,interrupted,
+                light.copy(completionOrder=3)))))
         val next=exposure("b",3,load="105")
         assertEquals(TieredLinearState(0,n("110")),review(request(listOf(a,light,next))).state)
         assertEquals(TieredLinearResult.Refused(TieredLinearRefusal.INCONSISTENT_ISSUED_STATE),

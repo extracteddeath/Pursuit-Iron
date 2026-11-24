@@ -139,7 +139,7 @@ try {
     await ctx.close();
   }
 
-  // 4. Share code: the program's sheet mints a PI2 code that Settings imports as an editable copy.
+  // 4. Share code: the program's sheet mints a PI2 code that Plan → Import brings in as an editable copy.
   {
     const { ctx, page, errors } = await open(393);
     await page.click('[data-tab="plan"]');
@@ -154,9 +154,10 @@ try {
     await page.evaluate(() => document.querySelector('.wpb-program-share-close').click());
     await page.reload({ waitUntil: 'networkidle0' });
     await page.waitForSelector('.wpb-tabbar .wpb-tab');
-    await page.evaluate(() => [...document.querySelectorAll('.wpb-tabbar .wpb-tab')].find(b => /Settings/.test(b.textContent)).click());
-    await page.waitForFunction(() => [...document.querySelectorAll('button')].some(b => b.textContent.includes('Add a shared program')));
-    await clickText(page, 'button', 'Add a shared program');
+    // B1031: bringing a program in is program management — Plan → Import.
+    await page.click('[data-tab="plan"]');
+    await page.waitForSelector('.wpb-plan-programs .wpb-home-import');
+    await page.evaluate(() => document.querySelector('.wpb-plan-programs .wpb-home-import').click());
     await page.waitForSelector('textarea[aria-label="Program code or text"]');
     await page.type('textarea[aria-label="Program code or text"]', 'PI2-nonsense-0000');
     await clickText(page, 'button', 'Import program');

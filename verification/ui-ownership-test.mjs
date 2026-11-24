@@ -825,7 +825,7 @@ const b1012Home=app.split("function Home(")[1].split(String.fromCharCode(10)+"fu
 assert.ok(b1012Home.includes('className: "pi-t-strong wpb-s956-flex-1') &&
  b1012Home.includes('className: "pi-t-muted wpb-s956-overflow-hidden'),
  'Two additional Home utilities intentionally raise source adoption from 15 to 17');
-assert.equal((app.split("function SettingsView(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,20,"SettingsView shared owner regression");
+assert.equal((app.split("function SettingsView(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,14,"SettingsView shared owner regression (B1031: program import moved to Plan)");
 assert.equal((app.split("function ProgressDetail(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,10,"ProgressDetail shared owner regression");
 assert.equal((app.split("function StrengthSnapshotCard(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,9,"StrengthSnapshotCard shared owner regression");
 assert.equal((app.split("function CompareView(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,24,"CompareView shared owner regression");
@@ -838,9 +838,10 @@ assert.equal((app.split("function LegacyProgramsCard(")[1].split(String.fromChar
 assert.equal((app.split("function ChangelogSheet(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,7,"ChangelogSheet shared owner regression");
 // B958 cross-screen shared presentation ownership: 80 literal JSX objects retired.
 // B1028: AddSheet moved chips, rows and actions onto UiChoice/UiListItem/UiAction (10 → 9 utilities).
-const b958Names=["PlanView","NextWorkoutView","Home","SettingsView","ProgressDetail","CompareView","MilestonesCard","StrengthComparisonCard","RecoveryTrendCard","MuscleRecoveryCard","ProfileMiniForm","ConvertProgramToCycleSheet","VolumeCard","AddSheet","SwapSheet"];
+// B1031: MilestonesCard removed — Progress no longer repeats Profile's achievements.
+const b958Names=["PlanView","NextWorkoutView","Home","SettingsView","ProgressDetail","CompareView","StrengthComparisonCard","RecoveryTrendCard","MuscleRecoveryCard","ProfileMiniForm","ConvertProgramToCycleSheet","VolumeCard","AddSheet","SwapSheet"];
 // B1030: PlanView dropped the phase archive and Up next card (11 → 9 utilities).
-const b958Counts=[9,6,2,2,1,1,4,8,7,3,4,5,3,9,13];
+const b958Counts=[9,6,2,2,1,1,8,7,3,4,5,3,9,13];
 for(let i=0;i<b958Names.length;i++){
   const name=b958Names[i],start=app.indexOf("function "+name+"(");
   const end=app.indexOf(String.fromCharCode(10)+"function ",start+1);

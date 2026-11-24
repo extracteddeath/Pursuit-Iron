@@ -101,8 +101,9 @@ assert.doesNotMatch(app, /margin: "-3px 8px 8px 34px"/,
     'the legacy amplifier stagger must not return');
 assert.match(app, /className: "wpb-training-calendar"/,
     'R78 calendar remains an explicit always-visible history surface');
-assert.match(app, /className: "wpb-progress-disclosure wpb-milestones-disclosure"/,
-    'R78 milestones own their independent native collapsed disclosure');
+// B1031: achievements live once, on Profile; Progress keeps the calendar record.
+assert.doesNotMatch(app, /wpb-milestones-disclosure/,
+    'Progress does not repeat Profile achievements');
 assert.doesNotMatch(app, /children: "Training calendar and milestones"/,
     'R78 must not fold the exact-date calendar into achievements');
 assert.doesNotMatch(app, /title: "Workouts this week"/,

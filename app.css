@@ -163,7 +163,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-s960-marginbottom-20px,#root .wpb-s960-marginbottom-20px{margin-bottom:20px}
 #root .wpb .wpb-s960-marginleft-4px,#root .wpb-s960-marginleft-4px{margin-left:4px}
 #root .wpb .wpb-s960-marginleft-auto,#root .wpb-s960-marginleft-auto{margin-left:auto}
-#root .wpb .wpb-s960-marginright-4px,#root .wpb-s960-marginright-4px{margin-right:4px}
 #root .wpb .wpb-s960-margintop-10px,#root .wpb-s960-margintop-10px{margin-top:10px}
 #root .wpb .wpb-s960-margintop-14px,#root .wpb-s960-margintop-14px{margin-top:14px}
 #root .wpb .wpb-s960-margintop-16px,#root .wpb-s960-margintop-16px{margin-top:16px}
@@ -202,7 +201,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    numeric-display rules without duplicating presentation logic inside each React screen. */
 #root{font-variant-ligatures:common-ligatures contextual;-webkit-font-smoothing:antialiased}
 #root h1,#root h2,#root h3,#root h4{margin-block-start:0;text-wrap:balance;letter-spacing:-.025em}
-#root p,#root li{overflow-wrap:anywhere;text-wrap:pretty}
+#root p,#root li{overflow-wrap:break-word;text-wrap:pretty}
 /* Inherit font family without outranking component-owned font sizes.
    :where gives the reset zero specificity, so rem-scaled labels and inputs
    on Home, Workout, Program and modal controls override it without
@@ -6507,12 +6506,6 @@ background:var(--pi-color-card)!important;
   outline:2px solid var(--pi-color-active)!important;
   outline-offset:-2px!important;
 }
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-milestones-disclosure>summary{
-  display:list-item;min-height:48px;
-  color:var(--pi-color-on-control);
-  border-block:1px solid var(--pi-color-divider);
-  padding:12px 8px!important;
-}
 @media (min-width:1120px) and (min-height:720px){
   /* Sidebar spans the grouping plus two list tracks: the month calendar
      must not set the height of a short first month and delay later groups. */
@@ -6521,7 +6514,7 @@ background:var(--pi-color-card)!important;
   }
 }
 @media (forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb-progress :is(.wpb-training-calendar,.wpb-milestones-disclosure),
+  #root[data-pi-motion="expressive"] .wpb-progress :is(.wpb-training-calendar),
   #root[data-pi-motion="expressive"] .wpb-progress .wpb-consistency-facts>div{
     color:CanvasText!important;background:Canvas!important;border-color:CanvasText!important;
   }
@@ -7301,7 +7294,6 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-progress .wpb-progress-measure-log{min-width:54px;padding:9px 11px;border-radius:12px;border:none;font-weight:700;font-size:14px;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-faint);cursor:default;}
 #root .wpb .wpb-progress .wpb-progress-empty{margin-top:var(--pi-space-10);text-align:center;color:var(--wpb-theme-faint);}
 #root .wpb .wpb-progress .wpb-progress-empty-copy{font-size:16px;margin-top:var(--pi-space-1);}
-#root .wpb .wpb-progress .wpb-progress-volume-intro{font-size:14px;color:var(--wpb-theme-muted);margin:2px 2px var(--pi-space-3);line-height:1.5;}
 #root .wpb .wpb-progress .wpb-consistency-card{background:var(--wpb-theme-card);border:1px solid var(--wpb-theme-border-soft);border-radius:16px;padding:14px 15px;margin-bottom:14px;}
 #root .wpb .wpb-progress .wpb-progress-consistency-head{display:flex;align-items:baseline;gap:10px;}
 #root .wpb .wpb-progress .wpb-progress-consistency-title{font-size:16px;font-weight:750;flex:1;}
@@ -7319,7 +7311,6 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-progress .wpb-progress-clear-filters{border:none;background:none;color:var(--wpb-theme-accent-ink);padding:var(--pi-space-2) 0;font-weight:700;}
 #root .wpb .wpb-progress .wpb-history-filter-help{font-size:12px;color:var(--wpb-theme-muted);line-height:1.5;}
 #root .wpb .wpb-progress .wpb-training-history{margin-bottom:14px;min-width:0;}
-#root .wpb .wpb-progress .wpb-progress-milestone-summary{font-size:14px;font-weight:700;padding:var(--pi-space-3) 2px;cursor:pointer;}
 #root .wpb .wpb-progress .wpb-progress-no-matches{padding:var(--pi-space-5) 0;font-size:14px;color:var(--wpb-theme-muted);}
 #root .wpb .wpb-progress .wpb-progress-grouping{display:flex;gap:2px;background:var(--wpb-theme-bg-tint);border-radius:12px;padding:2px;margin-bottom:var(--pi-space-2);align-self:flex-start;width:fit-content;}
 #root .wpb .wpb-progress .wpb-progress-group-choice{border:none;cursor:pointer;border-radius:8px;padding:5px 11px;font-size:14px;font-weight:700;background:transparent;color:var(--wpb-theme-faint);}
@@ -8915,7 +8906,6 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-b964-layout-19,#root .wpb-b964-layout-19{flex:1;overflow-y:auto;padding:16px 16px 40px}
 #root .wpb .wpb-b964-layout-20,#root .wpb-b964-layout-20{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-bottom:6px}
 #root .wpb .wpb-b964-layout-21,#root .wpb-b964-layout-21{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-bottom:4px}
-#root .wpb .wpb-b964-layout-22,#root .wpb-b964-layout-22{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;touch-action:pan-x pan-y;padding-bottom:2px}
 #root .wpb .wpb-b964-layout-23,#root .wpb-b964-layout-23{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:8px}
 #root .wpb .wpb-b964-layout-24,#root .wpb-b964-layout-24{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px}
 #root .wpb .wpb-b964-layout-25,#root .wpb-b964-layout-25{flex:1;overflow-y:auto;padding-bottom:8px}
@@ -8957,7 +8947,6 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-b965-layout-26,#root .wpb-b965-layout-26{cursor:crosshair;touch-action:pan-y}
 #root .wpb .wpb-b965-layout-27,#root .wpb-b965-layout-27{display:flex;gap:2px;height:8px}
 #root .wpb .wpb-b965-layout-28,#root .wpb-b965-layout-28{width:150px}
-#root .wpb .wpb-b965-layout-29,#root .wpb-b965-layout-29{margin-bottom:12px;cursor:pointer}
 #root .wpb .wpb-b965-layout-30,#root .wpb-b965-layout-30{margin-left:auto}
 #root .wpb .wpb-b965-layout-31,#root .wpb-b965-layout-31{vertical-align:-1px}
 #root .wpb .wpb-b965-layout-32,#root .wpb-b965-layout-32{min-width:0;flex:1 1 auto;min-height:0;overflow-y:auto;padding:14px 18px 18px}
@@ -9370,10 +9359,6 @@ background:var(--pi-color-card)!important;
   margin-top:2px;padding:13px 8px;border:0;background:transparent;
   text-align:left;cursor:pointer;
 }
-#root .wpb-b976-milestone-item{
-  flex-shrink:0;width:60px;min-height:60px;padding:0;border:0;
-  background:transparent;text-align:center;cursor:pointer;
-}
 #root .wpb-b976-changelog-backdrop{
   position:fixed;inset:0;z-index:90;display:flex;
   align-items:flex-end;background:#00000088;
@@ -9392,11 +9377,7 @@ background:var(--pi-color-card)!important;
   #root .wpb-b976-changelog-backdrop{
     background:Canvas;color:CanvasText;
   }
-  #root .wpb-b976-schedule-trigger:focus-visible,
-  #root .wpb-b976-trace-trigger:focus-visible,
-  #root .wpb-b976-previous-set-action:focus-visible,
-  #root .wpb-b976-session-exit:focus-visible,
-  #root .wpb-b976-milestone-item:focus-visible{
+  #root .wpb-b976-schedule-trigger:focus-visible,#root .wpb-b976-trace-trigger:focus-visible,#root .wpb-b976-previous-set-action:focus-visible,#root .wpb-b976-session-exit:focus-visible{
     outline:2px solid Highlight;outline-offset:2px;
   }
 }
@@ -9777,15 +9758,13 @@ background:var(--pi-color-card)!important;
 .wpb .wpb-settings-reference-name{margin-bottom:2px;font-size:var(--pi-type-support);font-weight:700}
 /* Diagnostics inherits Settings' semantic type, surface and focus roles. */
 /* Import sheet retains its existing drag/focus/callback contracts and native form semantics. */
-.wpb .wpb-settings-import-sheet{box-sizing:border-box;width:100%;padding:var(--pi-space-3) var(--pi-space-4) calc(env(safe-area-inset-bottom) + 26px);border-top:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-card) var(--pi-shape-card) 0 0;background:var(--pi-color-card);animation:sheetUp .28s cubic-bezier(.2,.7,.3,1) both}
 .wpb .wpb-settings-import-input{display:block;width:100%;height:150px;margin-bottom:var(--pi-space-3);resize:none;line-height:1.5}
 .wpb .wpb-settings-import-result{margin-bottom:var(--pi-space-3);font-size:var(--pi-type-support);font-weight:500;line-height:1.45;color:var(--wpb-theme-accent-ink)}
 .wpb .wpb-settings-import-result[data-outcome="error"]{color:var(--wpb-theme-danger)}
 .wpb .wpb-settings-import-submit{display:block;width:100%;min-height:var(--pi-control-min);padding:var(--pi-space-3);border:0;border-radius:var(--pi-shape-action);background:var(--pi-color-active);color:var(--pi-color-on-active);font-size:var(--pi-type-body);font-weight:700;cursor:pointer}
 .wpb .wpb-settings-import-submit:disabled{background:var(--pi-color-control);color:var(--pi-color-on-muted);cursor:default;opacity:.65}
 .wpb .wpb-settings-import-submit:focus-visible{outline:2px solid var(--wpb-focus);outline-offset:2px}
-@media(prefers-reduced-motion:reduce){.wpb .wpb-settings-import-sheet{animation:none}}
-@media(forced-colors:active){.wpb .wpb-settings-import-sheet,.wpb .wpb-settings-import-input{border-color:CanvasText}.wpb .wpb-settings-import-submit{background:Highlight;color:HighlightText}}
+@media(forced-colors:active){.wpb .wpb-settings-import-input{border-color:CanvasText}.wpb .wpb-settings-import-submit{background:Highlight;color:HighlightText}}
 .wpb .wpb-settings-diagnostic-intro{padding:0 var(--pi-space-1) var(--pi-space-3);color:var(--pi-color-on-muted);font-size:var(--pi-type-support);line-height:1.6}
 .wpb .wpb-settings-diagnostic-run{display:flex;align-items:center;justify-content:center;gap:var(--pi-space-2);width:100%;min-height:var(--pi-control-min);padding:var(--pi-space-3);border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-action);background:var(--pi-color-card);color:var(--wpb-theme-text);font-size:var(--pi-type-body);font-weight:650;cursor:pointer}
 .wpb .wpb-settings-diagnostic-run[data-running="true"]{border-color:var(--pi-color-warning);color:var(--pi-color-warning)}

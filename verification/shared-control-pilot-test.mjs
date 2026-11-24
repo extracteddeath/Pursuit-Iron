@@ -10,9 +10,10 @@ const gallery=app.slice(app.indexOf('function GalleryView('),app.indexOf('/* ⚠
 assert.ok(settings.length>10000&&gallery.length>4000,'Source must contain real Settings/Gallery views');
 
 // Four navigation actions use one shared button and one feature geometry owner.
-assert.equal(settings.split('className: "wpb-settings-navigation wpb-settings-link"').length-1,4,'Four Settings destinations share one native action family');
+// B1031: Add a shared program / Browse shared programs moved to Plan's program list.
+assert.equal(settings.split('className: "wpb-settings-navigation wpb-settings-link"').length-1,2,'Two Settings destinations share one native action family');
 assert.ok(settings.includes('_jsxs(UiAction, { variant: "tonal", "data-align": "start", onClick: onLibrary'));
-assert.ok(settings.includes('_jsxs(UiAction, { variant: "tonal", "data-align": "start", onClick: onGallery'));
+assert.ok(!settings.includes('onClick: onGallery'),'Community programs are reached from Plan → Import');
 assert.ok(!settings.includes('marginBottom: 8, background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, cursor: "pointer", textAlign: "left"'),
   'Repeated Settings navigation inline card paint cannot be restored');
 assert.ok(css.includes('#root .wpb .wpb-settings .wpb-settings-link.wpb-ui-action[data-action="tonal"]{'),

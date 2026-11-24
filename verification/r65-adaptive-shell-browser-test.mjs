@@ -361,8 +361,8 @@ try{
               'Calendar avoids irrelevant daily-streak pressure');
             assert.ok(await page.$$eval('.wpb-calendar-week',rows=>rows.length>0&&rows.every(row=>row.children.length===7)),
               'Calendar weeks contain exactly seven dates, no unlabeled total column');
-            assert.equal(await page.$eval('.wpb-milestones-disclosure',el=>el.open),false,
-              'Milestones are collapsed by default independently of the calendar');
+            assert.equal(await page.$('.wpb-milestones-disclosure'),null,
+              'B1031: Progress does not repeat Profile achievements');
             assert.equal(await page.$('.wpb-consistency-card [role="img"]'),null,
               'The ambiguous 28-square consistency chart has been retired');
             const trainingDates=await page.$$eval('.wpb-calendar-date[data-workouts]',els=>els.map(el=>({
@@ -381,8 +381,8 @@ try{
               'Legacy history detail uses completed working sets, tonnage and elapsed seconds');
             assert.ok(!legacyFacts.startsWith('0 sets'),
               'Legacy completed records cannot display a false zero-set total');
-            assert.equal(await page.$eval('.wpb-milestones-disclosure',el=>el.open),false,
-              'Selecting calendar history does not expand milestones');
+            assert.equal(await page.$('.wpb-milestones-disclosure'),null,
+              'B1031: Progress does not repeat Profile achievements');
             assert.equal(progress.viewportOverflow,false,'Progress has no horizontal overflow');
             if(expandedProgress){
               assert.ok(progress.filters.x>=progress.consistency.right-2,
@@ -756,8 +756,8 @@ try{
       assert.deepEqual(await page.$$eval('.wpb-calendar-month-stats>div .mono',
         els=>els.map(el=>el.textContent.trim())),['1','1'],
         'Monthly training days and sessions both include the correct imported date');
-      assert.equal(await page.$eval('.wpb-milestones-disclosure',el=>el.open),false,
-        'Milestones remain collapsed for legacy date history');
+      assert.equal(await page.$('.wpb-milestones-disclosure'),null,
+        'B1031: Progress does not repeat Profile achievements');
       await page.click('.wpb-calendar-date[data-workouts]');
       assert.match(await page.$eval('.wpb-calendar-day-detail',el=>el.textContent),/Upper/,
         'Imported date opens its actual session details');
@@ -815,8 +815,8 @@ try{
         els=>els.map(el=>el.textContent.trim()).sort());
       assert.deepEqual(summaries,['1 set','3 sets · 2,250 lb · 55m'].sort(),
         'Each workout reports only recorded facts; eight prescribed sets cannot become eight completed');
-      assert.equal(await page.$eval('.wpb-milestones-disclosure',el=>el.open),false,
-        'Viewing multiple workouts does not unexpectedly expand milestones');
+      assert.equal(await page.$('.wpb-milestones-disclosure'),null,
+        'B1031: Progress does not repeat Profile achievements');
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2),
         false,'Multiple workout details fit a narrow phone without horizontal overflow');
     }finally{await context.close();}

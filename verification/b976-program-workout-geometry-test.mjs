@@ -7,7 +7,7 @@ const names = [
   'schedule-trigger','schedule-day','reorder-backdrop','swap-search-icon',
   'swap-results','swap-chevron','restore-backdrop','trace-trigger',
   'previous-set-action','coach-chevron','injury-backdrop','pr-value',
-  'session-exit','milestone-item','changelog-backdrop','template-scroller'
+  'session-exit','changelog-backdrop','template-scroller' // B1031: milestone-item went with Progress' milestones copy
 ];
 const scope = css.slice(css.indexOf('/* B976 —'));
 const baseOwners = scope.split('@media(prefers-reduced-motion:reduce)')[0];
@@ -26,7 +26,7 @@ assert.ok(!scope.includes('!important'),'B976 must not introduce priority overri
 assert.ok(app.includes('setSchedSheet(true)'),'Program schedule still opens its editor');
 assert.ok(app.includes('setTraceOpen(open ? null : ei)'),'Workout trace still expands on demand');
 assert.ok(app.includes('setConfirmExit(true)'),'Workout exit still requests confirmation');
-assert.ok(app.includes('setDetail(m)'),'Progress milestones still open details');
+assert.ok(app.includes('setDetail(m)'),'Profile achievements still open details');
 assert.ok(app.includes('onClick: onClose'),'Backdrops keep their native dismissal owner');
 const baseStyle = name => {
   const selector='.wpb-b976-'+name+'{';

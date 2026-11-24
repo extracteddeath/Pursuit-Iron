@@ -82,6 +82,9 @@ object CustomTieredJournalEvidenceDomain {
             return no(CustomTieredJournalRefusal.INVALID_PROTOCOL)
         val first = sets.first().prescription.percentageIntent
             ?: return no(CustomTieredJournalRefusal.INVALID_PROTOCOL)
+        val recovery = first.recovery
+        if (original.blockPurpose != CustomBlockPurpose.TRAINING)
+            return no(CustomTieredJournalRefusal.RECOVERY_REQUIRES_REVIEW)
         val stage = first.tierStage ?: return no(CustomTieredJournalRefusal.INVALID_PROTOCOL)
         if (stage !in 0..2) return no(CustomTieredJournalRefusal.INVALID_PROTOCOL)
         val expectedReps = if (tier == PercentageTier.PRIMARY) listOf(3,2,1)[stage]
@@ -90,7 +93,7 @@ object CustomTieredJournalEvidenceDomain {
         val indexes = if (sets.size > expectedCount)
             List(sets.size - expectedCount) { 0 } + (0 until expectedCount).toList()
         else NamedPercentageProtocolDomain.trimmedSourceIndexes(expectedCount, sets.size,
-            expectedCount - 1, listOf(expectedCount - 1))
+            expectedCount - 1, if (recovery) emptyList() else listOf(expectedCount - 1))
         val facts = evidence.visits.filter {
             it.slotId == slotId && it.part == CustomWorkoutVisitPart.MAIN &&
                 it.setType == DraftSetType.WORKING
@@ -106,8 +109,6 @@ object CustomTieredJournalEvidenceDomain {
                 ?: return no(CustomTieredJournalRefusal.INVALID_PROTOCOL)
             val load = prescription.load as? DraftSetLoad.Verified
                 ?: return no(CustomTieredJournalRefusal.INVALID_PROTOCOL)
-            if (intent.recovery || original.blockPurpose != CustomBlockPurpose.TRAINING)
-                return no(CustomTieredJournalRefusal.RECOVERY_REQUIRES_REVIEW)
             if (!intent.validForSet(prescription) || intent.scheme != NamedPercentageScheme.GZCLP ||
                 intent.tier != tier || intent.tierStage != stage ||
                 intent.weekInBlock != original.weekInBlock ||
@@ -115,10 +116,12 @@ object CustomTieredJournalEvidenceDomain {
                 intent.sourceSetCount != expectedCount ||
                 intent.sourceOrdinal != indexes[index] + 1 ||
                 intent.referenceLoad.compareTo(first.referenceLoad) != 0 ||
-                intent.repOut != (index == sets.lastIndex) ||
+                intent.recovery != recovery ||
+                intent.repOut != (!recovery && index == sets.lastIndex) ||
                 prescription.exactRepTarget != expectedReps ||
                 load.unit != scope.unit || load.basis != scope.basis ||
-                load.value.compareTo(first.referenceLoad) != 0)
+                (if (recovery) load.value <= BigDecimal.ZERO || load.value >= first.referenceLoad
+                    else load.value.compareTo(first.referenceLoad) != 0))
                 return no(CustomTieredJournalRefusal.INVALID_PROTOCOL)
             val fact = facts.single { it.setKey == set.setKey }
             val actual = fact.actual
@@ -137,6 +140,6 @@ object CustomTieredJournalEvidenceDomain {
         return CustomTieredJournalResult.Candidate(TieredLinearExposure(
             workoutId, completionOrder, scope, tier, stage,
             Collections.unmodifiableList(targets), Collections.unmodifiableList(observations),
-            true, slotId))
+            !recovery, slotId, if (recovery) first.referenceLoad else null))
     }
 }

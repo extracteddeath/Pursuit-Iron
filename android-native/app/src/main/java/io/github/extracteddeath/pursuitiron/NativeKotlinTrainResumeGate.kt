@@ -14,6 +14,8 @@ internal object NativeKotlinTrainResumeGate {
     fun mayVerifyGenerated(
         resumeChecking:Boolean,
         manualLookupBusy:Boolean,
-        anotherWorkoutOpen:Boolean
-    ):Boolean = !resumeChecking && !manualLookupBusy && !anotherWorkoutOpen
+        anotherWorkoutOpen:Boolean,
+        timeAcceptanceBusy:Boolean=false
+    ):Boolean = !resumeChecking && !manualLookupBusy && !anotherWorkoutOpen &&
+        !timeAcceptanceBusy
 }

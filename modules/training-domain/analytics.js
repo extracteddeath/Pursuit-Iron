@@ -3259,7 +3259,16 @@ function syncSubSets(sets, ex, unit) {
             }
             return s;
         }
-        if (s.done || userOwnsRuntimeSet(s) || !(actW > 0))
+        if (s.done || !(actW > 0))
+            return s;
+        // A reps-only edit owns the rep count, not the mini-set load.
+        // Preserve genuinely edited weights and logged facts. Pending myo
+        // rows still inherit the performed activation weight, never a drop.
+        const manualLoad = userOwnsRuntimeSet(s) && (
+            s.kind !== "myo" || s.weightOwner === "user" ||
+            s.target?.w == null || String(s.weight) !== String(s.target.w)
+        );
+        if (manualLoad)
             return s;
         let want;
         if (s.kind === "drop") {

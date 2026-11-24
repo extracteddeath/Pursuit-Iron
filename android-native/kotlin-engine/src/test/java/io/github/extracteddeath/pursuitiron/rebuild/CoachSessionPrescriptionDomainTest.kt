@@ -71,6 +71,78 @@ class CoachSessionPrescriptionDomainTest {
             reps=RepBand(10,15),rir=null,rest=120)
     )
 
+    @Test fun exactZeroMachineWarmupCannotBecomeACompletedPrescriptionDraft() {
+        val machine=VerifiedLoadStock.Totals(
+            LoadUnit.LB,LoadBasis.MACHINE_STACK,
+            listOf(n("0"),n("20"),n("25"),n("30"),n("35")))
+        val machinePress=press.copy(equipment=ComposerEquipment.Verified(
+            LoadUnit.LB,n("30"),machine))
+        val edited=policies().map{p->
+            if(p.exerciseId=="db-press" &&
+                p.purpose==ComposerSessionPurpose.STRENGTH_SKILL)
+                p.copy(warmups=listOf(warm.copy(load=n("0.000"))))
+            else p
+        }
+        val review=CoachSessionPrescriptionDomain.draft(
+            request(options=listOf(machinePress,row)),edited)
+        assertEquals(PrescriptionDraftStatus.UNRESOLVED,review.status)
+        assertTrue(review.unresolvedExerciseVisits.any{
+            it.contains("db-press:d0:unverified-scheme")
+        })
+        assertNull(review.finalAudit)
+        assertFalse(review.canIssueWorkout)
+    }
+
+    @Test fun zeroAddedLandminePlatesRemainRealIssuedWorkingAndBackoffLoads() {
+        val stock=VerifiedLoadStock.Totals(
+            LoadUnit.LB,LoadBasis.LANDMINE_ADDED_PLATES,
+            listOf(n("0"),n("5"),n("10"),n("30")))
+        val landmine=press.copy(equipment=ComposerEquipment.Verified(
+            LoadUnit.LB,n("0"),stock))
+        val straight=policies().map{p->
+            if(p.exerciseId=="db-press")
+                p.copy(scheme=SetLoadScheme.STRAIGHT,
+                    maximumAuthorizedBackoff=null,backoffReps=null,
+                    backoffRir=null,warmups=emptyList(),
+                    purposeWorkingLoad=n("0.000"))
+            else p
+        }
+        val initial=CoachSessionPrescriptionDomain.draft(
+            request(options=listOf(landmine,row)),straight)
+        assertEquals(initial.reviewNotes.toString(),
+            PrescriptionDraftStatus.COMPLETE_FOR_REVIEW,initial.status)
+        val working=initial.sessions.flatMap{it.exercises}
+            .filter{it.exerciseId=="db-press"}
+            .flatMap{it.sets}
+            .filter{it.type==DraftSetType.WORKING}
+        assertTrue(working.isNotEmpty())
+        assertTrue(working.all{
+            val load=it.load as DraftSetLoad.Verified
+            load.value.compareTo(n("0"))==0 &&
+                load.basis==LoadBasis.LANDMINE_ADDED_PLATES
+        })
+
+        // A last-set backoff can finish at the same unloaded bar with zero
+        // ADDED plates; that is not a fabricated zero-resistance exercise.
+        val five=landmine.copy(equipment=ComposerEquipment.Verified(
+            LoadUnit.LB,n("5"),stock))
+        val backed=policies().map{p->
+            if(p.exerciseId=="db-press" &&
+                p.purpose==ComposerSessionPurpose.STRENGTH_SKILL)
+                p.copy(warmups=listOf(warm.copy(load=n("0"))))
+            else p
+        }
+        val review=CoachSessionPrescriptionDomain.draft(
+            request(options=listOf(five,row)),backed)
+        assertEquals(review.reviewNotes.toString(),
+            PrescriptionDraftStatus.COMPLETE_FOR_REVIEW,review.status)
+        val strength=review.sessions.first().exercises.single{
+            it.exerciseId=="db-press"
+        }
+        assertEquals(n("0"),(strength.sets.last().load as
+            DraftSetLoad.Verified).value)
+    }
+
     @Test fun goalSpecificDayUsesExplicitRepsRirRestAndPhysicalBackoff() {
         val report=CoachSessionPrescriptionDomain.draft(request(),policies())
         assertEquals(PrescriptionDraftStatus.COMPLETE_FOR_REVIEW,report.status)

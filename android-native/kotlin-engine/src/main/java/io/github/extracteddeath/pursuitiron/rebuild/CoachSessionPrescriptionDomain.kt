@@ -86,11 +86,9 @@ data class SessionPrescriptionDraft(
 
 object CoachSessionPrescriptionDomain {
     private val zero=BigDecimal.ZERO
-    private val maxLoad=BigDecimal("100000")
-
     private fun canonical(v:BigDecimal)=BigDecimal(v.stripTrailingZeros().toPlainString())
-    private fun validLoad(v:BigDecimal)=v>=zero && v<=maxLoad &&
-        v.stripTrailingZeros().scale()<=3
+    private fun validLoad(v:BigDecimal)=
+        KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(v)
 
     /** One timing projection for generation, composition and native replay.
      * It deliberately has no authority to alter sets, loads, reps or RIR. */
@@ -121,8 +119,11 @@ object CoachSessionPrescriptionDomain {
                     })) &&
                 (p.targetRir==null || p.targetRir in 0..10) &&
                 (p.backoffRir==null || p.backoffRir in 0..10) &&
+                // Numeric shape errors are malformed input; unissuable
+                // exercise/basis combinations instead remain an UNRESOLVED
+                // non-destructive draft, via the central load() gate below.
                 (p.purposeWorkingLoad==null ||
-                    (p.purposeWorkingLoad>zero && validLoad(p.purposeWorkingLoad))) &&
+                    validLoad(p.purposeWorkingLoad)) &&
                 p.activeSecondsPerSet in 1..3600 && p.restSecondsPerSet in 0..3600 &&
                 p.warmups.size<=12 &&
                 (p.maximumAuthorizedBackoff==null ||
@@ -159,7 +160,10 @@ object CoachSessionPrescriptionDomain {
         val eq=option.equipment as? ComposerEquipment.Verified ?:return null
         val result=EquipmentLoadDomain.inspect(eq.inventory,value,eq.unit)
         if(result !is LoadInspection.Confirmed || !result.exact)return null
-        return DraftSetLoad.Verified(eq.unit,result.basis,canonical(value))
+        val issued=DraftSetLoad.Verified(eq.unit,result.basis,canonical(value))
+        // The same physical prescription contract is required before any
+        // warmup, working set or last-set backoff can enter an auditable week.
+        return issued.takeIf(KotlinSetNumberAuthorityDomain::validIssuedLoad)
     }
 
     /** Find one actual attainable lower load, not a guessed percentage. */
@@ -170,7 +174,9 @@ object CoachSessionPrescriptionDomain {
         val result=EquipmentLoadDomain.inspect(eq.inventory,
             workingValue,eq.unit)
         val lower=(result as? LoadInspection.Confirmed)?.nextBelow ?:return null
-        if(lower<=zero || lower>=workingValue ||
+        if(!KotlinSetNumberAuthorityDomain.validPrescribedLoad(
+                lower,eq.inventory?.basis ?:return null) ||
+            lower>=workingValue ||
             workingValue.subtract(lower)>maxDecrease)return null
         return load(option,lower)
     }

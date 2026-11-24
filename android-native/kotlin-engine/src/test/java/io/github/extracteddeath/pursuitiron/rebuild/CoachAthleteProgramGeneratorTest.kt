@@ -10,7 +10,8 @@ class CoachAthleteProgramGeneratorTest {
         LoadBasis.DUMBBELL_PER_HAND,listOf(n("20"),n("25"),n("30")))
     private fun setup(
         split:ComposerSplit=ComposerSplit.FULL_BODY,
-        weekdays:Set<Int> =setOf(0,2,4)
+        weekdays:Set<Int> =setOf(0,2,4),
+        stock:VerifiedLoadStock=db
     )=CoachAthleteSetupDomain.review(AthleteSetupDraft(
         profileRevision="revision2",athleteProfileId="athlete2",
         goal=AthleteTrainingGoal.POWERBUILDING,
@@ -20,7 +21,7 @@ class CoachAthleteProgramGeneratorTest {
         sessionTimeBucket=SessionTimeBucket.FORTY_TO_SIXTY,
         hardSessionLimit=HardSessionLimit.NO_HARD_LIMIT,
         gym=GymProfileDraft("main-gym",LoadUnit.LB,
-            mapOf("dumbbells" to db),emptySet(),emptySet()),
+            mapOf("dumbbells" to stock),emptySet(),emptySet()),
         allowBodyweight=false,allowSupersets=false,
         allowTricepsOnLower=false,maxBarbellExercisesPerDay=0,
         focusedMuscles=emptySet(),reducedMuscles=emptySet(),
@@ -309,6 +310,35 @@ class CoachAthleteProgramGeneratorTest {
         for(focus in listOf(ComposerFocus.PUSH,ComposerFocus.PULL,
             ComposerFocus.LEGS))
             assertEquals(2,sixDay.focusByWeekday.values.count {it==focus})
+    }
+
+    @Test fun priorityLiftCannotClaimZeroDumbbellStockAsRealStrengthWork() {
+        val confirmed=VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.DUMBBELL_PER_HAND,
+            listOf(n("0"),n("20"),n("25"),n("30")))
+        val s=setup(stock=confirmed)
+        val p=policy(s,primaries=mapOf("bench" to 2))
+        val zero=request(s=s,policy=p,choices=listOf(
+            choice("bench").copy(selectedLoad=n("0")),
+            choice("row"),choice("squat")))
+        val refused=CoachAthleteProgramGenerator.generate(zero)
+        // Catalog input review rejects this even before optional priority
+        // scheduling; the later generator gate remains independent defense.
+        assertEquals(AthleteGenerationStatus.INPUTS_UNRESOLVED,refused.status)
+        assertNull(refused.candidate)
+        assertTrue(refused.intents.none{
+            it.requiredPrimaryExerciseId=="bench"
+        })
+
+        // A real positive selector remains numerically issuable and
+        // physically exact on this same equipment. The separate goal
+        // program planner can still refuse placement for other reasons;
+        // this test must not invent a schedule-approval guarantee.
+        assertTrue(KotlinSetNumberAuthorityDomain.validPrescribedLoad(
+            n("25"),LoadBasis.DUMBBELL_PER_HAND))
+        val at25=EquipmentLoadDomain.inspect(
+            confirmed,n("25"),LoadUnit.LB) as LoadInspection.Confirmed
+        assertTrue(at25.exact)
     }
 
     @Test fun priorityLiftPlacementUsesVerifiedLoadAndRealDayFrequency() {

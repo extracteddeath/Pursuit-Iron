@@ -287,7 +287,9 @@ object CoachAthleteProgramGenerator {
             return false
         val load=choice.selectedLoad ?:return false
         val inspected=EquipmentLoadDomain.inspect(stock,load,stock.unit)
-        return inspected is LoadInspection.Confirmed && inspected.exact
+        return KotlinSetNumberAuthorityDomain.validPrescribedLoad(
+            load,stock.basis) && inspected is LoadInspection.Confirmed &&
+            inspected.exact
     }
 
     internal fun placements(

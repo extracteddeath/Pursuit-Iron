@@ -56,6 +56,34 @@ class CoachWeekComposerTest {
     )=ComposerRequest(split,TrainingPhase.HYPERTROPHY,
         schedule,bands,exerciseOptions,maxPerDay,patterns)
 
+    @Test fun confirmedZeroStockIsNotAnIssuedMachineOrDumbbellProgramLoad() {
+        for(basis in listOf(LoadBasis.DUMBBELL_PER_HAND,
+            LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK,
+            LoadBasis.SMITH_TOTAL,LoadBasis.EXERCISE_OVERRIDE,
+            LoadBasis.ASSISTANCE_COUNTERWEIGHT)) {
+            val stock=VerifiedLoadStock.Totals(LoadUnit.LB,basis,
+                listOf(n("0"),n("5"),n("30")))
+            val invalid=chestOption.copy(requiredVisits=2,
+                equipment=ComposerEquipment.Verified(LoadUnit.LB,n("0"),stock))
+            val result=CoachWeekComposer.compose(base(
+                exerciseOptions=listOf(invalid,backOption,legOption,chestFly)))
+            assertTrue("Stock 0 must not authorize issued $basis",
+                invalid.exerciseId in result.excludedUnverifiedExerciseIds)
+            assertEquals(2,result.missingRequiredVisits[invalid.exerciseId])
+            assertTrue(result.visits.none{it.exerciseId==invalid.exerciseId})
+        }
+        // Landmine load means ADDED plates; the bar itself still carries mass.
+        val landmine=VerifiedLoadStock.Totals(
+            LoadUnit.LB,LoadBasis.LANDMINE_ADDED_PLATES,
+            listOf(n("0"),n("5"),n("30")))
+        val valid=chestOption.copy(requiredVisits=2,
+            equipment=ComposerEquipment.Verified(LoadUnit.LB,n("0"),landmine))
+        val approved=CoachWeekComposer.compose(base(
+            exerciseOptions=listOf(valid,backOption,legOption,chestFly)))
+        assertFalse(approved.excludedUnverifiedExerciseIds.contains(valid.exerciseId))
+        assertEquals(2,approved.visits.count{it.exerciseId==valid.exerciseId})
+    }
+
     @Test fun fourDayWeekBuildsRealDaysAndFulfillsDeclaredMuscleTargets() {
         val request=base()
         val output=CoachWeekComposer.compose(request)

@@ -84,7 +84,6 @@ data class CoachNextProgramLoadReview(
 
 object CoachNextProgramLoadReviewDomain {
     private val zero = BigDecimal.ZERO
-    private val maximumStep = BigDecimal("100000")
     private fun normalized(v: BigDecimal) =
         BigDecimal(v.stripTrailingZeros().toPlainString())
     private fun same(a: BigDecimal, b: BigDecimal) = a.compareTo(b) == 0
@@ -107,8 +106,8 @@ object CoachNextProgramLoadReviewDomain {
             return denied(CoachNextLoadReviewStatus.RESTRICTION_OR_LOW_READINESS,
                 "Review recovery or the movement restriction before changing the load.")
         if (request.maximumAuthorizedIncrease <= zero ||
-            request.maximumAuthorizedIncrease > maximumStep ||
-            request.maximumAuthorizedIncrease.stripTrailingZeros().scale() > 3)
+            !KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(
+                request.maximumAuthorizedIncrease))
             return denied(CoachNextLoadReviewStatus.NO_SAFE_CHANGE,
                 "The athlete's permitted increase is missing or invalid.")
         val option = request.approvedProgram.exercises.singleOrNull {
@@ -148,7 +147,9 @@ object CoachNextProgramLoadReviewDomain {
         val workingLoad=specific?.purposeWorkingLoad ?:equipment.plannedLoad
         val currentInspection = EquipmentLoadDomain.inspect(
             stock, workingLoad, equipment.unit)
-        if (currentInspection !is LoadInspection.Confirmed || !currentInspection.exact)
+        if (!KotlinSetNumberAuthorityDomain.validPrescribedLoad(
+                workingLoad,stock.basis) ||
+            currentInspection !is LoadInspection.Confirmed || !currentInspection.exact)
             return denied(CoachNextLoadReviewStatus.LOAD_BASIS_UNVERIFIED,
                 "The current prescribed weight cannot be built with verified equipment.")
         val plan = runCatching {

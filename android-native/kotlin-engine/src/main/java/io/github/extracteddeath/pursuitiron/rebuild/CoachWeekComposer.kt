@@ -179,9 +179,17 @@ object CoachWeekComposer {
     ) {
         ComposerEquipment.Bodyweight -> true
         is ComposerEquipment.Verified -> {
-            val result=EquipmentLoadDomain.inspect(equipment.inventory,
-                equipment.plannedLoad,equipment.unit)
-            result is LoadInspection.Confirmed && result.exact
+            val stock=equipment.inventory
+            // Confirmed stock is not itself a valid WORKING prescription:
+            // a zero selector on a machine is not an issued weight, while
+            // zero ADDED landmine plates still represents a loaded bar.
+            stock!=null &&
+                KotlinSetNumberAuthorityDomain.validPrescribedLoad(
+                    equipment.plannedLoad,stock.basis) &&
+                EquipmentLoadDomain.inspect(stock,
+                    equipment.plannedLoad,equipment.unit).let{
+                    it is LoadInspection.Confirmed && it.exact
+                }
         }
     }
     private fun validate(request:ComposerRequest) {

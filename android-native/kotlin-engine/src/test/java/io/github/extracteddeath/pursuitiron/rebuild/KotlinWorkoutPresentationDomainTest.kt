@@ -62,7 +62,12 @@ class KotlinWorkoutPresentationDomainTest {
         assertEquals(1,ui.completedCount)
         assertEquals(1,ui.skippedCount)
         assertNull(ui.exercises[0].sets[1].actual?.actualRir)
-        assertEquals("event-2",ui.exercises[0].sets[1].correctsEventId)
+        val firstObservation=ui.exercises[0].sets[1]
+        assertEquals("event-2",
+            (firstObservation.currentReceipt?.operation as
+                KotlinJournalOperation.RecordSet).eventId)
+        // An ordinary first log has no correction ancestry.
+        assertNull(firstObservation.correctsEventId)
         assertEquals(1,ui.remainingCount)
         j=step(j,recorded("event-3",2,"press:s1",
             KotlinJournalSetOutcome.COMPLETED,
@@ -73,7 +78,10 @@ class KotlinWorkoutPresentationDomainTest {
         assertEquals(1,ui.skippedCount)
         assertEquals(3L,ui.revision)
         assertEquals(BigDecimal("22.5"),ui.exercises[0].sets[1].actual?.load)
-        assertEquals("event-3",ui.exercises[0].sets[1].correctsEventId)
+        assertEquals("event-2",ui.exercises[0].sets[1].correctsEventId)
+        assertEquals("event-3",
+            (ui.exercises[0].sets[1].currentReceipt?.operation as
+                KotlinJournalOperation.RecordSet).eventId)
         j=step(j,recorded("event-4",3,"chin:s1",
             KotlinJournalSetOutcome.FAILED_ATTEMPT,
             KotlinPerformedSet(null,null,0,null)))
@@ -89,6 +97,54 @@ class KotlinWorkoutPresentationDomainTest {
         assertEquals(1,ui.completedCount)
         assertEquals(1,ui.skippedCount)
         assertEquals(1,ui.failedCount)
+    }
+
+    @Test fun repeatedCorrectionsShowImmediateAncestryNotTheirOwnEventId() {
+        var journal=KotlinWorkoutJournalDomain.begin(snapshot,identity)
+        journal=step(journal,recorded("first",0,"press:s1",
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("25"),LoadUnit.LB,8,null)))
+        var shown=KotlinWorkoutPresentationDomain.inspect(journal)
+            .exercises.first().sets.last()
+        assertNull(shown.correctsEventId)
+        assertEquals("first",
+            (shown.currentReceipt?.operation as KotlinJournalOperation.RecordSet).eventId)
+
+        journal=step(journal,recorded("second",1,"press:s1",
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("22.5"),LoadUnit.LB,9,2),
+            correction="first"))
+        shown=KotlinWorkoutPresentationDomain.inspect(journal)
+            .exercises.first().sets.last()
+        assertEquals("first",shown.correctsEventId)
+        assertEquals("second",
+            (shown.currentReceipt?.operation as KotlinJournalOperation.RecordSet).eventId)
+        assertEquals(BigDecimal("22.5"),shown.actual?.load)
+
+        // A second edit corrects the current effective receipt only;
+        // it does not relabel the first event or rewrite its historical fact.
+        journal=step(journal,recorded("third",2,"press:s1",
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,10,null),
+            correction="second"))
+        shown=KotlinWorkoutPresentationDomain.inspect(journal)
+            .exercises.first().sets.last()
+        assertEquals("second",shown.correctsEventId)
+        assertEquals("third",
+            (shown.currentReceipt?.operation as KotlinJournalOperation.RecordSet).eventId)
+        assertEquals(BigDecimal("20"),shown.actual?.load)
+        assertNull(shown.actual?.actualRir)
+        assertEquals(3,journal.receipts.size)
+        assertEquals("first",
+            (journal.receipts.first().operation as KotlinJournalOperation.RecordSet).eventId)
+        assertEquals("first",
+            (journal.receipts[1].operation as KotlinJournalOperation.RecordSet)
+                .correctsEventId)
+        assertEquals("second",
+            (journal.receipts[2].operation as KotlinJournalOperation.RecordSet)
+                .correctsEventId)
+        assertEquals(journal,(KotlinWorkoutJournalReplayDomain.verifyStoredState(journal)
+            as KotlinJournalReplayResult.Recovered).journal)
     }
 
     @Test fun remainingExerciseKeepsCompletedWarmupsAndOtherExercises() {

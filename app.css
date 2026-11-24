@@ -4709,6 +4709,10 @@ background:var(--pi-color-card)!important;
 #root[data-pi-motion="expressive"] .wpb-program .wpb-day-hit-chip[aria-expanded="true"]::before{
   box-shadow:inset 0 0 0 1.5px var(--pi-m3e-primary);
 }
+/* B1038: the progression action keeps its method readable on narrow rows; the "Auto ·" prefix
+   yields first (the accent emphasis already marks a lift set by hand). */
+#root .wpb .wpb-program .wpb-exercise-actions{container:pi-exercise-actions/inline-size;}
+@container pi-exercise-actions (max-width:260px){#root .wpb .wpb-program .wpb-progression-auto{display:none;}}
 #root .wpb .wpb-program .wpb-day-hits-list{display:flex;flex-wrap:wrap;gap:0 var(--pi-space-2);}
 /* Day focus and Add exercise close the day's list as plain sections, not a bordered box and a
    dashed card. */
@@ -5151,7 +5155,9 @@ background:var(--pi-color-card)!important;
   box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;
   gap:var(--pi-space-2);min-width:var(--pi-control-min);min-height:var(--pi-control-min);
   padding:var(--pi-space-2) var(--pi-control-padding-inline);
-  border:1px solid var(--pi-color-divider,var(--wpb-theme-border));
+  /* B1038: Compose FilledTonalButton — the container fill is the shape; no outline. The transparent
+     1px border keeps geometry stable and is painted by forced-colors mode. */
+  border:1px solid transparent;
   border-radius:var(--pi-shape-action,18px);background:var(--pi-color-control,var(--wpb-theme-card-high));
   color:var(--pi-color-on-control,var(--wpb-theme-text));font:inherit;
   font-size:var(--pi-type-support);font-weight:var(--pi-weight-action);line-height:1.4;

@@ -91,7 +91,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='1039';
+const __APP_VERSION__='4.0.0'; const __BUILD__='1040';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -8165,7 +8165,8 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                                                                                                 const s = styleFor(program, ex.id);
                                                                                                 if (s === "auto") {
                                                                                                     const a = resolveStyle(program, ex, slot === day.primaryIndex, activeWeek, perf, history, day.id);
-                                                                                                    return "Auto · " + (SHORT[a] || a || "");
+                                                                                                    // "Auto ·" is the first thing to go on a narrow row (container query): the method is what matters.
+                                                                                                    return _jsxs(_Fragment, { children: [_jsx("span", { className: "wpb-progression-auto", children: "Auto \u00B7 " }), SHORT[a] || a || ""] });
                                                                                                 }
                                                                                                 return SHORT[s] || s;
                                                                                             })() })] })), _jsx("button", { className: "pressable hit", "aria-label": `More options for ${ex.name}`, onClick: () => { if (!ensureTargetsApplied()) return; setRowMenu(rowMenu?.key === `${day.id}:${slot}` ? null : { key: `${day.id}:${slot}`, dayId: day.id, slot, exId: id }); }, title: "More options", "aria-expanded": rowMenu?.key === `${day.id}:${slot}`, "data-emphasis": rowMenu?.key === `${day.id}:${slot}` ? "accent" : undefined, children: _jsx(MoreHorizontal, { size: 16 }) })] })] }), pctMain ? (() => {

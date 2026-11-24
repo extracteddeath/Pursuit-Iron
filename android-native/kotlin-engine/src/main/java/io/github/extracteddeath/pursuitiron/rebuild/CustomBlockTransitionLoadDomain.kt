@@ -125,6 +125,17 @@ object CustomBlockTransitionLoadDomain {
             val authored=target.prescription.load as DraftSetLoad.Verified
             val oldLoad=historical.prescription.load as DraftSetLoad.Verified
             val weight=minOf(authored.value,fact.priorLoad)
+            // A selectable physical setting is not automatically a valid
+            // prescribed working weight. In particular, a machine/cable
+            // selector of zero must not be promoted to a strength-block
+            // starting load. Some bases (landmine added plates) explicitly
+            // permit zero, so delegate the exception to the one authority.
+            if(!KotlinSetNumberAuthorityDomain.validIssuedLoad(authored) ||
+                !KotlinSetNumberAuthorityDomain.validIssuedLoad(oldLoad) ||
+                !KotlinSetNumberAuthorityDomain.validPrescribedLoad(
+                    weight,authored.basis))
+                return result(CustomBlockTransitionLoadStatus.EQUIPMENT_UNVERIFIED,
+                    "The authored, previous and proposed loads must satisfy the shared issued-weight rules, not merely appear on the equipment selector.",assumed=assumed)
             fun buildable(value:BigDecimal)=EquipmentLoadDomain.inspect(stock,value,authored.unit)
                 .let{it is LoadInspection.Confirmed && it.exact}
             if(authored.basis!=oldLoad.basis || authored.unit!=oldLoad.unit ||

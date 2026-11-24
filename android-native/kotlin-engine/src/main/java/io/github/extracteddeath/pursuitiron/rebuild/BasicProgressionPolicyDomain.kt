@@ -123,8 +123,6 @@ object BasicProgressionPolicyDomain {
         fun reject(reason: BasicProgressionRefusal) = BasicProgressionResult.Refused(reason)
         val loads = request.issuedWorkingLoads
         if (request.nextWorkoutId.isBlank() || !request.nextScope.valid() ||
-            KotlinSetNumberAuthorityDomain.machineTagContradictsFreeBarbell(
-                request.nextScope.basis,request.nextScope.machineInstanceId) ||
             loads.size !in 1..32 || loads.any {
                 !KotlinSetNumberAuthorityDomain.validPrescribedLoad(it,request.nextScope.basis)
             })
@@ -149,6 +147,13 @@ object BasicProgressionPolicyDomain {
         // inventory, nor invokes progression or adaptive coaching.
         if (request.strategy == BasicProgressionStrategy.MANUAL_LOGGING)
             return candidate(loads,emptySet(),BasicProgressionDecision.MANUAL_REPEAT)
+
+        // Manual repeat is a nonwriting display of the authored prescription.
+        // A mislabeled historical station can be logged/reviewed, but must
+        // never earn a future change from an incompatible physical identity.
+        if(KotlinSetNumberAuthorityDomain.machineTagContradictsFreeBarbell(
+                request.nextScope.basis,request.nextScope.machineInstanceId))
+            return reject(BasicProgressionRefusal.INVALID_SOURCE_OR_LOAD)
 
         if (request.strategy != BasicProgressionStrategy.REP_TARGET_PROGRESSION &&
             (request.maximumAuthorizedIncrement <= zero ||

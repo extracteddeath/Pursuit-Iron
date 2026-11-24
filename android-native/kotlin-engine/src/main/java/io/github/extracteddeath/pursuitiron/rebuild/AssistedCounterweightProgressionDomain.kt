@@ -140,8 +140,9 @@ object AssistedCounterweightProgressionDomain {
                 current,assumed)
         if(current<=zero)return reject(
             AssistedCounterweightReviewStatus.NO_LOWER_CONFIRMED_ASSISTANCE,current,assumed)
-        val candidate=exact.nextBelow
-        if(candidate==null || candidate>=current)
+        val candidate=exact.nextHarder
+        if(candidate==null || !KotlinSetNumberAuthorityDomain.validPrescribedLoad(candidate,exact.basis) ||
+            exact.basis.compareDifficulty(candidate,current)<=0)
             return reject(AssistedCounterweightReviewStatus.NO_LOWER_CONFIRMED_ASSISTANCE,
                 current,assumed)
         if(current.subtract(candidate)>request.maximumAssistanceReduction)

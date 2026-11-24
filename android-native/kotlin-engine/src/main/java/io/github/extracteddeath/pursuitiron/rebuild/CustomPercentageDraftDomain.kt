@@ -1,5 +1,8 @@
 package io.github.extracteddeath.pursuitiron.rebuild
 
+import java.math.BigDecimal
+import java.util.Collections
+
 /**
  * The source-bound authoring bridge for named percentage intent. Recompute
  * the numerical candidate from the actual selected slot and supplied reviewed
@@ -28,8 +31,10 @@ sealed interface CustomPercentageDraftResult {
         val key:ProgramProgressionSlotKey,
         val weekInBlock:Int,
         val originalSets:List<CustomAuthoredSet>,
-        val proposal:CustomCycleBuilderResult.Proposed
+        val proposal:CustomCycleBuilderResult.Proposed,
+        val tierTransitions:List<TieredLinearTransition> = emptyList()
     ):CustomPercentageDraftResult {
+        val requiresReviewedReset:Boolean get()=tierTransitions.any{it.decision==TieredLinearDecision.RESET_REVIEW}
         val mayIssueWorkout:Boolean get()=false
         val mayModifyHistory:Boolean get()=false
         val maySaveProgram:Boolean get()=false
@@ -37,9 +42,52 @@ sealed interface CustomPercentageDraftResult {
 }
 
 object CustomPercentageDraftDomain {
-    fun review(
-        source:CustomPercentageDraftSource,
-        request:NamedPercentageRequest
+    private data class Projected(val load:BigDecimal,val reps:Int,val intent:CustomPercentageSetIntent)
+    private data class Projection(val sets:List<Projected>,
+        val transitions:List<TieredLinearTransition> = emptyList())
+
+    fun review(source:CustomPercentageDraftSource,request:NamedPercentageRequest):CustomPercentageDraftResult =
+        reviewSource(source,request.scope,request.tier,request.approvedSetBudget,
+            request.weekInBlock,request.blockWeeks) { block ->
+            val numeric=NamedPercentageProtocolDomain.review(request)
+                as? NamedPercentageResult.Candidate ?:return@reviewSource null
+            val reference=request.confirmedReference ?:return@reviewSource null
+            Projection(numeric.sets.map{set->
+                Projected(set.verifiedLoad,set.minimumReps,CustomPercentageSetIntent(
+                    request.scheme,request.tier,request.dayRole,source.weekInBlock,
+                    block.weeks,set.sourceOrdinal,numeric.sourceSetCount,reference,
+                    set.sourcePercent,set.effectivePercent,null,set.repOut,numeric.recovery))
+            })
+        }
+
+    /** Replay a complete owner-supplied tier ledger before drafting. Stable slot
+     * identity is mandatory here: identical lifts on the same day can coexist. */
+    fun reviewTiered(source:CustomPercentageDraftSource,request:TieredLinearRequest):CustomPercentageDraftResult {
+        if(request.sourceSlotId!=source.slotId)
+            return CustomPercentageDraftResult.Refused(CustomPercentageDraftRefusal.SCOPE_MISMATCH)
+        return reviewSource(source,request.scope,request.tier,request.approvedSetBudget,null,null) { block ->
+            val numeric=TieredLinearProgressionDomain.review(request)
+                as? TieredLinearResult.Candidate ?:return@reviewSource null
+            val count=numeric.targets.size
+            val size=numeric.sourceSetCount
+            val indexes=if(count>size) List(count-size){0}+(0 until size).toList()
+                else NamedPercentageProtocolDomain.trimmedSourceIndexes(size,count,size-1,
+                    if(numeric.recovery)emptyList() else listOf(size-1))
+            val hundred=BigDecimal("100")
+            val effective=if(numeric.recovery) BigDecimal("60") else hundred
+            Projection(numeric.targets.mapIndexed{index,set->
+                Projected(set.load,set.minimumReps,CustomPercentageSetIntent(
+                    NamedPercentageScheme.GZCLP,request.tier,PercentageDayRole.STANDARD,
+                    source.weekInBlock,block.weeks,indexes[index]+1,size,numeric.state.load,
+                    hundred,effective,numeric.state.stage,set.repOut,numeric.recovery))
+            },numeric.transitions)
+        }
+    }
+
+    private fun reviewSource(
+        source:CustomPercentageDraftSource,scope:BasicProgressionScope,tier:PercentageTier,
+        budget:Int,requestedWeek:Int?,requestedBlockWeeks:Int?,
+        compute:(CustomTrainingBlock)->Projection?
     ):CustomPercentageDraftResult {
         fun no(reason:CustomPercentageDraftRefusal)=CustomPercentageDraftResult.Refused(reason)
         val cycle=source.cycle
@@ -58,7 +106,8 @@ object CustomPercentageDraftDomain {
         val slot=day.slots.singleOrNull{it.slotId==source.slotId}
             ?:return no(CustomPercentageDraftRefusal.STALE_OR_INVALID_SOURCE)
         if(source.weekInBlock !in 1..block.weeks ||
-            request.weekInBlock!=source.weekInBlock || request.blockWeeks!=block.weeks ||
+            (requestedWeek!=null && requestedWeek!=source.weekInBlock) ||
+            (requestedBlockWeeks!=null && requestedBlockWeeks!=block.weeks) ||
             block.purpose!=CustomBlockPurpose.TRAINING)
             return no(CustomPercentageDraftRefusal.STALE_OR_INVALID_SOURCE)
         if(cycle.weekOverrides[block.blockId].orEmpty().any{
@@ -66,13 +115,12 @@ object CustomPercentageDraftDomain {
                     it.slotId==source.slotId})
             return no(CustomPercentageDraftRefusal.PROTECTED_WEEK)
 
-        val scope=request.scope
         if(!scope.valid() || scope.athleteId!=stamp.athleteId ||
             scope.programId!=stamp.cycleId || scope.gymId!=stamp.gymId ||
             scope.blockId!=block.blockId || scope.trainingDayId!=block.blockId+":d"+day.weekday ||
             scope.exerciseId!=slot.exerciseId || scope.machineInstanceId!=slot.machineInstanceId)
             return no(CustomPercentageDraftRefusal.SCOPE_MISMATCH)
-        if(slot.role!=when(request.tier) {
+        if(slot.role!=when(tier) {
                 PercentageTier.PRIMARY -> ComposerRole.PRIMARY
                 PercentageTier.SECONDARY -> ComposerRole.SECONDARY
             } || slot.sets.size !in 1..20 || slot.supersetGroup!=null ||
@@ -84,27 +132,20 @@ object CustomPercentageDraftDomain {
                     CustomWorkoutTimingDomain.setSeconds(set)==null
             })return no(CustomPercentageDraftRefusal.UNSUPPORTED_SLOT)
         val working=slot.sets.filter{it.type==DraftSetType.WORKING}
-        if(working.size!=request.approvedSetBudget || working.isEmpty())
+        if(working.size!=budget || working.isEmpty())
             return no(CustomPercentageDraftRefusal.BUDGET_MISMATCH)
-        val numeric=NamedPercentageProtocolDomain.review(request)
-            as? NamedPercentageResult.Candidate
-            ?:return no(CustomPercentageDraftRefusal.PROTOCOL_REFUSED)
-        val reference=request.confirmedReference
-            ?:return no(CustomPercentageDraftRefusal.PROTOCOL_REFUSED)
+        val numeric=compute(block) ?:return no(CustomPercentageDraftRefusal.PROTOCOL_REFUSED)
+        if(numeric.sets.size!=working.size)return no(CustomPercentageDraftRefusal.BUDGET_MISMATCH)
         var workingIndex=0
         val replacement=slot.sets.map{original->
             if(original.type!=DraftSetType.WORKING) original
             else {
                 val set=numeric.sets[workingIndex++]
-                val intent=CustomPercentageSetIntent(
-                    request.scheme,request.tier,request.dayRole,request.weekInBlock,
-                    request.blockWeeks,set.sourceOrdinal,numeric.sourceSetCount,
-                    reference,set.sourcePercent,set.effectivePercent,null,set.repOut,numeric.recovery)
                 val projected=original.copy(
-                    load=DraftSetLoad.Verified(scope.unit,scope.basis,set.verifiedLoad),
-                    reps=RepBand(set.minimumReps,set.minimumReps),
-                    exactRepTarget=set.minimumReps,percentageIntent=intent)
-                if(!intent.validForSet(projected))
+                    load=DraftSetLoad.Verified(scope.unit,scope.basis,set.load),
+                    reps=RepBand(set.reps,set.reps),exactRepTarget=set.reps,
+                    percentageIntent=set.intent)
+                if(!set.intent.validForSet(projected))
                     return no(CustomPercentageDraftRefusal.INVALID_PROJECTED_SET)
                 projected
             }
@@ -119,6 +160,6 @@ object CustomPercentageDraftDomain {
             ProgramProgressionSlotKey(block.blockId,day.weekday,slot.slotId),
             source.weekInBlock,edited.receipt.original.blocks.single{it.blockId==block.blockId}
                 .days.single{it.weekday==day.weekday}.slots.single{it.slotId==slot.slotId}.sets,
-            edited)
+            edited,Collections.unmodifiableList(numeric.transitions.toList()))
     }
 }

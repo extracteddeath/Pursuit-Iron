@@ -124,7 +124,8 @@ fun FinishSheet(vm: AppViewModel, onClose: () -> Unit) {
             val u = x.s("unit")
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Icon(PiIcons.Trophy, null, tint = cs.primary)
-                Text("Workout complete", style = MaterialTheme.typography.headlineSmall)
+                // Finishing with sets still open is a choice, not a completion: say which it is.
+                Text(if (x.i("doneSets") >= x.i("totalSets")) "Workout complete" else "Finish early?", style = MaterialTheme.typography.headlineSmall)
             }
             Text("${x.i("doneSets")} of ${x.i("totalSets")} sets logged", color = cs.onSurfaceVariant)
             val prs = x.list("prs")

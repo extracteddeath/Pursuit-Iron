@@ -53,6 +53,25 @@ class BasicProgressionPolicyDomainTest {
     private fun candidate(request:BasicProgressionRequest)=
         BasicProgressionPolicyDomain.review(request) as BasicProgressionResult.Candidate
 
+    @Test fun invalidRepBandsCannotAuthorizeEvenManualOrDynamicFutureNumbers() {
+        for(band in listOf(RepBand(0,10),RepBand(10,9),RepBand(6,101))) {
+            assertFalse(KotlinSetNumberAuthorityDomain.validIssuedRepBand(band))
+            for(strategy in listOf(
+                BasicProgressionStrategy.MANUAL_LOGGING,
+                BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,
+                BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION,
+                BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION)) {
+                val request=request(strategy,reps=listOf(10,10,10)).copy(
+                    repBand=band,previous=workout(listOf(10,10,10),
+                        listOf("100","100","100")).copy(targetReps=band))
+                assertEquals("$strategy $band",
+                    BasicProgressionResult.Refused(
+                        BasicProgressionRefusal.INVALID_SOURCE_OR_LOAD),
+                    BasicProgressionPolicyDomain.review(request))
+            }
+        }
+    }
+
     @Test fun manualLoggingKeepsApprovedNumbersWithoutHistoryStockOrCoaching() {
         val r=candidate(request(BasicProgressionStrategy.MANUAL_LOGGING,
             previous=null,previousScope=null,verifiedStock=null,

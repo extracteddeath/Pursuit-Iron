@@ -145,6 +145,9 @@ class NativeKotlinHistoryTransactionCoordinator(
             // original journal is present, as required for this operation.
             return@fenced denied(NativeHistoryTransactionRefusal.HISTORY_RECEIPT_MISMATCH)
         }
+        // Never reserve shared History for a Finish the journal cannot encode.
+        if(!journalStore.canEncodeProposal(owner,preview.state))
+            return@fenced denied(NativeHistoryTransactionRefusal.OPERATION_REJECTED)
         val intent = NativeHistoryWriteIntent.Finish(workoutId, operation,completionClock.observe())
         val prepared = ledgerStore.prepare(
             owner, athlete, base.ledger.revision, intent)

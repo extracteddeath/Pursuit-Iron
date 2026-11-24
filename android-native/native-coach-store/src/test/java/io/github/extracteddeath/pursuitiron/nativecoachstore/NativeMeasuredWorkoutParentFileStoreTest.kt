@@ -267,6 +267,19 @@ class NativeMeasuredWorkoutParentFileStoreTest {
         return result as NativeMeasuredFinishResult.Committed
     }
 
+    @Test fun fullHistoryRejectsNewMeasuredIssueWithoutWritingParent() {
+        approved(all=true)
+        val entries=(1..KotlinHistoryCapacityPolicy.MAX_MANIFEST_COMPLETIONS).map { i ->
+            KotlinHistoryManifestEntry(i.toLong(),"old-$i","old-storage-$i","old-finish-$i",1L,0L)
+        }
+        assertTrue(canonicalHistory.enrollVerifiedSnapshot("owner-one","athlete-one",entries){_,_->true}
+            is NativeHistoryLedgerResult.Durable)
+        denied(indexedStore().issue("owner-one","workout-one"),
+            NativeMeasuredWorkoutStoreRefusal.HISTORY_TRANSACTION_REQUIRED)
+        denied(indexedStore().open("owner-one","workout-one"),
+            NativeMeasuredWorkoutStoreRefusal.NOT_ISSUED)
+    }
+
     @Test fun measuredFinishSharesEnrolledCanonicalHistoryAndColdRetryDoesNotDuplicate() {
         val p=approved(all=true)
         enrollHistory()

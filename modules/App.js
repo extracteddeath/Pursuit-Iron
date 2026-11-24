@@ -6759,6 +6759,16 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
     const weekChipCaption = w => { const days = daysInWeek(program, w); let sets = 0, mins = 0;
         for (const d of days) { const sm = summarizeSession(program, d, w, pace); sets += sm.sets; mins += sm.minutes; }
         mins = Math.round(mins); return `${Math.round(sets)} sets · ${mins >= 60 ? `${Math.floor(mins / 60)}h${String(mins % 60).padStart(2, "0")}m` : `${mins}m`}`; };
+    // B1041: when every week carries the same sets and time, the chips said the same thing seven
+    // times; they name each week's phase instead (as Plan's week chips do).
+    let chipLoadsSame = null; // resolved on first chip render, once the week list exists
+    const weekChipText = w => {
+        if (chipLoadsSame === null) {
+            const loads = weeks.map(x => weekChipCaption(x));
+            chipLoadsSame = loads.length > 1 && loads.every(x => x === loads[0]);
+        }
+        return chipLoadsSame ? (phaseFor(program, w)?.label || weekChipCaption(w)) : weekChipCaption(w);
+    };
     // The week to open on: the lifter's CURRENT training week, derived from their logged history
     // (the same cursor that decides "up next"), so opening a program you're on week 2 of shows week 2 —
     // not week 1. An explicit initialWeek (a remembered in-session selection) still wins if present.
@@ -7959,7 +7969,7 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                     // gap belongs on an inner element — the meta line above does exactly this with its 3px —
                     // where overflow:hidden clips it to nothing along with everything else. The cycle stays one
                     // tap away from the top of the list, and the Cycles tab reaches it regardless.
-                    _jsx("div", { ref: pvCycle, className: "wpb-program-cycle-collapse", children: _jsx("div", { className: "wpb-program-cycle-inset", children: _jsxs("button", { onClick: cycleLink.open, "aria-label": `Part of cycle ${cycleLink.name} — view cycle`, className: "pressable wpb-program-cycle-link", children: [_jsx(Layers, { size: 15, className: "wpb-program-cycle-icon" }), _jsxs("div", { className: "wpb-program-cycle-copy", children: [_jsx("div", { className: "wpb-program-cycle-name", children: cycleLink.name }), _jsxs("div", { className: "wpb-program-cycle-meta", children: ["Block ", cycleLink.blockNum, " of ", cycleLink.blockCount, cycleLink.label ? ` · ${cycleLink.label}` : "", " \u00B7 view cycle"] })] }), _jsx(ChevronRight, { size: 16, className: "wpb-program-cycle-chevron" })] }) }) })), hasRetro && (_jsx("div", { ref: pvRetro, className: "wpb-b965-layout-05", children: _jsx("div", { className: "wpb-s960-paddingtop-12px", children: _jsxs("div", { className: "wpb-program-retro", children: [_jsxs("div", { className: "wpb-layout-row-tight-bottom8", children: [_jsx(BarChart3, { size: 14, color: C.accentInk }), _jsx("span", { className: "wpb-eya", children: "Block review" }), _jsx("span", { className: "wpb-program-retro-headline", children: retro.headline })] }), _jsx("div", { className: "wpb-s956-display-flex wpb-s956-flexdirection-column wpb-s956-gap-6", children: retro.recs.slice(0, 3).map((r, i) => (_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-flex-start wpb-s956-gap-6", children: [_jsx("span", { className: "wpb-program-retro-dot", "data-trend": r.trend }), _jsxs("span", { className: "wpb-program-retro-copy", children: [_jsxs("b", { className: "wpb-program-retro-muscle", children: [r.part, ":"] }), " ", r.rec] })] }, i))) })] }) }) })), _jsxs("div", { className: "wpb-program-actions", children: [!isSaved && (_jsxs(UiAction, { variant: "tonal", onClick: () => { setSeedInput(""); setSeedSheet(true); }, "aria-label": "Reroll exercises or enter a seed", className: "wpb-reroll", children: [_jsx(RefreshCw, { size: 16 }), " Reroll"] })), !(program.schedule && Object.keys(program.schedule).length > 0) && (_jsx(UiAction, { variant: "tonal", "data-icon-only": "true", onClick: () => setSchedSheet(true), "aria-label": "Set weekly schedule", title: "Set weekly schedule", children: _jsx(Calendar, { size: 18 }) })), _jsx(UiAction, { variant: "tonal", "data-icon-only": "true", onClick: openCfg, "aria-label": "Program settings", title: "Program settings", children: _jsx(Settings2, { size: 18 }) }), program.days.length > 1 && (_jsxs("div", { className: "wpb-program-day-picker", children: [_jsxs(UiAction, { variant: "tonal", onClick: event => { const anchor = event.currentTarget; setDayMenu(open => open ? null : anchor); }, "aria-label": "Jump to day", title: "Jump to day", "aria-expanded": !!dayMenu, "aria-haspopup": "menu", "aria-controls": "program-day-picker-menu", "data-emphasis": dayMenu ? "accent" : undefined, children: [openDayIdx >= 0 ? `D${openDayIdx + 1}` : "Day", _jsx(ChevronDown, { size: 14, className: "wpb-program-day-chevron", "aria-hidden": true })] }), dayMenu && _jsx(ContextMenu, { id: "program-day-picker-menu", "data-daypicker": true,
+                    _jsx("div", { ref: pvCycle, className: "wpb-program-cycle-collapse", children: _jsx("div", { className: "wpb-program-cycle-inset", children: _jsxs("button", { onClick: cycleLink.open, "aria-label": `Part of cycle ${cycleLink.name} — view cycle`, className: "pressable wpb-program-cycle-link", children: [_jsx(Layers, { size: 15, className: "wpb-program-cycle-icon" }), _jsxs("div", { className: "wpb-program-cycle-copy", children: [_jsx("div", { className: "wpb-program-cycle-name", children: cycleLink.name }), _jsxs("div", { className: "wpb-program-cycle-meta", children: ["Block ", cycleLink.blockNum, " of ", cycleLink.blockCount, cycleLink.label ? ` · ${cycleLink.label}` : "", " \u00B7 view cycle"] })] }), _jsx(ChevronRight, { size: 16, className: "wpb-program-cycle-chevron" })] }) }) })), hasRetro && (_jsx("div", { ref: pvRetro, className: "wpb-b965-layout-05", children: _jsx("div", { className: "wpb-s960-paddingtop-12px", children: _jsxs("div", { className: "wpb-program-retro", children: [_jsxs("div", { className: "wpb-layout-row-tight-bottom8", children: [_jsx(BarChart3, { size: 14, color: C.accentInk }), _jsx("span", { className: "wpb-eya", children: "Block review" }), _jsx("span", { className: "wpb-program-retro-headline", children: retro.headline })] }), _jsx("div", { className: "wpb-s956-display-flex wpb-s956-flexdirection-column wpb-s956-gap-6", children: retro.recs.slice(0, 3).map((r, i) => (_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-flex-start wpb-s956-gap-6", children: [_jsx("span", { className: "wpb-program-retro-dot", "data-trend": r.trend }), _jsxs("span", { className: "wpb-program-retro-copy", children: [_jsxs("b", { className: "wpb-program-retro-muscle", children: [r.part, ":"] }), " ", r.rec] })] }, i))) })] }) }) })), _jsxs("div", { className: "wpb-program-actions", children: [!isSaved && (_jsxs(UiAction, { variant: "tonal", onClick: () => { setSeedInput(""); setSeedSheet(true); }, "aria-label": "Reroll exercises or enter a seed", className: "wpb-reroll", children: [_jsx(RefreshCw, { size: 16 }), " Reroll"] })), !(program.schedule && Object.keys(program.schedule).length > 0) && (_jsx(UiAction, { variant: "tonal", "data-icon-only": "true", onClick: () => setSchedSheet(true), "aria-label": "Set weekly schedule", title: "Set weekly schedule", children: _jsx(Calendar, { size: 18 }) })), _jsx(UiAction, { variant: "tonal", "data-icon-only": "true", onClick: openCfg, "aria-label": "Program settings", title: "Program settings", children: _jsx(Settings2, { size: 18 }) }), program.days.length > 1 && (_jsxs("div", { className: "wpb-program-day-picker", children: [_jsxs(UiAction, { variant: "tonal", onClick: event => { const anchor = event.currentTarget; setDayMenu(open => open ? null : anchor); }, "aria-label": "Jump to day", title: "Jump to day", "aria-expanded": !!dayMenu, "aria-haspopup": "menu", "aria-controls": "program-day-picker-menu", "data-emphasis": dayMenu ? "accent" : undefined, children: [_jsx("span", { className: "wpb-program-day-picker-label", children: openDayIdx >= 0 ? displayDayName(program.days[openDayIdx].label, program) : "Day" }), _jsx(ChevronDown, { size: 14, className: "wpb-program-day-chevron", "aria-hidden": true })] }), dayMenu && _jsx(ContextMenu, { id: "program-day-picker-menu", "data-daypicker": true,
                         anchor: dayMenu, label: "Choose program day", title: activeWeek === deloadWeek ? "Deload week" : `Week ${activeWeek}`,
                         onClose: () => setDayMenu(null), items: program.days.map((day, index) => {
                             const done = isDayDone(day.id, activeWeek);
@@ -8004,7 +8014,7 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                             })(), _jsx("div", { className: "wpb-program-upgrade-assurance", children: "Your logged sets and history are untouched. If you don't like the result, the version you have now will be saved under Earlier layouts in Plan info after you apply the preview." }), _jsxs("div", { className: "wpb-s956-display-flex wpb-s956-gap-8 wpb-s956-flexwrap-wrap", children: [_jsxs("button", { onClick: () => { if (hasEdits)
                                             setConfirmEngine(true);
                                         else
-                                            onRegenerate(program.seed, ENGINE_V); }, "aria-label": "Rebuild with the latest program logic", className: "pressable wpb-program-upgrade-apply", children: [_jsx(Zap, { size: 14 }), " Update program"] }), _jsx("button", { onClick: () => (onCommitProgram || setProgram)(p => ({ ...p, engineDeclined: ENGINE_V })), "aria-label": "Keep this program as it is", className: "pressable wpb-program-upgrade-keep", children: "Keep it as it is" })] })] })), program.config?.endless && !manual ? (_jsx(ContinuousWave, { weeks: weeks, deloadWeek: deloadWeek, activeWeek: activeWeek, nowWeek: endlessNowWeek, onPick: pickWeek, dim: manual })) : (_jsxs("div", { className: "wpb-hscroll wpb-choice-rail wpb-week-rail", "data-active-week": activeWeek, children: [weeks.map(w => (_jsx(UiChoice, { kind: "summary", className: "wpb-program-week-chip", label: `Week ${w}`, caption: weekChipCaption(w), selected: activeWeek === w, onClick: () => pickWeek(w), "data-deload": "false" }, w))), deloadWeek && _jsx(UiChoice, { kind: "summary", className: "wpb-program-week-chip", label: "Deload", "data-deload": "true", caption: weekChipCaption(deloadWeek), selected: activeWeek === deloadWeek, onClick: () => pickWeek(deloadWeek) })] })), program.config?.percentScheme === "531" && !manual && (() => {
+                                            onRegenerate(program.seed, ENGINE_V); }, "aria-label": "Rebuild with the latest program logic", className: "pressable wpb-program-upgrade-apply", children: [_jsx(Zap, { size: 14 }), " Update program"] }), _jsx("button", { onClick: () => (onCommitProgram || setProgram)(p => ({ ...p, engineDeclined: ENGINE_V })), "aria-label": "Keep this program as it is", className: "pressable wpb-program-upgrade-keep", children: "Keep it as it is" })] })] })), program.config?.endless && !manual ? (_jsx(ContinuousWave, { weeks: weeks, deloadWeek: deloadWeek, activeWeek: activeWeek, nowWeek: endlessNowWeek, onPick: pickWeek, dim: manual })) : (_jsxs("div", { className: "wpb-hscroll wpb-choice-rail wpb-week-rail", "data-active-week": activeWeek, children: [weeks.map(w => (_jsx(UiChoice, { kind: "summary", className: "wpb-program-week-chip", label: `Week ${w}`, caption: weekChipText(w), selected: activeWeek === w, onClick: () => pickWeek(w), "data-deload": "false" }, w))), deloadWeek && _jsx(UiChoice, { kind: "summary", className: "wpb-program-week-chip", label: "Deload", "data-deload": "true", caption: weekChipCaption(deloadWeek), selected: activeWeek === deloadWeek, onClick: () => pickWeek(deloadWeek) })] })), program.config?.percentScheme === "531" && !manual && (() => {
                         const total = weeksOf(program);
                         const wave = PCT_SCHEMES["531"].weeks[activeWeek > total ? 3 : (activeWeek - 1) % 4];
                         const pcts = wave.sets.map(s => `${Math.round(s[0] * 100)}%`).join(" · ");
@@ -8100,8 +8110,10 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                                                     }, style: { ...iconBtn(), borderColor: "transparent", background: "transparent", color: C.muted, flexShrink: 0, width: 36, height: 36 }, children: _jsx(MoreHorizontal, { size: 18 }) }) }), _jsx("button", { className: "pressable hit wpb-day-start", "aria-label": day.exercises.length ? `Start ${day.label}` : "Add an exercise first", onClick: () => { if (day.exercises.length && ensureTargetsApplied())
                                                     onStartDay(day, activeWeek); }, disabled: !day.exercises.length, title: day.exercises.length ? "Start workout" : "Add an exercise first", style: {
                                                     flexShrink: 0, margin: "0 12px 0 2px", width: 42, height: 42, borderRadius: 12, border: "none",
-                                                    background: day.exercises.length ? C.accent : C.border, color: day.exercises.length ? C.accentText : C.faint, display: "flex", alignItems: "center", justifyContent: "center", cursor: day.exercises.length ? "pointer" : "default"
-                                                }, children: _jsx(Play, { size: 18, fill: day.exercises.length ? C.accentText : C.faint }) })] })) }), open && (_jsx("div", { className: "wpb-expand", children: _jsxs("div", { className: "wpb-s960-padding-0-12px-12px", children: [day.note && (_jsxs("div", { className: "wpb-b973-day-note", children: [_jsx(Info, { size: 14, color: C.accentInk, className: "wpb-b961-leading-icon" }), _jsx("span", { className: "wpb-type-body", children: day.note })] })), day.exercises.length > 0 && _jsx(DayHits, { program: program, day: day, weekIndex: activeWeek }), day.exercises.map((_id, slot) => {
+                                                    // B1041: only the next-due day's Start is the filled primary; the others are tonal, so
+                                                    // a list of days no longer shows a column of identical accent buttons.
+                                                    background: !day.exercises.length ? C.border : isNext ? C.accent : C.accentDim, color: !day.exercises.length ? C.faint : isNext ? C.accentText : C.accentInk, display: "flex", alignItems: "center", justifyContent: "center", cursor: day.exercises.length ? "pointer" : "default"
+                                                }, children: _jsx(Play, { size: 18, fill: !day.exercises.length ? C.faint : isNext ? C.accentText : C.accentInk }) })] })) }), open && (_jsx("div", { className: "wpb-expand", children: _jsxs("div", { className: "wpb-s960-padding-0-12px-12px", children: [day.note && (_jsxs("div", { className: "wpb-b973-day-note", children: [_jsx(Info, { size: 14, color: C.accentInk, className: "wpb-b961-leading-icon" }), _jsx("span", { className: "wpb-type-body", children: day.note })] })), day.exercises.length > 0 && _jsx(DayHits, { program: program, day: day, weekIndex: activeWeek }), day.exercises.map((_id, slot) => {
                                                 const id = exerciseAt(program, day, slot, activeWeek);
                                                 const ex = EX_BY_ID[id];
                                                 if (!ex)
@@ -19022,6 +19034,7 @@ function App() {
             pending.resize.disconnect();
             clearTimeout(pending.timer);
             const { scroller } = pending;
+            scroller.style.removeProperty("overflow-anchor");
             pending = null;
             sync(scroller);
         };
@@ -19039,8 +19052,18 @@ function App() {
             if (max >= target)
                 settle();
         };
+        // Replacing a waiting restore (the section changed again) must not record its clamped interim
+        // offset as the remembered one.
+        const discard = () => {
+            if (!pending)
+                return;
+            pending.resize.disconnect();
+            clearTimeout(pending.timer);
+            pending.scroller.style.removeProperty("overflow-anchor");
+            pending = null;
+        };
         const restore = () => {
-            settle();
+            discard();
             const scroller = primaryScroller();
             if (!scroller)
                 return;
@@ -19052,6 +19075,8 @@ function App() {
                 return;
             }
             const resize = new ResizeObserver(apply);
+            // Scroll anchoring would shift the offset as content arrives and read as a foreign scroll.
+            scroller.style.setProperty("overflow-anchor", "none");
             pending = { scroller, target, set: scroller.scrollTop, resize, timer: setTimeout(settle, 1000) };
             resize.observe(scroller);
             [...scroller.children].forEach(child => resize.observe(child));
@@ -19070,7 +19095,7 @@ function App() {
             document.removeEventListener("scroll", onScroll, true); cancelAnimationFrame(raf); observer.disconnect();
             for (const type of ["wheel", "touchstart", "pointerdown", "keydown"])
                 document.removeEventListener(type, interrupt, { capture: true, passive: true });
-            if (pending) { pending.resize.disconnect(); clearTimeout(pending.timer); pending = null; }
+            if (pending) { pending.resize.disconnect(); clearTimeout(pending.timer); pending.scroller.style.removeProperty("overflow-anchor"); pending = null; }
         };
     }, [view]);
     // Native-feel: edge-swipe-back. A drag that starts at the left screen edge and travels right far

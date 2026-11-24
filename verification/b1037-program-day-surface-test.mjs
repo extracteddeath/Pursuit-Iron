@@ -42,4 +42,11 @@ assert.ok(app.includes('_jsxs("dl", { className: "wpb-ui-stat-row wpb-plan-glanc
 assert.ok(app.includes('_jsx(UiCard, { className: "wpb-program-create-list", "aria-label": "Start a program"'), 'Program routes are one list card');
 assert.ok(!app.includes('textDecoration: d.done ? "line-through"'), 'Done sessions are not struck through');
 assert.ok(app.includes('const chipCaption = w => w.status === "now" ? "This week" :'), 'The week chip does not repeat the week card count');
+// B1041: the program editor's week chips name the phase when every week carries the same load,
+// the day picker names the day, and only the next-due day's Start is the filled primary.
+assert.ok(app.includes('caption: weekChipText(w),') && app.includes('return chipLoadsSame ? (phaseFor(program, w)?.label || weekChipCaption(w)) : weekChipCaption(w);'),
+    'Identical week loads give way to phase names');
+assert.ok(app.includes('className: "wpb-program-day-picker-label", children: openDayIdx >= 0 ? displayDayName(program.days[openDayIdx].label, program) : "Day"'),
+    'The day picker names the open day');
+assert.ok(app.includes('background: !day.exercises.length ? C.border : isNext ? C.accent : C.accentDim'), 'Only the next day Start is filled');
 console.log('PASS B1037 program day: one surface with divided exercise rows, compact chips, plain Day focus and shared actions.');

@@ -801,6 +801,34 @@ class NativeKotlinCustomHistoryTransactionTest {
         assertEquals(2L,ledger().completions.single().savedCorrectionRevision)
     }
 
+    @Test fun customCorrectionEncodingPreflightChecksWholeEnvelopeWithoutWriting() {
+        logged()
+        val completed=transactions.complete("owner-1","athlete-1","workout-2",finish())
+            as NativeCustomFinishResult.Committed
+        val original=(customSaved.open("owner-1","workout-2")
+            as NativeCustomSavedCorrectionResult.Opened).state
+        val ordinary=correction()
+        val proposal=(CustomSavedHistoryCorrectionDomain.reduce(original,ordinary)
+            as CustomSavedCorrectionDecision.Proposed).state
+        val receipt=completed.completion.storedReceiptId
+        assertTrue(customSaved.canEncodeProposal("owner-1","workout-2",receipt,proposal))
+        // Synthetic oversized envelope to isolate the codec budget from
+        // domain validation. No bodyweight performance is modified.
+        val large=KotlinPerformedSet(BigDecimal("200").setScale(60000),LoadUnit.LB,15,1)
+        val receipts=List(5){i->CustomSavedVisitCorrectionReceipt(i.toLong()+1,
+            ordinary.copy(eventId="large-$i",expectedCorrectionRevision=i.toLong(),
+                correctsEventId=if(i==0)"set-1" else "large-"+(i-1),performed=large))}
+        assertFalse(customSaved.canEncodeProposal("owner-1","workout-2",receipt,
+            proposal.copy(correctionRevision=5,receipts=receipts)))
+        val unchanged=(history.open("owner-1","athlete-1")
+            as NativeHistoryLedgerResult.Durable).ledger
+        assertTrue(unchanged.readyForHistoryReads)
+        assertEquals(original,(customSaved.open("owner-1","workout-2")
+            as NativeCustomSavedCorrectionResult.Opened).state)
+        assertTrue(customEdits.correct("owner-1","athlete-1","workout-2",ordinary)
+            is NativeCustomCorrectionTransactionResult.Committed)
+    }
+
     @Test fun interruptionBeforeCustomCorrectionFileIsRecoverable() {
         logged()
         assertTrue(transactions.complete("owner-1","athlete-1",

@@ -41,8 +41,8 @@ object KotlinWorkoutRestDomain {
             // workout event, even when note receipts followed it.
             receipt.appliedRevision<=journal.revision &&
             journal.effectiveSets[operation.setKey]==receipt && target.restSeconds in 0..3600) {
-            val index=journal.snapshot.targets.map{it.exerciseId}.distinct()
-                .indexOf(target.exerciseId)
+            val index=KotlinWorkoutPresentationDomain.occurrenceIndex(
+                journal.snapshot.targets,target.setKey)
             KotlinWorkoutRestCue(operation.eventId,target.restSeconds,index)
         } else null
         return KotlinWorkoutRestPresentation(receipt?.operation?.eventId,

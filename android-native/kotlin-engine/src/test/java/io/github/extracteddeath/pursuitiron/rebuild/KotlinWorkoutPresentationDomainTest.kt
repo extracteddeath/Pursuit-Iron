@@ -33,6 +33,59 @@ class KotlinWorkoutPresentationDomainTest {
         correction:String?=null)=KotlinJournalOperation.RecordSet(
         id,rev,key,outcome,performed,correction)
 
+    @Test fun repeatedExerciseOccurrencesKeepIssuedSequenceAndIndependentCounts() {
+        val first=snapshot.targets[1]
+        val middle=snapshot.targets[2]
+        val later=first.copy(setKey="press:later",ordinal=2)
+        val mixed=snapshot.copy(targets=listOf(first,middle,later))
+        var journal=KotlinWorkoutJournalDomain.begin(mixed,identity)
+        var projected=KotlinWorkoutPresentationDomain.inspect(journal)
+        assertEquals(listOf("press","chinup","press"),
+            projected.exercises.map{it.exerciseId})
+        assertEquals(listOf("press:s1","chin:s1","press:later"),
+            projected.exercises.flatMap{it.sets}.map{it.target.setKey})
+        assertEquals(0,KotlinWorkoutPresentationDomain.occurrenceIndex(
+            mixed.targets,"press:s1"))
+        assertEquals(1,KotlinWorkoutPresentationDomain.occurrenceIndex(
+            mixed.targets,"chin:s1"))
+        assertEquals(2,KotlinWorkoutPresentationDomain.occurrenceIndex(
+            mixed.targets,"press:later"))
+        assertEquals(-1,KotlinWorkoutPresentationDomain.occurrenceIndex(
+            mixed.targets,"missing"))
+        journal=step(journal,recorded("later-done",0,"press:later",
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("25"),LoadUnit.LB,9,null)))
+        projected=KotlinWorkoutPresentationDomain.inspect(journal)
+        assertEquals(listOf(0,0,1),projected.exercises.map{it.resolvedCount})
+        assertEquals(listOf("press:s1","chin:s1",null),
+            projected.exercises.map{it.nextUnresolvedSetKey})
+        assertEquals("press:s1",projected.firstUnresolvedSetKey)
+        assertEquals(2,projected.remainingCount)
+        assertFalse(projected.canFinish)
+        assertEquals(mixed.targets,journal.snapshot.targets)
+        assertEquals(journal,(KotlinWorkoutJournalReplayDomain.verifyStoredState(journal)
+            as KotlinJournalReplayResult.Recovered).journal)
+    }
+
+    @Test fun sameLiftWithDifferentRolesOrPurposesHasSeparateOccurrences() {
+        val first=snapshot.targets[1]
+        val second=first.copy(setKey="press:accessory",ordinal=2,
+            role=ComposerRole.ACCESSORY)
+        val third=second.copy(setKey="press:strength",ordinal=3,
+            purpose=ComposerSessionPurpose.STRENGTH_SKILL)
+        val extra=snapshot.copy(targets=listOf(first,second,third))
+        val groups=KotlinWorkoutPresentationDomain.inspect(
+            KotlinWorkoutJournalDomain.begin(extra,identity)).exercises
+        assertEquals(listOf(ComposerRole.PRIMARY,ComposerRole.ACCESSORY,
+            ComposerRole.ACCESSORY),groups.map{it.role})
+        assertEquals(listOf(ComposerSessionPurpose.HYPERTROPHY,
+            ComposerSessionPurpose.HYPERTROPHY,
+            ComposerSessionPurpose.STRENGTH_SKILL),groups.map{it.purpose})
+        assertEquals(listOf(0,1,2),extra.targets.map{
+            KotlinWorkoutPresentationDomain.occurrenceIndex(extra.targets,it.setKey)})
+        assertEquals(3,groups.size)
+    }
+
     @Test fun showsExactSequenceAndNoInventedActuals() {
         val journal=KotlinWorkoutJournalDomain.begin(snapshot,identity)
         val ui=KotlinWorkoutPresentationDomain.inspect(journal)

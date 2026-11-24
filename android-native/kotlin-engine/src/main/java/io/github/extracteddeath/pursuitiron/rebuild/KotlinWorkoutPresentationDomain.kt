@@ -46,6 +46,25 @@ data class KotlinWorkoutPresentation(
 )
 
 object KotlinWorkoutPresentationDomain {
+    /** The issued target sequence, not exerciseId alone, owns a movement
+     * occurrence. Repeating a lift after another movement (or under a new
+     * role/purpose) cannot move its sets back into an earlier exercise card. */
+    private fun sameOccurrence(a:KotlinWorkoutTarget,b:KotlinWorkoutTarget)=
+        a.exerciseId==b.exerciseId && a.role==b.role && a.purpose==b.purpose
+
+    /** Shared ordinal for the workout card and the post-set rest cue.
+     * Returns -1 for an unknown set; no inferred exercise index. */
+    internal fun occurrenceIndex(targets:List<KotlinWorkoutTarget>,setKey:String):Int {
+        var index=-1
+        var previous:KotlinWorkoutTarget?=null
+        for(target in targets) {
+            if(previous==null || !sameOccurrence(previous,target))index++
+            if(target.setKey==setKey)return index
+            previous=target
+        }
+        return -1
+    }
+
     fun inspect(journal:KotlinWorkoutJournalState):KotlinWorkoutPresentation {
         val snapshot=journal.snapshot
         val finished=journal.finishedByEventId!=null
@@ -58,15 +77,20 @@ object KotlinWorkoutPresentationDomain {
                 !finished
             )
         }
-        // Preserve the actual issued sequence. Never order by display name,
-        // enum, equipment, or a guessed exercise hierarchy.
-        val groups=linkedMapOf<String,MutableList<KotlinWorkoutSetPresentation>>()
-        for(set in sets) groups.getOrPut(set.target.exerciseId){mutableListOf()}
-            .add(set)
-        val exercises=groups.map{(id,items)->
-            KotlinWorkoutExercisePresentation(id,items.first().target.role,
-                items.first().target.purpose,items.toList(),
-                items.count{it.isResolved},
+        // Contiguous occurrences, never a global groupBy(exerciseId).
+        // A -> B -> A must remain three separate workout cards in that
+        // order, including independent completion and next-visit counts.
+        val groups=mutableListOf<MutableList<KotlinWorkoutSetPresentation>>()
+        for(set in sets) {
+            val previous=groups.lastOrNull()?.lastOrNull()?.target
+            if(previous==null || !sameOccurrence(previous,set.target))
+                groups.add(mutableListOf())
+            groups.last().add(set)
+        }
+        val exercises=groups.map{items->
+            val first=items.first().target
+            KotlinWorkoutExercisePresentation(first.exerciseId,first.role,
+                first.purpose,items.toList(),items.count{it.isResolved},
                 items.firstOrNull{!it.isResolved}?.target?.setKey)
         }
         val resolved=sets.count{it.isResolved}

@@ -50,6 +50,13 @@ sealed interface BasicProgrammedLoadResult {
     }
 }
 
+/** Shared physical realization for authored percentages and named protocols.
+ * A protocol determines intent; this single function determines attainable load. */
+internal sealed interface ProgrammedPhysicalLoadReview {
+    data class Refused(val reason:BasicProgrammedLoadRefusal):ProgrammedPhysicalLoadReview
+    data class Confirmed(val value:BigDecimal):ProgrammedPhysicalLoadReview
+}
+
 object BasicProgrammedPercentageLoadDomain {
     private val zero=BigDecimal.ZERO
     private val hundred=BigDecimal("100")
@@ -81,25 +88,36 @@ object BasicProgrammedPercentageLoadDomain {
         val proposed=ArrayList<BasicProgrammedWeekLoad>()
         for(step in request.authoredWeeks) {
             val raw=max.multiply(step.percentOfTrainingMax).divide(hundred)
-            // EquipmentLoadDomain can inspect three decimal places only. This
-            // is a DOWN-only numeric envelope; the load actually proposed is
-            // selected solely from verified inventory at or below the raw
-            // percentage. No rounding UP or invented physical increment.
-            val search=raw.setScale(3,RoundingMode.DOWN)
-            val inspected=EquipmentLoadDomain.inspect(stock,search,request.scope.unit)
-                as? LoadInspection.Confirmed
-                ?:return no(BasicProgrammedLoadRefusal.UNVERIFIED_GYM_STOCK)
-            val attainable=inspected.atOrBelow
-                ?:return no(BasicProgrammedLoadRefusal.NO_SAFE_AT_OR_BELOW_LOAD)
-            if(attainable>raw || attainable<zero ||
-                (attainable.signum()==0 && !basis.permitsZeroAddedLoad))
-                return no(BasicProgrammedLoadRefusal.NO_SAFE_AT_OR_BELOW_LOAD)
-            proposed+=BasicProgrammedWeekLoad(step.weekInBlock,
-                step.percentOfTrainingMax,raw,
-                BigDecimal(attainable.stripTrailingZeros().toPlainString()),
-                step.workingSets,step.reps)
+            val load=verifiedPhysicalLoad(request.scope,stock,raw)
+            when(load) {
+                is ProgrammedPhysicalLoadReview.Refused -> return no(load.reason)
+                is ProgrammedPhysicalLoadReview.Confirmed ->
+                    proposed+=BasicProgrammedWeekLoad(step.weekInBlock,
+                        step.percentOfTrainingMax,raw,load.value,step.workingSets,step.reps)
+            }
         }
         return BasicProgrammedLoadResult.Candidate(
             Collections.unmodifiableList(proposed))
+    }
+
+    internal fun verifiedPhysicalLoad(
+        scope:BasicProgressionScope,stock:VerifiedLoadStock,raw:BigDecimal
+    ):ProgrammedPhysicalLoadReview {
+        fun no(reason:BasicProgrammedLoadRefusal)=ProgrammedPhysicalLoadReview.Refused(reason)
+        if(stock.unit!=scope.unit || stock.basis!=scope.basis)
+            return no(BasicProgrammedLoadRefusal.UNVERIFIED_GYM_STOCK)
+        // DOWN-only search envelope. Exact implement inventory is the only
+        // authority for the actual weight; preserve the unrounded intent.
+        val search=raw.setScale(3,RoundingMode.DOWN)
+        val inspected=EquipmentLoadDomain.inspect(stock,search,scope.unit)
+            as? LoadInspection.Confirmed
+            ?:return no(BasicProgrammedLoadRefusal.UNVERIFIED_GYM_STOCK)
+        val attainable=inspected.atOrBelow
+            ?:return no(BasicProgrammedLoadRefusal.NO_SAFE_AT_OR_BELOW_LOAD)
+        if(attainable>raw || attainable<zero ||
+            (attainable.signum()==0 && !scope.basis.permitsZeroAddedLoad))
+            return no(BasicProgrammedLoadRefusal.NO_SAFE_AT_OR_BELOW_LOAD)
+        return ProgrammedPhysicalLoadReview.Confirmed(
+            BigDecimal(attainable.stripTrailingZeros().toPlainString()))
     }
 }

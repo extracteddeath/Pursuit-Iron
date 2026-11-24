@@ -33,7 +33,7 @@ assert.ok(css.includes('.wpb-program-revision-footer{bottom:0;'),
   'Program review footer retains its safe-area geometry');
 assert.ok(css.includes('.wpb-exercise-tags{display:flex;gap:5px;flex-wrap:wrap;'),
   'Actual exercise tags retain current compact geometry');
-assert.ok(css.includes('#root .wpb-workout :is(.wpb-workout-tools .wpb-workout-tool,.wpb-rest-actions>.wpb-rest-action){') &&
+assert.ok(css.includes('#root .wpb-workout :is(.wpb-workout-tools .wpb-workout-tool),#root .wpb-workout :is(.wpb-rest-actions>.wpb-rest-action){') &&
   css.includes('flex:0 0 48px;width:48px;min-width:48px;height:48px;min-height:48px;padding:0') &&
   css.includes('#root .wpb-workout .wpb-rest-actions>.wpb-rest-action{'),
   'Workout and Rest share a real 48px icon-action sizing owner');
@@ -95,11 +95,14 @@ assert.ok(b1011SettingsRules.length<=uiStyleBudget.b1011CssCharacters,'B1011 Set
 for(const role of ['wpb-settings-feedback','wpb-settings-diagnostic-run'])
  assert.ok(b1011SettingsRules.includes('.wpb .'+role+'{'),'Audited Settings owner missing: '+role);
 assert.ok(b1010SharedRules.length<=350,'B1010 round hit geometry owner must stay compact');
-assert.ok(b1009SharedRules.length<=1500,'B1009 shared typography must stay compact');
+// B1034 wrote these owners' selector lists one target per selector so each rule is indexed by
+// class instead of tested against every element: B1005 1288->1360, B1006 978->1032, B1007 690->702,
+// B1009 1341->1602 bytes. The caps follow the rewritten text; declarations are unchanged.
+assert.ok(b1009SharedRules.length<=1602,'B1009 shared typography must stay compact');
 assert.ok(b1008SharedRules.length<=591,'B1008 danger styles must stay compact');
-assert.ok(b1007SharedRules.length<=690,'B1007 presentation owner must remain compact');
-assert.ok(b1006SharedRules.length<=978,'B1006 CSS must remain compact');
-assert.ok(b1005SharedRules.length<=1288,'B1005 rules must remain compact');
+assert.ok(b1007SharedRules.length<=702,'B1007 presentation owner must remain compact');
+assert.ok(b1006SharedRules.length<=1032,'B1006 CSS must remain compact');
+assert.ok(b1005SharedRules.length<=1360,'B1005 rules must remain compact');
 assert.ok(b1004SharedButtonRules.length<=394,'B1004 shared button must not grow');
 assert.ok(css.includes('#root .wpb .wpb-dialog-primary-action{'),'Primary dialog action owner must exist');
 assert.ok(!app.includes("className: \"pressable\", style: { width: \"100%\", padding: \"13px\", borderRadius: 12, border: \"none\", background: C.accent, color: C.accentText, fontWeight: 700, cursor: \"pointer\", marginBottom: 8, display: \"flex\", alignItems: \"center\", justifyContent: \"center\", gap: 6 }"),'Six old inline primary CTA styles must not return');

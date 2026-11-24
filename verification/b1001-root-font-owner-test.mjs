@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const css=fs.readFileSync('app.css','utf8');
-assert.ok(css.includes(':where(#root) :where(button,[role="button"],input,textarea,select){font:inherit}'),
+assert.ok(css.includes(':where(#root) :where(button),\n:where(#root) :where([role="button"]),\n:where(#root) :where(input),\n:where(#root) :where(textarea),\n:where(#root) :where(select){font:inherit}'),
     'base form typography remains inherited but has zero specificity');
 assert.ok(!css.includes('#root button,#root [role="button"],#root input,#root textarea,#root select{font:inherit}'),
     'retired ID-specific typography rule must not win over component font sizes');

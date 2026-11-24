@@ -91,7 +91,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='1033';
+const __APP_VERSION__='4.0.0'; const __BUILD__='1034';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -2183,7 +2183,10 @@ function StyleTag({ theme } = {}) {
       .wpb-page-scroll{scroll-behavior:auto;overflow-anchor:auto;}
       .wpb-page-shell:not(.wpb-workout)>.wpb-page-header{transition:padding-top var(--m-base) var(--e-out),border-color 180ms var(--e-out),box-shadow 180ms var(--e-out),background-color 180ms var(--e-out);}
 
-      .wpb-page-scroll :is(input,textarea,select,[contenteditable="true"]){scroll-margin-top:88px;scroll-margin-bottom:132px;}
+      .wpb-page-scroll :where(input):not(.pi-pad),
+.wpb-page-scroll :where(textarea):not(.pi-pad),
+.wpb-page-scroll :where(select):not(.pi-pad),
+.wpb-page-scroll [contenteditable="true"]{scroll-margin-top:88px;scroll-margin-bottom:132px;}
 
       .wpb [data-sheet-drag]{
         overscroll-behavior:contain;scroll-padding-top:20px;
@@ -2198,16 +2201,21 @@ function StyleTag({ theme } = {}) {
       .wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet))[data-detent="content"]:not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet,.wpb-exinfo-sheet)){max-height:min(68dvh,540px)!important;}
       .wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet))[data-detent="large"]:not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet,.wpb-exinfo-sheet)){max-height:min(calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px),100%)!important;}
       .wpb [data-sheet-drag][data-dragging="1"]{box-shadow:0 -18px 48px rgba(0,0,0,.22);}
-      .wpb [data-sheet-drag] :is(input,textarea,select){scroll-margin-top:68px;scroll-margin-bottom:140px;}
+      .wpb [data-sheet-drag] input,.wpb [data-sheet-drag] textarea,.wpb [data-sheet-drag] select{scroll-margin-top:68px;scroll-margin-bottom:140px;}
       .wpb [data-sheet-drag]::before{width:36px;height:4px;margin-bottom:10px;opacity:.9;}
       @media(min-width:700px){.wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)){max-width:560px!important;margin-inline:auto!important;}}
 
       /* Type should survive real user data. Headlines may wrap naturally, identifiers may break only
          when they must, while data remains tabular and stable. */
-      .wpb :is(.wpb-title,.wpb-program-name,.wpb-settings-title,.wpb-wizard-heading-title,.wpb-exercise-heading,.wpb-onboarding-title){
+      .wpb .wpb-title,
+.wpb .wpb-program-name,
+.wpb .wpb-settings-title,
+.wpb .wpb-wizard-heading-title,
+.wpb .wpb-exercise-heading,
+.wpb .wpb-onboarding-title{
         overflow-wrap:anywhere;text-wrap:balance;
       }
-      .wpb :is(.mono,time,[data-numeric]){font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;}
+      .wpb .mono,.wpb :where(time):not(.pi-pad),.wpb [data-numeric]{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;}
       .wpb .wpb-ex-nav-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
       /* State changes should read as continuity, not DOM replacement. These classes are intentionally
@@ -2218,12 +2226,18 @@ function StyleTag({ theme } = {}) {
 
       /* Long histories stay cheap on real accounts. Open rows are forced visible because their
          height changes while expanded; closed rows may be skipped safely when far off-screen. */
-      .wpb :is(.wpb-history-session,.wpb-exercise-history-session,.wpb-cycle-list-card,.wpb-library-row){content-visibility:auto;contain-intrinsic-size:auto 118px;}
+      .wpb .wpb-history-session,
+.wpb .wpb-exercise-history-session,
+.wpb .wpb-cycle-list-card,
+.wpb .wpb-library-row{content-visibility:auto;contain-intrinsic-size:auto 118px;}
       .wpb .wpb-history-session[data-open="1"]{content-visibility:visible;}
 
       /* Stronger accessibility modes should not depend on subtle translucent borders. */
       @media(prefers-contrast:more){
-        .wpb :is(button,input,textarea,select){border-color:currentColor;}
+        .wpb button,
+.wpb input,
+.wpb textarea,
+.wpb select{border-color:currentColor;}
         .wpb .wpb-tabbar{border-top-color:${C.border}!important;}
       }
       @media(forced-colors:active){
@@ -2257,13 +2271,21 @@ function StyleTag({ theme } = {}) {
       /* M149 REAL-DEVICE RESILIENCE — width-only breakpoints miss phone landscape, split screen and
          accessibility zoom. Keep the existing visual language, but make vertical chrome yield before
          content and guarantee that modal actions remain reachable inside the visible viewport. */
-      .wpb :is(.wpb-primary-action,.wpb-secondary-action,.wpb-danger-action,.wpb-onboarding-primary,.wpb-onboarding-secondary){
+      .wpb .wpb-primary-action,
+.wpb .wpb-secondary-action,
+.wpb .wpb-danger-action,
+.wpb .wpb-onboarding-primary,
+.wpb .wpb-onboarding-secondary{
         height:auto!important;max-width:100%;min-width:0;white-space:normal!important;text-wrap:pretty;}
 
       /* M149 REAL-DEVICE RESILIENCE — width-only breakpoints miss phone landscape, split screen and
          accessibility zoom. Keep the existing visual language, but make vertical chrome yield before
          content and guarantee that modal actions remain reachable inside the visible viewport. */
-      .wpb :is(.wpb-primary-action:not(:where(.wpb-gym-done)),.wpb-secondary-action,.wpb-danger-action,.wpb-onboarding-primary,.wpb-onboarding-secondary){line-height:1.2!important;}
+      .wpb .wpb-primary-action:not(:where(.wpb-gym-done)),
+.wpb .wpb-secondary-action,
+.wpb .wpb-danger-action,
+.wpb .wpb-onboarding-primary,
+.wpb .wpb-onboarding-secondary{line-height:1.2!important;}
       .wpb :is(.wpb-premium-tabs,.wpb-settings .wpb-segmented)>button{
         min-width:var(--pi-segment-min,0)!important;white-space:normal!important;overflow-wrap:break-word;line-height:1.15!important;
       }
@@ -2273,7 +2295,7 @@ function StyleTag({ theme } = {}) {
       /* Centred dialogs previously relied on their content staying shorter than the screen. At 200%
          text, landscape, or a split-screen window that assumption fails and the bottom action can
          become unreachable. Cap to the *visual* viewport and let the dialog itself scroll. */
-      .wpb :is(.wpb-pop,.wpb-dialog,.wpb [data-wpb-dialog]>div:first-child:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet))){
+      .wpb :where(.wpb-pop):not(pi-pad.pi-pad.pi-pad.pi-pad),.wpb :where(.wpb-dialog):not(pi-pad.pi-pad.pi-pad.pi-pad),.wpb :is(.wpb [data-wpb-dialog]>div:first-child:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet))){
         max-height:min(calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px),100%)!important;
         overflow-y:auto;overscroll-behavior:contain;scroll-padding-block:12px;
       }

@@ -31,7 +31,7 @@ assert.ok(!/!important/.test(sharedControl.replace(/\/\*[\s\S]*?\*\//g,'')),'sha
 assert.ok(app.slice(app.indexOf('function ChartFavoritesManager('),app.indexOf('function HistoryView(')).includes('variant: "tonal"'),'chart actions reuse UiAction');
 assert.ok(css.includes('--pi-shape-card:20px;')&&css.includes('--pi-shape-action:20px;')&&css.includes('--pi-shape-feature:32px;')&&css.includes('--pi-motion-paint:var(--pi-m3e-effects-default);') && css.includes('--pi-m3e-effects-default:160ms;'),'cross-screen shape and motion vocabulary is centralized');
 assert.match(b911,/\.wpb-chart-favorite-name\{[\s\S]*?overflow-wrap:anywhere/,'long chart labels wrap');
-assert.ok(css.includes(':is(.wpb-ui-action,.wpb-ui-choice):focus-visible')&&css.includes('@media (prefers-reduced-motion:reduce){#root button')&&css.includes('.wpb-ui-action.wpb-ui-action[data-action],.wpb-ui-choice.wpb-ui-choice)'),'shared focus, reduced motion and forced colors remain owned globally');
+assert.ok(css.includes('.wpb .wpb-ui-action:focus-visible,#root[data-pi-motion="expressive"] .wpb .wpb-ui-choice:focus-visible')&&css.includes('@media (prefers-reduced-motion:reduce){#root button')&&css.includes('.wpb .wpb-ui-action.wpb-ui-action[data-action],#root[data-pi-motion="expressive"] .wpb .wpb-ui-choice.wpb-ui-choice.wpb-ui-choice{'),'shared focus, reduced motion and forced colors remain owned globally');
 assert.ok(!/transition:[^;]*(width|height|margin|padding|transform)/.test(b911),'no geometry-affecting control motion');
 
 

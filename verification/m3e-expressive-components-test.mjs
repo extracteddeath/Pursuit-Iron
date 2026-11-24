@@ -32,8 +32,8 @@ assert.ok(primitives.includes('export function UiCard(') &&
 assert.ok(css.includes('pointer-events:none') && css.includes('::after{opacity:.12}') &&
  css.includes('::after{opacity:.07}'),
  'Interaction feedback uses an inert state layer with distinct hover and press opacity');
-assert.ok(css.includes('@media(prefers-reduced-motion:reduce){\n  #root[data-pi-motion="expressive"] .wpb :is(.wpb-ui-action,.wpb-ui-choice)::after{transition:none}') &&
- css.includes('@media(forced-colors:active){\n  #root[data-pi-motion="expressive"] .wpb :is(.wpb-ui-action,.wpb-ui-choice)::after{display:none}'),
+assert.ok(css.includes('@media(prefers-reduced-motion:reduce){\n  #root[data-pi-motion="expressive"] .wpb .wpb-ui-action::after,#root[data-pi-motion="expressive"] .wpb .wpb-ui-choice::after{transition:none}') &&
+ css.includes('@media(forced-colors:active){\n  #root[data-pi-motion="expressive"] .wpb .wpb-ui-action::after,#root[data-pi-motion="expressive"] .wpb .wpb-ui-choice::after{display:none}'),
  'No animated state layer for reduced motion and no invisible overlays in forced colors');
 assert.equal((css.match(/!important/g)||[]).length,uiStyleBudget.cssPriorityDeclarations,
  'M3 Expressive upgrade cannot add high-specificity priority debt');

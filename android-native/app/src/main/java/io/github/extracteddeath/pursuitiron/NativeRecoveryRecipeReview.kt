@@ -4,7 +4,7 @@ import io.github.extracteddeath.pursuitiron.nativecoachstore.*
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import java.math.BigDecimal
 
-/** First connected Plan slice: append only, never shift or edit an issued week. */
+/** Explicit recovery draft review: never shift or edit an issued week. */
 internal data class NativeRecoveryRecipeRequest(
     val cycleId:String,
     val anchorBlockId:String,
@@ -14,7 +14,8 @@ internal data class NativeRecoveryRecipeRequest(
     val maximumWorkingSetsPerSlot:Int,
     val minimumTargetRir:Int,
     val maximumEasierStep:BigDecimal?=null,
-    val stepUnit:LoadUnit?=null
+    val stepUnit:LoadUnit?=null,
+    val insertAfterAnchor:Boolean=false
 )
 
 internal data class NativeRecoveryRecipeReady(

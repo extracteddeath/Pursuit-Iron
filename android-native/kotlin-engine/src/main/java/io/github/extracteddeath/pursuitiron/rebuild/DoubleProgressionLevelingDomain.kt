@@ -76,7 +76,8 @@ object DoubleProgressionLevelingDomain {
 
         fun nearestVerifiedWorkingLoad(inspection: LoadInspection.Confirmed): BigDecimal? {
             val lower = inspection.atOrBelow ?: return null
-            if (lower.signum() == 0 && !inspection.basis.permitsZeroAddedLoad) return null
+            if (!KotlinSetNumberAuthorityDomain.validPrescribedLoad(
+                    lower,inspection.basis)) return null
             val upper = inspection.nextAbove ?: return lower
             // Compare distances before division. Only an exact tie goes up.
             return if (upper.multiply(count) - sum <= sum - lower.multiply(count))
@@ -103,8 +104,7 @@ object DoubleProgressionLevelingDomain {
             CurrentWorkoutLevelingReview.Unavailable(reason)
         if(rows.size !in 2..32 || rows.map{it.setKey}.distinct().size!=rows.size ||
             rows.any {it.setKey.isBlank() || it.load!=null &&
-                (it.load<BigDecimal.ZERO || it.load>BigDecimal("100000") ||
-                    it.load.stripTrailingZeros().scale()>3) ||
+                !KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(it.load) ||
                 it.reps!=null && it.reps !in 1..100})
             return refuse(CurrentWorkoutLevelingReview.Reason.INVALID_ENTRY)
         // A zero added-plate landmine row still represents the real bar.
@@ -203,11 +203,12 @@ object DoubleProgressionLevelingDomain {
     ): LevelingReviewResult {
         fun reject(reason: LevelingRefusal) = LevelingReviewResult.Rejected(reason)
         if (facts.size !in 2..12 || goalRir !in 0..10 ||
-            facts.any { it.load.signum()<0 ||
+            facts.any {
+                !KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(it.load) ||
                 it.load.signum()==0 && verifiedStock?.basis?.permitsZeroAddedLoad!=true ||
-                it.load>BigDecimal("100000") || it.load.stripTrailingZeros().scale()>3 ||
                 it.reps <= 0 ||
-                it.actualRir != null && it.actualRir !in 0..10 })
+                it.actualRir != null && it.actualRir !in 0..10
+            })
             return reject(LevelingRefusal.INCOMPLETE_OR_INVALID)
         if (repBand.minimum <= 0 || repBand.maximum < repBand.minimum)
             return reject(LevelingRefusal.INCOMPLETE_OR_INVALID)

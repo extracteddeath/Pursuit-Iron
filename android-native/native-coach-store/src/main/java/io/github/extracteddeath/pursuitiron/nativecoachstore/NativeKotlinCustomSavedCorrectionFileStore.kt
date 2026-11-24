@@ -314,6 +314,21 @@ class NativeKotlinCustomSavedCorrectionFileStore(
             NativeCustomSavedCorrectionRefusal.STORAGE_UNAVAILABLE) }
     }
 
+    /** Preflight the exact receipt envelope before reserving History.
+     * The writer uses the same encoder; neither path substitutes numbers. */
+    private fun encodedProposal(owner:String,workoutId:String,
+        originalReceiptId:String,state:CustomSavedHistoryCorrectionState):ByteArray {
+        val envelope=NativeCustomSavedCorrectionEnvelope(owner,workoutId,
+            originalReceiptId,state.correctionRevision,state.receipts)
+        val bytes=NativeCustomSavedCorrectionCodec.encode(envelope)
+        require(NativeCustomSavedCorrectionCodec.decode(bytes)==envelope)
+        return bytes
+    }
+
+    internal fun canEncodeProposal(owner:String,workoutId:String,
+        originalReceiptId:String,state:CustomSavedHistoryCorrectionState):Boolean =
+        runCatching{encodedProposal(owner,workoutId,originalReceiptId,state)}.isSuccess
+
     internal fun appendPending(
         owner: String, workoutId: String,
         operation: CustomSavedVisitCorrection
@@ -362,10 +377,8 @@ class NativeKotlinCustomSavedCorrectionFileStore(
                     authorized(owner) != who)
                     return@withOwnerTransaction NativeCustomSavedCorrectionResult.Rejected(
                         NativeCustomSavedCorrectionRefusal.JOURNAL_MISMATCH)
-                val bytes = NativeCustomSavedCorrectionCodec.encode(
-                    NativeCustomSavedCorrectionEnvelope(owner, workoutId,
-                        existing.storedReceiptId, proposal.state.correctionRevision,
-                        proposal.state.receipts))
+                val bytes=encodedProposal(owner,workoutId,
+                    existing.storedReceiptId,proposal.state)
                 atomic(file(owner, workoutId), bytes)
                 // Acknowledge only a persisted, checksum/replay-verified reopen.
                 val after = load(owner, workoutId, who)

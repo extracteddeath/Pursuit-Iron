@@ -969,6 +969,17 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         "The correction was not saved. Review the saved set and retry."
                     } ?:state.unavailableReason?.let(::humanStatus),
                     machineInstanceId=recordedMachineId,
+                    loadStep=if(!set.isResolved && !presentation.finished &&
+                        !needsMachineSelection && set.target.load is DraftSetLoad.Verified) {
+                        {text,direction,count->
+                            withContext(Dispatchers.IO) {
+                                val target=set.target.load as DraftSetLoad.Verified
+                                val stock=host.reviewIssuedLevelingStock(workoutId,
+                                    set.target.exerciseId,recordedMachineId,set.target.setKey)
+                                KotlinSetDraftStepDomain.stepLoad(text,direction,count,target,stock)
+                            }
+                        }
+                    } else null,
                     athleteId=journal?.snapshot?.source?.athleteId.orEmpty(),
                     workoutId=workoutId,
                     issuedGymId=issuedGymId,machineRoster=machineRoster,
@@ -1377,6 +1388,7 @@ private fun NativeKotlinSetCard(
     position:Int,
     setCount:Int,
     plannedBackoffNote:String?,
+    loadStep:(suspend (String,Int,Int)->String?)?,
     showExerciseHeading:Boolean,
     onHistory:()->Unit,
     onInfo:()->Unit,
@@ -1487,6 +1499,7 @@ private fun NativeKotlinSetCard(
             onRir={draftEditor.update(rir=it)},
             showLoad=verifiedLoad!=null,
             allowFailedAttempt=existing?.reps==0,
+            loadStep=loadStep,
             showFieldHelp=false
         )
         if(verifiedLoad!=null && KotlinVerifiedPlateLayoutDomain.supportsBasis(verifiedLoad.basis)) {

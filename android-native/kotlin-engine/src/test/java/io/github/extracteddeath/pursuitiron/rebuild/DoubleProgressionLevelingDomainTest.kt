@@ -379,6 +379,39 @@ class DoubleProgressionLevelingDomainTest {
         }
     }
 
+    @Test fun levelingPhysicalNumbersUseTheOneIssuedAndActualEnvelope() {
+        // Both variants consume the exact same physical precision and range
+        // envelope as native set logging. They do not maintain shadow limits.
+        for(weight in listOf("-0.001","100000.001","115.0001")) {
+            assertFalse(KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(n(weight)))
+            val currentRows=current("115","120").let { rows ->
+                listOf(rows.first().copy(load=n(weight)),rows.last())
+            }
+            assertEquals(weight,
+                CurrentWorkoutLevelingReview.Unavailable(
+                    CurrentWorkoutLevelingReview.Reason.INVALID_ENTRY),
+                DoubleProgressionLevelingDomain.reviewCurrentWorkout(
+                    currentRows,stock))
+            assertEquals(weight,
+                LevelingReviewResult.Rejected(LevelingRefusal.INCOMPLETE_OR_INVALID),
+                DoubleProgressionLevelingDomain.review(
+                    listOf(LevelingSetFact(n(weight),5,3),
+                        LevelingSetFact(n("120"),5,3)),band,2,stock))
+        }
+        // Extra trailing zeros are NOT extra physical precision. Neither
+        // path silently quantizes entered weights or changes issued targets.
+        val current=DoubleProgressionLevelingDomain.reviewCurrentWorkout(
+            current("115.0000","120.0000"),stock)
+            as CurrentWorkoutLevelingReview.Ready
+        val prior=DoubleProgressionLevelingDomain.review(
+            facts("115.0000","120.0000"),band,2,stock)
+            as LevelingReviewResult.Candidate
+        assertEquals(n("117.5"),current.rawMean)
+        assertEquals(n("120"),current.roundedLoad)
+        assertEquals(current.roundedLoad,prior.proposedStraightSetLoad)
+        assertFalse(prior.mayModifyIssuedWorkout)
+    }
+
     @Test fun priorAndCurrentLandmineReviewsCountTheUnloadedBar() {
         val plates = VerifiedLoadStock.Totals(LoadUnit.LB, LoadBasis.LANDMINE_ADDED_PLATES,
             listOf("0", "5", "10").map(::n))

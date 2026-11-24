@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 1041,
+  "build": 1042,
   "engineVersion": "0.65.10",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "c2d290142ea30f338a95c3e96a40fff61b577d6deb72357ea8b0b4bb4e442162",
@@ -162,10 +162,10 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "2aba75f33f49bcc4352acbec0adf559fc3368be0fb1e438bcc6a33ec1a1b0c4b",
-    "index.html": "86eeeda728efe4cc39e988b817d0f4c7cfd4848a226ff988ffdede0f8b5b4c49",
-    "sw.js": "e99c3a5a48c69b6b5e7038198e0d5e4b232f6fbd618b6f4f606161bbdc285998",
-    "BUILD_PROFILE.json": "bab3309847eb1858f22d0357f87d796683ad856ed880bbda7a88863068fb5117",
+    "modules/App.js": "48ed002d2cd2a8bd943aac7ce98787dc67bbf37efa154f54780c6f72ffd081df",
+    "index.html": "b5885201032a1902d993490eca0126784673318828c6d8acac2d58495ac5160b",
+    "sw.js": "23ff4bfd920c7daa262fd8c44165cd31d6686c2e54e577d836c71eeabfd32fdb",
+    "BUILD_PROFILE.json": "087e35d281a994e2438728be80b9c0c5865f6d6e163a4a913ad14d8ee5f7a367",
     "CHANGELOG.md": "b2652caa581ef510ddbf292f8422749da1a1616e8c07b2de372922a2782a2539",
     "app.css": "7f1e0454f2dbc8ab98b0a50a735f53ef1ebae3731dff4031076e0f41d7fe1480",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
@@ -174,6 +174,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1041-r7065cf69bfa8fd7f",
-  "uiMilestone": "Build 1041 · M3 type scale (14/16 body) and 48px touch targets"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1042-r396cb851d7cf5544",
+  "uiMilestone": "Build 1042 · M3 type scale (14/16 body) and 48px touch targets"
 }

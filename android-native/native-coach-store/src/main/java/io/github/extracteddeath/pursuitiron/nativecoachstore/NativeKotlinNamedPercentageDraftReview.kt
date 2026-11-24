@@ -49,6 +49,25 @@ sealed interface NativeNamedDraftAcceptance {
     data class Rejected(val reason:NativeNamedPercentageRefusal):NativeNamedDraftAcceptance
 }
 
+sealed interface NativeNamedBatchReview {
+    data class Ready(val selections:List<NativeNamedPercentageSelection>,
+        val individual:List<NativeNamedPercentageReview.Ready>,
+        val draft:CustomTrainingCycle,
+        val receipts:List<NativeNamedPercentageDraftReceipt>):NativeNamedBatchReview {
+        val mayIssueWorkout:Boolean get()=false
+        val maySaveProgram:Boolean get()=false
+    }
+    data class Rejected(val reason:NativeNamedPercentageRefusal):NativeNamedBatchReview
+}
+sealed interface NativeNamedBatchAcceptance {
+    data class Saved(val revision:Long,val receipts:List<NativeNamedPercentageDraftReceipt>):
+        NativeNamedBatchAcceptance {
+        val mayIssueWorkout:Boolean get()=false
+        val isSignedOff:Boolean get()=false
+    }
+    data class Rejected(val reason:NativeNamedPercentageRefusal):NativeNamedBatchAcceptance
+}
+
 /**
  * Fixed named percentage authoring review using the existing owner-fenced
  * draft, signoff, physical-stock selector, mixed history and outstanding
@@ -156,6 +175,89 @@ class NativeKotlinNamedPercentageDraftReview(
         runCatching{fence.withOwnerTransaction(selection.ownerKey){evaluate(selection)}}
             .getOrElse{NativeNamedPercentageReview.Rejected(NativeNamedPercentageRefusal.STORAGE_UNAVAILABLE)}
 
+    private fun receipt(fresh:NativeNamedPercentageReview.Ready):NativeNamedPercentageDraftReceipt {
+        val scope=fresh.request.scope
+        return NativeNamedPercentageDraftReceipt(fresh.selection,fresh.source.stamp,
+            fresh.source.blockId,fresh.source.weekInBlock,scope.exerciseId,
+            scope.machineInstanceId,scope.unit,scope.basis,fresh.consentRevision,
+            fresh.historyRevision,fresh.machineRosterRevision)
+    }
+
+    /** Evaluate all amendments against one unchanged approved source, then
+     * combine only their independently derived week overrides. Never save
+     * a partial batch or require signing off each intermediate draft. */
+    private fun evaluateBatch(selections:List<NativeNamedPercentageSelection>):NativeNamedBatchReview {
+        fun deny(reason:NativeNamedPercentageRefusal)=NativeNamedBatchReview.Rejected(reason)
+        if(selections.size !in 1..NativeNamedPercentageDraftReceiptCodec.MAX_RECEIPTS)
+            return deny(NativeNamedPercentageRefusal.INVALID_SELECTION)
+        val first=selections.first()
+        if(selections.any{it.ownerKey!=first.ownerKey || it.cycleId!=first.cycleId} ||
+            selections.map{Triple(it.absoluteWeek,it.weekday,it.slotId)}.distinct().size!=selections.size)
+            return deny(NativeNamedPercentageRefusal.INVALID_SELECTION)
+        val reviews=ArrayList<NativeNamedPercentageReview.Ready>()
+        for(selection in selections) {
+            val reviewed=evaluate(selection)
+            if(reviewed is NativeNamedPercentageReview.Rejected)return deny(reviewed.reason)
+            reviews+=reviewed as NativeNamedPercentageReview.Ready
+        }
+        val initial=reviews.first()
+        val base=initial.source.cycle
+        if(reviews.any{it.source.cycle!=base || it.source.stamp!=initial.source.stamp ||
+            it.consentRevision!=initial.consentRevision || it.historyRevision!=initial.historyRevision ||
+            it.machineRosterRevision!=initial.machineRosterRevision})
+            return deny(NativeNamedPercentageRefusal.REVIEW_CHANGED)
+        val overrides=base.weekOverrides.toMutableMap()
+        for(review in reviews) {
+            val src=review.source
+            val edit=review.proposal.proposal.draft.weekOverrides[src.blockId].orEmpty()
+                .singleOrNull{it.weekInBlock==src.weekInBlock && it.weekday==src.weekday &&
+                    it.slotId==src.slotId}
+                ?:return deny(NativeNamedPercentageRefusal.RECIPE_REFUSED)
+            overrides[src.blockId]=overrides[src.blockId].orEmpty()+edit
+        }
+        val candidate=base.copy(revision=base.revision+1,weekOverrides=overrides.toMap())
+        val receipts=reviews.map(::receipt)
+        val evidence=reviews.map{review->
+            val src=review.source
+            CustomNamedPercentageWeekEvidence(CustomNamedPercentageWeekKey(src.blockId,
+                src.weekInBlock,src.weekday,src.slotId),review.request)
+        }
+        if(!NativeNamedPercentageDraftReceiptCodec.validBatch(receipts,first.ownerKey,candidate) ||
+            CustomNamedPercentageCycleAuditDomain.review(candidate,
+                initial.source.stamp.copy(cycleRevision=candidate.revision),evidence)
+                    !is CustomNamedPercentageCycleAudit.Verified)
+            return deny(NativeNamedPercentageRefusal.RECIPE_REFUSED)
+        return NativeNamedBatchReview.Ready(selections.toList(),reviews.toList(),candidate,receipts)
+    }
+
+    fun previewBatch(selections:List<NativeNamedPercentageSelection>):NativeNamedBatchReview {
+        val input=selections.toList()
+        val first=input.firstOrNull()?:return NativeNamedBatchReview.Rejected(
+            NativeNamedPercentageRefusal.INVALID_SELECTION)
+        return runCatching{fence.withOwnerTransaction(first.ownerKey){evaluateBatch(input)}}
+            .getOrElse{NativeNamedBatchReview.Rejected(NativeNamedPercentageRefusal.STORAGE_UNAVAILABLE)}
+    }
+
+    fun acceptBatch(selections:List<NativeNamedPercentageSelection>,displayed:NativeNamedBatchReview.Ready,
+        athleteConfirmed:Boolean):NativeNamedBatchAcceptance {
+        fun deny(reason:NativeNamedPercentageRefusal)=NativeNamedBatchAcceptance.Rejected(reason)
+        if(!athleteConfirmed)return deny(NativeNamedPercentageRefusal.CONFIRMATION_REQUIRED)
+        val input=selections.toList()
+        val first=input.firstOrNull()?:return deny(NativeNamedPercentageRefusal.INVALID_SELECTION)
+        return runCatching{fence.withOwnerTransaction(first.ownerKey){
+            val fresh=evaluateBatch(input)
+            if(fresh is NativeNamedBatchReview.Rejected)return@withOwnerTransaction deny(fresh.reason)
+            fresh as NativeNamedBatchReview.Ready
+            if(fresh!=displayed)return@withOwnerTransaction deny(NativeNamedPercentageRefusal.REVIEW_CHANGED)
+            val prior=fresh.individual.first().source.cycle.revision
+            when(drafts.saveReviewedNamedBatch(first.ownerKey,first.cycleId,prior,fresh.draft,fresh.receipts)) {
+                is NativeCustomDraftWriteResult.Committed ->
+                    NativeNamedBatchAcceptance.Saved(fresh.draft.revision,fresh.receipts)
+                else -> deny(NativeNamedPercentageRefusal.DRAFT_SAVE_REJECTED)
+            }
+        }}.getOrElse{deny(NativeNamedPercentageRefusal.STORAGE_UNAVAILABLE)}
+    }
+
     /** Reopen all authoritative inputs, compare the complete displayed
      * proposal, then atomically save only the next UNSIGNED draft revision.
      * The reference receipt survives a cold read; a generic edit clears it.
@@ -171,11 +273,7 @@ class NativeKotlinNamedPercentageDraftReview(
                 if(current is NativeNamedPercentageReview.Rejected)
                     return@withOwnerTransaction NativeNamedDraftAcceptance.Rejected(current.reason)
                 val fresh=current as NativeNamedPercentageReview.Ready
-                val scope=fresh.request.scope
-                val receipt=NativeNamedPercentageDraftReceipt(fresh.selection,fresh.source.stamp,
-                    fresh.source.blockId,fresh.source.weekInBlock,scope.exerciseId,
-                    scope.machineInstanceId,scope.unit,scope.basis,fresh.consentRevision,
-                    fresh.historyRevision,fresh.machineRosterRevision)
+                val receipt=receipt(fresh)
                 val candidate=fresh.proposal.proposal.draft
                 when(drafts.saveReviewedNamed(selection.ownerKey,selection.cycleId,
                     fresh.source.cycle.revision,candidate,receipt)) {

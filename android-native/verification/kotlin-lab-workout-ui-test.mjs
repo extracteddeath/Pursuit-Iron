@@ -1521,7 +1521,8 @@ const myoOptInPanel=firstUi.indexOf('if(myoChoice!=null && state.savedProgramId=
 assert.ok(myoSetStart>=0 && myoSetMarker>myoSetStart &&
   myoSetMarker<myoOptInPanel,'Final-set technique must be inside prescribed set review');
 for(const clause of [
-  'state.includeMyoFinisher && state.canSaveDraft',
+  'state.includeMyoFinisher &&',
+  '(state.canSaveDraft || state.savedProgramId!=null)',
   'myoChoice?.dayIndex==session.dayIndex',
   'myoChoice?.exerciseId==exercise.exerciseId',
   'myoChoice?.exerciseIndex==exerciseIndex',
@@ -1531,6 +1532,11 @@ for(const clause of [
 ])assert.ok(firstUi.slice(myoSetStart,myoSetMarker+600).includes(clause),
   'Myo final-set marker must be exact, opt-in and source reviewed: '+clause);
 
+assert.match(firstConversion,/auditedFirstWeekMinutes\(audit,prescribed\.sessions\.associate/);
+assert.match(firstUi,/auditedMinutesByDayIndex=conversion\?\.auditedMinutesByDayIndex\.orEmpty\(\)/);
+assert.match(firstUi,/auditedMinutesByDayIndex=conversion\.auditedMinutesByDayIndex/);
+assert.match(firstUi,/val estimate=auditedMinutes \?:session\.estimatedMinutes/);
+assert.match(firstUi,/else if\(state\.includeMyoFinisher\)"base estimate"/);
 assert.match(firstUi,/includeMyoFinisher=before\.includeMyoFinisher/);
 assert.match(firstHost,/includeMyoFinisher=seed\.includeMyoFinisher/);
 assert.match(firstHost,/includeMyoFinisher=includeMyoFinisher/);

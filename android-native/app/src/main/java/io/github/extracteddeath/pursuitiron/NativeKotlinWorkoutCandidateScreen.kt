@@ -137,7 +137,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     var undoConfirm by remember(workoutId){mutableStateOf<String?>(null)}
     val referenceMode=display.referenceMode
     var historyExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
-    var infoExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
+    var infoSetKey by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var infoWarmupsOnly by rememberSaveable(workoutId){mutableStateOf(false)}
     var plateRequest by remember(workoutId) {
         mutableStateOf<NativeComposerPlateRequest?>(null)
@@ -328,6 +328,15 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     val selected=allSets.firstOrNull{it.target.setKey==selectedKey}
         ?:allSets.firstOrNull()
     val selectedOccurrence=selected?.target?.setKey?.let{occurrenceBySetKey[it]}
+    // A sheet opened on one issued occurrence must not jump to a later
+    // occurrence with the same exercise ID after a journal update or undo.
+    LaunchedEffect(presentation,infoSetKey) {
+        if(presentation!=null && infoSetKey!=null &&
+            infoSetKey !in occurrenceBySetKey.keys) {
+            infoSetKey=null
+            infoWarmupsOnly=false
+        }
+    }
     val activeKeys=if(showAll)allSets else listOfNotNull(selected)
     val issuedGymId=journal?.originalSnapshot?.source?.gymId
     val activeMachineConfig=selected?.target?.exerciseId?.let {exerciseId->
@@ -587,8 +596,8 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             onHistory=selected?.target?.exerciseId?.let{exerciseId->
                 {historyExerciseId=exerciseId}
             },
-            onInfo=selected?.target?.exerciseId?.let{exerciseId->
-                {infoExerciseId=exerciseId}
+            onInfo=selected?.target?.setKey?.let{key->
+                {infoWarmupsOnly=false;infoSetKey=key}
             },
             onSkip=selected?.takeIf {
                 !it.isResolved && !presentation.finished && !showAll &&
@@ -613,7 +622,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         }
         if(!showAll && !presentation.finished && journal!=null) {
             val toolExercise=selected?.target?.exerciseId
-            val toolTargets=journal.snapshot.targets.filter{it.exerciseId==toolExercise}
+            val toolTargets=selectedOccurrence?.sets.orEmpty().map{it.target}
             NativeKotlinWorkoutTools(
                 enabled=!state.busy && !swapLoading,
                 onSessionNote={showSessionNote=true},
@@ -624,11 +633,11 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                     {pinnedExerciseId=exerciseId}
                 },
                 onSwap=null,
-                onWarmup=toolExercise?.takeIf {
+                onWarmup=selected?.target?.setKey?.takeIf {
                     toolTargets.any{it.type==DraftSetType.WARMUP}
-                }?.let {exerciseId->{
+                }?.let {key->{
                     infoWarmupsOnly=true
-                    infoExerciseId=exerciseId
+                    infoSetKey=key
                 }}
             )
         }
@@ -995,7 +1004,8 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                     onHistory={historyExerciseId=set.target.exerciseId},
                     onInfo={
                         selectedKey=set.target.setKey
-                        infoExerciseId=set.target.exerciseId
+                        infoWarmupsOnly=false
+                        infoSetKey=set.target.setKey
                     },
                     onShowPlates={load,unit->
                         plateRequest=NativeComposerPlateRequest(
@@ -1160,12 +1170,12 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     }
     // Factual planned set details are derived from the currently recovered
     // journal, not guessed from a movement name or the old web catalog.
-    infoExerciseId?.let {exerciseId ->
-        val targets=journal?.snapshot?.targets.orEmpty().filter {
-            it.exerciseId==exerciseId
-        }
+    infoSetKey?.let {key ->
+        val occurrence=occurrenceBySetKey[key]
+        val targets=occurrence?.sets.orEmpty().map{it.target}
         if(targets.isNotEmpty()) {
             val first=targets.first()
+            val exerciseId=first.exerciseId
             val infoConfig=issuedGymId?.let { gymId ->
                 if(exerciseId in eligibleMachineExercises)
                     KotlinMachineAlternativesDomain.forGymExercise(
@@ -1177,6 +1187,8 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             val multipleOccurrences=presentation?.exercises.orEmpty().count {
                 it.exerciseId==exerciseId
             }>1
+            val occurrenceNumber=presentation?.exercises.orEmpty()
+                .filter{it.exerciseId==exerciseId}.indexOf(occurrence)+1
             val infoOptions=NativeKotlinEquipmentRecoveryPolicy.review(
                 activeWorkout=presentation?.finished==false && !state.busy && !swapLoading,
                 hasPhysicalMachineConfig=infoConfig!=null &&
@@ -1211,6 +1223,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             NativeKotlinWorkoutExerciseInfoSheet(
                 exerciseId=exerciseId,
                 sourceDescription="Issued generated workout · "+
+                    (if(multipleOccurrences)"Occurrence #$occurrenceNumber · " else "")+
                     first.role.name.lowercase().replace('_',' ')+
                     " · "+first.purpose.name.lowercase().replace('_',' '),
                 sets=composerWorkoutInfoSets(targets),
@@ -1223,20 +1236,20 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                     ({
                         // The Info action is not a Focus navigation request.
                         // Keep the currently edited set and its unsaved fields.
-                        infoExerciseId=null
+                        infoSetKey=null
                         openPhysicalMachineFor=exerciseId
                     }) else null,
                 onSwapExercise=if(!infoWarmupsOnly && !multipleOccurrences &&
                     infoOptions.canReplaceExercise)
                     ({
-                        infoExerciseId=null
+                        infoSetKey=null
                         reviewSwap(exerciseId)
                     }) else null,
                 onSkipRemainingExercise=if(!infoWarmupsOnly &&
                     !multipleOccurrences &&
                     infoActions.mayRequestSkipRemaining)journal?.revision?.let{revision->
                     ({
-                        infoExerciseId=null
+                        infoSetKey=null
                         pendingExerciseSkip=NativeExerciseSkipRequest(
                             exerciseId,revision)
                     })
@@ -1244,7 +1257,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 onUndoWorkoutSwap=if(!infoWarmupsOnly &&
                     infoActions.mayRequestUndoSwap)infoUndo?.let{event->
                     ({
-                        infoExerciseId=null
+                        infoSetKey=null
                         undoConfirm=event.eventId
                     })
                 }else null,
@@ -1261,15 +1274,15 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                     // Navigation only: leave the ordinary set writer in charge.
                     selectedKey=key
                     showAll=false
-                    infoExerciseId=null
+                    infoSetKey=null
                     infoWarmupsOnly=false
                 }),
                 onHistory={
-                    infoExerciseId=null
+                    infoSetKey=null
                     infoWarmupsOnly=false
                     historyExerciseId=exerciseId
                 },
-                onDismiss={infoExerciseId=null;infoWarmupsOnly=false}
+                onDismiss={infoSetKey=null;infoWarmupsOnly=false}
             )
         }
     }

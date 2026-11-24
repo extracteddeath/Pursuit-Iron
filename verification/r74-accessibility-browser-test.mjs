@@ -141,7 +141,9 @@ try{
           'Text enlargement preserves the restore draft');
         await textSize(false);
         await action('.wpb-settings','Cancel');
-        await action('.wpb-settings','Add a shared program');
+        // B1031: program import lives in Plan → Import; its field keeps its accessible name there.
+        await page.click('[data-tab="plan"]');await page.waitForSelector('.wpb-plan-programs .wpb-home-import');
+        await page.$eval('.wpb-plan-programs .wpb-home-import',el=>el.click());
         const programField='textarea[aria-label="Program code or text"]';
         await page.waitForSelector(programField);
         assert.equal(await fieldName(programField),'Program code or text');
@@ -150,6 +152,7 @@ try{
         await page.waitForSelector(programField,{hidden:true});
         assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),[program],
           'Inspecting import fields never restores or creates a program');
+        await page.click('[data-tab="settings"]');await page.waitForSelector('.wpb-settings');
         await page.evaluate(()=>{
           const opener=[...document.querySelectorAll('.wpb-settings button')]
             .find(el=>el.textContent.includes('Your gyms'));

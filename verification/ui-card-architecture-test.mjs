@@ -29,11 +29,13 @@ for(const role of ['wpb-settings-diagnostic-intro','wpb-settings-diagnostic-run'
 assert.ok(diagnostics.includes('onClick: () => runDeviceSelfTest("quick")') && diagnostics.includes('onClick: () => runDeviceSelfTest("full")'),'Diagnostics behavior retained');
 assert.ok(diagnostics.includes('"data-outcome": selfTest.failures.length ? "fail" : "pass"'),'Result states remain data-driven');
 assert.ok(diagnostics.includes('style: { width: `${Math.max(2, Math.min(100,'),'Progress animation retains only computed width');
-const importSlice=app.slice(app.indexOf('function SettingsView('),app.indexOf('function CompareView(',app.indexOf('function SettingsView(')));
-for(const cls of ['wpb-settings-import-sheet','wpb-settings-import-input','wpb-settings-import-result','wpb-settings-import-submit'])
+// B1031: importing a shared program is program management — it lives in Plan (Import) on UiSheet.
+const importSlice=fs.readFileSync('modules/program-import-sheet.js','utf8');
+assert.ok(importSlice.includes("_jsx(UiSheet, {"),'Import uses the shared modal bottom sheet');
+for(const cls of ['wpb-settings-import-input','wpb-settings-import-result','wpb-settings-import-submit'])
  assert.ok(importSlice.includes(cls) && css.includes('.wpb .'+cls+'{'),'Import UI must retain CSS owner '+cls);
-assert.ok(importSlice.includes('ref: sheetDragRef, onClick: e => e.stopPropagation()'),'Import drag and backdrop propagation must survive');
-assert.ok(importSlice.includes('onChange: e => setPasteProg(p => ({ ...p, text: e.target.value, result: null }))'),'Native textarea edits must keep existing state writer');
-assert.ok(importSlice.includes('disabled: !pasteProg.text.trim()'),'Import submit must remain disabled for empty text');
-assert.ok(importSlice.includes('"data-outcome": pasteProg.result.ok ? "ok" : "error"'),'Result success/errors must be visibly stateful');
+assert.ok(!app.slice(app.indexOf('function SettingsView('),app.indexOf('function CompareView(')).includes('setPasteProg'),'Settings no longer hosts program import');
+assert.ok(importSlice.includes('onChange: e => { setText(e.target.value); setResult(null); }'),'Native textarea edits clear a stale result');
+assert.ok(importSlice.includes('disabled: !text.trim() || busy'),'Import submit must remain disabled for empty text');
+assert.ok(importSlice.includes("'data-outcome': result.ok ? 'ok' : 'error'"),'Result success/errors must be visibly stateful');
 console.log('PASS UI Card architecture: shared owner and source inventory remain intact.');

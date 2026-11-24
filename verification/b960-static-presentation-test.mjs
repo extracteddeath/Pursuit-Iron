@@ -5,7 +5,8 @@ const css=fs.readFileSync('app.css','utf8');
 const total=(app.match(/style: \{/g)||[]).length;
 assert.ok(total<=1522,'B960 retained utility owners must not regress to a higher inline-style count; later builds may retire more');
 const owners=[...css.matchAll(/#root \.wpb \.(wpb-s960-[a-z0-9-]+),#root \.\1\{([^}]+)\}/g)];
-assert.equal(owners.length,71,'B960 CSS owners must remain one declaration per exact property/value');
+// B1031: marginright-4px served only the removed Progress milestones card.
+assert.equal(owners.length,70,'B960 CSS owners must remain one declaration per exact property/value');
 const names=new Set(owners.map(m=>m[1]));
 assert.equal(names.size,owners.length,'no competing CSS utility owners');
 for(const name of names){

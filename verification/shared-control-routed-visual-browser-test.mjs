@@ -64,11 +64,12 @@ try{
           return {text:node.textContent.trim(),height:rect.height,width:rect.width,
             selected:node.getAttribute('data-action')};
         }));
-        assert.equal(nav.length,5,'All five Settings destinations use the same shared action');
+        // B1031: shared-program import and the community gallery moved to Plan's program list.
+        assert.equal(nav.length,3,'All three Settings destinations use the same shared action');
         assert.ok(nav.some(row=>row.text.includes('Your gyms')),'Gym navigation keeps its reachable entry point');
-        assert.ok(nav.every(row=>row.height>=48) && nav.filter(row=>row.selected==='tonal').length===4 &&
+        assert.ok(nav.every(row=>row.height>=48) && nav.filter(row=>row.selected==='tonal').length===2 &&
           nav.some(row=>row.text.includes('Your gyms')&&row.selected==='text'),
-          'Four standalone tonal actions and a contained text action retain 48px hit targets: '+JSON.stringify(nav));
+          'Two standalone tonal actions and a contained text action retain 48px hit targets: '+JSON.stringify(nav));
         if(width===320||width===834||width===900){
           await page.screenshot({path:path.join(root,`verification/shared-pilot-settings-top-${theme}-${width}.png`)});
         }
@@ -120,15 +121,16 @@ try{
         }));
         assert.ok(timeField.shared&&timeField.height>=48&&timeField.font>=16&&timeField.type==='time',
           'Reminder time inherits shared paint but retains native picker: '+JSON.stringify(timeField));
-        const galleryButton=await page.evaluateHandle(()=>[...document.querySelectorAll('.wpb-settings-navigation')]
-          .find(el=>el.textContent.includes('Browse shared programs')));
-        assert.ok(galleryButton.asElement(),'Settings gallery navigation is available');
-        await galleryButton.asElement().evaluate(el=>el.scrollIntoView({block:'center'}));
         if(width===320||width===834||width===900){
           await page.screenshot({path:path.join(root,`verification/shared-pilot-settings-actions-${theme}-${width}.png`)});
         }
-        await galleryButton.asElement().click();
-        await galleryButton.dispose();
+        // B1031: the community gallery is reached from Plan → Import, with the other program sources.
+        assert.equal(await page.evaluate(()=>[...document.querySelectorAll('.wpb-settings-navigation')]
+          .some(el=>el.textContent.includes('Browse shared programs'))),false,'Settings no longer hosts program sources');
+        await page.click('[data-tab="plan"]');await page.waitForSelector('.wpb-plan-programs .wpb-home-import');
+        await page.$eval('.wpb-plan-programs .wpb-home-import',el=>el.click());
+        await page.waitForSelector('.wpb-program-import-browse');
+        await page.$eval('.wpb-program-import-browse',el=>el.click());
         await page.waitForSelector('.wpb-gallery-title');
         // Gallery data arrives asynchronously. Assert after its real filter controls mount.
         await page.waitForSelector('.wpb-gallery-chip');

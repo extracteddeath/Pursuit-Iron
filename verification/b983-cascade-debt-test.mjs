@@ -91,7 +91,8 @@ assert.ok(css.slice(b1027Start,b1028Start).length<=uiStyleBudget.b1027CssCharact
 assert.ok(css.slice(b1028Start).length<=uiStyleBudget.b1028CssCharacters,'B1028 shared-component owner must remain bounded');
 assert.ok(b1012TemplateRules.length<=uiStyleBudget.b1012CssCharacters,'B1012 Home template owner must not grow');
 assert.ok(b1011SettingsRules.length<=uiStyleBudget.b1011CssCharacters,'B1011 Settings owner must remain bounded');
-for(const role of ['wpb-settings-feedback','wpb-settings-diagnostic-run','wpb-settings-import-sheet'])
+// B1031: the program-import sheet moved to Plan on UiSheet; its container owner retired.
+for(const role of ['wpb-settings-feedback','wpb-settings-diagnostic-run'])
  assert.ok(b1011SettingsRules.includes('.wpb .'+role+'{'),'Audited Settings owner missing: '+role);
 assert.ok(b1010SharedRules.length<=350,'B1010 round hit geometry owner must stay compact');
 assert.ok(b1009SharedRules.length<=1500,'B1009 shared typography must stay compact');
@@ -142,7 +143,7 @@ assert.ok(!css.includes('@media(max-width:350px){\n  #root[data-pi-motion="expre
   'Inert theme selector must stay removed');
 
 /* B1005: fixed-paint roles now use palette-aware shared CSS, not inline objects. */
-const b1005Roles=[["wpb-ey8",9,"style: { ...eyebrow(), marginBottom: 8 }"],["wpb-ey6",5,"style: { ...eyebrow(), marginBottom: 6 }"],["wpb-ey",6,"style: { ...eyebrow() }"],["wpb-eya",3,"style: { ...eyebrowAccent() }"],["wpb-eya8",2,"style: { ...eyebrowAccent(), marginBottom: 8 }"],["wpb-square-accent",4,"style: { width: 34, height: 34, borderRadius: 8, background: C.accentDim, display: \"flex\", alignItems: \"center\", justifyContent: \"center\", flexShrink: 0 }"],["wpb-close-quiet",4,"style: { background: \"none\", border: \"none\", color: C.muted, cursor: \"pointer\", padding: 4 }"],["wpb-save-compact",2,"style: { width: \"100%\", padding: \"13px\", borderRadius: 12, border: \"none\", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: \"pointer\" }"],["wpb-preview-meta",2,"style: { fontSize: 13, color: C.muted, marginTop: 6, display: \"flex\", alignItems: \"center\", gap: 6, flexWrap: \"wrap\" }"],["wpb-preview-kicker",2,"style: { fontSize: 13, fontWeight: 700, letterSpacing: 1.2, color: C.accentInk, textTransform: \"uppercase\" }"]];
+const b1005Roles=[["wpb-ey8",9,"style: { ...eyebrow(), marginBottom: 8 }"],["wpb-ey6",5,"style: { ...eyebrow(), marginBottom: 6 }"],["wpb-ey",6,"style: { ...eyebrow() }"],["wpb-eya",3,"style: { ...eyebrowAccent() }"],["wpb-eya8",2,"style: { ...eyebrowAccent(), marginBottom: 8 }"],["wpb-square-accent",2 /* B1031: two Settings links moved to Plan */,"style: { width: 34, height: 34, borderRadius: 8, background: C.accentDim, display: \"flex\", alignItems: \"center\", justifyContent: \"center\", flexShrink: 0 }"],["wpb-close-quiet",4,"style: { background: \"none\", border: \"none\", color: C.muted, cursor: \"pointer\", padding: 4 }"],["wpb-save-compact",2,"style: { width: \"100%\", padding: \"13px\", borderRadius: 12, border: \"none\", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: \"pointer\" }"],["wpb-preview-meta",2,"style: { fontSize: 13, color: C.muted, marginTop: 6, display: \"flex\", alignItems: \"center\", gap: 6, flexWrap: \"wrap\" }"],["wpb-preview-kicker",2,"style: { fontSize: 13, fontWeight: 700, letterSpacing: 1.2, color: C.accentInk, textTransform: \"uppercase\" }"]];
 for(const [role,count,old] of b1005Roles){
   assert.ok(css.includes('.'+role),'B1005 CSS role missing: '+role);
   assert.equal((app.match(new RegExp('\\b'+role+'\\b','g'))||[]).length,count,'B1005 class use count: '+role);
@@ -161,7 +162,7 @@ assert.ok(css.includes('.wpb-review-inset{margin-bottom:12px;background:var(--wp
   'B1006 inset surface must use the exact mapped theme token');
 
 /* B1007: semantically labelled round adjustment and shared meter/footnote roles. */
-const b1007Roles=[["wpb-round-step",2,"style: { width: 28, height: 28, borderRadius: 8, border: \"none\", background: \"none\", color: C.muted, cursor: \"pointer\", fontSize: 15, fontWeight: 700, lineHeight: 1 }"],["wpb-meter",2,"style: { height: 6, borderRadius: 999, background: C.bg2, overflow: \"hidden\" }"],["wpb-meter-grow",2,"style: { flex: 1, height: 6, borderRadius: 999, background: C.bg2, overflow: \"hidden\" }"],["wpb-compare-note",2,"style: { fontSize: 11, color: C.faint, marginTop: 16, lineHeight: 1.5, padding: \"0 2px\" }"],["wpb-quiet-note",2,"style: { fontSize: 11, color: C.faint, marginTop: 12, lineHeight: 1.45, fontStyle: \"italic\" }"]];
+const b1007Roles=[["wpb-round-step",2,"style: { width: 28, height: 28, borderRadius: 8, border: \"none\", background: \"none\", color: C.muted, cursor: \"pointer\", fontSize: 15, fontWeight: 700, lineHeight: 1 }"],["wpb-meter",1 /* B1031: the Progress milestones copy used one */,"style: { height: 6, borderRadius: 999, background: C.bg2, overflow: \"hidden\" }"],["wpb-meter-grow",2,"style: { flex: 1, height: 6, borderRadius: 999, background: C.bg2, overflow: \"hidden\" }"],["wpb-compare-note",2,"style: { fontSize: 11, color: C.faint, marginTop: 16, lineHeight: 1.5, padding: \"0 2px\" }"],["wpb-quiet-note",2,"style: { fontSize: 11, color: C.faint, marginTop: 12, lineHeight: 1.45, fontStyle: \"italic\" }"]];
 for(const [role,n,old] of b1007Roles){
   assert.ok(css.includes('.'+role),'Missing B1007 palette owner '+role);
   assert.equal((app.match(new RegExp('className: "(?:[^"]* )?'+role+'(?= |")','g'))||[]).length,n,'B1007 complete class use count '+role);

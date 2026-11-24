@@ -6,7 +6,8 @@ const overlaySources=app+'\n'+fs.readFileSync('modules/exercise-picker-sheet.js'
 const owners=[...overlaySources.matchAll(/wpb-b961-overlay-(\d{2})/g)].map(x=>x[1]);
 const styles=[...css.matchAll(/#root \.wpb \.wpb-backdrop\.wpb-b961-overlay-(\d{2})\{([^{}]+)\}/g)];
 // B1028: the exercise picker moved onto UiSheet, retiring overlay-06.
-assert.equal(owners.length,24,'24 modal call sites are class-owned');
+// B1031: the Settings program-import sheet moved onto UiSheet (Plan → Import).
+assert.equal(owners.length,23,'23 modal call sites are class-owned');
 assert.equal(new Set(owners).size,styles.length,'one CSS owner for each overlay variant');
 for(const [_,number,rule] of styles){
  assert.ok(owners.includes(number),'orphan overlay rule '+number);

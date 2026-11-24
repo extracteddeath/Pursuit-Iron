@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { withPreloads } from './module-graph.mjs';
 
 // Finalize the CURRENT manifest only. Historical milestone scripts and workflows cannot rewrite
 // this release, and this command never commits or pushes generated changes.
@@ -24,7 +25,7 @@ const walkJs = directory => fs.readdirSync(directory, { withFileTypes: true }).f
 const runtimeFiles = [...walkJs('modules').filter(file => file !== 'modules/App.js'), ...walkJs('vendor')].sort();
 
 write('modules/App.js', read('modules/App.js').replace(/const __BUILD__='\d+'/g, `const __BUILD__='${manifest.build}'`));
-write('index.html', read('index.html').replace(/build(:|=)'\d+'/g, `build$1'${manifest.build}'`));
+write('index.html', withPreloads(read('index.html').replace(/build(:|=)'\d+'/g, `build$1'${manifest.build}'`)));
 if (!read('modules/next-engine/config.js').includes(`ENGINE_VERSION = '${manifest.engineVersion}'`))
     throw new Error('Manifest and engine version must agree before finalizing.');
 

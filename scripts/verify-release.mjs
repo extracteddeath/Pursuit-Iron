@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { withPreloads } from './module-graph.mjs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -43,6 +44,7 @@ if (profile.milestone !== manifest.milestone) fail('BUILD_PROFILE milestone does
 if (profile.uiMilestone !== manifest.uiMilestone) fail('BUILD_PROFILE UI milestone does not match manifest');
 if (profile.cache !== manifest.cache) fail('BUILD_PROFILE cache does not match manifest');
 if (!index.includes('<script type="module" src="./modules/main.js"></script>')) fail('index.html does not load canonical modules/main.js');
+if (withPreloads(index) !== index) fail('index.html modulepreload list is stale: run node scripts/finalize-release.mjs');
 if (!index.includes('rel="manifest" href="./manifest.webmanifest"')) fail('index.html manifest link missing');
 if (!index.includes('serviceWorker.register("./sw.js"')) fail('index.html service-worker registration missing');
 

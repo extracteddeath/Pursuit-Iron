@@ -1819,11 +1819,6 @@ display:block!important;
   margin:0!important;
   padding:0!important;
 }
-@media(min-width:360px){
-  #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>button:first-child{
-    width:calc(100% - 94px)!important;
-  }
-}
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>button:first-child>div:first-child{
   font-size:11px!important;
   line-height:1.4!important;
@@ -1834,63 +1829,6 @@ display:block!important;
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>button:first-child>div:nth-child(3),
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>button:first-child>div:nth-child(2):not(:last-child){
   text-wrap:balance;
-}
-#root[data-pi-motion="expressive"] .wpb-home .wpb-m3-day-orbit{
-  position:absolute;
-  right:16px;top:17px;
-  width:88px;height:88px;
-  display:grid;place-items:center;
-  pointer-events:none;
-  z-index:2;
-  contain:layout style;
-}
-/* This override must follow the orbit's base display:grid declaration. */
-@media(max-width:359px){
-  #root[data-pi-motion="expressive"] .wpb-home .wpb-m3-day-orbit{display:none;}
-}
-#root[data-pi-motion="expressive"] .wpb-home .wpb-m3-day-orbit>svg{
-  grid-area:1/1;
-  display:block;
-  width:88px;height:88px;
-  overflow:visible;
-  rotate:-90deg;
-  filter:drop-shadow(0 3px 6px color-mix(in srgb,currentColor 8%,transparent));
-}
-#root[data-pi-motion="expressive"] .wpb-home .wpb-m3-day-orbit .wpb-m3-orbit-progress{
-  stroke-dashoffset:0;
-  animation:piOrbitTrace 680ms cubic-bezier(.2,.8,.22,1) both;
-}
-#root[data-pi-motion="expressive"] .wpb-home .wpb-m3-orbit-value{
-  grid-area:1/1;
-  display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
-  gap:0;
-  font-variant-numeric:tabular-nums;
-  transform:translateY(-1px);
-}
-#root[data-pi-motion="expressive"] .wpb-home .wpb-m3-orbit-value>strong{
-  font-size:28px;
-  font-weight:820;
-  line-height:1;
-  letter-spacing:-.055em;
-}
-#root[data-pi-motion="expressive"] .wpb-home .wpb-m3-orbit-value>span{
-  font-size:11px;
-  font-weight:720;
-  color:var(--wpb-theme-muted);
-  margin-top:3px;
-  letter-spacing:.025em;
-}
-@keyframes piOrbitTrace{
-  from{stroke-dashoffset:100;opacity:.5}
-  to{stroke-dashoffset:0;opacity:1}
-}
-
-
-/* Restoring the training-rotation dial from R4 must not animate for readers
-   requesting reduced motion; the static progress is always visible. */
-@media(prefers-reduced-motion:reduce),(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb-home .wpb-m3-orbit-progress{animation:none!important;}
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-glance{
   display:grid!important;
@@ -8995,7 +8933,9 @@ background:var(--pi-color-card)!important;
   margin:0;
   background:var(--pi-color-canvas);box-shadow:inset 0 -1px var(--pi-color-divider);
 }
-.wpb-plan-view>.wpb-plan-week-picker{top:calc(-1*var(--pi-space-3));margin-inline:calc(-1*var(--pi-page-inset));padding-inline:calc(var(--pi-page-inset) + 4px);scroll-padding-inline:calc(var(--pi-page-inset) + 4px)}
+/* B1035: scoped like the shared .wpb-choice-rail owner (#root .wpb), whose 4px padding otherwise
+   won and pulled the first week chip into the screen edge while the rail bleeds to it. */
+#root .wpb .wpb-plan-view>.wpb-plan-week-picker{top:calc(-1*var(--pi-space-3));margin-inline:calc(-1*var(--pi-page-inset));padding-inline:calc(var(--pi-page-inset) + 4px);scroll-padding-inline:calc(var(--pi-page-inset) + 4px)}
 /* Plan's selected week appears once beneath its picker; all other weeks stay in their phase timeline. */
 .wpb-plan-selected-week{min-width:0;margin-block:var(--pi-space-3) var(--pi-space-4);}
 .wpb-plan-glance-tile{flex:1;min-width:0;padding-block:var(--pi-space-2);}

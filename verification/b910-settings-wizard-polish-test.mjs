@@ -33,7 +33,8 @@ assert.ok(!settings.includes('className: "pressable hit wpb-toggle"'),'No legacy
 for(const callback of ['setKeepAwake','setWarmupCard','setRestAutoStart','setHaptics','setReminders'])
  assert.ok(settings.includes(callback),'Preserves '+callback+' callback');
 assert.ok(settings.includes('role: "group", "aria-label": "Reminder days"'),'Reminder choices are grouped');
-assert.ok(settings.includes('"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"'),'Seven unique day labels');
+assert.ok(settings.includes('"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"'),'Seven unique day labels, Monday-first like every week in the app');
+assert.ok(settings.includes('const i = (order + 1) % 7;'),'Reminder days still store JS weekdays');
 assert.ok(settings.includes('selected: on, "aria-label": day'),'Day chips expose selection state and names');
 for(const key of ['wpb-settings-switch-track','wpb-settings-switch-thumb','wpb-reminder-days','wpb-reminder-day'])
  assert.ok(css.includes('.'+key),'Shared style owner '+key);

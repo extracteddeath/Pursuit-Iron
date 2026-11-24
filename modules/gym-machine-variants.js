@@ -5,8 +5,11 @@ import { addMachineVariant, assignLegacyMachineHistory, editMachineVariant, setD
 import { UiAction, UiField, UiSummary } from './ui-primitives.js';
 
 // Gym-owned settings, not program edits: the exercise still has one muscle-dose identity.
-const machineExercises=EXERCISES.filter(ex=>isMachineLike(ex.equip))
-    .sort((a,b)=>a.name.localeCompare(b.name));
+// Built on first use: sorting the library with localeCompare at module load cost ~50 ms of a
+// 4x-throttled startup for a list that only appears inside a gym's machine settings.
+let machineList=null;
+const machineExercises=()=>machineList||(machineList=EXERCISES.filter(ex=>isMachineLike(ex.equip))
+    .sort((a,b)=>a.name.localeCompare(b.name)));
 const short = value => String(value ?? '').trim();
 export function GymMachineVariantFields({gym,onChange}) {
     const [exerciseId,setExerciseId]=useState('machine-press');
@@ -45,7 +48,7 @@ export function GymMachineVariantFields({gym,onChange}) {
         _jsxs('label',{children:['Exercise',
             _jsx(UiField,{as:'select',className:'wpb-ui-control','aria-label':'Exercise with machine alternatives',value:exerciseId,
                 onChange:event=>{setExerciseId(event.target.value);setMessage('');},
-                children:machineExercises.map(ex=>_jsx('option',{value:ex.id,children:ex.name},ex.id))})
+                children:machineExercises().map(ex=>_jsx('option',{value:ex.id,children:ex.name},ex.id))})
         ]}),
         !instances.length && _jsx('p',{className:'wpb-gym-guidance',children:
             'No physical variants for this exercise. Enter Machine A and tap Add machine, '+

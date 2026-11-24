@@ -36,7 +36,7 @@ for(const rel of shell){if(rel==='./')continue;assert.ok(fs.existsSync(new URL('
 // while unchanged finalization stays byte-identical and never accumulates revision suffixes.
 const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'pursuit-release-revision-'));
 try {
-    for (const file of ['scripts/finalize-release.mjs', 'RELEASE_MANIFEST.json', 'BUILD_PROFILE.json',
+    for (const file of ['scripts/finalize-release.mjs', 'scripts/module-graph.mjs', 'RELEASE_MANIFEST.json', 'BUILD_PROFILE.json',
         'modules', 'vendor', 'index.html', 'manifest.webmanifest', 'sw.js', 'gallery.json',
         'app.css', 'privacy.html', 'CHANGELOG.md', 'icons', 'favicon.ico']) {
         const destination = path.join(fixture, file);

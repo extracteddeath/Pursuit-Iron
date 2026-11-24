@@ -89,7 +89,8 @@ assert.match(app, /function propagateCycleEditsPure\(/,
     'live cycle-propagation helper must remain available to programSavePlan');
 assert.match(app, /programSavePlan[\s\S]*?propagateCycleEditsPure\(/,
     'programSavePlan must remain wired to the live cycle-propagation helper');
-assert.doesNotMatch(index, /app-shell-adapter/, 'Node and browser must resolve the same canonical adapter');
+// The modulepreload list names the canonical adapter by path; only the import map could substitute it.
+assert.doesNotMatch(index.match(/<script type="importmap">[\s\S]*?<\/script>/)?.[0] ?? '', /app-shell-adapter/, 'Node and browser must resolve the same canonical adapter');
 assert.equal(fs.existsSync(new URL('../modules/shadow-engine', import.meta.url)), false);
 assert.equal(fs.existsSync(new URL('../modules/next-engine/app-shell-adapter-capacity.js', import.meta.url)), false);
 assert.equal(fs.existsSync(new URL('../app.js', import.meta.url)), false, 'the unreferenced historical root bundle must not ship');

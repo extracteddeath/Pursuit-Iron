@@ -554,6 +554,32 @@ class NativeKotlinTrackedWorkoutGatewayTest {
         assertFalse(index.canIssueProgression)
     }
 
+    @Test fun reusedSetEventIdCannotPoisonHistoryWithUnreplayableFinishIntent() {
+        issue()
+        enroll()
+        val before=recorded()
+        val originalLedger=(ledger().open("owner-1","athlete-1")
+            as NativeHistoryLedgerResult.Durable).ledger
+        val collision=KotlinJournalOperation.Finish("event-0",before.revision)
+        val refused=history().complete("owner-1","athlete-1","workout-1",collision)
+        assertEquals(NativeHistoryTransactionResult.Rejected(
+            NativeHistoryTransactionRefusal.OPERATION_REJECTED),refused)
+        val unchanged=(ledger().open("owner-1","athlete-1")
+            as NativeHistoryLedgerResult.Durable).ledger
+        assertEquals(originalLedger,unchanged)
+        assertNull(unchanged.pending)
+        assertEquals(before,original())
+        val saved=gateway().append("owner-1","athlete-1","workout-1",finish())
+            as NativeJournalFileResult.Durable
+        assertEquals("finish-1",saved.journal.finishedByEventId)
+        val retried=gateway().append("owner-1","athlete-1","workout-1",finish())
+            as NativeJournalFileResult.Durable
+        assertTrue(retried.replayed)
+        assertEquals(saved.journal,retried.journal)
+        assertEquals(1,(ledger().open("owner-1","athlete-1")
+            as NativeHistoryLedgerResult.Durable).ledger.completions.size)
+    }
+
     @Test fun pendingFinishIsRecoveredBeforeOpeningAndIsNeverDuplicated() {
         issue()
         enroll()

@@ -71,6 +71,15 @@ object KotlinSetNumberAuthorityDomain {
         value>=zero && value<=maxLoad &&
             value.stripTrailingZeros().scale()<=3
 
+    /**
+     * One policy for a newly issued rep-range number, from program design
+     * through the last durable workout receipt. This is the *prescription*
+     * envelope, not a requirement that a completed set hit its target.
+     * Under/over-target observed reps remain accurate factual history.
+     */
+    fun validIssuedRepBand(reps:RepBand):Boolean =
+        reps.minimum in 1..100 && reps.maximum in reps.minimum..100
+
     /** A prescribed zero means an unloaded implement only for a basis that supports it. */
     fun validPrescribedLoad(value:BigDecimal,basis:LoadBasis):Boolean =
         validPhysicalLoadValue(value) && (value.signum()!=0 || basis.permitsZeroAddedLoad)

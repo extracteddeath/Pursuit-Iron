@@ -91,7 +91,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='1037';
+const __APP_VERSION__='4.0.0'; const __BUILD__='1038';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -11721,19 +11721,19 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
     // input's readOnly attribute (readOnly blocks real typing but not every programmatic path). No
     // legitimate flow edits a done set's numbers — to change one, untick it first.
     const editSet = (ei, si, field, val) => setData(d => d.map((e, i) => i !== ei ? e :
-        { ...e, sets: e.sets.map((s, j) => j !== si || s.done ? s : { ...s, [field]: field === "reps" ? cleanReps(val) : val, auto: false, valueOwner: "user", hint: undefined }) }));
+        { ...e, sets: e.sets.map((s, j) => j !== si || s.done ? s : { ...s, [field]: field === "reps" ? cleanReps(val) : val, auto: false, valueOwner: "user", ...(field === "weight" ? { weightOwner: "user" } : {}), hint: undefined }) }));
     // quick steppers: nudge reps by ±1 and weight by one load increment without the keyboard
     const bumpReps = (ei, si, delta) => setData(d => d.map((e, i) => i !== ei ? e :
         { ...e, sets: e.sets.map((s, j) => j !== si || s.done ? s : { ...s, reps: String(clamp((parseInt(s.reps) || 0) + delta, 0, 100)), auto: false, valueOwner: "user", hint: undefined }) }));
     const bumpWeight = (ei, si, dir) => setData(d => d.map((e, i) => i !== ei ? e :
         { ...e, sets: e.sets.map((s, j) => j !== si || s.done ? s : {
             ...s, weight: String(nudgeWorkoutLoad(EX_BY_ID[e.id], unit, s.weight, dir)),
-            auto: false, valueOwner: "user", hint: undefined
+            auto: false, valueOwner: "user", weightOwner: "user", hint: undefined
         }) }));
     // user typing a weight takes manual control of that set (and clears any auto hint).
     // Locked (done) sets are immutable here too — see editSet's note.
     const editWeight = (ei, si, val) => setData(d => d.map((e, i) => i !== ei ? e :
-        { ...e, sets: e.sets.map((s, j) => j !== si || s.done ? s : { ...s, weight: cleanWeight(val), auto: false, valueOwner: "user", hint: undefined }) }));
+        { ...e, sets: e.sets.map((s, j) => j !== si || s.done ? s : { ...s, weight: cleanWeight(val), auto: false, valueOwner: "user", weightOwner: "user", hint: undefined }) }));
     // Add an exercise to this session on the fly (freestyle logging + extending a program workout)
     const addExerciseToSession = (id) => {
         const ex = EX_BY_ID[id];
@@ -18990,8 +18990,13 @@ function App() {
                 shell.dataset.scrolled = scroller.scrollTop > 4 ? "1" : "0";
             // While a restore is still waiting for content to grow tall enough, the clamped offset is
             // not the user's position: recording it would overwrite the remembered one for good.
-            if (pending && pending.scroller === scroller)
-                return;
+            if (pending && pending.scroller === scroller) {
+                // Our own re-application lands exactly on the value we set. Anything else moved it
+                // (the lifter, or the app scrolling something into view): stop restoring and record it.
+                if (Math.abs(scroller.scrollTop - pending.set) <= 1)
+                    return;
+                settle();
+            }
             if (scroller.closest(`[data-view-frame="${view}"]`))
                 scrollMemory.current[scrollKey(scroller)] = scroller.scrollTop;
         };
@@ -19017,7 +19022,12 @@ function App() {
                 return;
             const { scroller, target } = pending;
             const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
-            scroller.scrollTop = Math.min(target, max);
+            if (Math.abs(scroller.scrollTop - pending.set) > 1) {
+                settle(); // moved by someone else since the last re-application
+                return;
+            }
+            pending.set = Math.min(target, max);
+            scroller.scrollTop = pending.set;
             if (max >= target)
                 settle();
         };
@@ -19034,7 +19044,7 @@ function App() {
                 return;
             }
             const resize = new ResizeObserver(apply);
-            pending = { scroller, target, resize, timer: setTimeout(settle, 1000) };
+            pending = { scroller, target, set: scroller.scrollTop, resize, timer: setTimeout(settle, 1000) };
             resize.observe(scroller);
             [...scroller.children].forEach(child => resize.observe(child));
         };

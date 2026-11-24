@@ -337,6 +337,21 @@ class NativeKotlinFutureActivationCommitTransaction(
             NativeFutureCommitInventory.Verified(review)
         }}.getOrElse {NativeFutureCommitInventory.InvalidOrForeign}
 
+    /** A missing commit alone proves nothing: a staged handoff may exist
+     * before the WAL is written. Conversely read() requires a handoff and
+     * therefore rejects a genuinely unused activation namespace.
+     * Only both independently verified empty inventories prove absence.
+     */
+    internal fun verifiesNoActivation(ownerKey:String):Boolean =
+        runCatching{fence.withOwnerTransaction(ownerKey) {
+            val signed=owner(ownerKey) ?:return@withOwnerTransaction false
+            val handoff=handoffs.inventoryOwner(ownerKey)
+            val commit=inventoryOwner(ownerKey)
+            handoff==NativeFutureHandoffReview.Missing &&
+                commit==NativeFutureCommitInventory.Verified(null) &&
+                owner(ownerKey)==signed
+        }}.getOrDefault(false)
+
     fun read(ownerKey:String):NativeFutureCommitReview =
         runCatching{fence.withOwnerTransaction(ownerKey){
             if(owner(ownerKey)==null)return@withOwnerTransaction NativeFutureCommitReview.Rejected(

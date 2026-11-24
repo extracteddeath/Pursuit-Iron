@@ -17,6 +17,15 @@ class NativeKotlinRecoveryScheduleFenceTest {
         assertFalse(policy.permits(previous+fact("future",5),"cycle",5))
     }
 
+    @Test fun revisionBoundCalendarOrActivationCannotBeSilentlyInvalidated() {
+        val p=NativeRecoveryScheduleInventoryPolicy
+        assertTrue(p.calendarPermits("cycle",false,emptySet(),emptySet()))
+        assertTrue(p.calendarPermits("cycle",false,setOf("other"),setOf("other")))
+        assertFalse(p.calendarPermits("cycle",true,emptySet(),emptySet()))
+        assertFalse(p.calendarPermits("cycle",false,setOf("cycle"),emptySet()))
+        assertFalse(p.calendarPermits("cycle",false,emptySet(),setOf("cycle")))
+    }
+
     @Test fun futureInsertionCannotShiftAnyObservedWeekAtOrAfterItsBoundary() {
         val policy=NativeRecoveryScheduleInventoryPolicy
         val completed=listOf(fact("w1",1),fact("w3",3))

@@ -66,7 +66,7 @@ for(const required of [
   'NativeCustomDraftRefusal.STALE_REVISION'
 ])assert.ok(controller.includes(required),'Missing controller review/save: '+required);
 // Both revisioned Strength repairs must take the source-fenced Undo path.
-assert.match(controller,/if\(receipt\.operation in setOf\("strength-dose-repair",\s*"strength-menu-recovery","recovery-recipe"\)\)/,
+assert.match(controller,/if\(receipt\.operation in setOf\("strength-dose-repair",\s*"strength-menu-recovery"\)\)/,
   'Dose and menu recovery Undo must use a current reviewed gym source');
 for(const required of [
   'repairReview=state.strengthRepairReview',
@@ -138,7 +138,7 @@ const preview=host.slice(host.indexOf('private fun deriveRecoveryRecipe('),
   host.indexOf('fun readAdaptiveCyclePermissions('));
 for(const needle of ['!assistance.policy.offersFatigueAdvice','rights.allowedKinds',
   'original.revision!=request.expectedCycleRevision','source.revision!=request.expectedSourceRevision',
-  'candidate.blocks.dropLast(1)!=original.blocks',
+  'candidate.blocks.take(anchorIndex+1)+candidate.blocks.drop(anchorIndex+2)!=original.blocks',
   'candidate.weekOverrides!=original.weekOverrides',
   'ReviewedRecoveryBlockRecipeDomain.propose(',
   'revisionFence.withOwnerTransaction(owner.ownerKey)',
@@ -169,6 +169,15 @@ assert.match(recoveryPanel,/it\.request\.stepUnit==\(if\(adjustLoad\)unit else n
 assert.match(recoveryPanel,/enabled=ready && !busy && confirmed && validBudget/);
 console.log('PASS optional recovery equipment-step preview requires exact unit, current machine roster and fresh reviewed budget.');
 
+const recoveryFence=readFileSync(root+'native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinRecoveryScheduleFence.kt','utf8');
+assert.match(recoveryModel,/expectedHistoryRevision:Long/);
+assert.match(preview,/recoveryScheduleFence\.review\(/);
+assert.match(recoveryFence,/history\.read\(ownerKey,owner\.athleteId\)/);
+assert.match(recoveryFence,/inventory\.inspect\(ownerKey,owner\.athleteId,completed\)/);
+assert.match(recoveryFence,/!it\.completed \|\| it\.absoluteWeek>=firstChangedWeek/);
+assert.match(recoveryFence,/NativeRecoveryScheduleReview\.Ready\(timeline\.manifestRevision\)/);
+console.log('PASS recovery schedule review binds verified history and refuses any unfinished same-cycle workout or shifted observed week.');
+
 const fatigueHandoff=plan.slice(plan.indexOf('val recoverySignal=state.fatigueCoachingEnabled'),
   plan.indexOf('if(!recoverySignal && permissionHost!=null'));
 assert.match(fatigueHandoff,/CustomRepForecastPolicy\.TARGET_RIR_TREND_V3/);
@@ -181,11 +190,21 @@ assert.match(recoveryPanel,/focusAnchor\.bringIntoView\(\)/);
 assert.match(recoveryPanel,/onFocusConsumed\(\)/);
 console.log('PASS same-day fatigue hold hands off to an explicit recovery review only; no automatic save, load or scheduling action.');
 
-const recoveryFence=readFileSync(root+'native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinRecoveryScheduleFence.kt','utf8');
-assert.match(recoveryModel,/expectedHistoryRevision:Long/);
-assert.match(preview,/recoveryScheduleFence\.review\(/);
-assert.match(recoveryFence,/history\.read\(ownerKey,owner\.athleteId\)/);
-assert.match(recoveryFence,/inventory\.inspect\(ownerKey,owner\.athleteId,completed\)/);
-assert.match(recoveryFence,/!it\.completed \|\| it\.absoluteWeek>=firstChangedWeek/);
-assert.match(recoveryFence,/NativeRecoveryScheduleReview\.Ready\(timeline\.manifestRevision\)/);
-console.log('PASS recovery schedule review binds verified history and refuses any unfinished same-cycle workout or shifted observed week.');
+assert.match(recoveryModel,/val insertAfterAnchor:Boolean=false/);
+assert.match(preview,/original\.blocks\.take\(anchorIndex\+1\)\.sumOf/);
+assert.match(preview,/insertAfterAnchor=request\.insertAfterAnchor/);
+assert.match(recoveryPanel,/it\.request\.anchorBlockId==anchor\.blockId/);
+assert.match(recoveryPanel,/it\.request\.insertAfterAnchor==inserting/);
+assert.match(recoveryPanel,/Shifted future blocks/);
+assert.match(recoveryPanel,/I reviewed recovery and the shifted weeks/);
+assert.match(recoveryFence,/handoffs\.inventoryOwner\(ownerKey\)/);
+assert.match(recoveryFence,/commits\.inventoryOwner\(ownerKey\)/);
+assert.match(recoveryFence,/approvals\.inventoryOwner\(ownerKey\)/);
+assert.match(recoveryFence,/calendars\.inventoryOwner\(ownerKey\)/);
+assert.match(controller,/host\.undoRecoveryRecipe\(receipt,source\)/);
+const recoveryUndo=host.slice(host.indexOf('fun undoRecoveryRecipe('),host.indexOf('fun readAdaptiveCyclePermissions('));
+assert.match(recoveryUndo,/current!=receipt\.proposed/);
+assert.match(recoveryUndo,/recoveryScheduleFence\.review\(owner\.ownerKey,current\.cycleId/);
+assert.ok(recoveryUndo.indexOf('recoveryScheduleFence.review(')<recoveryUndo.indexOf('customAuthoringCoordinator.saveVerifiedExerciseEdit('));
+assert.match(recoveryTests,/insertionPreservesEarlierWeeksAndAllLaterBlockRelativeOverrides/);
+console.log('PASS mid-cycle recovery boundary, shifted-week consent, verified activation/calendar fences and protected Undo.');

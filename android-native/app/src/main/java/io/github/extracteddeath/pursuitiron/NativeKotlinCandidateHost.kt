@@ -154,8 +154,6 @@ internal class NativeKotlinCandidateHost(context:Context) {
         measuredParentHistoryStore)
     private val outstandingCustomInventory=NativeKotlinCustomOutstandingWorkoutInventory(
         customPreparedStore,customIssuedStore)
-    private val recoveryScheduleFence=NativeKotlinRecoveryScheduleFence(
-        revisionFence,localAthlete,mixedHistoryReader,outstandingCustomInventory)
     private val resumableCustomWorkouts=NativeKotlinCustomResumeReview(
         revisionFence,localAthlete,mixedHistoryReader,
         outstandingCustomInventory,customIssuedStore)
@@ -179,6 +177,9 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val approvedBlockCalendar=NativeKotlinActivatedBlockCalendarFileStore(
         root,revisionFence,localAthlete,futureActivationCommit,
         authoringSourceStore,customDraftStore)
+    private val recoveryScheduleFence=NativeKotlinRecoveryScheduleFence(
+        revisionFence,localAthlete,mixedHistoryReader,outstandingCustomInventory,
+        futureActivationHandoff,futureActivationCommit,futureActivationApproval,approvedBlockCalendar)
     // First-block dates are a separate, non-durable preflight. A future
     // activation record can never stand in for the first block's consent.
     private val firstBlockCalendarPreflight=NativeKotlinFirstBlockCalendarPreflight(
@@ -2695,7 +2696,12 @@ internal class NativeKotlinCandidateHost(context:Context) {
             return deny("The saved program or gym changed. Review again.")
         // An append changes the signed revision even though earlier dates
         // do not move. Do not orphan any unfinished preparation or journal.
-        val firstChangedWeek=original.blocks.sumOf{it.weeks.toLong()}+1L
+        val anchorIndex=original.blocks.indexOfFirst{it.blockId==request.anchorBlockId}
+        if(anchorIndex<0 || original.blocks[anchorIndex].purpose!=CustomBlockPurpose.TRAINING ||
+            (request.insertAfterAnchor && original.blocks.getOrNull(anchorIndex+1)?.purpose!=CustomBlockPurpose.TRAINING) ||
+            (!request.insertAfterAnchor && anchorIndex!=original.blocks.lastIndex))
+            return deny("Choose a valid training-block boundary.")
+        val firstChangedWeek=original.blocks.take(anchorIndex+1).sumOf{it.weeks.toLong()}+1L
         if(firstChangedWeek !in 1L..104L)
             return deny("The recovery week is outside the supported calendar.")
         val schedule=when(val verified=recoveryScheduleFence.review(
@@ -2728,24 +2734,26 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 request.maximumWorkingSetsPerSlot,request.minimumTargetRir,
                 maximumEasierStep=request.maximumEasierStep,
                 verifiedMachineConfigurations=roster?.configurations,
-                appendRecoveryBlockId="recovery-"+(original.revision+1)))
+                appendRecoveryBlockId="recovery-"+(original.revision+1),
+                insertAfterAnchor=request.insertAfterAnchor))
         val candidate=generated.candidate?.proposedCycle
         val audit=generated.comparison?.evaluated?.singleOrNull()?.coachingAudit
         if(generated.status!=ReviewedRecoveryBlockRecipeStatus.READY_FOR_REVIEW ||
             candidate==null || audit==null ||
-            candidate.blocks.dropLast(1)!=original.blocks ||
+            candidate.blocks.size!=original.blocks.size+1 ||
+            candidate.blocks.take(anchorIndex+1)+candidate.blocks.drop(anchorIndex+2)!=original.blocks ||
             candidate.weekOverrides!=original.weekOverrides ||
             candidate.revision!=original.revision+1)
             return deny(generated.explanation)
-        val baseline=generated.comparison?.sourceAudit?.weeks?.lastOrNull()
-            ?:return deny("The final training week was not verified.")
-        val recovery=audit.weeks.lastOrNull()
+        val baseline=generated.comparison?.sourceAudit?.weeks?.singleOrNull{it.absoluteWeek==firstChangedWeek.toInt()-1}
+            ?:return deny("The preceding training week was not verified.")
+        val recovery=audit.weeks.singleOrNull{it.absoluteWeek==firstChangedWeek.toInt()}
             ?:return deny("The proposed recovery week was not verified.")
         if(baseline.blockId!=request.anchorBlockId ||
             baseline.blockPurpose!=CustomBlockPurpose.TRAINING ||
             recovery.absoluteWeek!=baseline.absoluteWeek+1 ||
             recovery.blockPurpose!=CustomBlockPurpose.RECOVERY)
-            return deny("The audited recovery week did not match the final training week.")
+            return deny("The audited recovery week did not match the chosen training-block boundary.")
         return NativeRecoveryRecipePreview.Ready(NativeRecoveryRecipeReady(
             request,owner,rights.revision,assistance.revision,roster?.revision,
             schedule.historyRevision,candidate,baseline,recovery))
@@ -2792,6 +2800,46 @@ internal class NativeKotlinCandidateHost(context:Context) {
             }
         }.getOrElse {NativeRecoveryRecipeDecision.Rejected(
             "The reviewed proposal could not be saved. Reload the program.")}
+    }
+
+    /** Removing an accepted recovery week shifts later dates too. Undo
+     * must pass the SAME owner/history/calendar fence, not the generic
+     * source-only exercise edit path. Never trust a caller's boundary. */
+    fun undoRecoveryRecipe(receipt:CustomCycleDraftReceipt,
+        expectedSourceRevision:Long):NativeCustomDraftWriteResult {
+        fun stale()=NativeCustomDraftWriteResult.Rejected(NativeCustomDraftRefusal.STALE_REVISION)
+        val owner=localAthlete.signedInIdentity() ?:return stale()
+        if(receipt.operation!="recovery-recipe")return stale()
+        return runCatching {
+            revisionFence.withOwnerTransaction(owner.ownerKey) {
+                val current=(customDraftStore.read(owner.ownerKey,receipt.proposed.cycleId)
+                    as? NativeCustomDraftReadResult.Found)?.draft
+                    ?:return@withOwnerTransaction stale()
+                if(current!=receipt.proposed || current.athleteId!=owner.athleteId)
+                    return@withOwnerTransaction stale()
+                val original=receipt.original
+                val index=current.blocks.indexOfFirst{block->
+                    original.blocks.none{it.blockId==block.blockId}
+                }
+                if(index<0 || current.blocks[index].purpose!=CustomBlockPurpose.RECOVERY ||
+                    current.blocks[index].weeks!=1 ||
+                    current.blocks.size!=original.blocks.size+1 ||
+                    current.blocks.take(index)+current.blocks.drop(index+1)!=original.blocks ||
+                    current.weekOverrides!=original.weekOverrides ||
+                    current.copy(revision=original.revision,blocks=original.blocks)!=original)
+                    return@withOwnerTransaction stale()
+                val firstChanged=current.blocks.take(index).sumOf{it.weeks.toLong()}+1
+                if(firstChanged !in 1L..104L ||
+                    recoveryScheduleFence.review(owner.ownerKey,current.cycleId,
+                        firstChanged.toInt()) !is NativeRecoveryScheduleReview.Ready)
+                    return@withOwnerTransaction stale()
+                val proposed=CustomCycleBuilderDomain.undo(current,receipt)
+                    as? CustomCycleBuilderResult.Proposed ?:return@withOwnerTransaction stale()
+                if(localAthlete.signedInIdentity()!=owner)return@withOwnerTransaction stale()
+                customAuthoringCoordinator.saveVerifiedExerciseEdit(
+                    owner.ownerKey,proposed.draft,current.revision,expectedSourceRevision)
+            }
+        }.getOrElse{stale()}
     }
 
     fun readAdaptiveCyclePermissions(cycleId:String):NativeAdaptivePermissionRead {

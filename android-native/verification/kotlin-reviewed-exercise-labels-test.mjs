@@ -81,7 +81,7 @@ for(const id of ['band-pushup','plank',
 // COUNTERWEIGHT is LESS demanding. Snapshot/History still own the actual.
 const kotlinRoot='android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/';
 const guardFiles=[
-  ['InWorkoutCoachDomain.kt','request.equipment?.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT'],
+  ['InWorkoutCoachDomain.kt','if(!planned.basis.higherSettingIncreasesDifficulty)'],
   ['ConservativeProgressionReview.kt','ASSISTANCE_NEEDS_DECREASE_REVIEW'],
   ['CoachNextProgramLoadReviewDomain.kt','stock.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT'],
   ['CustomSameBlockLoadContinuityDomain.kt','ASSISTANCE_NEEDS_SEPARATE_RECOVERY_REVIEW'],

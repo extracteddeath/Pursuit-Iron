@@ -163,14 +163,14 @@ object ConservativeProgressionReview {
         // Normal double progression only offers a HIGHER external load.
         // Assisted counterweights run in the opposite physical direction;
         // never propose an increase as a strength achievement.
-        if(verifiedStock?.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+        if(verifiedStock?.basis?.higherSettingIncreasesDifficulty==false)
             return result(IncreaseReviewReason.ASSISTANCE_NEEDS_DECREASE_REVIEW)
         val inspected=EquipmentLoadDomain.inspect(verifiedStock,observed,latest.unit)
         if(inspected !is LoadInspection.Confirmed)
             return result(IncreaseReviewReason.CONFIRMED_INVENTORY_REQUIRED)
         if(!inspected.exact)
             return result(IncreaseReviewReason.CURRENT_LOAD_UNVERIFIED)
-        val candidate=inspected.nextAbove ?: return result(IncreaseReviewReason.NO_HIGHER_VERIFIED_LOAD)
+        val candidate=inspected.nextHarder ?: return result(IncreaseReviewReason.NO_HIGHER_VERIFIED_LOAD)
         if(candidate.subtract(observed)>maximumAllowedStep)
             return result(IncreaseReviewReason.INCREMENT_EXCEEDS_USER_LIMIT)
 

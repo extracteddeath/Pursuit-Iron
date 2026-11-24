@@ -77,6 +77,17 @@ class AssistedCounterweightProgressionDomainTest {
             unlisted.status)
     }
 
+    @Test fun zeroAssistanceSelectorNeverBecomesAnAssistedProgressionProposal() {
+        val zeroStock=stock.copy(minimum=n("0"))
+        val result=AssistedCounterweightProgressionDomain.review(
+            request(previous=session("w1",assistance="10"),
+                latest=session("w2",assistance="10"),equipment=zeroStock))
+        assertEquals(AssistedCounterweightReviewStatus.NO_LOWER_CONFIRMED_ASSISTANCE,
+            result.status)
+        assertNull(result.suggestedAssistance)
+        assertFalse(result.canOfferForReview)
+    }
+
     @Test fun catalogPreservesThreeDistinctAssistedMovementsAndExactMachineStock() {
         val byId=StarterExerciseTranche.entries().associateBy{it.legacyCuratedId}
         val ids=listOf("assisted-dip","assisted-chinup","assisted-pullup")

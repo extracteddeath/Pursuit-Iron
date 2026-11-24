@@ -136,23 +136,23 @@ object KotlinFutureLoadNumberAuthorityDomain {
 
         when(source) {
             KotlinFutureLoadSource.EARNED_NEXT_INCREMENT -> {
-                if(basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+                if(!basis.higherSettingIncreasesDifficulty)
                     return no(KotlinFutureLoadRefusal.UNSUPPORTED_ASSISTANCE_DIRECTION)
-                if(candidateLoad<=issuedLoad)
+                if(basis.compareDifficulty(candidateLoad,issuedLoad)<=0)
                     return no(KotlinFutureLoadRefusal.WRONG_CHANGE_DIRECTION)
-                if(current.nextAbove==null || !same(current.nextAbove,candidateLoad))
+                if(current.nextHarder==null || !same(current.nextHarder!!,candidateLoad))
                     return no(KotlinFutureLoadRefusal.NOT_ADJACENT_VERIFIED_INCREMENT)
                 if(candidateLoad.subtract(issuedLoad)>maximumAuthorizedIncrease)
                     return no(KotlinFutureLoadRefusal.EXCEEDS_AUTHORIZED_INCREMENT)
             }
             KotlinFutureLoadSource.EARNED_ASSISTANCE_DECREMENT -> {
-                if(basis!=LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+                if(basis.higherSettingIncreasesDifficulty)
                     return no(KotlinFutureLoadRefusal.UNSUPPORTED_ASSISTANCE_DIRECTION)
-                if(candidateLoad>=issuedLoad)
+                if(basis.compareDifficulty(candidateLoad,issuedLoad)<=0)
                     return no(KotlinFutureLoadRefusal.WRONG_CHANGE_DIRECTION)
                 // No invented minimum or negative counterweights; resolve the
                 // actual PREVIOUS available station setting from verified stock.
-                if(current.nextBelow==null || !same(current.nextBelow,candidateLoad))
+                if(current.nextHarder==null || !same(current.nextHarder!!,candidateLoad))
                     return no(KotlinFutureLoadRefusal.NOT_ADJACENT_VERIFIED_INCREMENT)
                 // A zero selector ends assisted work. Switching to unassisted
                 // reps requires a separately prescribed movement and baseline.
@@ -162,9 +162,9 @@ object KotlinFutureLoadNumberAuthorityDomain {
                     return no(KotlinFutureLoadRefusal.EXCEEDS_AUTHORIZED_INCREMENT)
             }
             KotlinFutureLoadSource.RETURN_TO_DEMONSTRATED_LOAD -> {
-                if(basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+                if(!basis.higherSettingIncreasesDifficulty)
                     return no(KotlinFutureLoadRefusal.UNSUPPORTED_ASSISTANCE_DIRECTION)
-                if(candidateLoad>=issuedLoad)
+                if(basis.compareDifficulty(candidateLoad,issuedLoad)>=0)
                     return no(KotlinFutureLoadRefusal.WRONG_CHANGE_DIRECTION)
                 // A return is intentionally NOT forced to one physical step:
                 // its exact lower value must have been demonstrated in the

@@ -3,10 +3,12 @@ on:
   push:
     branches:
       - architecture/android-compose-foundation
+      - architecture/kotlin-engine-rebuild
   pull_request:
     paths:
       - 'android-native/**'
       - '.github/workflows/android-compose-foundation.yml'
+  workflow_dispatch:
 jobs:
   canonical-bridge:
     runs-on: ubuntu-latest

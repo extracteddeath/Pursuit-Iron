@@ -97,6 +97,30 @@ class NativeKotlinRestCountdownPolicyTest {
             "previous","latest",latest)?.seconds)
     }
 
+    @Test fun manualRestAcknowledgmentSupersedesDelayedCueButNotNextSet() {
+        val cue=NativeKotlinRestCue("new",90,1)
+        assertTrue(NativeRestReceiptCuePolicy.needsPendingClear("old",null,"new"))
+        assertFalse(NativeRestReceiptCuePolicy.needsPendingClear("old","new","new"))
+        assertEquals(cue,NativeRestReceiptCuePolicy.newCue("old","new",cue))
+        // A manual restart or clear acknowledges "new" before the cue arrives.
+        assertNull(NativeRestReceiptCuePolicy.newCue("new","new",cue))
+        assertFalse(NativeRestReceiptCuePolicy.needsPendingClear("new","new","new"))
+        val later=NativeKotlinRestCue("later",60,1)
+        assertTrue(NativeRestReceiptCuePolicy.needsPendingClear("new","new","later"))
+        assertEquals(later,NativeRestReceiptCuePolicy.newCue("new","later",later))
+    }
+
+    @Test fun checkpointsMustHaveConsistentDurationAndSafeDeadline() {
+        assertNull(NativeRestCountdownPolicy.decode("1|1000|2000|61000|90"))
+        assertNull(NativeRestCountdownPolicy.begin(90,Long.MAX_VALUE-1,wall))
+        assertFalse(NativeRestCountdownPolicy.valid(
+            started(90).copy(activeSeconds=120),elapsed,wall))
+        val fractional=requireNotNull(NativeRestCountdownPolicy.adjust(
+            started(90),30,elapsed+12_345L,wall+12_345L))
+        assertEquals(fractional,NativeRestCountdownPolicy.decode(
+            NativeRestCountdownPolicy.encode(fractional)))
+    }
+
     @Test fun progressIsBoundedToOnePresentationSession() {
         val active=started(3600)
         val almost=NativeRestCountdownPolicy.adjust(

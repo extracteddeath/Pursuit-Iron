@@ -127,6 +127,56 @@ class ReviewedRecoveryBlockRecipeDomainTest {
         assertEquals(ReviewedRecoveryBlockRecipeStatus.INVALID_REQUEST,duplicate.status)
     }
 
+    @Test fun insertionPreservesEarlierWeeksAndAllLaterBlockRelativeOverrides() {
+        val first=cycle().blocks.first().copy(weeks=2)
+        val later=first.copy(blockId="later-training",label="Later training",weeks=1)
+        val slot=first.days.first().slots.first()
+        val anchorSets=slot.sets.map{it.copy(targetRir=3)}
+        val laterSets=slot.sets.map{it.copy(targetRir=5)}
+        val source=cycle().copy(blocks=listOf(first,later),weekOverrides=mapOf(
+            first.blockId to listOf(CustomWeekSlotOverride(2,0,slot.slotId,anchorSets)),
+            later.blockId to listOf(CustomWeekSlotOverride(1,0,slot.slotId,laterSets))))
+        val initial=request(source,target=first.blockId,rir=3)
+        val allowed=initial.copy(
+            source=initial.source.copy(
+                permissions=initial.source.permissions.copy(adaptBlocks=true),
+                coaching=initial.source.coaching.copy(continuityPolicy=
+                    CustomCoachVolumeContinuityPolicy(fixture.n("0.25"),fixture.n("0.25")))),
+            appendRecoveryBlockId="recovery-between",insertAfterAnchor=true)
+        val withoutOptIn=ReviewedRecoveryBlockRecipeDomain.propose(
+            allowed.copy(insertAfterAnchor=false))
+        assertEquals(ReviewedRecoveryBlockRecipeStatus.INVALID_REQUEST,withoutOptIn.status)
+        val result=ReviewedRecoveryBlockRecipeDomain.propose(allowed)
+        assertEquals(result.explanation,ReviewedRecoveryBlockRecipeStatus.READY_FOR_REVIEW,
+            result.status)
+        val proposed=result.candidate!!.proposedCycle
+        assertEquals(listOf(first.blockId,"recovery-between",later.blockId),
+            proposed.blocks.map{it.blockId})
+        assertEquals(source.blocks,proposed.blocks.filter{it.blockId!="recovery-between"})
+        assertEquals(source.weekOverrides,proposed.weekOverrides)
+        val sourceReview=result.comparison!!.sourceAudit.structuralReview!!
+        val changedReview=result.comparison!!.evaluated.single().coachingAudit!!.structuralReview!!
+        for(w in 1..2) {
+            val before=CustomTrainingCycleDomain.week(sourceReview,w)!!
+            val after=CustomTrainingCycleDomain.week(changedReview,w)!!
+            assertEquals(before.days,after.days)
+            assertEquals(before.blockId,after.blockId)
+            assertEquals(before.weekInBlock,after.weekInBlock)
+        }
+        val recovery=CustomTrainingCycleDomain.week(changedReview,3)!!
+        assertEquals(CustomBlockPurpose.RECOVERY,recovery.purpose)
+        assertEquals(anchorSets.take(1),recovery.days.first().slots.first().sets)
+        val beforeLater=CustomTrainingCycleDomain.week(sourceReview,3)!!
+        val afterLater=CustomTrainingCycleDomain.week(changedReview,4)!!
+        assertEquals(beforeLater.days,afterLater.days)
+        assertEquals(beforeLater.blockId,afterLater.blockId)
+        assertEquals(beforeLater.weekInBlock,afterLater.weekInBlock)
+        assertEquals(listOf(27,27,9,27),result.comparison!!.evaluated.single()
+            .coachingAudit!!.weeks.map{it.workingSets})
+        assertFalse(result.mayIssueWorkout)
+        assertFalse(result.mayModifyHistory)
+    }
+
     @Test fun eachChangedDimensionNeedsPermissionAndOnlyRecoveryMayBeTargeted() {
         for(permissions in listOf(
             CustomCycleCoachPermissions(adaptRir=true),

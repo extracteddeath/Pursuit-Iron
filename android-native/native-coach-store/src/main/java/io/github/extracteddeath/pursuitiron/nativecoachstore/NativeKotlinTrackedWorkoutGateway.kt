@@ -150,36 +150,16 @@ class NativeKotlinTrackedWorkoutGateway(
         }
     }
 
-    /** One explicit athlete action, serialized under the normal owner fence.
-     * Each skip uses the existing atomic journal writer. If interrupted,
-     * only acknowledged receipts survive; a fresh review selects the rest.
-     * No correction or Finish can be introduced by this operation. */
+    /** One explicit athlete action, under the owner/history fence and
+     * a single journal lock/atomic write. Either every unresolved entry
+     * in the reviewed occurrence is skipped or none is changed. */
     fun skipRemainingExercise(
         owner:String,athlete:String,workoutId:String,
         expectedRevision:Long,exerciseId:String
     ):NativeJournalFileResult=fenced(owner,athlete,unavailable()) {
         if(!verifyHistory(owner,athlete))return@fenced unavailable()
-        val opened=workout.open(owner,workoutId)
-        if(opened !is NativeJournalFileResult.Durable)return@fenced opened
-        if(!authorized(owner,athlete,opened.journal))
-            return@fenced NativeJournalFileResult.Rejected(
-                NativeJournalFileRefusal.NOT_AUTHORIZED)
-        val review=WorkoutRemainingExerciseDomain.generated(opened.journal,exerciseId)
-        if(review==null || review.journalRevision!=expectedRevision)
-            return@fenced NativeJournalFileResult.Rejected(
-                NativeJournalFileRefusal.JOURNAL_REJECTED,
-                if(review==null)KotlinJournalRefusal.UNKNOWN_SET
-                else KotlinJournalRefusal.STALE_REVISION)
-        var saved:NativeJournalFileResult.Durable=opened
-        for(key in review.entries) {
-            val operation=KotlinJournalOperation.RecordSet(
-                "skip-"+java.util.UUID.randomUUID(),saved.journal.revision,
-                key,KotlinJournalSetOutcome.SKIPPED,null)
-            val result=append(owner,athlete,workoutId,operation)
-            if(result !is NativeJournalFileResult.Durable)return@fenced result
-            saved=result
-        }
-        saved
+        workout.skipRemainingExercise(owner,athlete,workoutId,
+            expectedRevision,exerciseId)
     }
 
     /**

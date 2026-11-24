@@ -726,6 +726,42 @@ class NativeKotlinTrackedWorkoutGatewayTest {
         assertEquals(1L,cold().revision)
     }
 
+    @Test fun atomicRemainingSkipRejectsStaleAndRevokedWithoutChangingDisk() {
+        enroll()
+        val initial=issue()
+        val file=java.nio.file.Files.list(root).use { paths ->
+            paths.filter { it.fileName.toString().startsWith("journal-") &&
+                it.fileName.toString().endsWith(".bin") }.findFirst().get()
+        }
+        val bytes=java.nio.file.Files.readAllBytes(file)
+        val stale=gateway().skipRemainingExercise(
+            "owner-1","athlete-1","workout-1",1,"bench")
+        assertEquals(KotlinJournalRefusal.STALE_REVISION,
+            (stale as NativeJournalFileResult.Rejected).journalReason)
+        assertArrayEquals(bytes,java.nio.file.Files.readAllBytes(file))
+        val denied=journal().skipRemainingStored(
+            "owner-1","workout-1",0,"bench") { _,_->false }
+        assertEquals(NativeJournalFileRefusal.NOT_AUTHORIZED,
+            (denied as NativeJournalFileResult.Rejected).reason)
+        assertArrayEquals(bytes,java.nio.file.Files.readAllBytes(file))
+        assertEquals(initial,original())
+        var authorizationReads=0
+        val saved=journal().skipRemainingStored(
+            "owner-1","workout-1",0,"bench") { owner,source ->
+                authorizationReads++
+                allow(owner,source)
+            } as NativeJournalFileResult.Durable
+        assertEquals(1,authorizationReads)
+        assertFalse(saved.replayed)
+        assertEquals(2L,saved.journal.revision)
+        assertEquals(listOf(1L,2L),saved.journal.receipts.map{it.appliedRevision})
+        assertEquals(saved.journal,original())
+        val after=java.nio.file.Files.readAllBytes(file)
+        assertTrue(gateway().skipRemainingExercise(
+            "owner-1","athlete-1","workout-1",0,"bench") is NativeJournalFileResult.Rejected)
+        assertArrayEquals(after,java.nio.file.Files.readAllBytes(file))
+    }
+
     @Test fun multiEntrySkipAppendsOnlySkipsAndLeavesFinishExplicit() {
         enroll();val initial=issue()
         val saved=gateway().skipRemainingExercise("owner-1","athlete-1","workout-1",0,"bench") as NativeJournalFileResult.Durable

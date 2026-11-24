@@ -1065,6 +1065,15 @@ assert.ok(composer.includes('NativeSetValueFields(') &&
   composer.includes('showFieldHelp=false') &&
   journal.includes('showFieldHelp=false'),
   'Generated workout must use shared accessible reps/RIR steppers and omit the load field for source-verified bodyweight sets');
+
+assert.match(sharedSetFields,/loadStep:\(suspend \(String,Int,Int\)->String\?\)\?=null/);
+assert.match(sharedSetFields,/currentLoad==start && editToken==token/);
+assert.match(sharedSetFields,/longIncrement=\{stepWeight\(1,3\)\}/);
+assert.match(sharedSetFields,/keyboardType=KeyboardType.Decimal/);
+assert.match(composer,/set\.target\.exerciseId,recordedMachineId,set\.target\.setKey/);
+assert.match(journal,/slot\.slotId,mainMachineId,set\.setKey/);
+assert.match(composer,/KotlinSetDraftStepDomain\.stepLoad\(text,direction,count,target,stock\)/);
+assert.match(journal,/KotlinSetDraftStepDomain\.stepLoad\(text,direction,count,target,stock\)/);
 const infoSheet=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutExerciseInfoSheet.kt')+
   read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutInfoPresentation.kt');
 const infoPolicy=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeWorkoutInfoActionPolicy.kt');

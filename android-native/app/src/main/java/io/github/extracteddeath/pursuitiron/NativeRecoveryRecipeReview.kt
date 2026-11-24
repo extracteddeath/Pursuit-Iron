@@ -23,6 +23,7 @@ internal data class NativeRecoveryRecipeReady(
     val expectedPermissionRevision:Long,
     val expectedCoachSettingsRevision:Long,
     val expectedRosterRevision:Long?,
+    val expectedHistoryRevision:Long,
     val proposedCycle:CustomTrainingCycle,
     val baseline:CustomCoachWeekMeasurement,
     val recovery:CustomCoachWeekMeasurement

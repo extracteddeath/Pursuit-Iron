@@ -80,5 +80,61 @@ class CustomPercentageDraftDomainTest {
         assertEquals(CustomPercentageDraftResult.Refused(CustomPercentageDraftRefusal.PROTECTED_WEEK),
             CustomPercentageDraftDomain.review(source.copy(cycle=edited),request))
         assertEquals(original,edited.weekOverrides.getValue("strength").single())
+    } 
+    private fun exposure(id:String,order:Long,stage:Int=0,weight:String="100",failed:Boolean=false,
+        sourceSlotId:String?="press-slot"):TieredLinearExposure {
+        val reps=listOf(3,2,1)[stage]
+        return TieredLinearExposure(id,order,scope,PercentageTier.PRIMARY,stage,
+            List(3){i->TieredLinearSetTarget(i,n(weight),reps,i==2)},
+            List(3){i->if(failed && i==2)
+                WorkingSetFact(i,SetOutcome.FAILED_ATTEMPT,n(weight),0,null,n(weight),2)
+                else WorkingSetFact(i,SetOutcome.COMPLETED,n(weight),reps,null,n(weight),2)},
+            true,sourceSlotId)
     }
+    private fun tiered(history:List<TieredLinearExposure> = emptyList())=
+        TieredLinearRequest("next",scope,PercentageTier.PRIMARY,TieredLinearState(0,n("100")),
+            true,history,stock,n("5"),3,sourceSlotId="press-slot")
+
+    @Test fun tierReplayDraftPreservesStableSourceOrdinalsAndIgnoresOtherSameDaySlot() {
+        val other=exposure("other",2,sourceSlotId="other-slot")
+        val result=CustomPercentageDraftDomain.reviewTiered(source,tiered(listOf(exposure("a",1),other)))
+            as CustomPercentageDraftResult.Proposed
+        val sets=result.proposal.draft.weekOverrides.getValue("strength").single().sets.drop(1)
+        assertEquals(List(3){n("105")},sets.map{(it.load as DraftSetLoad.Verified).value})
+        assertEquals(List(3){3},sets.map{it.exactRepTarget})
+        assertEquals(listOf(1,3,5),sets.map{it.percentageIntent!!.sourceOrdinal})
+        assertTrue(sets.all{it.percentageIntent!!.sourceSetCount==5 && it.percentageIntent!!.tierStage==0})
+        assertEquals(listOf(false,false,true),sets.map{it.percentageIntent!!.repOut})
+        assertEquals(listOf("a"),result.tierTransitions.map{it.workoutId})
+        assertFalse(result.requiresReviewedReset)
+        assertFalse(result.mayIssueWorkout)
+    }
+
+    @Test fun tierResetIsExplicitReviewAndMissingSlotHistoryFailsClosed() {
+        val history=listOf(exposure("a",1,failed=true),exposure("b",2,1,failed=true),
+            exposure("c",3,2,failed=true))
+        val result=CustomPercentageDraftDomain.reviewTiered(source,tiered(history))
+            as CustomPercentageDraftResult.Proposed
+        assertTrue(result.requiresReviewedReset)
+        assertEquals(TieredLinearDecision.RESET_REVIEW,result.tierTransitions.last().decision)
+        val sets=result.proposal.draft.weekOverrides.getValue("strength").single().sets.drop(1)
+        assertTrue(sets.all{(it.load as DraftSetLoad.Verified).value==n("85")})
+        assertTrue(sets.all{it.percentageIntent!!.tierStage==0 && it.percentageIntent!!.referenceLoad==n("85")})
+        assertFalse(result.maySaveProgram)
+        assertEquals(CustomPercentageDraftResult.Refused(CustomPercentageDraftRefusal.PROTOCOL_REFUSED),
+            CustomPercentageDraftDomain.reviewTiered(source,tiered(listOf(exposure("unknown",1,sourceSlotId=null)))))
+        assertEquals(CustomPercentageDraftResult.Refused(CustomPercentageDraftRefusal.SCOPE_MISMATCH),
+            CustomPercentageDraftDomain.reviewTiered(source,tiered().copy(sourceSlotId="other-slot")))
+    }
+
+    @Test fun tierRecoveryKeepsReferenceSeparateFromActualLightWeight() {
+        val result=CustomPercentageDraftDomain.reviewTiered(source,
+            tiered(listOf(exposure("a",1))).copy(recovery=true)) as CustomPercentageDraftResult.Proposed
+        val sets=result.proposal.draft.weekOverrides.getValue("strength").single().sets.drop(1)
+        assertTrue(sets.all{(it.load as DraftSetLoad.Verified).value==n("60")})
+        assertTrue(sets.all{it.percentageIntent!!.referenceLoad==n("105") &&
+            it.percentageIntent!!.effectivePercent==n("60") &&
+            it.percentageIntent!!.recovery && !it.percentageIntent!!.repOut})
+    }
+
 }

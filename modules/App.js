@@ -91,7 +91,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='1035';
+const __APP_VERSION__='4.0.0'; const __BUILD__='1036';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -18992,6 +18992,10 @@ function App() {
             const shell = scroller.closest(".wpb-page-shell");
             if (shell)
                 shell.dataset.scrolled = scroller.scrollTop > 4 ? "1" : "0";
+            // While a restore is still waiting for content to grow tall enough, the clamped offset is
+            // not the user's position: recording it would overwrite the remembered one for good.
+            if (pending && pending.scroller === scroller)
+                return;
             if (scroller.closest(`[data-view-frame="${view}"]`))
                 scrollMemory.current[scrollKey(scroller)] = scroller.scrollTop;
         };
@@ -18999,15 +19003,46 @@ function App() {
         document.addEventListener("scroll", onScroll, true);
         // A keyed view mounts at scrollTop 0. Restore BEFORE the first meaningful paint of its chrome so
         // Back feels like returning to a native screen, not reopening a web route from the top.
-        const restore = () => {
-            const scroller = primaryScroller();
-            if (scroller) {
-                const saved = Number(scrollMemory.current[scrollKey(scroller)] || 0);
-                const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
-                scroller.scrollTop = Math.min(saved, max);
-                sync(scroller);
-            }
+        // Sections can render in stages (idle-time insights, lazy panes), so a restore that finds the
+        // content still too short keeps the remembered offset and re-applies it as the content grows,
+        // until it fits, the lifter scrolls or touches, or a second passes.
+        let pending = null;
+        const settle = () => {
+            if (!pending)
+                return;
+            pending.resize.disconnect();
+            clearTimeout(pending.timer);
+            const { scroller } = pending;
+            pending = null;
+            sync(scroller);
         };
+        const apply = () => {
+            if (!pending)
+                return;
+            const { scroller, target } = pending;
+            const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+            scroller.scrollTop = Math.min(target, max);
+            if (max >= target)
+                settle();
+        };
+        const restore = () => {
+            settle();
+            const scroller = primaryScroller();
+            if (!scroller)
+                return;
+            const target = Number(scrollMemory.current[scrollKey(scroller)] || 0);
+            const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+            scroller.scrollTop = Math.min(target, max);
+            if (target <= max || typeof ResizeObserver !== "function") {
+                sync(scroller);
+                return;
+            }
+            const resize = new ResizeObserver(apply);
+            pending = { scroller, target, resize, timer: setTimeout(settle, 1000) };
+            resize.observe(scroller);
+            [...scroller.children].forEach(child => resize.observe(child));
+        };
+        const interrupt = () => settle();
         const raf = requestAnimationFrame(restore);
         const observer = new MutationObserver(records => {
             if (records.some(record => record.target === primaryScroller()))
@@ -19015,7 +19050,14 @@ function App() {
         });
         if (frame)
             observer.observe(frame, { attributes: true, subtree: true, attributeFilter: ["data-scroll-key"] });
-        return () => { document.removeEventListener("scroll", onScroll, true); cancelAnimationFrame(raf); observer.disconnect(); };
+        for (const type of ["wheel", "touchstart", "pointerdown", "keydown"])
+            document.addEventListener(type, interrupt, { capture: true, passive: true });
+        return () => {
+            document.removeEventListener("scroll", onScroll, true); cancelAnimationFrame(raf); observer.disconnect();
+            for (const type of ["wheel", "touchstart", "pointerdown", "keydown"])
+                document.removeEventListener(type, interrupt, { capture: true, passive: true });
+            if (pending) { pending.resize.disconnect(); clearTimeout(pending.timer); pending = null; }
+        };
     }, [view]);
     // Native-feel: edge-swipe-back. A drag that starts at the left screen edge and travels right far
     // enough while staying mostly horizontal pops to the previous screen. Excluded on Home (root), the

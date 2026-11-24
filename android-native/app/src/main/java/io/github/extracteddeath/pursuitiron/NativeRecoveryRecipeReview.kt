@@ -2,6 +2,7 @@ package io.github.extracteddeath.pursuitiron
 
 import io.github.extracteddeath.pursuitiron.nativecoachstore.*
 import io.github.extracteddeath.pursuitiron.rebuild.*
+import java.math.BigDecimal
 
 /** First connected Plan slice: append only, never shift or edit an issued week. */
 internal data class NativeRecoveryRecipeRequest(
@@ -11,7 +12,9 @@ internal data class NativeRecoveryRecipeRequest(
     val expectedSourceRevision:Long,
     val coaching:CustomCoachAuditInputs,
     val maximumWorkingSetsPerSlot:Int,
-    val minimumTargetRir:Int
+    val minimumTargetRir:Int,
+    val maximumEasierStep:BigDecimal?=null,
+    val stepUnit:LoadUnit?=null
 )
 
 internal data class NativeRecoveryRecipeReady(
@@ -19,6 +22,7 @@ internal data class NativeRecoveryRecipeReady(
     val owner:NativeKotlinOwnerIdentity,
     val expectedPermissionRevision:Long,
     val expectedCoachSettingsRevision:Long,
+    val expectedRosterRevision:Long?,
     val proposedCycle:CustomTrainingCycle,
     val baseline:CustomCoachWeekMeasurement,
     val recovery:CustomCoachWeekMeasurement

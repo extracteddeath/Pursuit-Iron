@@ -99,6 +99,28 @@ class KotlinFutureLoadNumberAuthorityDomainTest {
             review(from="210",to="203",source=recovery))
     }
 
+    @Test fun everyLoadBasisHasOnePhysicalDifficultyDirection() {
+        for(basis in LoadBasis.entries) {
+            val inverse=basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT
+            assertEquals(!inverse,basis.higherSettingIncreasesDifficulty)
+            assertEquals(if(inverse)-1 else 1,basis.compareDifficulty(n("105"),n("100")))
+            assertEquals(if(inverse)1 else -1,basis.compareDifficulty(n("95"),n("100")))
+            assertEquals(0,basis.compareDifficulty(n("100.00"),n("100")))
+        }
+        val weighted=EquipmentLoadDomain.inspect(external,n("200"),LoadUnit.LB)
+            as LoadInspection.Confirmed
+        assertEquals(n("205"),weighted.nextHarder)
+        assertEquals(n("195"),weighted.nextEasier)
+        val counterweight=EquipmentLoadDomain.inspect(assisted,n("100"),LoadUnit.LB)
+            as LoadInspection.Confirmed
+        assertEquals(n("95"),counterweight.nextHarder)
+        assertEquals(n("105"),counterweight.nextEasier)
+        val assistedFloor=EquipmentLoadDomain.inspect(assisted,n("80"),LoadUnit.LB)
+            as LoadInspection.Confirmed
+        assertNull(assistedFloor.nextHarder)
+        assertEquals(n("85"),assistedFloor.nextEasier)
+    }
+
     @Test fun assistanceHasExactlyTheOppositeVerifiedPhysicalDirection() {
         val source=KotlinFutureLoadSource.EARNED_ASSISTANCE_DECREMENT
         val ready=review(from="100",to="95",source=source,stock=assisted,

@@ -331,8 +331,9 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     // A sheet opened on one issued occurrence must not jump to a later
     // occurrence with the same exercise ID after a journal update or undo.
     LaunchedEffect(presentation,infoSetKey) {
-        if(presentation!=null && infoSetKey!=null &&
-            infoSetKey !in occurrenceBySetKey.keys) {
+        val key=infoSetKey
+        if(presentation!=null && key!=null &&
+            key !in occurrenceBySetKey.keys) {
             infoSetKey=null
             infoWarmupsOnly=false
         }
@@ -1188,7 +1189,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 it.exerciseId==exerciseId
             }>1
             val occurrenceNumber=presentation?.exercises.orEmpty()
-                .filter{it.exerciseId==exerciseId}.indexOf(occurrence)+1
+                .filter{it.exerciseId==exerciseId}.indexOfFirst{it==occurrence}+1
             val infoOptions=NativeKotlinEquipmentRecoveryPolicy.review(
                 activeWorkout=presentation?.finished==false && !state.busy && !swapLoading,
                 hasPhysicalMachineConfig=infoConfig!=null &&

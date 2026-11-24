@@ -90,6 +90,16 @@ class InWorkoutCoachDomainTest {
             assess(ask(stock=only)).direction)
     }
 
+    @Test fun stockZeroDoesNotPermitAnInvalidNextWorkingLoad() {
+        val zeroStock=VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.MACHINE_STACK,
+            listOf(n(0),n(5),n(10)))
+        val result=assess(ask(observations=listOf(fact(0,5,2,0)),
+            nextLoad=5,stock=zeroStock))
+        assertEquals(InWorkoutDirection.NO_SAFE_SMALLER_LOAD,result.direction)
+        assertNull(result.weightForHumanReview)
+        assertEquals(n(5),result.issuedTargetUnchanged)
+    }
+
     @Test fun skippedOrFailedEarlierSetsMustStayUnresolved() {
         val skip=WorkingSetFact(0,SetOutcome.SKIPPED,null,null,null)
         val fail=WorkingSetFact(0,SetOutcome.FAILED_ATTEMPT,n(215),0,null)

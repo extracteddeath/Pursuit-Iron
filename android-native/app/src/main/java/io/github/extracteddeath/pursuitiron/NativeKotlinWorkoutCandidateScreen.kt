@@ -1506,15 +1506,16 @@ private fun NativeKotlinSetCard(
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.error)
         }
-        PursuitPrimaryAction(
-            if(set.isResolved)"Save corrected set" else "Complete set",
-            enabled=!busy && actual!=null
-        ) {onRecord(KotlinJournalSetOutcome.COMPLETED,actual)}
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
-            TextButton(onClick=onSkip,enabled=!busy){Text("Skip")}
-            TextButton(onClick={failedActual?.let(onFail)},
-                enabled=!busy && failedActual!=null){Text("Failed attempt")}
-        }
+        PursuitSetEntryActions(
+            completeLabel=if(set.isResolved)"Save correction" else "Complete",
+            skipLabel="Skip",
+            canComplete=!busy && actual!=null,
+            canSkip=!busy,
+            canFail=!busy && failedActual!=null,
+            onComplete={onRecord(KotlinJournalSetOutcome.COMPLETED,actual)},
+            onSkip=onSkip,
+            onFail={failedActual?.let(onFail)}
+        )
     }
     PursuitCard(highlighted=!set.isResolved && !finished) {
         if(showExerciseHeading)PursuitExerciseHeading(target.exerciseId,

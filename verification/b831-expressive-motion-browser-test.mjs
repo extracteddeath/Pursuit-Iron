@@ -2724,8 +2724,14 @@ try {
         assert.ok(rangesR20.every(h=>h>=44),
             'R20 rendered exercise chart ranges use accessible hit heights: '+JSON.stringify(rangesR20));
 
-        assert.ok(await page.$eval('[data-exercisedetail]',el=>el.scrollWidth<=el.clientWidth+1),
-            'exercise chart metric choices scroll rather than clipping screen width');
+        // Measured indicators and the charts settle within a frame or two of the tab switch;
+        // assert the settled layout, and name whatever still overflows if it never settles.
+        const settled=await page.waitForFunction(()=>{const el=document.querySelector('[data-exercisedetail]');
+            return el&&el.scrollWidth<=el.clientWidth+1;},{timeout:3000}).then(()=>true,()=>false);
+        const overflow=settled?null:await page.$eval('[data-exercisedetail]',el=>{const r=el.getBoundingClientRect();
+            return {scrollWidth:el.scrollWidth,clientWidth:el.clientWidth,wide:[...el.querySelectorAll('*')].filter(n=>{const b=n.getBoundingClientRect();
+                return b.right>r.right+1&&getComputedStyle(n).position!=='fixed';}).slice(0,8).map(n=>(n.className&&n.className.baseVal===undefined?n.className:n.tagName)+' '+Math.round(n.getBoundingClientRect().right))};});
+        assert.ok(settled,'exercise chart metric choices scroll rather than clipping screen width: '+JSON.stringify(overflow));
         // Capture the selected Charts tab, not a transient keyboard focus ring
         // on the next tab. Keyboard focus remains separately tested above.
         if (width===430) await page.screenshot({ path: path.join(root, 'verification/b831-m3-exercise-charts-phone.png') });

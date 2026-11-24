@@ -37,7 +37,7 @@ internal object NativeAuthoredSetCodec {
         else -> throw IOException("Unknown custom load kind")
     }
     fun write(output: DataOutputStream, value: CustomAuthoredSet, hasPercentageIntent:Boolean=false) = with(output) {
-        require(value.percentageIntent==null || hasPercentageIntent && value.percentageIntent.validForSet(value))
+        require(value.percentageIntent?.let { hasPercentageIntent && it.validForSet(value) } != false)
         enum(value.type)
         load(value.load)
         writeInt(value.reps.minimum)

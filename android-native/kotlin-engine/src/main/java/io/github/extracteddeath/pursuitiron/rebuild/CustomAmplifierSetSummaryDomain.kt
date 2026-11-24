@@ -36,6 +36,9 @@ object CustomAmplifierSetSummaryDomain {
                 "${amp.followUpRounds} weight ${if(amp.followUpRounds==1)"drop" else "drops"} · "+
                     loads.joinToString(" → ")+" · ${amp.followUpReps} reps per drop"
             }
+            CustomAmplifierKind.MYO_REPS ->
+                "${amp.followUpRounds} mini-sets × ${amp.followUpReps} reps · " +
+                    "same activation load · ${amp.followUpRestSeconds}s between"
             else ->
                 "${amp.followUpRounds} ${AdvancedAmplifierProtocolDomain.stageNoun(amp.kind,true)}"+
                     " × ${amp.followUpReps} reps · ${amp.followUpRestSeconds}s between"
@@ -83,10 +86,34 @@ object CustomAmplifierSetSummaryDomain {
                     }
                 CustomAmplifierKind.LENGTHENED_PARTIALS ->
                     "Logged ${completedObservations.sumOf{it.reps}} partial reps"
-                else ->
-                    "Performed ${AdvancedAmplifierProtocolDomain.stageNoun(amp.kind,true)}: "+
-                        completedObservations.joinToString(" + "){it.reps.toString()}+
-                        " reps"
+                else -> {
+                    // Show the physical activation load that was actually
+                    // logged, NOT the issued prescription or an earlier set.
+                    // An invalid/stale draft cannot silently display changed
+                    // mini weights as a normal same-load technique.
+                    val activation=main.performed
+                    val sameStationAndLoad=activation!=null &&
+                        completedObservations.all {
+                            CustomWorkoutExecutionDomain.sameActualLoadAndStation(
+                                activation,it)
+                        }
+                    if(!sameStationAndLoad)
+                        "Follow-up load/station mismatch · review recorded technique"
+                    else {
+                        val loadLabel=when {
+                            activation.load==null && activation.unit==null ->
+                                "bodyweight"
+                            activation.load!=null && activation.unit!=null ->
+                                "${activation.load.stripTrailingZeros().toPlainString()} " +
+                                    activation.unit.name.lowercase()
+                            else -> "unverified load"
+                        }
+                        "Performed ${AdvancedAmplifierProtocolDomain.stageNoun(amp.kind,true)} at " +
+                            loadLabel+": "+
+                            completedObservations.joinToString(" + "){it.reps.toString()}+
+                            " reps"
+                    }
+                }
             }
         return CustomAmplifierSetSummary(title,planned,progress,actuals)
     }

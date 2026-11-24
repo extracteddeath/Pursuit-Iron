@@ -114,6 +114,32 @@ class KotlinSetNumberAuthorityDomainTest {
                 as KotlinSetEntryResult.Rejected).reason)
     }
 
+    @Test fun completedPhysicalStationRequiresValidWeightedActualAndExplicitIdentity() {
+        val authority=KotlinSetNumberAuthorityDomain
+        val completed=KotlinJournalSetOutcome.COMPLETED
+        val issued=load()
+        assertEquals("machine-B",authority.completedPhysicalStation(
+            issued,completed,actual("205",rir=null,machine="machine-B")))
+        assertNull(authority.completedPhysicalStation(
+            issued,completed,actual(machine=null)))
+        assertNull(authority.completedPhysicalStation(
+            issued,completed,actual(machine="")))
+        assertNull(authority.completedPhysicalStation(
+            issued,completed,actual(unit=LoadUnit.KG)))
+        assertNull(authority.completedPhysicalStation(
+            issued,completed,actual(weight=null)))
+        assertNull(authority.completedPhysicalStation(
+            issued,completed,actual(reps=0)))
+        assertNull(authority.completedPhysicalStation(
+            issued,KotlinJournalSetOutcome.FAILED_ATTEMPT,
+            actual(reps=0,rir=null)))
+        assertNull(authority.completedPhysicalStation(
+            issued,KotlinJournalSetOutcome.SKIPPED,null))
+        assertNull(authority.completedPhysicalStation(
+            DraftSetLoad.ExplicitBodyweight,completed,
+            actual(weight=null,unit=null,machine="machine-A")))
+    }
+
     @Test fun physicalStationBarbellContradictionHasOneCrossRouteDefinition() {
         val authority = KotlinSetNumberAuthorityDomain
         assertTrue(authority.machineTagContradictsFreeBarbell(

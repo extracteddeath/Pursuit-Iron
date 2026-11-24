@@ -2800,6 +2800,49 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             service.preview(selection))
     }
 
+    @Test fun namedDraftConfirmationIsAtomicColdReadableAndNeverInheritsOldSignoff() {
+        val f=authoredCoachFixture(initializeHistory=false,phaseTransition=true)
+        initialize()
+        approved()
+        assertTrue(f.history.enroll("owner-1","athlete-1"){owner,athlete->
+            active==NativeKotlinOwnerIdentity(owner,athlete)
+        } is NativeHistoryLedgerResult.Durable)
+        val preflight=NativeKotlinCustomWorkoutPreflight(fence,identity,drafts,sources,store())
+        val reviewer=NativeKotlinNamedPercentageDraftReview(fence,identity,drafts,sources,
+            store(),preflight,f.reader,NativeKotlinCustomOutstandingWorkoutInventory(f.prepared,f.issuer))
+        val selection=NativeNamedPercentageSelection("owner-1","cycle-1",1,0,"slot-0",
+            NamedPercentageScheme.FIVE_THREE_ONE,PercentageTier.PRIMARY,
+            PercentageDayRole.STANDARD,PercentageReferenceKind.TRAINING_MAX,n("30"))
+        val displayed=reviewer.preview(selection) as NativeNamedPercentageReview.Ready
+        assertEquals(NativeNamedDraftAcceptance.Rejected(NativeNamedPercentageRefusal.CONFIRMATION_REQUIRED),
+            reviewer.acceptDraft(selection,displayed,false))
+        assertEquals(NativeNamedDraftAcceptance.Rejected(NativeNamedPercentageRefusal.REVIEW_CHANGED),
+            reviewer.acceptDraft(selection.copy(reference=n("35")),displayed,true))
+        assertNull((drafts.read("owner-1","cycle-1") as NativeCustomDraftReadResult.Found).namedReceipt)
+        val saved=reviewer.acceptDraft(selection,displayed,true) as NativeNamedDraftAcceptance.Saved
+        assertEquals(2L,saved.revision)
+        assertFalse(saved.isSignedOff)
+        assertFalse(saved.mayIssueWorkout)
+        val cold=NativeCustomCycleDraftFileStore(temp.root.toPath(),
+            NativeKotlinApprovalRevisionFence(temp.root.toPath()),identity)
+        val reopened=cold.read("owner-1","cycle-1") as NativeCustomDraftReadResult.Found
+        assertEquals(displayed.proposal.proposal.draft,reopened.draft)
+        assertEquals(saved.receipt,reopened.namedReceipt)
+        assertFalse(saved.receipt.maySignoff)
+        assertFalse((store().read("owner-1","cycle-1",inputs()) as NativeCustomSignoffRead.Found).isCurrent)
+        assertTrue(preflight.inspect("owner-1","cycle-1",1,0,inputs())
+            is NativeCustomPreflightResult.Rejected)
+        assertTrue(reviewer.acceptDraft(selection,displayed,true) is NativeNamedDraftAcceptance.Rejected)
+        assertEquals(reopened,cold.read("owner-1","cycle-1"))
+        assertEquals(NativeCustomDraftWriteResult.Committed(3),
+            cold.save("owner-1","cycle-1",2,reopened.draft.copy(revision=3,title="Changed")))
+        val edited=cold.read("owner-1","cycle-1") as NativeCustomDraftReadResult.Found
+        assertNull(edited.namedReceipt)
+        assertEquals(3L,edited.draft.revision)
+        active=NativeKotlinOwnerIdentity("owner-1","another-athlete")
+        assertTrue(cold.read("owner-1","cycle-1") is NativeCustomDraftReadResult.Rejected)
+    }
+
     private fun calibrationStore(f:AuthoredCoachFixture)=NativeKotlinBlockCalibrationConsentStore(
         temp.root.toPath(),fence,identity,f.coach,drafts,sources,permissionStore,f.reader,
         NativeKotlinCustomOutstandingWorkoutInventory(f.prepared,f.issuer),

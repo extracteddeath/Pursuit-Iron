@@ -21,7 +21,7 @@ data class NativeNamedPercentageSelection(
 enum class NativeNamedPercentageRefusal {
     INVALID_SELECTION, NOT_AUTHORIZED, CURRENT_CONSENT_REQUIRED,
     SOURCE_OR_STOCK_UNAVAILABLE, HISTORY_UNVERIFIED, PROTECTED_WEEK,
-    RECIPE_REFUSED, CONFIRMATION_REQUIRED, REVIEW_CHANGED, STORAGE_UNAVAILABLE
+    RECIPE_REFUSED, CONFIRMATION_REQUIRED, REVIEW_CHANGED, DRAFT_SAVE_REJECTED, STORAGE_UNAVAILABLE
 }
 
 sealed interface NativeNamedPercentageReview {
@@ -38,6 +38,15 @@ sealed interface NativeNamedPercentageReview {
         val maySaveProgram:Boolean get()=false
         val mayIssueWorkout:Boolean get()=false
     }
+}
+
+sealed interface NativeNamedDraftAcceptance {
+    data class Saved(val revision:Long,val receipt:NativeNamedPercentageDraftReceipt):
+        NativeNamedDraftAcceptance {
+        val isSignedOff:Boolean get()=false
+        val mayIssueWorkout:Boolean get()=false
+    }
+    data class Rejected(val reason:NativeNamedPercentageRefusal):NativeNamedDraftAcceptance
 }
 
 /**
@@ -146,6 +155,38 @@ class NativeKotlinNamedPercentageDraftReview(
     fun preview(selection:NativeNamedPercentageSelection):NativeNamedPercentageReview =
         runCatching{fence.withOwnerTransaction(selection.ownerKey){evaluate(selection)}}
             .getOrElse{NativeNamedPercentageReview.Rejected(NativeNamedPercentageRefusal.STORAGE_UNAVAILABLE)}
+
+    /** Reopen all authoritative inputs, compare the complete displayed
+     * proposal, then atomically save only the next UNSIGNED draft revision.
+     * The reference receipt survives a cold read; a generic edit clears it.
+     * The previous cycle signoff is necessarily stale after this write. */
+    fun acceptDraft(selection:NativeNamedPercentageSelection,
+        displayed:NativeNamedPercentageReview.Ready,
+        athleteConfirmed:Boolean):NativeNamedDraftAcceptance {
+        if(!athleteConfirmed)return NativeNamedDraftAcceptance.Rejected(
+            NativeNamedPercentageRefusal.CONFIRMATION_REQUIRED)
+        return runCatching {
+            fence.withOwnerTransaction(selection.ownerKey) {
+                val current=reconfirm(selection,displayed,true)
+                if(current is NativeNamedPercentageReview.Rejected)
+                    return@withOwnerTransaction NativeNamedDraftAcceptance.Rejected(current.reason)
+                val fresh=current as NativeNamedPercentageReview.Ready
+                val scope=fresh.request.scope
+                val receipt=NativeNamedPercentageDraftReceipt(fresh.selection,fresh.source.stamp,
+                    fresh.source.blockId,fresh.source.weekInBlock,scope.exerciseId,
+                    scope.machineInstanceId,scope.unit,scope.basis,fresh.consentRevision,
+                    fresh.historyRevision,fresh.machineRosterRevision)
+                val candidate=fresh.proposal.proposal.draft
+                when(drafts.saveReviewedNamed(selection.ownerKey,selection.cycleId,
+                    fresh.source.cycle.revision,candidate,receipt)) {
+                    is NativeCustomDraftWriteResult.Committed ->
+                        NativeNamedDraftAcceptance.Saved(candidate.revision,receipt)
+                    else -> NativeNamedDraftAcceptance.Rejected(
+                        NativeNamedPercentageRefusal.DRAFT_SAVE_REJECTED)
+                }
+            }
+        }.getOrElse{NativeNamedDraftAcceptance.Rejected(NativeNamedPercentageRefusal.STORAGE_UNAVAILABLE)}
+    }
 
     fun reconfirm(selection:NativeNamedPercentageSelection,displayed:NativeNamedPercentageReview.Ready,
         athleteConfirmed:Boolean):NativeNamedPercentageReview {

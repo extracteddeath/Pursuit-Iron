@@ -190,14 +190,22 @@ object NamedPercentageProtocolDomain {
         val peak=source.indices.reduce{best,i ->
             if(source[i].verifiedLoad>=source[best].verifiedLoad)i else best
         }
+        return trimmedSourceIndexes(source.size,count,peak,
+            source.indices.filter{source[it].repOut}).map{source[it]}
+    }
+
+    /** Shared selection of original source ordinals for trimmed protocols. */
+    internal fun trimmedSourceIndexes(
+        size:Int,count:Int,peak:Int,repOuts:List<Int>
+    ):List<Int> {
+        require(size in 1..20 && count in 1..size && peak in 0 until size &&
+            repOuts.all{it in 0 until size})
+        if(count==size)return (0 until size).toList()
         val spread=(0 until count).map { i ->
-            // Integer half-up rounding for nonnegative indices.
             val denominator=maxOf(1,count-1)
-            (2*i*(source.size-1)+denominator)/(2*denominator)
+            (2*i*(size-1)+denominator)/(2*denominator)
         }
-        val indexes=(listOf(peak,source.lastIndex,0)+
-            source.indices.filter{source[it].repOut}+spread+source.indices.toList())
+        return (listOf(peak,size-1,0)+repOuts+spread+(0 until size).toList())
             .distinct().take(count).sorted()
-        return indexes.map{source[it]}
     }
 }

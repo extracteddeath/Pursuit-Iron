@@ -117,7 +117,7 @@ object InWorkoutCoachDomain {
         // A lower number is HARDER; the ordinary fatigue backoff algorithm
         // would dangerously recommend the opposite of recovery. Never offer
         // a smaller counterweight after missed reps or call it a backoff.
-        if(request.equipment?.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT) {
+        if(!planned.basis.higherSettingIncreasesDifficulty) {
             if(actual.compareTo(kept)!=0)
                 return result(InWorkoutDirection.REVIEW_AUTHORED_LOAD_CHANGE,
                     "The selected assisted counterweight differs from the previous set. More counterweight is easier, not a stronger load. Keep the issued next-set target until explicitly reviewed.")
@@ -149,7 +149,7 @@ object InWorkoutCoachDomain {
                     else
                         "The previous set used an athlete-recorded weight different from its issued target. The next target remains ${kept.toPlainString()} ${request.unit.name.lowercase()}; no backoff or reduction was authorized.")
             if(unchangedActual && verifiedPrior is LoadInspection.Confirmed &&
-                verifiedPrior.exact && kept<actual)
+                verifiedPrior.exact && planned.basis.compareDifficulty(kept,actual)<0)
                 return result(InWorkoutDirection.FOLLOW_PLANNED_BACKOFF,
                     "Your next set is already lighter at ${kept.toPlainString()} ${request.unit.name.lowercase()}. "+
                     if(lastReps<request.repBand.minimum)
@@ -162,9 +162,10 @@ object InWorkoutCoachDomain {
                 "The next set has a different prescribed weight. Check the planned loading scheme and any edited actuals before changing it.")
         }
         if(lastReps<request.repBand.minimum) {
-            val smaller=planned.nextBelow
+            val smaller=planned.nextEasier
             if(smaller!=null &&
-                actual.subtract(smaller)<=request.maximumApprovedReviewStep)
+                KotlinSetNumberAuthorityDomain.validPrescribedLoad(smaller,planned.basis) &&
+                actual.subtract(smaller).abs()<=request.maximumApprovedReviewStep)
                 return result(InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD,
                     "You completed $lastReps of ${request.repBand.minimum} minimum reps. "+
                     "Consider ${smaller.toPlainString()} ${request.unit.name.lowercase()} for this next set only; nothing changes until you choose.",

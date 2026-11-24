@@ -322,7 +322,9 @@ class CoachAthleteProgramGeneratorTest {
             choice("bench").copy(selectedLoad=n("0")),
             choice("row"),choice("squat")))
         val refused=CoachAthleteProgramGenerator.generate(zero)
-        assertEquals(AthleteGenerationStatus.PLACEMENTS_UNRESOLVED,refused.status)
+        // Catalog input review rejects this even before optional priority
+        // scheduling; the later generator gate remains independent defense.
+        assertEquals(AthleteGenerationStatus.INPUTS_UNRESOLVED,refused.status)
         assertNull(refused.candidate)
         assertTrue(refused.intents.none{
             it.requiredPrimaryExerciseId=="bench"

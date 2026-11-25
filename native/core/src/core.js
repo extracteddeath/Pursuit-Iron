@@ -3563,6 +3563,8 @@ export function editor({ programId, weekIndex = 1 } = {}) {
                     type: ex?.type === 'compound' ? 'compound' : 'isolation', last: lastTop(id),
                     plateau: plateauFor(stored || p, (stored || p).days.find((x) => x.id === d.id) || d, id), plateauChoice: plateauQueue()[`${p.id}:${d.id}`]?.[id] || null,
                     style: style || 'auto', styleLabel: STYLE_LABEL[style] || (style ? (E.PROG_STYLES?.[style] || style) : 'Auto'), styleLocked: !!p.progStyleLifter?.[id],
+                    // The method Auto resolved to this week, so the editor says 'Auto · Dynamic double', not a bare 'Auto'.
+                    autoLabel: (!style || style === 'auto') && cell?.progressionStyle && cell.progressionStyle !== 'auto' ? (STYLE_LABEL[cell.progressionStyle] || E.PROG_STYLES?.[cell.progressionStyle] || cell.progressionStyle) : '',
                     superset: !!p.ss?.[`${d.id}:${slot}`], rounds: Number(p.rounds?.[`${d.id}:${slot}`]) || null, added: !!ov.added, sets: Number(p.rounds?.[`${d.id}:${slot}`]) || sets, reps: ov.reps ?? cell?.reps ?? null, rir: cell?.rir ?? null,
                     pinSum: (() => { const pn = pinnedNote({ id }); return pn ? [pn.fields.filter((f) => f.value).map((f) => `${f.label} ${f.value}`).join(' · '), pn.note].filter(Boolean).join(' — ') : ''; })() };
             });

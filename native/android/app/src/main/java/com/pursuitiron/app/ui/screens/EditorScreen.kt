@@ -571,10 +571,12 @@ private fun ExerciseCard(vm: AppViewModel, e: JSONObject, dayId: String, x: JSON
                 Text(if (open == "swap") "Close" else "Swap", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = cs.onSecondaryContainer)
             }
             Row(Modifier.weight(1f).height(42.dp).clip(CircleShape).background(cs.surfaceContainerHigh).clickable(enabled = !e.b("percent")) { onToggle("prog") }
-                .semantics(mergeDescendants = true) { role = Role.Button; contentDescription = "How ${x.s("name")} progresses: ${x.s("styleLabel")}" }.padding(horizontal = 12.dp),
+                .semantics(mergeDescendants = true) { role = Role.Button; contentDescription = "How ${x.s("name")} progresses: ${if (x.s("style").let { it.isNotBlank() && it != "auto" }) "pinned to " + x.s("styleLabel") else "Auto"}" }.padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
-                Icon(PiIcons.Trend, null, modifier = Modifier.size(15.dp))
-                Text("Progression: " + x.s("styleLabel").ifBlank { "Auto" },
+                // Who chose the method is always visible: "Auto · <what Auto picked>" or "Pinned · <your pick>".
+                val pinned = x.s("style").let { it.isNotBlank() && it != "auto" }
+                Icon(if (pinned) PiIcons.Pin else PiIcons.Trend, null, modifier = Modifier.size(15.dp))
+                Text(if (pinned) "Pinned · " + x.s("styleLabel") else "Auto" + x.s("autoLabel").takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty(),
                     style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Box(Modifier.size(42.dp).clip(CircleShape).background(cs.surfaceContainerHigh).clickable { onToggle("more") }

@@ -1857,3 +1857,14 @@ assert.ok(
   repReference.includes('if(exactRepTarget != null) exactRepTarget.toString()'),
   'Authored main-set reps must reach the logger, correction reference and Leveling draft; follow-ups use their own reps'
 );
+
+// Typed named rep-out is a presentation distinction only; ordinary actual
+// entry, Last, and amplifier follow-ups keep their own numeric authority.
+const weekRepLabel=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleWeekEditSheet.kt');
+assert.ok(customRepEditor.includes('val mainRepOut=part==CustomWorkoutVisitPart.MAIN && prescription.percentageIntent?.repOut==true') &&
+  customRepEditor.split('repOut = mainRepOut').length===3 &&
+  repReference.includes('nativeTargetRepMetric(reps,exactRepTarget,repOut)') &&
+  repReference.includes('minimum reps; record actual reps') &&
+  weekRepLabel.includes('percentageIntent?.repOut==true && exactRepTarget!=null') &&
+  weekRepLabel.includes('nativeTargetRepMetric(reps,exactRepTarget,true)'),
+  'Named rep-out must show the issued minimum in Plan and Target, including saved-set correction, without changing Last or follow-ups');

@@ -807,8 +807,37 @@ class NativeKotlinTieredInitialReferenceReviewTest {
                 it.fileName.toString().endsWith("-w6.bin")}.findFirst().get()
         }
         val original=java.nio.file.Files.readAllBytes(receipt)
+        val expected=checkNotNull(active)
+        val identityBytes=java.io.ByteArrayOutputStream().also{stream->
+            java.io.DataOutputStream(stream).use{out->
+                out.writeInt(0x50494F31);out.writeInt(1)
+                out.writeUTF(expected.ownerKey);out.writeUTF(expected.athleteId)
+            }
+        }.toByteArray()
+        java.nio.file.Files.write(root.resolve("local-athlete.bin"),
+            identityBytes+java.security.MessageDigest.getInstance("SHA-256").digest(identityBytes))
+        val before=NativeKotlinStagedCoreStoreAudit.inspect(root,expected)
+        assertTrue(before.toString(),before is NativeKotlinStagedCoreAuditResult.Verified)
+        val verified=before as NativeKotlinStagedCoreAuditResult.Verified
+        assertEquals(5,verified.tierTransitionReceipts)
+        assertEquals(6,verified.finishedWorkouts)
+        val password="tier-specialist-recovery-password".toCharArray()
+        fun capture():ByteArray {
+            val archive=NativeKotlinEncryptedTrainingSnapshot.capture(root,fence,expected,
+                {active},{reader.read(expected.ownerKey,expected.athleteId) is
+                    NativeKotlinMixedHistoryReadResult.Review},password)
+            assertTrue(archive.toString(),archive is NativeKotlinTrainingSnapshotResult.Ready)
+            return (archive as NativeKotlinTrainingSnapshotResult.Ready).encrypted
+        }
+        val validArchive=capture()
         java.nio.file.Files.delete(receipt)
         assertNull(coldStore().inventoryForRecovery("owner-1"))
+        assertEquals(NativeKotlinStagedCoreAuditResult.Rejected(
+            NativeKotlinStagedCoreRefusal.TIER_TRANSITION_INVENTORY_UNVERIFIED),
+            NativeKotlinStagedCoreStoreAudit.inspect(root,expected))
+        // Encryption authenticates the captured bytes; it cannot replace
+        // the independent numerical and linked receipt audit on restore.
+        val incompleteArchive=capture()
         java.nio.file.Files.write(receipt,original.copyOf(original.size-1))
         assertNull(coldStore().inventoryForRecovery("owner-1"))
         java.nio.file.Files.write(receipt,original)
@@ -828,6 +857,23 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         assertEquals(SetOutcome.FAILED_ATTEMPT,exposures[3].observations.single().outcome)
         assertEquals(0,exposures[3].observations.single().actualReps)
         assertEquals(2L,(drafts.read("owner-1","cycle-1") as NativeCustomDraftReadResult.Found).draft.revision)
+        val destination=temp.newFolder("tier-clean-install").toPath().resolve("kotlin-coach-v1")
+        fun restore(archive:ByteArray)=NativeKotlinCleanStoreRestore.restoreToAbsentStore(
+            destination,archive,password,expected,{stage,who->
+                NativeKotlinStagedCoreStoreAudit.inspect(stage,who) is NativeKotlinStagedCoreAuditResult.Verified
+            })
+        assertEquals(NativeKotlinCleanRestoreResult.Rejected(
+            NativeKotlinCleanRestoreRefusal.INVALID_RESTORED_STORE),restore(incompleteArchive))
+        assertFalse(java.nio.file.Files.exists(destination))
+        val restored=restore(validArchive)
+        assertTrue(restored.toString(),restored is NativeKotlinCleanRestoreResult.Committed)
+        assertEquals(before,NativeKotlinStagedCoreStoreAudit.inspect(destination,expected))
+        // Exact receipt bytes survive encryption, staging, and atomic
+        // publication. The cold audit independently replays all six weeks.
+        assertArrayEquals(original,java.nio.file.Files.readAllBytes(destination.resolve(receipt.fileName)))
+        assertEquals(NativeKotlinCleanRestoreResult.Rejected(
+            NativeKotlinCleanRestoreRefusal.EXISTING_TRAINING_DATA),restore(validArchive))
+        assertEquals(before,NativeKotlinStagedCoreStoreAudit.inspect(destination,expected))
     }
 
     @Test fun initialTierCannotBorrowOlderOrdinarySameDayReceiptsOrRestartAUsedSlot() {

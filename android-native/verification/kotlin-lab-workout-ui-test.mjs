@@ -1925,3 +1925,10 @@ assert.ok(basicPreviewScreen.includes('if(scheme==NamedPercentageScheme.GZCLP)')
   machineChoiceHost.includes('fixedNamedDraftReview.previewTieredInitial(NativeTieredInitialSelection(') &&
   machineChoiceHost.includes('fixedNamedDraftReview.acceptTieredInitial(displayed.selection,displayed,confirmed)'),
   'Native GZCLP authoring must preview explicit load and increment and save only the exact reviewed unsigned revision');
+
+assert.ok(basicPreviewController.includes('host.reviewTieredCalendar(cycleId)') &&
+  basicPreviewController.includes('tieredCalendar=calendar') &&
+  basicPreviewController.includes('nextCycleSlot=initialNext') &&
+  basicPreviewScreen.includes('when(val calendar=state.tieredCalendar)') &&
+  machineChoiceHost.includes('nextCustomCycleSession.reviewTieredCalendar(owner.ownerKey,cycleId)'),
+  'Tiered calendar discovery must remain separate from the initial workout issue grant');

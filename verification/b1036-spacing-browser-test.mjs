@@ -72,6 +72,30 @@ try{
     assert.ok(settings.seg.every(x=>x>=11.5),'Training experience labels keep a 12px inset '+JSON.stringify({width,settings}));
     assert.equal(settings.small,0,'Secondary and ghost actions are 48px tall '+ctx);
 
+    // B1052: the library's chip rails bleed to the screen edge with the gutter as scroll padding, and
+    // Exercise detail is a full-width top app bar over one 16px-gutter column.
+    await tab('home');
+    await page.click('button[aria-label="Exercise library"]');await page.waitForSelector('.wpb-library-row');await wait(600);
+    const rails=await page.evaluate(()=>[...document.querySelectorAll('.wpb-library-filter-strip')].map(r=>{const b=r.getBoundingClientRect(),cs=getComputedStyle(r);
+      r.scrollLeft=r.scrollWidth;const last=[...r.children].pop().getBoundingClientRect();return {left:Math.round(b.left),right:Math.round(innerWidth-b.right),pad:parseFloat(cs.paddingLeft),endGap:Math.round(b.right-last.right)};}));
+    const inset=await page.evaluate(()=>parseFloat(getComputedStyle(document.querySelector('.wpb')).getPropertyValue('--pi-page-inset')));
+    assert.ok(rails.length&&rails.every(r=>r.left<=1&&r.right<=1&&r.pad===inset&&r.endGap>=inset-1),'Library chip rails bleed with the page gutter at both ends '+JSON.stringify({width,rails}));
+    await page.evaluate(()=>document.querySelector('.wpb-library-row').click());await page.waitForSelector('.wpb-exercise-detail-header');await wait(700);
+    const detail=await page.evaluate(()=>{const h=document.querySelector('.wpb-exercise-detail-header').getBoundingClientRect(),hc=getComputedStyle(document.querySelector('.wpb-exercise-detail-header'));
+      const back=document.querySelector('.wpb-exercise-detail-back'),bc=getComputedStyle(back),br=back.getBoundingClientRect();
+      const body=document.querySelector('.wpb-exercise-detail-body');const kids=[...body.children].filter(e=>e.getBoundingClientRect().height>0);
+      return {hLeft:Math.round(h.left),hWidth:Math.round(h.width),radius:hc.borderTopLeftRadius,backBg:bc.backgroundColor,backBorder:bc.borderTopWidth,backSize:[Math.round(br.width),Math.round(br.height)],
+        lefts:[...new Set(kids.map(k=>Math.round(k.getBoundingClientRect().left)))]};});
+    assert.ok(detail.hLeft===0&&detail.hWidth===width&&detail.radius==='0px','Exercise detail header is a full-width top app bar '+JSON.stringify({width,detail}));
+    assert.ok(detail.backBg==='rgba(0, 0, 0, 0)'&&detail.backBorder==='0px'&&detail.backSize.every(v=>v===48),'Back is a standard 48px icon button '+JSON.stringify(detail));
+    assert.deepEqual(detail.lefts,[inset],'Every exercise-detail block starts on the page gutter '+JSON.stringify({width,detail}));
+    await page.evaluate(()=>[...document.querySelectorAll('.wpb-exercise-tab')].find(b=>b.textContent.trim()==='Charts')?.click());await wait(700);
+    const metric=await page.evaluate(()=>{const r=document.querySelector('.wpb-exercise-metric-tabs');if(!r)return null;const b=r.getBoundingClientRect();r.scrollLeft=r.scrollWidth;const last=[...r.children].pop().getBoundingClientRect();
+      return {left:Math.round(b.left),right:Math.round(innerWidth-b.right),first:Math.round(r.children[0].getBoundingClientRect().left+r.scrollLeft-r.scrollLeft),endGap:Math.round(b.right-last.right)};});
+    if(metric)assert.ok(metric.left===0&&metric.right===0&&metric.endGap>=inset-1,'Chart metric chips bleed and end on the gutter '+JSON.stringify({width,metric}));
+    await page.evaluate(()=>document.querySelector('.wpb-exercise-detail-back').click());await wait(500);
+    await page.evaluate(()=>document.querySelector('[aria-label="Back"]')?.click());await wait(500);
+
     // Workout: the active set does not shift its controls against the other rows.
     await tab('home');
     await page.evaluate(()=>document.querySelector('.wpb-home-hero .wpb-primary-action').click());await wait(1500);

@@ -1676,7 +1676,7 @@ function StyleTag({ theme } = {}) {
         border-top:1px solid var(--hairline)!important;
         box-shadow:var(--overlay-shadow)!important;}
       [data-sheet-drag]::before{width:34px!important;height:4px!important;margin-bottom:9px!important;background:${C.border}!important;}
-      .wpb-pop,.wpb-dialog,.wpb [data-wpb-dialog]>div:first-child:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)){
+      .wpb-pop,.wpb-dialog,.wpb [data-wpb-dialog]>div:first-child:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet,.wpb-exercise-detail-header)){
         border-radius:16px!important;
         box-shadow:var(--overlay-shadow)!important;
       }

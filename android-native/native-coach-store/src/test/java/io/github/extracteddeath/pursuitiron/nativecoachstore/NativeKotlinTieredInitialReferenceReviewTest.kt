@@ -332,6 +332,20 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         assertEquals(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT,confirmDay())
         java.nio.file.Files.write(file,frozen)
         assertEquals(restoredDay,recoverDay())
+        val original=(coldPrepared().open("owner-1",first.nextWorkoutId) as NativeCustomPreparedRead.Found).workout
+        val correction=NativeKotlinCustomHistoryCorrectionTransaction(history,coldJournal(),
+            NativeKotlinCustomSavedCorrectionFileStore(root,fence,identity,coldJournal(),history),fence,identity)
+            .correct("owner-1","athlete-1",first.nextWorkoutId,
+                CustomSavedVisitCorrection("multi-tier-correction",0,
+                    CustomWorkoutVisitKey(original.snapshot.slots.single().sets.single().setKey,
+                        CustomWorkoutVisitPart.MAIN),"${first.nextWorkoutId}-actual",
+                    KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(n("25"),LoadUnit.LB,1,0)))
+        assertTrue(correction.toString(),correction is NativeCustomCorrectionTransactionResult.Committed)
+        assertEquals(NativeTieredTransitionRecovery.Refused(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED),recoverDay())
+        val corrected=preview(nextSelection) as NativeSavedNamedReview.Signed
+        assertEquals(TieredLinearState(1,n("25")),corrected.nextMultiTierCandidate?.slots?.single()?.result?.state)
+        assertEquals(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT,confirmDay(corrected))
+        assertArrayEquals(frozen,java.nio.file.Files.readAllBytes(file))
         assertEquals(saved,coldDrafts.read("owner-1","cycle-1"))
         assertEquals(NativeCustomPreparedRead.Missing,coldPrepared().open("owner-1",nextSelection.nextWorkoutId))
         active=NativeKotlinOwnerIdentity("other-owner","other-athlete")

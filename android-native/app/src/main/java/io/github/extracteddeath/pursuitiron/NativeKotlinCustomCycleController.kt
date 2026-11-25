@@ -39,7 +39,7 @@ internal data class NativeKotlinCustomCycleState(
     val tieredTransitionPrepared:NativeCustomPreparedWorkout?=null,
     val tieredInitialPreview:NativeCustomPreflightResult.ReviewedPreview?=null,
     val tieredInitialPrepared:NativeCustomPreparedWorkout?=null,
-    val tieredReference:NativeTieredInitialReview.Ready?=null,
+    val tieredReferenceBatch:NativeTieredInitialBatchReview.Ready?=null,
     val fixedNamedBatch:NativeNamedBatchReview.Ready?=null,
     val fixedNamedReview:NativeSavedNamedReview?=null,
     val fixedNamedWorkoutId:String?=null,
@@ -1081,30 +1081,31 @@ internal class NativeKotlinCustomCycleController(
         current.value.draft?.cycleId?.let{refreshFixedNamedReview(it)}
     }
 
-    fun reviewTieredInitialReference(week:Int,weekday:Int,slotId:String,tier:PercentageTier,
-        initialLoad:java.math.BigDecimal,maximumIncrease:java.math.BigDecimal)=run {
+    fun reviewTieredInitialChoices(choices:List<NativeTieredInitialChoice>)=run {
         val before=current.value
         val draft=before.draft ?:return@run
         if(before.fixedNamedDraft || before.tieredDraft)return@run
-        current.value=before.copy(tieredReference=null,fixedNamedBatch=null)
-        val result=host.previewTieredInitialReference(draft.cycleId,week,weekday,slotId,
-            tier,initialLoad,maximumIncrease,"tier-"+java.util.UUID.randomUUID().toString())
-        val ready=(result as? NativeTieredInitialReview.Ready)?.takeIf{it.source.cycle==draft}
-        current.value=current.value.copy(tieredReference=ready,
-            message=if(ready!=null)"Review the exact initial targets before saving."
-                else "Initial tier preview refused: "+(result as? NativeTieredInitialReview.Rejected)
+        current.value=before.copy(tieredReferenceBatch=null,fixedNamedBatch=null)
+        val result=host.previewTieredInitialChoices(draft.cycleId,choices)
+        val ready=(result as? NativeTieredInitialBatchReview.Ready)?.takeIf{
+            it.individual.all{review->review.source.cycle==draft} &&
+                it.selections.map{selection->NativeTieredInitialChoice.from(selection)}==choices
+        }
+        current.value=current.value.copy(tieredReferenceBatch=ready,
+            message=if(ready!=null)"Review all exact initial targets before saving."
+                else "Tier reference preview refused: "+(result as? NativeTieredInitialBatchReview.Rejected)
                     ?.reason?.name.orEmpty().lowercase().replace('_',' '))
     }
 
-    fun acceptTieredInitialReference(displayed:NativeTieredInitialReview.Ready)=run {
+    fun acceptTieredInitialChoices(displayed:NativeTieredInitialBatchReview.Ready)=run {
         val before=current.value
         val draft=before.draft ?:return@run
-        if(before.fixedNamedDraft || before.tieredDraft || before.tieredReference!=displayed ||
-            displayed.source.cycle!=draft)return@run
-        val result=host.acceptTieredInitialReference(displayed,true)
-        if(result !is NativeTieredInitialAcceptance.Saved) {
-            current.value=before.copy(tieredReference=null,
-                message="Initial reference changed or was refused. Nothing approved.")
+        if(before.fixedNamedDraft || before.tieredDraft || before.tieredReferenceBatch!=displayed ||
+            displayed.individual.any{it.source.cycle!=draft})return@run
+        val result=host.acceptTieredInitialChoices(displayed,true)
+        if(result !is NativeTieredInitialBatchAcceptance.Saved) {
+            current.value=before.copy(tieredReferenceBatch=null,
+                message="Tier reference review changed or was refused. Nothing approved.")
             return@run
         }
         applyRead(draft.cycleId,host.readCustomCycleDraft(draft.cycleId))
@@ -1114,7 +1115,7 @@ internal class NativeKotlinCustomCycleController(
     fun reviewFixedNamedChoices(choices:List<NativeFixedNamedChoice>)=run {
         val before=current.value
         val draft=before.draft ?:return@run
-        current.value=before.copy(fixedNamedBatch=null,tieredReference=null)
+        current.value=before.copy(fixedNamedBatch=null,tieredReferenceBatch=null)
         if(before.fixedNamedDraft || before.tieredDraft)return@run
         val result=host.previewFixedNamedCycle(draft.cycleId,choices)
         val ready=(result as? NativeNamedBatchReview.Ready)?.takeIf{

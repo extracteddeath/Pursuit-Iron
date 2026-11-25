@@ -884,11 +884,18 @@ class NativeKotlinFirstTierTransitionConsentStore(
                 ?:return@withOwnerTransaction null
             require(Files.isDirectory(directory,LinkOption.NOFOLLOW_LINKS))
             val files=Files.walk(directory).use{stream->
-                stream.filter{it.fileName.toString().startsWith("tier-first-transition-")}
+                stream.filter{it.fileName.toString().let{name->
+                    name.startsWith("tier-first-transition-") || name.startsWith("tier-day-transition-")}}
                     .limit(4097).toList()
             }
             require(files.size<=4096)
-            val records=files.map{file->
+            val multiRecords=files.filter{it.fileName.toString().startsWith("tier-day-transition-")}.map{file->
+                val old=decodeMulti(readMulti(file))
+                require(old.owner==ownerKey && old.athlete==owner.athleteId &&
+                    file==multiPath(ownerKey,old.cycle,old.selection.absoluteWeek,old.selection.weekday))
+                old
+            }
+            val records=files.filter{it.fileName.toString().startsWith("tier-first-transition-")}.map{file->
                 val old=decode(readBytes(file))
                 require(old.ownerKey==ownerKey && old.athleteId==owner.athleteId)
                 val first=firstWeek(ownerKey,old.cycleId)?:error("missing initial tier receipt")
@@ -903,7 +910,16 @@ class NativeKotlinFirstTierTransitionConsentStore(
                 .map{it.manifest.workoutId}.toSet()
             val census=(outstanding.inspect(ownerKey,owner.athleteId,completed)
                 as? NativeCustomInventoryReview.Reviewed)?:return@withOwnerTransaction null
-            require(records.map{it.selection.nextWorkoutId}.distinct().size==records.size)
+            val allIds=records.map{it.selection.nextWorkoutId}+multiRecords.map{it.selection.nextWorkoutId}
+            require(allIds.distinct().size==allIds.size)
+            require(records.map{it.cycleId}.toSet().intersect(multiRecords.map{it.cycle}.toSet()).isEmpty())
+            val reviewer=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
+                signoffs,history,outstanding,machineRosters)
+            for((cycleId,unordered) in multiRecords.groupBy{it.cycle}) {
+                val sorted=unordered.sortedWith(compareBy<NativeFrozenTierDay>{it.selection.absoluteWeek}
+                    .thenBy{it.selection.weekday})
+                require(reviewer.verifyMultiTierRecoveryInventory(ownerKey,cycleId,sorted))
+            }
             for((cycleId,unordered) in records.groupBy{it.cycleId}){
                 val stored=drafts.read(ownerKey,cycleId) as? NativeCustomDraftReadResult.Found
                     ?:return@withOwnerTransaction null
@@ -1020,10 +1036,12 @@ class NativeKotlinFirstTierTransitionConsentStore(
                     ?:return@withOwnerTransaction null
                 if(prepared.authority==NativeCustomPreparationAuthority.TIERED_TRANSITION)
                     require(records.any{it.selection.nextWorkoutId==fact.workoutId &&
-                        it.fingerprint==prepared.consentFingerprint})
+                        it.fingerprint==prepared.consentFingerprint} ||
+                        multiRecords.any{it.selection.nextWorkoutId==fact.workoutId &&
+                            it.fingerprint==prepared.consentFingerprint})
             }
             if(identity.signedInIdentity()!=owner)return@withOwnerTransaction null
-            records.size
+            records.size+multiRecords.size
         }}.getOrNull()
     }
 

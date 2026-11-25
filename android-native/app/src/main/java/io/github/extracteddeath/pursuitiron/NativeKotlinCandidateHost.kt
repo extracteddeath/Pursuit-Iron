@@ -926,7 +926,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val saved=customDraftStore.read(owner.ownerKey,cycleId) as? NativeCustomDraftReadResult.Found
             ?:return NativeCustomNextCycleSlot.Rejected("Current tier references are unavailable.")
         return if(saved.tieredInitialReceipts.size>1)
-            nextCustomCycleSession.reviewMultiTieredInitial(owner.ownerKey,cycleId)
+            nextCustomCycleSession.reviewMultiTieredInitial(owner.ownerKey,cycleId,tieredTransitions)
         else nextCustomCycleSession.reviewTieredCalendar(owner.ownerKey,cycleId)
     }
 
@@ -945,7 +945,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val saved=customDraftStore.read(ownerKey,cycleId) as? NativeCustomDraftReadResult.Found
             ?:return NativeCustomNextCycleSlot.Rejected("Current tier references are unavailable.")
         return if(saved.tieredInitialReceipts.size>1)
-            nextCustomCycleSession.reviewMultiTieredInitial(ownerKey,cycleId)
+            nextCustomCycleSession.reviewMultiTieredInitial(ownerKey,cycleId,tieredTransitions)
         else nextCustomCycleSession.reviewTieredInitial(ownerKey,cycleId,inputs)
     }
 

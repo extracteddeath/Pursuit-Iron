@@ -2575,8 +2575,9 @@ try {
                 flags:flags.map(el=>el.getBoundingClientRect().height),
                 overflow:root.scrollWidth>root.clientWidth+1};
         });
-        assert.ok(r44Library.opaque && r44Library.page!==r44Library.header &&
-            r44Library.header===r44Library.result &&
+        // B1053: the Library header is a flat M3 top app bar on the page canvas.
+        assert.ok(r44Library.opaque && r44Library.page===r44Library.header &&
+            r44Library.header!==r44Library.result &&
             r44Library.search===r44Library.filter &&
             r44Library.search!==r44Library.result &&
             r44Library.images.every(x=>x==='none') &&

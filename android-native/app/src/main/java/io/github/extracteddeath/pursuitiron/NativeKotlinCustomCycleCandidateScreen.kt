@@ -2598,8 +2598,9 @@ private fun NativeTieredTransitionControls(state:NativeKotlinCustomCycleState,
     val review=state.tieredTransitionReview
     val candidate=review?.nextTierCandidate
     val shown=state.tieredTransitionPreview
-    var resetConfirmed by remember(candidate){mutableStateOf(false)}
-    var recoveryConfirmed by remember(candidate){mutableStateOf(false)}
+    val stale=state.staleTieredTransition
+    var resetConfirmed by remember(candidate,stale){mutableStateOf(false)}
+    var recoveryConfirmed by remember(candidate,stale){mutableStateOf(false)}
     if(shown==null) {
         Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
             Checkbox(checked=recovery,onCheckedChange={recovery=it},enabled=!state.busy)
@@ -2607,6 +2608,17 @@ private fun NativeTieredTransitionControls(state:NativeKotlinCustomCycleState,
         }
         OutlinedButton(onClick={controller.previewTieredTransition(recovery)},enabled=!state.busy,
             modifier=Modifier.fillMaxWidth()){Text("Review next tier workout")}
+    }
+    stale?.let{old->
+        Text("Previous approved targets",style=MaterialTheme.typography.titleMedium)
+        old.previousTargets.forEach{set->
+            Text("${kotlinIssuedLoadLabel(set.load)} · ${set.repTargetLabel()}",
+                style=MaterialTheme.typography.bodySmall)
+        }
+        if(old.preparation!=null)
+            Text("The old prepared workout cannot be issued after this history correction.",
+                style=MaterialTheme.typography.bodyMedium)
+        Text("Corrected targets",style=MaterialTheme.typography.titleMedium)
     }
     candidate?.let{next->
         Text("Week ${next.selection.absoluteWeek} · Tier stage ${next.result.state.stage+1}",
@@ -2618,7 +2630,10 @@ private fun NativeTieredTransitionControls(state:NativeKotlinCustomCycleState,
             Text("${target.load.toPlainString()} ${next.request.scope.unit} · ${target.minimumReps}${if(target.repOut)"+" else ""} reps",
                 style=MaterialTheme.typography.bodySmall)
         }
-        if(shown==null) {
+        if(shown==null && stale?.preparation!=null) {
+            OutlinedButton(onClick=controller::discardStaleTieredPreparation,enabled=!state.busy,
+                modifier=Modifier.fillMaxWidth()){Text("Discard unissued preparation")}
+        } else if(shown==null) {
             if(next.requiresExplicitResetReview) {
                 Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
                     Checkbox(checked=resetConfirmed,onCheckedChange={resetConfirmed=it},enabled=!state.busy)
@@ -2634,7 +2649,7 @@ private fun NativeTieredTransitionControls(state:NativeKotlinCustomCycleState,
             Button(onClick={controller.approveTieredTransition(resetConfirmed,recoveryConfirmed)},
                 enabled=!state.busy && (!next.requiresExplicitResetReview || resetConfirmed) &&
                     (!next.selection.recovery || recoveryConfirmed),modifier=Modifier.fillMaxWidth()){
-                Text("Approve exact tier targets")
+                Text(if(stale!=null)"Replace approval with corrected targets" else "Approve exact tier targets")
             }
         }
     }

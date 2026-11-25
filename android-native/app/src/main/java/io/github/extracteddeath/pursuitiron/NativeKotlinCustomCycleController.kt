@@ -33,6 +33,7 @@ internal data class NativeKotlinCustomCycleState(
     val tieredSupportPrepared:NativeCustomPreparedWorkout?=null,
     val tieredTransitionAvailable:Boolean=false,
     val tieredTransitionReview:NativeSavedNamedReview.Signed?=null,
+    val staleTieredTransition:NativeStaleTierTransitionReview?=null,
     val tieredTransitionPreview:NativeFirstTierTransitionPreflight.Reviewed?=null,
     val tieredTransitionPrepared:NativeCustomPreparedWorkout?=null,
     val tieredInitialPreview:NativeCustomPreflightResult.ReviewedPreview?=null,
@@ -740,7 +741,7 @@ internal class NativeKotlinCustomCycleController(
         }==true
         current.value=before.copy(tieredInitialReview=ready ?:signed,
             tieredCalendar=calendar,tieredSupportAvailable=supporting,
-            tieredTransitionAvailable=transition,tieredTransitionReview=null,
+            tieredTransitionAvailable=transition,tieredTransitionReview=null,staleTieredTransition=null,
             tieredTransitionPreview=null,tieredTransitionPrepared=null,
             tieredSupportWorkoutId=null,tieredSupportPreview=null,tieredSupportPrepared=null,
             signoff=null,coachingAudit=null,reviewedCoachInputs=null,
@@ -915,8 +916,11 @@ internal class NativeKotlinCustomCycleController(
             is NativeTieredTransitionRecovery.Refused -> {
                 if(restored.reason!=NativeTieredTransitionConsentResult.MISSING ||
                     next !is NativeCustomNextCycleSlot.Next) {
-                    current.value=before.copy(tieredTransitionReview=null,tieredTransitionPreview=null,
-                        tieredTransitionPrepared=null,message="Saved tier approval cannot be verified. Review history before continuing.")
+                    val stale=host.reviewStaleTieredTransition(draft.cycleId,week,day)
+                    current.value=before.copy(tieredTransitionReview=stale?.review,staleTieredTransition=stale,
+                        tieredTransitionPreview=null,tieredTransitionPrepared=null,
+                        message=if(stale!=null)"Corrected history changed the approval. Review the old and new targets."
+                            else "Saved tier approval cannot be verified. Review history before continuing.")
                     return@run
                 }
                 val selection=NativeTieredNextSelection("tier-"+UUID.randomUUID().toString(),week,recovery)
@@ -924,7 +928,7 @@ internal class NativeKotlinCustomCycleController(
                     as? NativeSavedNamedReview.Signed)?.takeIf{
                     it.draft==draft && it.nextTierCandidate?.selection==selection
                 }
-                current.value=before.copy(tieredTransitionReview=shown,tieredTransitionPreview=null,
+                current.value=before.copy(tieredTransitionReview=shown,staleTieredTransition=null,tieredTransitionPreview=null,
                     tieredTransitionPrepared=null,
                     message=if(shown!=null)"Review the next tier targets before approving."
                         else "No verified next tier targets are available.")
@@ -947,7 +951,7 @@ internal class NativeKotlinCustomCycleController(
                     it.snapshot==shown.session && it.consentFingerprint==shown.receiptFingerprint &&
                     it.consentRevision==review.consent.recordRevision}
         else null
-        current.value=before.copy(tieredCalendar=next,tieredTransitionReview=review,
+        current.value=before.copy(tieredCalendar=next,tieredTransitionReview=review,staleTieredTransition=null,
             tieredTransitionPreview=shown,tieredTransitionPrepared=saved,
             message=if(shown!=null)"Approved tier workout verified. Review all targets before preparing."
                 else "Approved tier workout cannot be verified.")
@@ -959,11 +963,29 @@ internal class NativeKotlinCustomCycleController(
         val shown=before.tieredTransitionReview ?:return@run
         if(!before.tieredTransitionAvailable || before.tieredTransitionPreview!=null ||
             shown.draft!=draft)return@run
-        val result=host.confirmTieredTransition(draft.cycleId,shown,reset,recovery)
+        val stale=before.staleTieredTransition
+        if(stale?.preparation!=null)return@run
+        val result=if(stale!=null)host.replaceStaleTieredTransition(draft.cycleId,stale,reset,recovery)
+            else host.confirmTieredTransition(draft.cycleId,shown,reset,recovery)
         if(result in setOf(NativeTieredTransitionConsentResult.RECORDED,
-                NativeTieredTransitionConsentResult.REPLAYED))
+                NativeTieredTransitionConsentResult.REPLAYED,NativeTieredTransitionConsentResult.REPLACED))
             showApprovedTieredTransition(before,shown)
         else current.value=before.copy(message="Tier approval refused: "+result.name.lowercase().replace('_',' '))
+    }
+
+    fun discardStaleTieredPreparation()=run {
+        val before=current.value
+        val draft=before.draft ?:return@run
+        val stale=before.staleTieredTransition ?:return@run
+        val saved=stale.preparation ?:return@run
+        if(!before.tieredTransitionAvailable || stale.review!=before.tieredTransitionReview)return@run
+        val removed=host.cancelStaleTieredTransition(draft.cycleId,stale)
+        refreshTieredInitialReview(draft.cycleId)
+        if(removed) {
+            val fresh=host.reviewStaleTieredTransition(draft.cycleId,saved.snapshot.absoluteWeek,saved.snapshot.weekday)
+            current.value=current.value.copy(tieredTransitionReview=fresh?.review,staleTieredTransition=fresh,
+                message="Old preparation discarded. Review the corrected targets before replacing approval.")
+        } else current.value=current.value.copy(message="Preparation was not discarded. Refresh and verify history.")
     }
 
     fun prepareTieredTransitionWorkout()=run {

@@ -1954,3 +1954,14 @@ assert.ok(basicPreviewScreen.includes('NativeTieredTransitionControls(state,cont
   machineChoiceHost.includes('tieredTransitions.prepareScheduled') &&
   machineChoiceHost.includes('tieredTransitions.issueScheduled'),
   'Successive tier workouts must use ordered review, explicit consent, and the exact existing native journal');
+
+assert.ok(basicPreviewScreen.includes('Previous approved targets') &&
+  basicPreviewScreen.includes('Corrected targets') &&
+  basicPreviewScreen.includes('controller::discardStaleTieredPreparation') &&
+  basicPreviewController.includes('host.reviewStaleTieredTransition') &&
+  basicPreviewController.includes('host.cancelStaleTieredTransition') &&
+  basicPreviewController.includes('host.replaceStaleTieredTransition') &&
+  machineChoiceHost.includes('tieredTransitions.reviewStaleScheduled') &&
+  machineChoiceHost.includes('tieredTransitions.cancelStaleScheduled') &&
+  machineChoiceHost.includes('tieredTransitions.replaceStaleScheduled'),
+  'Corrected tier history must show previous and corrected targets and require explicit replacement before issuing');

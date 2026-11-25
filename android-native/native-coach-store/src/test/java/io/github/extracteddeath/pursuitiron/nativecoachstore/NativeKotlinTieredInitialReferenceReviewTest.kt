@@ -824,8 +824,8 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         val password="tier-specialist-recovery-password".toCharArray()
         fun capture():ByteArray {
             val archive=NativeKotlinEncryptedTrainingSnapshot.capture(root,fence,expected,
-                {active},{reader.read(expected.ownerKey,expected.athleteId)
-                    is NativeKotlinMixedHistoryReadResult.Review},password)
+                {active},{reader.read(expected.ownerKey,expected.athleteId) is
+                    NativeKotlinMixedHistoryReadResult.Review},password)
             assertTrue(archive.toString(),archive is NativeKotlinTrainingSnapshotResult.Ready)
             return (archive as NativeKotlinTrainingSnapshotResult.Ready).encrypted
         }

@@ -13,6 +13,16 @@ enum class NativeSavedNamedReviewRefusal {
 data class NativeTieredNextSelection(val nextWorkoutId:String,val absoluteWeek:Int,
     val recovery:Boolean=false)
 
+/** The engine reports every historical reset in the replay. Consent is
+ * needed only for a newly generated reset from this latest completed
+ * exposure; an earlier reset is authenticated by its own frozen receipt.
+ * A recovery exposure contributes no reset decision of its own.
+ */
+private fun needsNewTierResetConsent(request:TieredLinearRequest,result:TieredLinearResult.Candidate):Boolean =
+    request.completed.lastOrNull()?.workoutId?.let{latest->
+        result.transitions.any{it.workoutId==latest && it.decision==TieredLinearDecision.RESET_REVIEW}
+    } ?:false
+
 data class NativeTieredNextCandidate(
     val selection:NativeTieredNextSelection,val request:TieredLinearRequest,
     val result:TieredLinearResult.Candidate,val draft:CustomPercentageDraftResult.Proposed,
@@ -22,7 +32,7 @@ data class NativeTieredNextCandidate(
 ) {
     val mayIssueWorkout:Boolean get()=false
     val maySaveProgram:Boolean get()=false
-    val requiresExplicitResetReview:Boolean get()=result.requiresReviewedReset
+    val requiresExplicitResetReview:Boolean get()=needsNewTierResetConsent(request,result)
 }
 
 sealed interface NativeSavedNamedReview {
@@ -373,7 +383,7 @@ class NativeKotlinSavedNamedPercentageReview(
                     val oldNumeric=TieredLinearProgressionDomain.review(oldRequest)
                         as? TieredLinearResult.Candidate
                         ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
-                    if(oldNumeric.requiresReviewedReset!=old.resetRequired)
+                    if(needsNewTierResetConsent(oldRequest,oldNumeric)!=old.resetRequired)
                         return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
                     val oldDraft=CustomPercentageDraftDomain.reviewTiered(
                         CustomPercentageDraftSource(historicalCycle,stamp.copy(cycleRevision=historicalCycle.revision),

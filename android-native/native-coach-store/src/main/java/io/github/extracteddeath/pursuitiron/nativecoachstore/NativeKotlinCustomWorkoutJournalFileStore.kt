@@ -227,6 +227,25 @@ class NativeKotlinCustomWorkoutJournalFileStore(
         absoluteWeek:Int,weekday:Int,
         inputs:CustomCoachAuditInputs,
         calibration:NativeKotlinBlockCalibrationConsentStore?=null
+    ):NativeCustomJournalResult =
+        issueReviewed(ownerKey,workoutId,cycleId,absoluteWeek,weekday,inputs,
+            NativeCustomPreparationAuthority.CUSTOM_CYCLE,calibration,null)
+
+    /** First issuance of fixed named prescriptions; no ordinary calibration
+     * or implicit progression is permitted. Existing named sessions replay
+     * exactly even when the source has subsequently been revoked. */
+    fun issueNamed(ownerKey:String,workoutId:String,cycleId:String,
+        absoluteWeek:Int,weekday:Int,inputs:CustomCoachAuditInputs,
+        historyReader:NativeKotlinMixedHistoryReadCoordinator
+    ):NativeCustomJournalResult =
+        issueReviewed(ownerKey,workoutId,cycleId,absoluteWeek,weekday,inputs,
+            NativeCustomPreparationAuthority.NAMED_CYCLE,null,historyReader)
+
+    private fun issueReviewed(ownerKey:String,workoutId:String,cycleId:String,
+        absoluteWeek:Int,weekday:Int,inputs:CustomCoachAuditInputs,
+        authority:NativeCustomPreparationAuthority,
+        calibration:NativeKotlinBlockCalibrationConsentStore?,
+        namedHistory:NativeKotlinMixedHistoryReadCoordinator?
     ):NativeCustomJournalResult {
         if(!id.matches(workoutId)||!id.matches(cycleId) ||
             absoluteWeek !in 1..104 || weekday !in 0..6)
@@ -244,8 +263,7 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                     val origin=(prepared.open(ownerKey,workoutId)
                         as? NativeCustomPreparedRead.Found)?.workout
                     val snap=currentRecord.issued.journal.snapshot
-                    return@withOwnerTransaction if(origin?.authority==
-                            NativeCustomPreparationAuthority.CUSTOM_CYCLE &&
+                    return@withOwnerTransaction if(origin?.authority==authority &&
                         snap.stamp.cycleId==cycleId &&
                         snap.absoluteWeek==absoluteWeek && snap.weekday==weekday)
                         currentRecord
@@ -267,7 +285,7 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                 // A future-block preparation is a different consent protocol.
                 // It must never be laundered into legacy custom issuance,
                 // even after a later activation handoff has been cleared.
-                if(selected.authority!=NativeCustomPreparationAuthority.CUSTOM_CYCLE)
+                if(selected.authority!=authority)
                     return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                         NativeCustomJournalRefusal.CONSENT_CHANGED)
                 if(selected.athleteId!=current.athleteId ||
@@ -298,6 +316,24 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                     other.reason!=NativeJournalFileRefusal.NOT_ISSUED)
                     return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                         NativeCustomJournalRefusal.WORKOUT_ID_CONFLICT)
+                if(authority==NativeCustomPreparationAuthority.NAMED_CYCLE) {
+                    if(namedHistory==null ||
+                        NativeKotlinBlockCalibrationConsentStore.hasRecord(root,ownerKey,workoutId))
+                        return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                            NativeCustomJournalRefusal.CONSENT_CHANGED)
+                    val reviewed=preflight.inspectNamed(ownerKey,workoutId,cycleId,
+                        absoluteWeek,weekday,inputs,namedHistory,
+                        NativeKotlinCustomOutstandingWorkoutInventory(prepared,this))
+                        as? NativeCustomPreflightResult.ReviewedPreview
+                        ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                            NativeCustomJournalRefusal.CONSENT_CHANGED)
+                    if(reviewed.receipt.recordRevision!=selected.consentRevision ||
+                        reviewed.receipt.fingerprintSha256!=selected.consentFingerprint ||
+                        reviewed.session!=selected.snapshot)
+                        return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                            NativeCustomJournalRefusal.CONSENT_CHANGED)
+                    return@withOwnerTransaction commitFirstIssue(current,selected)
+                }
                 val pre=preflight.inspect(ownerKey,cycleId,
                     absoluteWeek,weekday,inputs)
                 val needsCalibration=selected.calibrationApprovalFingerprint!=null ||
@@ -358,20 +394,25 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                     actuallyApproved!=selected.snapshot)
                     return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                         NativeCustomJournalRefusal.CONSENT_CHANGED)
-                if(owner(ownerKey)!=current)
-                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
-                        NativeCustomJournalRefusal.NOT_AUTHORIZED)
-                val created=NativeCustomIssuedJournal(
-                    ownerKey,current.athleteId,selected.consentRevision,
-                    CustomWorkoutJournalDomain.begin(workoutId,
-                        selected.snapshot,selected.consentFingerprint))
-                atomic(path(ownerKey,workoutId),encode(created))
-                NativeCustomJournalResult.Durable(created,false)
+                commitFirstIssue(current,selected)
             }
         }.getOrElse {
             NativeCustomJournalResult.Rejected(
                 NativeCustomJournalRefusal.STORAGE_UNAVAILABLE)
         }
+    }
+
+    /** Only called inside the owner transaction, AFTER all current consent,
+     * selection and cross-journal checks pass. One common journal creation. */
+    private fun commitFirstIssue(current:NativeKotlinOwnerIdentity,
+        selected:NativeCustomPreparedWorkout):NativeCustomJournalResult {
+        if(owner(selected.ownerKey)!=current || selected.athleteId!=current.athleteId)
+            return NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.NOT_AUTHORIZED)
+        val created=NativeCustomIssuedJournal(selected.ownerKey,current.athleteId,
+            selected.consentRevision,CustomWorkoutJournalDomain.begin(selected.workoutId,
+                selected.snapshot,selected.consentFingerprint))
+        atomic(path(selected.ownerKey,selected.workoutId),encode(created))
+        return NativeCustomJournalResult.Durable(created,false)
     }
 
     /**

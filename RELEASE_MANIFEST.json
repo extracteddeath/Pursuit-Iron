@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 1051,
+  "build": 1052,
   "engineVersion": "0.65.10",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "4e82c233635b45bf7fa79485db5542aebaf685d906b77b060cd5ec782f7b8f93",
@@ -162,18 +162,18 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "af14764262c500e060631e592285fbc8aac14bce262e00dbcf5e19f7dccbb3bc",
-    "index.html": "ace8deab498606dce1954cac0cfe4dc85da031920e1483d65e84cbf16a54a1c4",
-    "sw.js": "d380ef8ae01509ff589c332fbf5445d814da5445256be97ff83ebaf8df8ae6ff",
-    "BUILD_PROFILE.json": "359ae5f9c82201012d891b95b9bcdbf53add65b57e837e359a5c485baa09569d",
+    "modules/App.js": "b1dc8cd5a00380f7b71da0a00358ffec2c0646b47088dd485d1bdff6b31a185e",
+    "index.html": "6f289588ff0fb9beee71eb55bf8182fb240e3d91131ba623eb6a1dba1a20ef24",
+    "sw.js": "c92b3b288d26480b681756f04e6e7a39e9971ba744203690249c816019ba1ea9",
+    "BUILD_PROFILE.json": "8808b2fb887465638b590d5412e3542097a213c9656e8afcdb8a436f1266b4e6",
     "CHANGELOG.md": "b2652caa581ef510ddbf292f8422749da1a1616e8c07b2de372922a2782a2539",
-    "app.css": "f7eebebb9789def5708f4c9ff3476f45c188dd09948d93bb074d0fc00d9a8aad",
+    "app.css": "b5e218e4bb4a0e112a28dab5dc57a95ed4a56f1c72f18f3a9dc6a06ef05dd4b3",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1051-r7f4f40f9caf03f96",
-  "uiMilestone": "Build 1051 · M3 type scale (14/16 body) and 48px touch targets"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1052-r9e5ef1d328d09d93",
+  "uiMilestone": "Build 1052 · M3 type scale (14/16 body) and 48px touch targets"
 }

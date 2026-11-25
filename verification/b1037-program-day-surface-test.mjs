@@ -28,10 +28,11 @@ assert.ok(app.includes('_jsxs(UiAction, { variant: "text", "aria-label": "Share 
 assert.ok(rule('#root[data-pi-motion="expressive"] .wpb-program .wpb-schedule-day').includes('border-color:transparent!important;'),
     'Week schedule tiles are filled, not outlined; only today keeps an outline');
 // B1038: filled tonal actions draw their container, not an outline; a narrow exercise row keeps
-// the progression method and drops the "Auto ·" prefix first.
+// the progression method; B1054: who chose it ("Auto" or "Pinned") is never dropped, it stacks.
 assert.ok(rule('#root .wpb .wpb-ui-action[data-action="tonal"]').includes('border:1px solid transparent;'), 'Tonal actions have no outline');
-assert.ok(app.includes('_jsx("span", { className: "wpb-progression-auto", children: "Auto \\u00B7 " })'), 'Auto prefix is its own span');
-assert.ok(css.includes('@container pi-exercise-actions (max-width:260px){#root .wpb .wpb-program .wpb-progression-auto{display:none;}}'), 'Auto prefix yields on narrow rows');
+assert.ok(app.includes('_jsx("span", { className: "wpb-progression-auto", children: "Auto" }), _jsx("span", { className: "wpb-progression-sep", children: " \\u00B7 " })'), 'Auto prefix and separator are their own spans');
+assert.ok(app.includes('_jsx("span", { className: "wpb-progression-auto", children: "Pinned" })'), 'A lifter-pinned method is labelled as pinned');
+assert.ok(/@container pi-exercise-actions \(max-width:260px\)\{#root \.wpb \.wpb-program \.wpb-progression-auto\{display:block;/.test(css) && !css.includes('.wpb-progression-auto{display:none;}'), 'Narrow rows stack the chooser instead of hiding it');
 // B1039: stat tiles (Home's week recap, Profile's card metrics) are figures divided by a rule,
 // not filled tiles inside their card.
 assert.ok(css.includes('border-radius:0;background:transparent;box-shadow:-1px 0 0 var(--pi-color-divider);text-align:center}'), 'Home stat tiles are flat');

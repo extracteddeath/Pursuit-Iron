@@ -92,6 +92,48 @@ class BasicProgressionPolicyDomainTest {
         assertFalse(r.maySaveFutureProgram)
     }
 
+    @Test fun reported200To215NearFailureMustNeverPromoteEverySetTo215() {
+        val target=RepBand(5,8)
+        val weights=listOf("200","205","210","215")
+        val misses=listOf(3,3,2,2)
+        val available=VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.MACHINE_STACK,
+            (195..225 step 5).map{n(it.toString())})
+        fun case(mode:BasicProgressionStrategy,loads:List<String>,reps:List<Int>,
+            issued:List<String> = loads)=request(mode,reps,loads,issued,
+                previous=workout(reps,loads,issued).copy(targetReps=target),
+                verifiedStock=available).copy(repBand=target)
+        val strict=BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION
+        val dynamic=BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION
+        // A mixed baseline cannot masquerade as strict straight-set DP.
+        assertEquals(BasicProgressionResult.Refused(
+            BasicProgressionRefusal.UNSUPPORTED_STRAIGHT_SET_SCHEME),
+            BasicProgressionPolicyDomain.review(case(strict,weights,misses)))
+        val held=candidate(case(dynamic,weights,misses))
+        assertEquals(weights.map(::n),held.proposedWorkingLoads)
+        assertTrue(held.increasedOrdinals.isEmpty())
+        assertTrue(held.dynamicSetDecisions.all{it==BasicProgressionDecision.BUILD_REPS})
+        assertFalse(held.maySaveFutureProgram)
+        // Uniform 215 was the earlier bad suggestion, not a justified
+        // new baseline; the actual corrected facts must fence it out.
+        val imposed=List(4){"215"}
+        for(mode in listOf(strict,dynamic))
+            assertEquals(BasicProgressionResult.Refused(
+                BasicProgressionRefusal.BASELINE_DIFFERS_FROM_HISTORY),
+                BasicProgressionPolicyDomain.review(case(mode,weights,misses,imposed)))
+        val repeat=candidate(case(strict,imposed,List(4){2}))
+        assertEquals(imposed.map(::n),repeat.proposedWorkingLoads)
+        assertEquals(BasicProgressionDecision.BUILD_REPS,repeat.decision)
+        assertTrue(repeat.increasedOrdinals.isEmpty())
+        val partial=candidate(case(dynamic,weights,listOf(8,3,2,2)))
+        assertEquals(listOf("205","205","210","215").map(::n),partial.proposedWorkingLoads)
+        assertEquals(setOf(0),partial.increasedOrdinals)
+        val manual=candidate(case(BasicProgressionStrategy.MANUAL_LOGGING,weights,misses)
+            .copy(previous=null,previousScope=null,verifiedStock=null))
+        assertEquals(weights.map(::n),manual.proposedWorkingLoads)
+        assertEquals(BasicProgressionDecision.MANUAL_REPEAT,manual.decision)
+        assertFalse(manual.mayModifyIssuedWorkout)
+    }
+
     @Test fun strictDoubleNeedsAllWorkingSetsAtCeilingBeforeAllAdvance() {
         val mode=BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION
         val hold=candidate(request(mode))

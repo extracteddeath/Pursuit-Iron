@@ -31,7 +31,7 @@ sealed interface NativeCustomPreflightResult {
  */
 internal sealed interface NativeFirstTierTransitionPreflight {
     data class Reviewed(val review:NativeSavedNamedReview.Signed,
-        val session:CustomWorkoutDaySnapshot):NativeFirstTierTransitionPreflight {
+        val session:CustomWorkoutDaySnapshot,val receiptFingerprint:String):NativeFirstTierTransitionPreflight {
         val mayIssueWorkout:Boolean get()=false
     }
     data class Rejected(val reason:NativeCustomPreflightRefusal):NativeFirstTierTransitionPreflight
@@ -164,7 +164,7 @@ class NativeKotlinCustomWorkoutPreflight(
                 return@withOwnerTransaction deny(NativeCustomPreflightRefusal.MACHINE_BINDING_NOT_VERIFIED)
             if(identity.signedInIdentity()!=owner)
                 return@withOwnerTransaction deny(NativeCustomPreflightRefusal.NOT_AUTHORIZED)
-            NativeFirstTierTransitionPreflight.Reviewed(signed,snapshot)
+            NativeFirstTierTransitionPreflight.Reviewed(signed,snapshot,recovered.receiptFingerprint)
         }}.getOrElse{deny(NativeCustomPreflightRefusal.STORAGE_UNAVAILABLE)}
     }
 

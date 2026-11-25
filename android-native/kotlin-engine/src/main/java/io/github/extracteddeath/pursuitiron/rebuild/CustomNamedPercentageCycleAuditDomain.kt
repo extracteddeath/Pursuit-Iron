@@ -105,11 +105,15 @@ object CustomNamedPercentageCycleAuditDomain {
         // authored weeks. The complete replay must cite exactly the prior
         // issued workout IDs and targets in this thread, in calendar order.
         // Different days, stations, and tiers remain independent.
-        val tierIds=(initialTiers.map{it.request.nextWorkoutId}+
-            tierTransitions.map{it.request.nextWorkoutId})
-        // Multiple slots may coexist in the same workout; ID uniqueness is
-        // per thread, not global across different slots.
-        if(tierIds.any{it.isBlank()})
+        // Several tier slots can share one workout, but different calendar
+        // positions cannot share its ID. Conversely, every slot on the same
+        // scheduled day must refer to that same issued journal.
+        val tierDays=(initialTiers.map{it.key to it.request.nextWorkoutId}+
+            tierTransitions.map{it.key to it.request.nextWorkoutId})
+            .groupBy{Triple(it.first.blockId,it.first.weekInBlock,it.first.weekday)}
+        if(tierDays.values.any{day->day.any{it.second.isBlank()} ||
+                day.map{it.second}.distinct().size!=1} ||
+            tierDays.values.map{it.first().second}.distinct().size!=tierDays.size)
             return deny(CustomNamedPercentageCycleRefusal.TIER_HISTORY_REQUIRED)
         val threadKey:(CustomNamedPercentageWeekKey,TieredLinearRequest)->Triple<BasicProgressionScope,PercentageTier,String> =
             {key,request->Triple(request.scope,request.tier,key.slotId)}

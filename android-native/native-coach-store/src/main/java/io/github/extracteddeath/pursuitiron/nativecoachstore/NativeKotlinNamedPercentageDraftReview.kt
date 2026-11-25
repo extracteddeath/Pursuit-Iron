@@ -38,6 +38,19 @@ sealed interface NativeTieredInitialReview {
     data class Rejected(val reason:NativeNamedPercentageRefusal):NativeTieredInitialReview
 }
 
+/** All selected references are reviewed against the same original source
+ * and physical history, then composed in one candidate revision. */
+sealed interface NativeTieredInitialBatchReview {
+    data class Ready(val selections:List<NativeTieredInitialSelection>,
+        val individual:List<NativeTieredInitialReview.Ready>,
+        val draft:CustomTrainingCycle,
+        val receipts:List<NativeTieredInitialDraftReceipt>):NativeTieredInitialBatchReview {
+        val maySaveProgram:Boolean get()=false
+        val mayIssueWorkout:Boolean get()=false
+    }
+    data class Rejected(val reason:NativeNamedPercentageRefusal):NativeTieredInitialBatchReview
+}
+
 sealed interface NativeTieredInitialAcceptance {
     data class Saved(val revision:Long,val receipt:NativeTieredInitialDraftReceipt):NativeTieredInitialAcceptance {
         val mayIssueWorkout:Boolean get()=false
@@ -262,6 +275,89 @@ class NativeKotlinNamedPercentageDraftReview(
             context.consentRevision,context.historyRevision,context.rosterRevision)
     }
 
+    private fun tierReceipt(fresh:NativeTieredInitialReview.Ready):NativeTieredInitialDraftReceipt {
+        val scope=fresh.request.scope
+        return NativeTieredInitialDraftReceipt(fresh.selection,fresh.source.stamp,
+            fresh.source.blockId,fresh.source.weekInBlock,scope.exerciseId,scope.machineInstanceId,
+            scope.unit,scope.basis,fresh.consentRevision,fresh.historyRevision,fresh.machineRosterRevision)
+    }
+
+    private fun evaluateTieredBatch(selections:List<NativeTieredInitialSelection>):NativeTieredInitialBatchReview {
+        fun deny(reason:NativeNamedPercentageRefusal)=NativeTieredInitialBatchReview.Rejected(reason)
+        if(selections.size !in 1..NativeTieredInitialDraftReceiptCodec.MAX_RECEIPTS)
+            return deny(NativeNamedPercentageRefusal.INVALID_SELECTION)
+        val first=selections.first()
+        if(selections.any{it.ownerKey!=first.ownerKey || it.cycleId!=first.cycleId} ||
+            selections.map{Triple(it.absoluteWeek,it.weekday,it.slotId)}.distinct().size!=selections.size)
+            return deny(NativeNamedPercentageRefusal.INVALID_SELECTION)
+        val positions=selections.groupBy{it.absoluteWeek to it.weekday}
+        if(positions.values.any{day->day.map{it.nextWorkoutId}.distinct().size!=1} ||
+            positions.values.map{it.first().nextWorkoutId}.distinct().size!=positions.size)
+            return deny(NativeNamedPercentageRefusal.INVALID_SELECTION)
+        val reviews=ArrayList<NativeTieredInitialReview.Ready>()
+        for(selection in selections) {
+            when(val reviewed=evaluateTieredInitial(selection)) {
+                is NativeTieredInitialReview.Rejected -> return deny(reviewed.reason)
+                is NativeTieredInitialReview.Ready -> reviews+=reviewed
+            }
+        }
+        val initial=reviews.first()
+        val base=initial.source.cycle
+        if(reviews.any{it.source.cycle!=base || it.source.stamp!=initial.source.stamp ||
+            it.consentRevision!=initial.consentRevision || it.historyRevision!=initial.historyRevision ||
+            it.machineRosterRevision!=initial.machineRosterRevision})
+            return deny(NativeNamedPercentageRefusal.REVIEW_CHANGED)
+        if(reviews.map{Triple(it.source.blockId,it.source.weekday,it.source.slotId)}.distinct().size!=reviews.size)
+            return deny(NativeNamedPercentageRefusal.INVALID_SELECTION)
+        val overrides=base.weekOverrides.toMutableMap()
+        for(review in reviews) {
+            val src=review.source
+            val edit=review.proposal.proposal.draft.weekOverrides[src.blockId].orEmpty()
+                .singleOrNull{it.weekInBlock==src.weekInBlock && it.weekday==src.weekday &&
+                    it.slotId==src.slotId}
+                ?:return deny(NativeNamedPercentageRefusal.RECIPE_REFUSED)
+            overrides[src.blockId]=overrides[src.blockId].orEmpty()+edit
+        }
+        val candidate=base.copy(revision=base.revision+1,weekOverrides=overrides.toMap())
+        val receipts=reviews.map(::tierReceipt)
+        val evidence=reviews.map{review->
+            val src=review.source
+            CustomTieredInitialWeekEvidence(CustomNamedPercentageWeekKey(src.blockId,
+                src.weekInBlock,src.weekday,src.slotId),review.request)
+        }
+        if(!NativeTieredInitialDraftReceiptCodec.validBatch(receipts,first.ownerKey,candidate) ||
+            CustomNamedPercentageCycleAuditDomain.reviewWithInitialTiers(candidate,
+                initial.source.stamp.copy(cycleRevision=candidate.revision),emptyList(),evidence)
+                    !is CustomNamedPercentageCycleAudit.Verified)
+            return deny(NativeNamedPercentageRefusal.RECIPE_REFUSED)
+        return NativeTieredInitialBatchReview.Ready(selections.toList(),reviews.toList(),candidate,receipts)
+    }
+
+    fun previewTieredInitialBatch(selections:List<NativeTieredInitialSelection>):NativeTieredInitialBatchReview {
+        val input=selections.toList()
+        val first=input.firstOrNull()?:return NativeTieredInitialBatchReview.Rejected(
+            NativeNamedPercentageRefusal.INVALID_SELECTION)
+        return runCatching{fence.withOwnerTransaction(first.ownerKey){evaluateTieredBatch(input)}}
+            .getOrElse{NativeTieredInitialBatchReview.Rejected(NativeNamedPercentageRefusal.STORAGE_UNAVAILABLE)}
+    }
+
+    /** Pure reconfirmation: no multi-thread draft or issuance is saved by
+     * this review. A later atomic persistence path must reuse this proof. */
+    fun reconfirmTieredInitialBatch(selections:List<NativeTieredInitialSelection>,
+        displayed:NativeTieredInitialBatchReview.Ready,athleteConfirmed:Boolean):NativeTieredInitialBatchReview {
+        fun deny(reason:NativeNamedPercentageRefusal)=NativeTieredInitialBatchReview.Rejected(reason)
+        if(!athleteConfirmed)return deny(NativeNamedPercentageRefusal.CONFIRMATION_REQUIRED)
+        val input=selections.toList()
+        val first=input.firstOrNull()?:return deny(NativeNamedPercentageRefusal.INVALID_SELECTION)
+        return runCatching{fence.withOwnerTransaction(first.ownerKey){
+            when(val fresh=evaluateTieredBatch(input)) {
+                is NativeTieredInitialBatchReview.Rejected -> fresh
+                is NativeTieredInitialBatchReview.Ready -> if(fresh==displayed)fresh
+                    else deny(NativeNamedPercentageRefusal.REVIEW_CHANGED)
+            }
+        }}.getOrElse{deny(NativeNamedPercentageRefusal.STORAGE_UNAVAILABLE)}
+    }
+
     fun previewTieredInitial(selection:NativeTieredInitialSelection):NativeTieredInitialReview =
         runCatching{fence.withOwnerTransaction(selection.ownerKey){evaluateTieredInitial(selection)}}
             .getOrElse{NativeTieredInitialReview.Rejected(NativeNamedPercentageRefusal.STORAGE_UNAVAILABLE)}
@@ -296,9 +392,7 @@ class NativeKotlinNamedPercentageDraftReview(
             val scope=fresh.request.scope
             if(identity.signedInIdentity()!=NativeKotlinOwnerIdentity(selection.ownerKey,scope.athleteId))
                 return@withOwnerTransaction deny(NativeNamedPercentageRefusal.NOT_AUTHORIZED)
-            val receipt=NativeTieredInitialDraftReceipt(fresh.selection,fresh.source.stamp,
-                fresh.source.blockId,fresh.source.weekInBlock,scope.exerciseId,scope.machineInstanceId,
-                scope.unit,scope.basis,fresh.consentRevision,fresh.historyRevision,fresh.machineRosterRevision)
+            val receipt=tierReceipt(fresh)
             val draft=fresh.proposal.proposal.draft
             if(!NativeTieredInitialDraftReceiptCodec.valid(receipt,selection.ownerKey,draft))
                 return@withOwnerTransaction deny(NativeNamedPercentageRefusal.DRAFT_SAVE_REJECTED)

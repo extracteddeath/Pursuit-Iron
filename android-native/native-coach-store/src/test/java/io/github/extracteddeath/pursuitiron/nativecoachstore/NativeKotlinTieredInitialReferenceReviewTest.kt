@@ -123,6 +123,59 @@ class NativeKotlinTieredInitialReferenceReviewTest {
     private fun selection()=NativeTieredInitialSelection("owner-1","cycle-1",1,0,
         "slot-0","tier-first",PercentageTier.PRIMARY,n("25"),n("5"))
 
+    @Test fun multipleTierReferencesShareOneReviewedRevisionAndRemainIndependentByDay() {
+        initialize()
+        val first=selection()
+        val second=first.copy(weekday=2,slotId="slot-2",nextWorkoutId="tier-second",initialLoad=n("30"))
+        val third=first.copy(weekday=4,slotId="slot-4",nextWorkoutId="tier-third",initialLoad=n("35"))
+        val selections=listOf(first,second,third)
+        fun preview(s:List<NativeTieredInitialSelection> = selections)=review().previewTieredInitialBatch(s)
+        assertEquals(NativeTieredInitialBatchReview.Rejected(NativeNamedPercentageRefusal.CURRENT_CONSENT_REQUIRED),preview())
+        approved()
+        enroll()
+        val result=preview()
+        assertTrue(result.toString(),result is NativeTieredInitialBatchReview.Ready)
+        val ready=result as NativeTieredInitialBatchReview.Ready
+        assertEquals(2L,ready.draft.revision)
+        assertEquals(3,ready.receipts.size)
+        assertEquals(listOf(n("25"),n("30"),n("35")),ready.individual.map{it.request.initialState.load})
+        assertEquals(3,ready.individual.map{it.request.scope.trainingDayId}.distinct().size)
+        assertEquals(3,ready.individual.map{it.request.sourceSlotId}.distinct().size)
+        assertTrue(ready.individual.all{it.request.completed.isEmpty()})
+        val edits=ready.draft.weekOverrides.getValue("base")
+        assertEquals(listOf(0,2,4),edits.map{it.weekday})
+        assertEquals(listOf(n("25"),n("30"),n("35")),edits.map{(it.sets.single().load as DraftSetLoad.Verified).value})
+        assertTrue(edits.all{it.sets.single().percentageIntent?.tierStage==0})
+        assertTrue(NativeTieredInitialDraftReceiptCodec.validBatch(ready.receipts,"owner-1",ready.draft))
+        assertFalse(NativeTieredInitialDraftReceiptCodec.valid(ready.receipts.first(),"owner-1",ready.draft))
+        assertFalse(NativeTieredInitialDraftReceiptCodec.validBatch(ready.receipts.dropLast(1),"owner-1",ready.draft))
+        assertFalse(NativeTieredInitialDraftReceiptCodec.validBatch(ready.receipts+ready.receipts.first(),"owner-1",ready.draft))
+        assertFalse(NativeTieredInitialDraftReceiptCodec.validBatch(ready.receipts,"other-owner",ready.draft))
+        assertFalse(NativeTieredInitialDraftReceiptCodec.validBatch(
+            ready.receipts.mapIndexed{i,r->if(i==1)r.copy(selection=r.selection.copy(nextWorkoutId=first.nextWorkoutId)) else r},
+            "owner-1",ready.draft))
+        assertEquals(ready,review().reconfirmTieredInitialBatch(selections,ready,true))
+        assertEquals(NativeTieredInitialBatchReview.Rejected(NativeNamedPercentageRefusal.CONFIRMATION_REQUIRED),
+            review().reconfirmTieredInitialBatch(selections,ready,false))
+        assertEquals(NativeTieredInitialBatchReview.Rejected(NativeNamedPercentageRefusal.REVIEW_CHANGED),
+            review().reconfirmTieredInitialBatch(listOf(first,second.copy(initialLoad=n("35")),third),ready,true))
+        assertEquals(NativeTieredInitialBatchReview.Rejected(NativeNamedPercentageRefusal.INVALID_SELECTION),
+            preview(listOf(first,second.copy(nextWorkoutId=first.nextWorkoutId))))
+        assertEquals(NativeTieredInitialBatchReview.Rejected(NativeNamedPercentageRefusal.INVALID_SELECTION),
+            preview(listOf(first,first.copy(absoluteWeek=2,nextWorkoutId="another-week"))))
+        assertTrue(preview(listOf(first,second.copy(initialLoad=n("31")))) is NativeTieredInitialBatchReview.Rejected)
+        assertFalse(ready.maySaveProgram)
+        assertFalse(ready.mayIssueWorkout)
+        assertEquals(1L,(drafts.read("owner-1","cycle-1") as NativeCustomDraftReadResult.Found).draft.revision)
+        assertEquals(NativeCustomPreparedRead.Missing,prepared.open("owner-1",first.nextWorkoutId))
+        assertTrue(prepared.prepare("owner-1","other-prepared","cycle-1",1,0,inputs())
+            is NativeCustomPrepareResult.Prepared)
+        assertEquals(NativeTieredInitialBatchReview.Rejected(NativeNamedPercentageRefusal.PROTECTED_WEEK),
+            review().reconfirmTieredInitialBatch(selections,ready,true))
+        active=NativeKotlinOwnerIdentity("other-owner","other-athlete")
+        assertEquals(NativeTieredInitialBatchReview.Rejected(NativeNamedPercentageRefusal.NOT_AUTHORIZED),preview())
+    }
+
     @Test fun initialTierRequiresRealOwnerConsentLedgerAndExactPhysicalReference() {
         initialize()
         val s=selection()

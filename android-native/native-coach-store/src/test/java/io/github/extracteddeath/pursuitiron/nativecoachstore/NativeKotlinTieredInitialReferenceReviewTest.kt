@@ -281,7 +281,28 @@ class NativeKotlinTieredInitialReferenceReviewTest {
             assertEquals(if(s.weekday==2)TieredLinearState(1,s.initialLoad)
                 else TieredLinearState(0,s.initialLoad+n("5")),result.state)
         }
+        val transitionReviewer=NativeKotlinSavedNamedPercentageReview(coldFence,identity,coldDrafts,sources,
+            coldSignoffs,reader,inventory)
+        fun preview(s:NativeMultiTierNextSelection)=transitionReviewer.previewMultiTieredNext("owner-1","cycle-1",inputs(),s)
+        val nextSelection=NativeMultiTierNextSelection("week-two-day-zero",2,0)
+        assertTrue(preview(nextSelection.copy(weekday=2)) is NativeSavedNamedReview.Rejected)
+        assertTrue(preview(nextSelection.copy(absoluteWeek=3)) is NativeSavedNamedReview.Rejected)
+        assertTrue(preview(nextSelection.copy(nextWorkoutId=first.nextWorkoutId)) is NativeSavedNamedReview.Rejected)
+        assertTrue(preview(nextSelection.copy(recoverySlotIds=setOf("slot-2"))) is NativeSavedNamedReview.Rejected)
+        val proposed=preview(nextSelection) as NativeSavedNamedReview.Signed
+        val transition=checkNotNull(proposed.nextMultiTierCandidate)
+        assertEquals(nextSelection,transition.selection)
+        assertEquals(saved.draft.revision+1,transition.draft.revision)
+        assertEquals(TieredLinearState(0,n("30")),transition.slots.single().result.state)
+        assertEquals("slot-0",transition.slots.single().evidence.key.slotId)
+        assertEquals(n("30"),(transition.snapshot.slots.single().sets.single().prescription.load as DraftSetLoad.Verified).value)
+        assertFalse(transition.mayIssueWorkout)
+        assertFalse(transition.maySaveProgram)
+        assertEquals(transition, (preview(nextSelection) as NativeSavedNamedReview.Signed).nextMultiTierCandidate)
+        assertEquals(saved,coldDrafts.read("owner-1","cycle-1"))
+        assertEquals(NativeCustomPreparedRead.Missing,coldPrepared().open("owner-1",nextSelection.nextWorkoutId))
         active=NativeKotlinOwnerIdentity("other-owner","other-athlete")
+        assertTrue(preview(nextSelection) is NativeSavedNamedReview.Rejected)
         assertTrue(coldSignoffs.recoverTieredInitialReview("owner-1","cycle-1",reader,inventory)
             is NativeSavedNamedReview.Rejected)
     }

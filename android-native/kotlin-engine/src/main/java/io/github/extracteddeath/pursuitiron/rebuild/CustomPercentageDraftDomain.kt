@@ -32,7 +32,8 @@ sealed interface CustomPercentageDraftResult {
         val weekInBlock:Int,
         val originalSets:List<CustomAuthoredSet>,
         val proposal:CustomCycleBuilderResult.Proposed,
-        val tierTransitions:List<TieredLinearTransition> = emptyList()
+        val tierTransitions:List<TieredLinearTransition> = emptyList(),
+        val tieredResult:TieredLinearResult.Candidate?=null
     ):CustomPercentageDraftResult {
         val requiresReviewedReset:Boolean get()=tierTransitions.any{it.decision==TieredLinearDecision.RESET_REVIEW}
         val mayIssueWorkout:Boolean get()=false
@@ -99,7 +100,7 @@ object CustomPercentageDraftRecheckDomain {
 object CustomPercentageDraftDomain {
     private data class Projected(val load:BigDecimal,val reps:Int,val intent:CustomPercentageSetIntent)
     private data class Projection(val sets:List<Projected>,
-        val transitions:List<TieredLinearTransition> = emptyList())
+        val tieredResult:TieredLinearResult.Candidate?=null)
 
     fun review(source:CustomPercentageDraftSource,request:NamedPercentageRequest):CustomPercentageDraftResult =
         reviewSource(source,request.scope,request.tier,request.approvedSetBudget,
@@ -135,8 +136,41 @@ object CustomPercentageDraftDomain {
                     NamedPercentageScheme.GZCLP,request.tier,PercentageDayRole.STANDARD,
                     source.weekInBlock,block.weeks,indexes[index]+1,size,numeric.state.load,
                     hundred,effective,numeric.state.stage,set.repOut,numeric.recovery))
-            },numeric.transitions)
+            },numeric)
         }
+    }
+
+    /** Combine independently rederived slot edits into ONE revision of
+     * their common base. Used for fixed prescriptions, tier roots and later
+     * same-session tier transitions. Numerical authority stays in review
+     * and reviewTiered; this structural projection never grants consent.
+     * A conflicting, stale or unrelated edit refuses the whole batch. */
+    fun combineReviewedWeekEdits(base:CustomTrainingCycle,
+        proposals:List<CustomPercentageDraftResult.Proposed>):CustomTrainingCycle? {
+        if(proposals.size !in 1..3000 || base.revision !in 1..9_007_199_254_740_990L)return null
+        val stamp=proposals.first().source
+        if(stamp.cycleRevision!=base.revision || stamp.cycleId!=base.cycleId ||
+            stamp.athleteId!=base.athleteId)return null
+        val keys=HashSet<CustomNamedPercentageWeekKey>()
+        val overrides=base.weekOverrides.toMutableMap()
+        for(p in proposals) {
+            if(p.source!=stamp || p.proposal.receipt.original!=base)return null
+            val key=CustomNamedPercentageWeekKey(p.key.blockId,p.weekInBlock,p.key.weekday,p.key.slotId)
+            if(!keys.add(key))return null
+            val original=base.weekOverrides[key.blockId].orEmpty()
+            if(original.any{it.weekInBlock==key.weekInBlock && it.weekday==key.weekday && it.slotId==key.slotId})
+                return null
+            val edit=p.proposal.draft.weekOverrides[key.blockId].orEmpty().singleOrNull{
+                it.weekInBlock==key.weekInBlock && it.weekday==key.weekday && it.slotId==key.slotId
+            }?:return null
+            // Each independent projection must change only its selected
+            // week-slot. Do not propagate other fields from a proposal.
+            val exact=base.copy(revision=base.revision+1,
+                weekOverrides=base.weekOverrides+(key.blockId to (original+edit)))
+            if(p.proposal.draft!=exact)return null
+            overrides[key.blockId]=overrides[key.blockId].orEmpty()+edit
+        }
+        return base.copy(revision=base.revision+1,weekOverrides=overrides.toMap())
     }
 
     private fun reviewSource(
@@ -215,6 +249,7 @@ object CustomPercentageDraftDomain {
             ProgramProgressionSlotKey(block.blockId,day.weekday,slot.slotId),
             source.weekInBlock,edited.receipt.original.blocks.single{it.blockId==block.blockId}
                 .days.single{it.weekday==day.weekday}.slots.single{it.slotId==slot.slotId}.sets,
-            edited,Collections.unmodifiableList(numeric.transitions.toList()))
+            edited,Collections.unmodifiableList(numeric.tieredResult?.transitions.orEmpty().toList()),
+            numeric.tieredResult)
     }
 }

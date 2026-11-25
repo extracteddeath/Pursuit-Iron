@@ -145,6 +145,47 @@ class CustomPercentageDraftDomainTest {
         assertFalse(result.mayIssueWorkout)
     }
 
+    @Test fun twoTierSlotsInOneWorkoutHaveSeparateStatesButOneJournalIdentity() {
+        val rootA=tiered().copy(nextWorkoutId="week-1-day-0")
+        val rootB=rootA.copy(sourceSlotId="other-slot",initialState=TieredLinearState(0,n("120")))
+        val nextA=rootA.copy(nextWorkoutId="week-2-day-0",completed=listOf(
+            exposure(rootA.nextWorkoutId,1)))
+        val nextB=rootB.copy(nextWorkoutId=nextA.nextWorkoutId,completed=listOf(
+            exposure(rootB.nextWorkoutId,1,weight="120",failed=true,sourceSlotId="other-slot")))
+        val nextOtherDay=rootA.copy(scope=scope.copy(trainingDayId="strength:d2"),
+            nextWorkoutId="week-1-day-2")
+        fun key(week:Int,slot:String,day:Int=0)=CustomNamedPercentageWeekKey("strength",week,day,slot)
+        fun apply(current:CustomTrainingCycle,k:CustomNamedPercentageWeekKey,r:TieredLinearRequest):CustomTrainingCycle =
+            (CustomPercentageDraftDomain.reviewTiered(CustomPercentageDraftSource(current,
+                stamp.copy(cycleRevision=current.revision),k.blockId,k.weekInBlock,k.weekday,k.slotId),r)
+                as CustomPercentageDraftResult.Proposed).proposal.draft
+        val roots=listOf(CustomTieredInitialWeekEvidence(key(1,"press-slot"),rootA),
+            CustomTieredInitialWeekEvidence(key(1,"other-slot"),rootB),
+            CustomTieredInitialWeekEvidence(key(1,"press-slot",2),nextOtherDay))
+        val later=listOf(CustomTieredTransitionWeekEvidence(key(2,"press-slot"),nextA),
+            CustomTieredTransitionWeekEvidence(key(2,"other-slot"),nextB))
+        val initial=roots.fold(cycle){draft,p->apply(draft,p.key,p.request)}
+        val candidate=later.fold(initial){draft,p->apply(draft,p.key,p.request)}
+        fun audit(initialTiers:List<CustomTieredInitialWeekEvidence> = roots,
+            transitions:List<CustomTieredTransitionWeekEvidence> = later)=
+            CustomNamedPercentageCycleAuditDomain.reviewWithTierHistory(candidate,
+                stamp.copy(cycleRevision=candidate.revision),emptyList(),initialTiers,transitions)
+        assertEquals(5,(audit() as CustomNamedPercentageCycleAudit.Verified).reviewedWeeks)
+        val numericA=TieredLinearProgressionDomain.review(nextA) as TieredLinearResult.Candidate
+        val numericB=TieredLinearProgressionDomain.review(nextB) as TieredLinearResult.Candidate
+        assertEquals(TieredLinearState(0,n("105")),numericA.state)
+        assertEquals(TieredLinearState(1,n("120")),numericB.state)
+        assertEquals(CustomNamedPercentageCycleAudit.Refused(CustomNamedPercentageCycleRefusal.TIER_HISTORY_REQUIRED),
+            audit(initialTiers=roots.mapIndexed{i,p->if(i==2)
+                p.copy(request=p.request.copy(nextWorkoutId=rootA.nextWorkoutId)) else p}))
+        assertEquals(CustomNamedPercentageCycleAudit.Refused(CustomNamedPercentageCycleRefusal.TIER_HISTORY_REQUIRED),
+            audit(transitions=later.mapIndexed{i,p->if(i==1)
+                p.copy(request=p.request.copy(nextWorkoutId="different-journal")) else p}))
+        assertTrue(audit(transitions=listOf(later.first(),later.last().copy(request=nextB.copy(completed=nextA.completed))))
+            is CustomNamedPercentageCycleAudit.Refused)
+        assertTrue(audit(initialTiers=roots.dropLast(1)) is CustomNamedPercentageCycleAudit.Refused)
+    }
+
     @Test fun tierResetIsExplicitReviewAndMissingSlotHistoryFailsClosed() {
         val history=listOf(exposure("a",1,failed=true),exposure("b",2,1,failed=true),
             exposure("c",3,2,failed=true))

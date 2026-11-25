@@ -2255,7 +2255,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   
   #root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump-control{
     background:Canvas!important;
-    color:CanvasText!important;
     border:1px solid CanvasText!important;
   }
 }
@@ -3401,11 +3400,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* Rein in the page-level card radius/spacing without touching the logger.
    Shared low cards are 20–22px; selection controls are smaller. */
-#root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile{
-  border-radius:var(--pi-shape-card)!important;
-  box-shadow:none!important;
-  background-image:none!important;
-}
 /* Reserve strong accent for selected state and primary action, not the
    supporting outlines of every nested card. R36 text roles stay unchanged. */
 @media(max-width:359px){
@@ -8023,6 +8017,8 @@ background:var(--pi-color-card)!important;
 @media(forced-colors:active){
 .wpb-game-plan-highlight-icon,
 #root .wpb .wpb-home-game-plan{border:1px solid CanvasText}}
+/* B1049: navigation tabs keep their 16px shape; the shared press-morph never reshaped them. */
+#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab{border-radius:16px!important;}
 /* B910 / UI polish pass 04 — Settings and creation motion consistency.
    The creation header formerly put a 44px Back target in a 34px-high row.
    Keep header and progress geometry steady across all wizard questions;
@@ -9173,8 +9169,6 @@ background:var(--pi-color-card)!important;
   #root .wpb .wpb-b975-offline-status{animation:none;}
 }
 
-/* B1049: navigation tabs keep their 16px shape; the shared press-morph never reshaped them. */
-#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab{border-radius:16px!important;}
 /* B976 — Program schedule, exercise swap and workout detail controls have
    explicit CSS owners. Retire static JSX geometry without changing actions,
    engine data, tab/navigation state or theme-derived dynamic values. */

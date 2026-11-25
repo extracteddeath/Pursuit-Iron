@@ -37,7 +37,7 @@ assert.ok(!/transition:[^;]*(width|height|margin|padding|transform)/.test(b911),
 
 const progressSource=app.slice(app.indexOf('function HistoryView('),app.indexOf('\nfunction ',app.indexOf('function HistoryView(')+12));
 assert.ok(progressSource.includes('className: "wpb-progress-glance-item"'),'Progress glance keeps its maintained class owner');
-assert.match(css,/\.wpb-progress-glance-item\{[^}]*background:var\(--wpb-theme-card\);[^}]*border:1px solid var\(--wpb-theme-border-soft\)/,'live theme paint remains class-owned');
+assert.match(css,/\.wpb-progress-glance-item\{[^}]*border:1px solid var\(--pi-r11-edge\);[^}]*background:var\(--pi-r11-quiet\)/,'live theme paint remains class-owned (B1048 owner)');
 for(const x of [
   'className: "wpb-progress-panel", style: { background: C.card, borderRadius:',
   'className: "wpb-progress-entry-row", style: { display:',
@@ -45,6 +45,8 @@ for(const x of [
   'className: "wpb-render-auto wpb-history-session", style: { background: C.card, borderRadius:'
 ]) assert.ok(!progressSource.includes(x),'Progress presentation is not duplicated in JSX: '+x);
 const progressOwner=css.slice(css.indexOf('/* B914 / Cohesion 04'),css.indexOf('/* B891 — favorite chart ordering'));
-for(const x of ['.wpb-progress-glance-item','.wpb-progress-glance-label','.wpb-progress-panel','.wpb-progress-entry-row','.wpb-history-filters','.wpb-history-session'])assert.ok(progressOwner.includes(x+'{'),x+' owns its static layout in CSS');
+const glanceOwner=css.slice(css.indexOf('/* B1048 — Progress glance'));
+for(const x of ['.wpb-progress-glance-item','.wpb-progress-glance-label'])assert.ok(glanceOwner.includes(x+'{'),x+' owns its static layout in the B1048 owner');
+for(const x of ['.wpb-progress-panel','.wpb-progress-entry-row','.wpb-history-filters','.wpb-history-session'])assert.ok(progressOwner.includes(x+'{'),x+' owns its static layout in CSS');
 
 console.log('PASS B891: favorite chart persistence/ordering, accessible move controls and responsive history CSS.');

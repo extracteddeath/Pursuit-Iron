@@ -227,6 +227,10 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         val pending=reviewer().reviewTieredInitial("owner-1","cycle-1",inputs())
         assertTrue(pending.toString(),pending is NativeSavedNamedReview.Ready)
         val displayed=pending as NativeSavedNamedReview.Ready
+        assertEquals(displayed,store().recoverTieredInitialReview("owner-1","cycle-1",reader,inventory))
+        assertTrue(store().recoverFixedNamedReview("owner-1","cycle-1",reader,inventory)
+            is NativeSavedNamedReview.Rejected)
+        assertNull(store().signedTieredInputs("owner-1","cycle-1"))
         assertEquals(saved.receipt,displayed.initialTierReceipt)
         assertEquals(proposal.request,displayed.initialTierEvidence?.request)
         assertEquals(prior,displayed.priorConsent)
@@ -259,6 +263,8 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         val verified=cold.reviewSignedTieredInitial("owner-1","cycle-1",inputs())
         assertTrue(verified.toString(),verified is NativeSavedNamedReview.Signed)
         val signed=verified as NativeSavedNamedReview.Signed
+        assertEquals(signed,coldSignoffs.recoverTieredInitialReview("owner-1","cycle-1",reader,inventory))
+        assertEquals(inputs(),coldSignoffs.signedTieredInputs("owner-1","cycle-1"))
         assertEquals(receipt,signed.consent)
         assertEquals(saved.receipt,signed.initialTierReceipt)
         assertEquals(displayed.initialTierEvidence,signed.initialTierEvidence)
@@ -275,10 +281,16 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         assertTrue(cold.reviewSignedTieredInitial("owner-1","cycle-1",changed) is NativeSavedNamedReview.Rejected)
         active=NativeKotlinOwnerIdentity("other-owner","other-athlete")
         assertTrue(cold.reviewSignedTieredInitial("owner-1","cycle-1",inputs()) is NativeSavedNamedReview.Rejected)
+        assertTrue(coldSignoffs.recoverTieredInitialReview("owner-1","cycle-1",reader,inventory)
+            is NativeSavedNamedReview.Rejected)
+        assertNull(coldSignoffs.signedTieredInputs("owner-1","cycle-1"))
         active=NativeKotlinOwnerIdentity("owner-1","athlete-1")
         assertTrue(coldSignoffs.revoke("owner-1","cycle-1",receipt.recordRevision)
             is NativeCustomSignoffWrite.Committed)
         assertTrue(cold.reviewSignedTieredInitial("owner-1","cycle-1",inputs()) is NativeSavedNamedReview.Rejected)
+        assertTrue(coldSignoffs.recoverTieredInitialReview("owner-1","cycle-1",reader,inventory)
+            is NativeSavedNamedReview.Rejected)
+        assertNull(coldSignoffs.signedTieredInputs("owner-1","cycle-1"))
     }
 
     @Test fun initialTierIssuesOnlyExactApprovedIdAndBuildsNextCandidateFromDurableLedger() {
@@ -656,12 +668,18 @@ class NativeKotlinTieredInitialReferenceReviewTest {
             is NativeCustomJournalResult.Durable)
         val firstSnapshot=(first as NativeCustomPrepareResult.Prepared).workout.snapshot
         finish(initial.nextWorkoutId,firstSnapshot,1)
+        // Cold initial review must not reopen a completed initial session.
+        assertTrue(store().recoverTieredInitialReview("owner-1","cycle-1",reader,inventory)
+            is NativeSavedNamedReview.Rejected)
 
         fun transition(week:Int,workout:String,recovery:Boolean,stage:Int,
             expectedReference:String,expectedLoad:String,reset:Boolean,actualReps:Int) {
             val selection=NativeTieredNextSelection(workout,week,recovery)
             val preview=coldStore().preview("owner-1","cycle-1",inputs(),selection)
             assertTrue(preview.toString(),preview is NativeSavedNamedReview.Signed)
+            assertEquals(preview,coldStore().previewUsingSavedRules("owner-1","cycle-1",selection))
+            assertTrue(coldStore().previewUsingSavedRules("foreign-owner","cycle-1",selection)
+                is NativeSavedNamedReview.Rejected)
             var displayed=preview as NativeSavedNamedReview.Signed
             val candidate=checkNotNull(displayed.nextTierCandidate)
             assertEquals(stage,candidate.result.state.stage)
@@ -735,8 +753,9 @@ class NativeKotlinTieredInitialReferenceReviewTest {
                     coldStore().recover("owner-1","cycle-1",week))
                 assertTrue(prepare() is NativeCustomPrepareResult.Rejected)
                 assertEquals(NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.NOT_PREPARED),issue())
-                val fresh=coldStore().preview("owner-1","cycle-1",inputs(),selection)
+                val fresh=coldStore().previewUsingSavedRules("owner-1","cycle-1",selection)
                 assertTrue(fresh.toString(),fresh is NativeSavedNamedReview.Signed)
+                assertEquals(coldStore().preview("owner-1","cycle-1",inputs(),selection),fresh)
                 displayed=fresh as NativeSavedNamedReview.Signed
                 assertEquals(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT,
                     coldStore().confirm("owner-1","cycle-1",displayed,true,recoveryConfirmed=true))

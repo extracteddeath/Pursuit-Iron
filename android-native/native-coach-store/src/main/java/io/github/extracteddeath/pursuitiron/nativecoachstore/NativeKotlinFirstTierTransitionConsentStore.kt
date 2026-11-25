@@ -187,6 +187,21 @@ internal class NativeKotlinFirstTierTransitionConsentStore(
         }
     }
 
+    /** Cold UI entry: no externally supplied policy, source, load or
+     * history. The entire ordinary transition review still runs under the
+     * owner fence after recovering the exact saved signed rules. */
+    fun previewUsingSavedRules(ownerKey:String,cycleId:String,
+        selection:NativeTieredNextSelection):NativeSavedNamedReview =
+        runCatching{fence.withOwnerTransaction(ownerKey){
+            if(identity.signedInIdentity()?.ownerKey!=ownerKey)
+                return@withOwnerTransaction NativeSavedNamedReview.Rejected(
+                    NativeSavedNamedReviewRefusal.NOT_AUTHORIZED)
+            val inputs=signoffs.signedTieredInputs(ownerKey,cycleId)
+                ?:return@withOwnerTransaction NativeSavedNamedReview.Rejected(
+                    NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
+            preview(ownerKey,cycleId,inputs,selection)
+        }}.getOrElse{NativeSavedNamedReview.Rejected(NativeSavedNamedReviewRefusal.STORAGE_UNAVAILABLE)}
+
     /** Consecutive candidate preview. Earlier approval files must exist;
      * the reviewer authenticates their frozen recipes and completed origins.
      */

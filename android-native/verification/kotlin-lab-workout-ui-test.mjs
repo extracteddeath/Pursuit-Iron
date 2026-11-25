@@ -753,7 +753,7 @@ for(const source of [journal,composer]) {
 // Existing recorded sets remain journal-owned, and the durability bootstrap
 // does not turn a partial preference write into a fake successful set.
 // Verify each canonical issuer rather than only a count of call sites.
-const customIssuerNames=['issueReviewedCustomWorkout','issueActivatedFutureWorkout','issueFixedNamedWorkout','issueTieredInitialWorkout'];
+const customIssuerNames=['issueReviewedCustomWorkout','issueActivatedFutureWorkout','issueFixedNamedWorkout','issueTieredInitialWorkout','issueTieredSupportWorkout'];
 assert.ok(machineChoiceHost.includes('private fun pinMachineChoiceForIssuedWorkout(') &&
   machineChoiceHost.includes('if(issued is NativeKotlinIssueResult.Committed)') &&
   machineChoiceHost.includes('pinMachineChoiceForIssuedWorkout(workoutId,custom=false)') &&
@@ -1932,3 +1932,13 @@ assert.ok(basicPreviewController.includes('host.reviewTieredCalendar(cycleId)') 
   basicPreviewScreen.includes('when(val calendar=state.tieredCalendar)') &&
   machineChoiceHost.includes('nextCustomCycleSession.reviewTieredCalendar(owner.ownerKey,cycleId)'),
   'Tiered calendar discovery must remain separate from the initial workout issue grant');
+
+assert.ok(basicPreviewScreen.includes('controller::previewTieredSupportWorkout') &&
+  basicPreviewScreen.includes('controller::prepareTieredSupportWorkout') &&
+  basicPreviewScreen.includes('controller::issueTieredSupportWorkout') &&
+  basicPreviewController.includes('before.tieredSupportAvailable') &&
+  basicPreviewController.includes('host.previewTieredSupportWorkout') &&
+  machineChoiceHost.includes('customWorkoutPreflight.inspectTieredSupport') &&
+  machineChoiceHost.includes('customPreparedStore.prepareTieredSupport') &&
+  machineChoiceHost.includes('customIssuedStore.issueTieredSupport'),
+  'Tiered supporting days must use exact native review, preparation, and issuance');

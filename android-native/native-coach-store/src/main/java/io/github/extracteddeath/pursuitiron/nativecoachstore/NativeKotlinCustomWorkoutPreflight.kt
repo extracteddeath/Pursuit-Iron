@@ -90,6 +90,20 @@ class NativeKotlinCustomWorkoutPreflight(
         ownerKey:String,workoutId:String,cycleId:String,absoluteWeek:Int,weekday:Int,
         inputs:CustomCoachAuditInputs,history:NativeKotlinMixedHistoryReadCoordinator,
         outstanding:NativeKotlinCustomOutstandingWorkoutInventory
+    ):NativeCustomPreflightResult =
+        inspectSpecialist(ownerKey,workoutId,cycleId,absoluteWeek,weekday,inputs,history,outstanding,false)
+
+    internal fun inspectTieredInitial(
+        ownerKey:String,workoutId:String,cycleId:String,absoluteWeek:Int,weekday:Int,
+        inputs:CustomCoachAuditInputs,history:NativeKotlinMixedHistoryReadCoordinator,
+        outstanding:NativeKotlinCustomOutstandingWorkoutInventory
+    ):NativeCustomPreflightResult =
+        inspectSpecialist(ownerKey,workoutId,cycleId,absoluteWeek,weekday,inputs,history,outstanding,true)
+
+    private fun inspectSpecialist(
+        ownerKey:String,workoutId:String,cycleId:String,absoluteWeek:Int,weekday:Int,
+        inputs:CustomCoachAuditInputs,history:NativeKotlinMixedHistoryReadCoordinator,
+        outstanding:NativeKotlinCustomOutstandingWorkoutInventory,tiered:Boolean
     ):NativeCustomPreflightResult {
         fun deny(reason:NativeCustomPreflightRefusal)=NativeCustomPreflightResult.Rejected(reason)
         if(!id.matches(ownerKey)||!id.matches(workoutId)||!id.matches(cycleId)||
@@ -98,10 +112,19 @@ class NativeKotlinCustomWorkoutPreflight(
         return runCatching{fence.withOwnerTransaction(ownerKey){
             val owner=identity.signedInIdentity()?.takeIf{it.ownerKey==ownerKey}
                 ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.NOT_AUTHORIZED)
-            val signed=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
-                consents,history,outstanding,machineRosters).reviewSigned(ownerKey,cycleId,inputs)
-                as? NativeSavedNamedReview.Signed
+            val reviewer=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
+                consents,history,outstanding,machineRosters)
+            val signed=(if(tiered)reviewer.reviewSignedTieredInitial(ownerKey,cycleId,inputs)
+                else reviewer.reviewSigned(ownerKey,cycleId,inputs)) as? NativeSavedNamedReview.Signed
                 ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
+            if(tiered) {
+                val selection=signed.initialTierReceipt?.selection
+                    ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
+                if(selection.nextWorkoutId!=workoutId || selection.absoluteWeek!=absoluteWeek ||
+                    selection.weekday!=weekday || selection.cycleId!=cycleId ||
+                    signed.initialTierEvidence==null)
+                    return@withOwnerTransaction deny(NativeCustomPreflightRefusal.INVALID_SELECTION)
+            }
             val timeline=(history.read(ownerKey,owner.athleteId)
                 as? NativeKotlinMixedHistoryReadResult.Review)?.timeline
                 ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
@@ -124,8 +147,9 @@ class NativeKotlinCustomWorkoutPreflight(
             if(source.ownerKey!=ownerKey || source.athleteId!=owner.athleteId ||
                 source.revision!=signed.stamp.gymCatalogSourceRevision)
                 return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
-            val preview=CustomWorkoutSnapshotDomain.reviewNamedForConsent(signed.draft,
-                source.setup,source.catalog,source.revision,inputs,signed.evidence,absoluteWeek,weekday)
+            val preview=CustomWorkoutSnapshotDomain.reviewSpecialistForConsent(signed.draft,
+                source.setup,source.catalog,source.revision,inputs,signed.evidence,
+                listOfNotNull(signed.initialTierEvidence),absoluteWeek,weekday)
                 as? CustomWorkoutSnapshotResult.Preview
                 ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.COACH_AUDIT_FAILED)
             if(preview.snapshot.stamp!=signed.stamp)

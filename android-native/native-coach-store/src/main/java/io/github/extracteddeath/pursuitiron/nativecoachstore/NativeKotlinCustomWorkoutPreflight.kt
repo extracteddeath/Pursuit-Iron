@@ -119,6 +119,8 @@ class NativeKotlinCustomWorkoutPreflight(
         absoluteWeek:Int,weekday:Int,history:NativeKotlinMixedHistoryReadCoordinator,
         outstanding:NativeKotlinCustomOutstandingWorkoutInventory):NativeCustomPreflightResult {
         val inputs=consents.signedTieredInputs(ownerKey,cycleId)
+            ?: (consents.recoverTieredInitialReview(ownerKey,cycleId,history,outstanding,machineRosters)
+                as? NativeSavedNamedReview.Signed)?.takeIf{it.initialTierReceipts.size>1}?.inputs
             ?:return NativeCustomPreflightResult.Rejected(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
         return inspectSpecialist(ownerKey,workoutId,cycleId,absoluteWeek,weekday,
             inputs,history,outstanding,true,supportingDay=true)
@@ -195,12 +197,21 @@ class NativeKotlinCustomWorkoutPreflight(
                 ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.NOT_AUTHORIZED)
             val reviewer=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
                 consents,history,outstanding,machineRosters)
-            val signed=(if(supportingDay)reviewer.reviewSignedTieredSupport(ownerKey,cycleId,inputs)
+            val multiSupport=supportingDay &&
+                (drafts.read(ownerKey,cycleId) as? NativeCustomDraftReadResult.Found)
+                    ?.tieredInitialReceipts?.size?.let{it>1}==true
+            val signed=(if(supportingDay && !multiSupport)reviewer.reviewSignedTieredSupport(ownerKey,cycleId,inputs)
                 else if(tiered)reviewer.reviewSignedTieredInitial(ownerKey,cycleId,inputs)
                 else reviewer.reviewSigned(ownerKey,cycleId,inputs)) as? NativeSavedNamedReview.Signed
                 ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
             val multiInitial=tiered && !supportingDay && signed.initialTierReceipts.size>1
-            if(multiInitial) {
+            if(multiSupport) {
+                if(signed.initialTierReceipts.size<2 ||
+                    signed.initialTierReceipts.any{it.selection.nextWorkoutId==workoutId} ||
+                    !NativeCustomNextCycleSlotDomain.isMultiTieredSupportDay(signed.draft,
+                        signed.initialTierReceipts,absoluteWeek,weekday))
+                    return@withOwnerTransaction deny(NativeCustomPreflightRefusal.INVALID_SELECTION)
+            } else if(multiInitial) {
                 val matching=signed.initialTierReceipts.filter{r->
                     r.selection.absoluteWeek==absoluteWeek && r.selection.weekday==weekday
                 }
@@ -236,7 +247,7 @@ class NativeKotlinCustomWorkoutPreflight(
                 else !session.completed || (session.cycleId==cycleId &&
                     session.absoluteWeek==absoluteWeek && session.weekday==weekday)
             })return@withOwnerTransaction deny(NativeCustomPreflightRefusal.SESSION_UNAVAILABLE)
-            if(multiInitial) {
+            if(multiInitial || multiSupport) {
                 val facts=census.sessions.filter{it.cycleId==cycleId}.map{item->
                     val origin=outstanding.preparedOrigin(ownerKey,item.workoutId)
                         ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.SESSION_UNAVAILABLE)

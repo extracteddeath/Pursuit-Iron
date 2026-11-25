@@ -105,6 +105,45 @@ class CustomBasicHistoryProgressionDomainTest {
         assertFalse(result.mayModifyHistory)
     }
 
+    @Test fun savedE1rmUsesAuthenticOriginalEffortAndAnExactAuthoredWeekKeepsAuthority() {
+        val base=cycle(SavedProgressionMethod.E1RM)
+        val program=base.copy(blocks=base.blocks.map{block->
+            block.copy(phase=TrainingPhase.STRENGTH,days=block.days.map{day->
+                day.copy(slots=day.slots.map{it.copy(role=ComposerRole.PRIMARY)})})
+        })
+        fun strength(s:CustomWorkoutDaySnapshot)=s.copy(phase=TrainingPhase.STRENGTH,
+            slots=s.slots.map{it.copy(role=ComposerRole.PRIMARY)})
+        val next=strength(snapshot())
+        val old=completed(1).let{it.copy(snapshot=strength(it.snapshot))}
+        val earned=review(next,listOf(old),program) as CustomBasicHistoryResult.Reviewed
+        assertEquals(listOf(n(105),n(105)),earned.candidate.proposedWorkingLoads)
+        assertEquals(BasicE1rmEvidence(BigDecimal("140.0"),2,true),earned.candidate.e1rmEvidence)
+        val actual=old.evidence.visits.first()
+        val corrected=old.copy(evidence=old.evidence.copy(visits=listOf(
+            actual.copy(actual=checkNotNull(actual.actual).copy(actualRir=0)))+
+            old.evidence.visits.drop(1)))
+        val held=review(next,listOf(corrected),program) as CustomBasicHistoryResult.Reviewed
+        assertEquals(listOf(n(100),n(100)),held.candidate.proposedWorkingLoads)
+        assertFalse(checkNotNull(held.candidate.e1rmEvidence).everySetMeetsGoal)
+        assertTrue(held.candidate.increasedOrdinals.isEmpty())
+        val edits=checkNotNull(CustomBasicProgressionDraftDomain.forWeekEdit("main",
+            next.slots.single().sets.map{it.prescription},earned))
+        val approved=program.copy(weekOverrides=mapOf("base" to listOf(
+            CustomWeekSlotOverride(2,0,"main",edits))))
+        val plan=BasicProgramProgressionPlanDomain.review(approved,previewWeek=ProgramProgressionWeek("base",2))
+            as ProgramProgressionPlan.Ready
+        val exact=plan.assignments.single{it.key.slotId=="main"}
+        assertEquals(ProgramProgressionRoute.AUTHORED_WEEKLY_PERIODIZATION,exact.route)
+        assertEquals(SavedProgressionMethod.E1RM,BasicProgramProgressionPlanDomain.savedChoice(exact))
+        val later=BasicProgramProgressionPlanDomain.review(approved,previewWeek=ProgramProgressionWeek("base",3))
+            as ProgramProgressionPlan.Ready
+        assertEquals(ProgramProgressionRoute.E1RM_COACH_REVIEW,later.assignments.single{it.key.slotId=="main"}.route)
+        val owned=next.copy(slots=next.slots.map{slot->slot.copy(sets=slot.sets.mapIndexed{i,set->
+            set.copy(prescription=edits[i])})})
+        assertEquals(CustomBasicHistoryResult.Rejected(CustomBasicHistoryRefusal.AUTHORED_OR_SPECIALIST_OWNS_LOAD),
+            review(owned,listOf(old),approved))
+    }
+
     @Test fun progressionMatchesPhysicalWeightNumericallyAndVerifiesTheIssuedReceipt() {
         val prior = completed(1)
         fun from(first: CustomHistoricalVisitFact) = review(sessions = listOf(prior.copy(

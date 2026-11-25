@@ -164,8 +164,24 @@ class CustomPercentageDraftDomainTest {
             CustomTieredInitialWeekEvidence(key(1,"press-slot",2),nextOtherDay))
         val later=listOf(CustomTieredTransitionWeekEvidence(key(2,"press-slot"),nextA),
             CustomTieredTransitionWeekEvidence(key(2,"other-slot"),nextB))
-        val initial=roots.fold(cycle){draft,p->apply(draft,p.key,p.request)}
-        val candidate=later.fold(initial){draft,p->apply(draft,p.key,p.request)}
+        fun project(base:CustomTrainingCycle,k:CustomNamedPercentageWeekKey,r:TieredLinearRequest)=
+            CustomPercentageDraftDomain.reviewTiered(CustomPercentageDraftSource(base,
+                stamp.copy(cycleRevision=base.revision),k.blockId,k.weekInBlock,k.weekday,k.slotId),r)
+                as CustomPercentageDraftResult.Proposed
+        val rootEdits=roots.map{project(cycle,it.key,it.request)}
+        val initial=checkNotNull(CustomPercentageDraftDomain.combineReviewedWeekEdits(cycle,rootEdits))
+        assertEquals(cycle.revision+1,initial.revision)
+        assertEquals(roots.fold(cycle){draft,p->apply(draft,p.key,p.request)}.weekOverrides,initial.weekOverrides)
+        val dayEdits=later.map{project(initial,it.key,it.request)}
+        val candidate=checkNotNull(CustomPercentageDraftDomain.combineReviewedWeekEdits(initial,dayEdits))
+        assertEquals(initial.revision+1,candidate.revision)
+        assertEquals(later.fold(initial){draft,p->apply(draft,p.key,p.request)}.weekOverrides,candidate.weekOverrides)
+        assertNull(CustomPercentageDraftDomain.combineReviewedWeekEdits(initial,listOf(dayEdits.first(),dayEdits.first())))
+        assertNull(CustomPercentageDraftDomain.combineReviewedWeekEdits(initial,listOf(dayEdits.first(),rootEdits.first())))
+        assertNull(CustomPercentageDraftDomain.combineReviewedWeekEdits(initial,emptyList()))
+        assertNull(CustomPercentageDraftDomain.combineReviewedWeekEdits(initial,listOf(dayEdits.first().copy(
+            proposal=dayEdits.first().proposal.copy(draft=dayEdits.first().proposal.draft.copy(title="Unrelated change"))))))
+        assertEquals(cycle.blocks,candidate.blocks)
         fun audit(initialTiers:List<CustomTieredInitialWeekEvidence> = roots,
             transitions:List<CustomTieredTransitionWeekEvidence> = later)=
             CustomNamedPercentageCycleAuditDomain.reviewWithTierHistory(candidate,

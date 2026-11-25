@@ -29,16 +29,10 @@ assert.ok(!css.includes(librarySurface) && libraryPaint.includes('background-ima
 assert.ok(!css.includes(librarySurface.replace(/\{$/,'')+',\n#root[data-pi-motion="expressive"] .wpb-exercise-detail'),
  'Exercise Detail is no longer redundantly included in the early Library owner');
 
-const r20='#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail\n  .wpb-exercise-detail-header{';
-const r11='#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-detail-header{';
-const r20Body=css.split(r20)[1]?.split('}')[0]||'';
-const r11Body=css.split(r11)[1]?.split('}')[0]||'';
-assert.ok(r20Body.includes('align-items:center!important;') &&
- r20Body.includes('padding-bottom:10px!important;') &&
- !r20Body.includes('background-color:'),
- 'R20 Exercise Detail layout survives without an obsolete paint declaration');
-assert.ok(r11Body.includes('background-color:var(--pi-r11-quiet)!important;') &&
- r11Body.includes('background-image:none!important;') &&
- r11Body.includes('border-bottom:1px solid var(--pi-r11-edge)!important;'),
- 'R11 remains the later, actual Exercise Detail paint owner');
+// B1052: the exercise detail header now has one owner, a flat full-width top app bar.
+const detailOwner=css.slice(css.indexOf('/* B1052 — Exercise detail'));
+assert.ok(/\.wpb-exercise-detail-header\{[^}]*border-radius:0;[^}]*background:var\(--pi-color-canvas\)/.test(detailOwner),
+ 'Exercise Detail header is a flat top app bar with one paint owner');
+assert.ok(!css.includes('#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-detail-header{'),
+ 'Superseded R11/R20 header owners are retired');
 console.log('PASS B1019: three superseded CSS priority owners retired with final paint intact.');

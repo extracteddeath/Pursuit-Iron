@@ -2683,8 +2683,10 @@ try {
                 overflow:body?.scrollWidth>body?.clientWidth+1};
         });
         assert.ok(r44Detail.opaque &&
-            r44Detail.page!==r44Detail.header &&
-            r44Detail.header===r44Detail.figure &&
+            // B1052: the top app bar is flat on the screen canvas (M3), while
+            // the figure stays a separated tonal surface.
+            r44Detail.page===r44Detail.header &&
+            r44Detail.header!==r44Detail.figure &&
             r44Detail.figure!==r44Detail.tabs &&
             r44Detail.images.every(x=>x==='none') &&
             r44Detail.backWidth>=48 &&

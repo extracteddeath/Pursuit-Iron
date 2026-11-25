@@ -185,7 +185,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-s960-margin-0,#root .wpb-s960-margin-0{margin:0}
 #root .wpb .wpb-s960-margin-0-2px-12px,#root .wpb-s960-margin-0-2px-12px{margin:0 2px 12px}
 #root .wpb .wpb-s960-margin-10px-2px-0,#root .wpb-s960-margin-10px-2px-0{margin:10px 2px 0}
-#root .wpb .wpb-s960-margin-10px-2px-4px,#root .wpb-s960-margin-10px-2px-4px{margin:10px 2px 4px}
 #root .wpb .wpb-s960-margin-12px-0-14px,#root .wpb-s960-margin-12px-0-14px{margin:12px 0 14px}
 #root .wpb .wpb-s960-margin-4px-0-10px,#root .wpb-s960-margin-4px-0-10px{margin:4px 0 10px}
 #root .wpb .wpb-s960-margin-6px-0-12px,#root .wpb-s960-margin-6px-0-12px{margin:6px 0 12px}
@@ -953,11 +952,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-library-empty-action{margin-top:var(--pi-space-4);cursor:pointer}
 @media(max-width:360px){.wpb-library-headline{gap:var(--pi-space-1)}}
 /* Exercise details consume canonical history/goal projections from LibraryView. */
-.wpb-exercise-detail{position:fixed;inset:0;z-index:80;display:flex;flex-direction:column;overflow:hidden;background:var(--pi-color-canvas)}
-.wpb-exercise-detail-header{display:flex;align-items:center;gap:var(--pi-space-2);flex-shrink:0;padding:calc(env(safe-area-inset-top) + var(--pi-space-2)) calc(var(--pi-page-inset) + env(safe-area-inset-right)) var(--pi-space-2) calc(var(--pi-page-inset) + env(safe-area-inset-left));border-bottom:1px solid var(--pi-color-divider);background:var(--pi-color-canvas)}
-.wpb-exercise-detail-back{display:grid;place-items:center;flex-shrink:0;min-width:48px;min-height:48px;padding:0;border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-action);background:var(--pi-color-control);color:var(--pi-color-on-control);cursor:pointer}
-.wpb-exercise-detail-title{flex:1;min-width:0;font-size:var(--pi-type-heading);font-weight:700;line-height:1.3;overflow-wrap:anywhere}
-.wpb-exercise-detail-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:var(--pi-space-3) calc(var(--pi-page-inset) + env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + var(--pi-space-6)) calc(var(--pi-page-inset) + env(safe-area-inset-left));max-width:560px;width:100%;margin:0 auto}
 .wpb-exercise-figure-wrap{position:relative;margin-bottom:var(--pi-space-3)}
 .wpb-exercise-demo-overlay{position:absolute;right:var(--pi-space-2);top:var(--pi-space-2);display:inline-flex;align-items:center;gap:var(--pi-space-2);min-height:48px;padding:var(--pi-space-2) var(--pi-space-3);border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-action);background:var(--pi-color-card);color:var(--pi-color-on-control);font-size:var(--pi-type-support);font-weight:650;text-decoration:none}
 .wpb-exercise-meta{display:flex;align-items:center;flex-wrap:wrap;gap:var(--pi-space-2);margin:var(--pi-space-2) 0 var(--pi-space-3);font-size:var(--pi-type-support);line-height:1.4;color:var(--pi-color-on-muted)}
@@ -1053,35 +1047,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-exercise-detail .wpb-exercise-goal-input,
 .wpb-exercise-detail .wpb-exercise-goal-save,
 .wpb-exercise-detail .wpb-exercise-ban{border-color:ButtonText;background:ButtonFace;color:ButtonText}.wpb-library .wpb-filter-chip[aria-pressed="true"],.wpb-library .wpb-library-flag[aria-pressed="true"],.wpb-exercise-goal-save{background:Highlight;color:HighlightText}}
-
-#root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail.wpb-backdrop{
-  background-clip:border-box;
-}
 /* PI M3 EXERCISE DETAIL — denser information hierarchy, not denser taps.
    Scoped to the full-screen Library detail; no workout set grids are altered. */
-#root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail-header{
-  min-height:64px;
-  padding:calc(env(safe-area-inset-top) + 8px) 14px 9px!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail-header>button:first-child{
-  width:44px!important;
-  min-width:44px!important;
-  height:44px!important;
-  border-radius:12px!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail-header>div:last-child{
-  font-size:clamp(17px,4.6vw,20px)!important;
-  font-weight:740!important;
-  line-height:1.2!important;
-  letter-spacing:-.025em!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail-body{
-  width:100%;
-  box-sizing:border-box;
-  padding:12px 16px calc(env(safe-area-inset-bottom) + 28px)!important;
-  scroll-padding-top:10px;
-  overscroll-behavior-y:contain;
-}
 #root[data-pi-motion="expressive"] .wpb .wpb-exercise-figure-wrap{
   border-radius:16px;
   overflow:hidden;
@@ -1191,10 +1158,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   margin-top:10px!important;
 }
 @media(max-width:360px){
-  #root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail-body{
-    padding-left:12px!important;
-    padding-right:12px!important;
-  }
   #root[data-pi-motion="expressive"] .wpb .wpb-exercise-tabs>button{
     font-size:12px!important;
   }
@@ -2430,30 +2393,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    The fullscreen layer remains opaque and the R12 linked-entry animation
    continues to own motion; never animate the page backdrop itself. */
 #root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
-  .wpb-exercise-detail-header{
-  min-height:64px;
-  align-items:center!important;
-  gap:10px!important;
-  padding-top:calc(env(safe-area-inset-top) + 9px)!important;
-  padding-bottom:10px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
-  .wpb-exercise-detail-header>div:last-child{
-  min-width:0!important;
-  white-space:normal!important;
-  overflow:visible!important;
-  text-overflow:clip!important;
-  overflow-wrap:anywhere!important;
-  text-wrap:pretty;
-  font-size:clamp(17px,4.7vw,20px)!important;
-  line-height:1.24!important;
-  letter-spacing:-.025em!important;
-}
-#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
-  .wpb-exercise-detail-header>button:first-child{
-  border-radius:16px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
   .wpb-exercise-figure-wrap{
   margin-bottom:9px!important;
 
@@ -3034,14 +2973,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   min-height:48px!important;
   flex-shrink:0;
 }
-#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
-  .wpb-exercise-detail-header>button:first-child{
-  width:48px!important;
-  height:48px!important;
-  min-width:48px!important;
-  min-height:48px!important;
-  flex:0 0 48px!important;
-}
 #root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-tool,
 #root[data-pi-motion="expressive"] .wpb-workout .wpb-rest-actions>button,
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-actions>button{
@@ -3561,21 +3492,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-color:var(--pi-r11-accent-stroke)!important;
   background-color:var(--pi-r11-selected)!important;
 }
+/* The full-screen detail never inherits the scrim fade: it is an opaque destination. */
 #root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail.wpb-backdrop{
-  background-color:light-dark(var(--pi-m3e-base),var(--pi-r41-page))!important;
   background-image:none!important;
   opacity:1!important;
-}
-#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-detail-header{
-  background-color:var(--pi-r11-quiet)!important;
-  background-image:none!important;
-  border-bottom:1px solid var(--pi-r11-edge)!important;
-  border-radius:0 0 21px 21px!important;
-  box-shadow:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-detail-body{
-  min-width:0;
-  padding-inline:max(16px,env(safe-area-inset-left))!important;
 }
 #root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-figure-wrap{
   background-color:var(--pi-r11-quiet)!important;
@@ -3599,11 +3519,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   box-shadow:none!important;
 }
 /* Never shrink touch targets or overlap the title at 320px / large text. */
-@media(max-width:359px){
-  #root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-detail-body{
-    padding-inline:max(12px,env(safe-area-inset-left))!important;
-  }
-}
 @media(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb .wpb-library.wpb-library,
 #root[data-pi-motion="expressive"] .wpb .wpb-library-header.wpb-library-header,
@@ -7487,7 +7402,7 @@ background:var(--pi-color-card)!important;
   translate:none!important;
   transform:none;
 }
-#root .wpb .wpb-page-shell,#root .wpb .wpb-exercise-detail{
+#root .wpb .wpb-page-shell{
   animation:none!important;
 }
 #root .wpb .wpb-wizard-step{
@@ -9925,3 +9840,51 @@ background:var(--pi-color-card)!important;
   content-visibility:auto;contain-intrinsic-size:auto 118px;
 }
 #root .wpb .wpb-library .wpb-library-results>.wpb-library-row span,#root .wpb .wpb-library .wpb-library-results>.wpb-library-row strong{min-width:0;overflow-wrap:anywhere;white-space:normal;line-height:1.28;}
+/* B1052 — Exercise detail follows the Compose screen anatomy: a full-width small top app bar
+   (standard 48px icon button, titleLarge), then one 16px-gutter column with a 12px block rhythm.
+   Horizontal chip rails bleed to the screen edge and keep the gutter as scroll padding, so the last
+   chip is never cut off at the edge. */
+#root .wpb .wpb-exercise-detail{position:fixed;inset:0;z-index:80;display:flex;flex-direction:column;overflow:hidden;padding:0;background:var(--pi-color-canvas);}
+#root .wpb .wpb-exercise-detail-header{
+  display:flex;align-items:center;gap:4px;flex-shrink:0;min-height:64px;box-sizing:border-box;
+  margin:0;padding:calc(env(safe-area-inset-top) + 8px) 16px 8px 4px;
+  border:0;border-radius:0;background:var(--pi-color-canvas);box-shadow:none;
+}
+#root .wpb .wpb-exercise-detail-header>.wpb-exercise-detail-back{
+  display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;min-width:48px;min-height:48px;padding:0;
+  border:0;border-radius:50%;background:transparent;color:var(--wpb-theme-text);box-shadow:none;
+}
+#root .wpb .wpb-exercise-detail-header>.wpb-exercise-detail-back:active{background:color-mix(in srgb,var(--wpb-theme-text) 12%,transparent);}
+#root .wpb .wpb-exercise-detail-header>.wpb-exercise-detail-title{flex:1;min-width:0;margin:0;font-size:1.375rem;font-weight:700;line-height:1.27;letter-spacing:0;overflow-wrap:anywhere;}
+#root .wpb .wpb-exercise-detail-body{
+  flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  padding:8px var(--pi-page-inset) calc(28px + env(safe-area-inset-bottom));
+}
+#root .wpb .wpb-exercise-detail-body>*+*{margin-top:12px;}
+#root .wpb .wpb-exercise-detail-body>*{margin-bottom:0;}
+#root .wpb .wpb-exercise-detail .wpb-exercise-tabs{margin:16px 0 4px;}
+#root .wpb .wpb-exercise-detail .wpb-exercise-tabs+*{margin-top:16px;}
+#root .wpb .wpb-exercise-detail .wpb-exercise-ban{margin-top:24px;}
+/* Charts */
+#root .wpb .wpb-exercise-detail .wpb-exercise-machine-scope{margin-bottom:16px;}
+#root .wpb .wpb-exercise-metric-tabs{margin:0 calc(-1*var(--pi-page-inset)) 4px;padding:0 var(--pi-page-inset) 4px;scroll-padding-inline:var(--pi-page-inset);}
+#root .wpb .wpb-exercise-metric-tabs::after{content:"";flex:0 0 1px;}
+#root .wpb .wpb-exercise-chart-summary{margin:12px 0 4px;}
+#root .wpb .wpb-exercise-chart-range{margin:0 0 12px;font-size:var(--pi-type-support);color:var(--pi-color-on-muted);}
+#root .wpb .wpb-exercise-chart-blurb{margin:12px 0 0;font-size:var(--pi-type-support);line-height:1.5;color:var(--pi-color-on-muted);}
+#root .wpb .wpb-exercise-detail .wpb-exercise-window-tabs{margin-top:16px;}
+/* Records */
+#root .wpb .wpb-exercise-detail .wpb-exercise-record-row,
+#root .wpb .wpb-exercise-detail .wpb-exercise-rep-heading,
+#root .wpb .wpb-exercise-detail .wpb-exercise-rep-row{padding-inline:0;}
+#root .wpb .wpb-exercise-detail .wpb-exercise-record-row>div:first-child{display:grid;gap:2px;}
+#root .wpb .wpb-exercise-detail .wpb-exercise-records{margin-bottom:16px;}
+/* About */
+#root .wpb .wpb-exercise-detail .wpb-exercise-tags{margin:0 0 16px;gap:6px;}
+#root .wpb .wpb-ui-field-help{font-size:var(--pi-type-caption);font-weight:400;line-height:1.4;color:var(--pi-color-on-muted);}
+/* Chip rails bleed to the screen edge and keep the 16px gutter as their start/end padding. */
+#root .wpb .wpb-library-controls>.wpb-library-filter-strip{margin-inline:calc(-1*var(--pi-page-inset));padding-inline:var(--pi-page-inset);scroll-padding-inline:var(--pi-page-inset);}
+#root .wpb .wpb-library-controls>.wpb-library-filter-strip::after{content:"";flex:0 0 1px;}
+/* Settings copy outside cards aligns to the section title, not 4px inside it. */
+#root .wpb .wpb-backup .wpb-backup-intro{padding-inline:0;}
+#root .wpb .wpb-backup .wpb-backup-device-note{margin-inline:0;}

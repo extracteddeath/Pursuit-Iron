@@ -38,8 +38,8 @@ export function useMachineChartScope(history,exerciseId,gyms=[]) {
 }
 export function MachineChartScopePicker({scopes,active,onSelect}) {
     if(scopes.length<=1)return null;
-    return _jsxs('label',{className:'wpb-exercise-machine-scope',children:[
-        'Compare weights on',
+    return _jsxs('label',{className:'wpb-ui-field wpb-exercise-machine-scope',children:[
+        _jsx('span',{children:'Compare weights on'}),
         _jsx(UiField,{as:'select','aria-label':'Physical machine for strength trend',
             value:active?.key||'',onChange:event=>onSelect(event.target.value),
             children:scopes.map(scope=>_jsx('option',{value:scope.key,
@@ -47,6 +47,6 @@ export function MachineChartScopePicker({scopes,active,onSelect}) {
                     ? 'Older unassigned history'
                     : `${scope.machineLabel||'Machine '+scope.machineInstanceId} · gym ${scope.gymId}`
             },scope.key))}),
-        _jsx('small',{children:'Machines may use different resistance scales. Only comparable loads are plotted.'})
+        _jsx('small',{className:'wpb-ui-field-help',children:'Machines may use different resistance scales. Only comparable loads are plotted.'})
     ]});
 }

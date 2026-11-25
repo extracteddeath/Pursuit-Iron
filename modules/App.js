@@ -91,7 +91,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='1049';
+const __APP_VERSION__='4.0.0'; const __BUILD__='1050';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -1157,9 +1157,9 @@ function StyleTag({ theme } = {}) {
 
       /* One overlay language. Inline backgrounds remain the source of theme colour; this standardizes
          geometry, depth, and safe-area behavior without rewriting each sheet component. */
-      .wpb [data-wpb-dialog]{padding-left:12px!important;padding-right:12px!important;}
+      .wpb [data-wpb-dialog]:not(.wpb-exercise-detail){padding-left:12px!important;padding-right:12px!important;}
       .wpb [data-wpb-dialog]>div:first-child:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)){box-shadow:0 18px 60px rgba(0,0,0,.28);}
-      .wpb-backdrop{backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);}
+      .wpb-backdrop:not(.wpb-exercise-detail){backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);}
       /* M95 CONTROL CONSISTENCY — non-workout controls share one interaction language. */
       .wpb-page-shell:not(.wpb-workout) input:not([type="range"]):not(.wpb-ui-control):not(.wpb-library-search-input),
       .wpb-page-shell:not(.wpb-workout) select:not(.wpb-ui-control),
@@ -1667,7 +1667,7 @@ function StyleTag({ theme } = {}) {
 
       /* One sheet/dialog language. Full-width phone sheets keep the native edge attachment; larger
          screens become a contained surface instead of a huge stretched mobile drawer. */
-      .wpb-backdrop{background:rgba(0,0,0,.54)!important;}
+      .wpb-backdrop:not(.wpb-exercise-detail){background:rgba(0,0,0,.54)!important;}
       .wpb-backdrop>[data-sheet-drag]{
         overflow:hidden;}
       .wpb-backdrop>[data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)){
@@ -1676,7 +1676,7 @@ function StyleTag({ theme } = {}) {
         border-top:1px solid var(--hairline)!important;
         box-shadow:var(--overlay-shadow)!important;}
       [data-sheet-drag]::before{width:34px!important;height:4px!important;margin-bottom:9px!important;background:${C.border}!important;}
-      .wpb-pop,.wpb-dialog,.wpb [data-wpb-dialog]>div:first-child:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)){
+      .wpb-pop,.wpb-dialog,.wpb [data-wpb-dialog]>div:first-child:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet,.wpb-exercise-detail-header)){
         border-radius:16px!important;
         box-shadow:var(--overlay-shadow)!important;
       }
@@ -1960,10 +1960,6 @@ function StyleTag({ theme } = {}) {
          this view also participates in the backdrop stack for system-Back/focus ownership, so it
          needs a later, more-specific opaque override. Without it the Library rows remain visible
          through the transparent history/record sections and look like they are overlapping. */
-      .wpb-backdrop.wpb-exercise-detail{
-        background:${C.bg}!important;
-        backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
-      }
 
 
 
@@ -14891,7 +14887,7 @@ function ExerciseCharts({ history, id, gyms = [], defaultMetric = "e1rm" }) {
     return (_jsxs("div", { "data-exercisecharts": metric, children: [
         _jsx(MachineChartScopePicker,{scopes,active,onSelect:setSelectedScope}),
         _jsx("div", { className: "wpb-xscroll wpb-exercise-metric-tabs wpb-b964-layout-18", role: "tablist", "aria-label": "Exercise chart metric", children: EX_METRICS.map(x => (_jsx("button", { role: "tab", "data-metric-tab": x.id, "aria-selected": metric === x.id, "aria-pressed": metric === x.id, onClick: () => setMetric(x.id), className: "pressable wpb-exercise-metric-tab", style: { flexShrink: 0, padding: "8px 13px", borderRadius: 12, cursor: "pointer", fontSize: 14, fontWeight: 700, whiteSpace: "nowrap",
-                        border: `1px solid ${metric === x.id ? C.accent : C.border}`, background: metric === x.id ? C.accent : C.card, color: metric === x.id ? C.accentText : C.muted }, children: x.label }, x.id))) }), series.ok ? (_jsxs(_Fragment, { children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s957-gap-16 wpb-s956-alignitems-flex-end wpb-s960-margin-10px-2px-4px", children: [_jsxs("div", { children: [_jsxs("div", { className: "wpb-type-micro-faint", children: ["Avg ", m.label] }), _jsxs("div", { className: "mono wpb-s960-fontsize-22px wpb-s956-fontweight-700 wpb-s960-letterspacing-neg-0-5px", children: [fmt(series.avg), " ", _jsx("span", { style: { fontSize: 14, color: C.faint, fontWeight: 600 }, children: unitLabel })] })] }), _jsxs("div", { children: [_jsxs("div", { className: "wpb-type-micro-faint", children: ["Best ", m.label] }), _jsxs("div", { className: "mono wpb-s960-fontsize-22px wpb-s956-fontweight-700 wpb-s960-letterspacing-neg-0-5px", children: [fmt(series.best), " ", _jsx("span", { style: { fontSize: 14, color: C.faint, fontWeight: 600 }, children: unitLabel })] })] }), _jsxs("div", { className: "wpb-s960-marginleft-auto wpb-s956-textalign-right", children: [_jsx("div", { className: "wpb-type-micro-faint", children: "Change" }), _jsxs("div", { className: "mono", style: { fontSize: 16, fontWeight: 700, color: series.delta > 0 ? C.accentInk : series.delta < 0 ? C.warn : C.muted }, children: [series.delta > 0 ? "+" : "", fmt(series.delta)] })] })] }), _jsxs("div", { style: { fontSize: 14, color: C.muted, margin: "0 2px 10px" }, "data-range-label": true, children: [dF(series.from), " \u2013 ", dF(series.to), " \u00B7 ", series.sessions, " session", series.sessions === 1 ? "" : "s"] }), _jsx("div", { className: "wpb-exercise-chart-surface", style: { background: C.card, borderRadius: 16, padding: "12px 6px 4px" }, children: _jsx(MetricChart, { series: series }) }), _jsx("div", { style: { fontSize: 14, color: C.faint, lineHeight: 1.5, margin: "10px 2px 0" }, children: m.blurb })] })) : (_jsxs("div", { "data-empty-window": true, style: { textAlign: "center", padding: "34px 16px", color: C.faint, background: C.card, borderRadius: 16 }, children: [_jsx(TrendingUp, { size: 24, className: "wpb-b977-muted-empty-icon" }), _jsx("div", { style: { fontSize: 16, fontWeight: 600, color: C.muted, marginTop: 8 }, children: "Nothing logged in this range" }), _jsx("div", { className: "wpb-s956-fontsize-14 wpb-s957-margintop-4 wpb-s957-lineheight-1-5", children: "Widen the range below, or log a session with this lift." })] })), _jsx("div", { className: "wpb-exercise-window-tabs", role: "tablist", "aria-label": "Exercise chart range", style: { display: "flex", gap: 4, background: C.card, borderRadius: 12, padding: 4, marginTop: 12 }, children: EX_WINDOWS.map(w => (_jsx("button", { role: "tab", "data-window-tab": w.id, "aria-selected": win === w.id, "aria-pressed": win === w.id, onClick: () => setWin(w.id), className: "pressable", style: { flex: 1, padding: "8px 2px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 14, fontWeight: 700,
+                        border: `1px solid ${metric === x.id ? C.accent : C.border}`, background: metric === x.id ? C.accent : C.card, color: metric === x.id ? C.accentText : C.muted }, children: x.label }, x.id))) }), series.ok ? (_jsxs(_Fragment, { children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s957-gap-16 wpb-s956-alignitems-flex-end wpb-exercise-chart-summary", children: [_jsxs("div", { children: [_jsxs("div", { className: "wpb-type-micro-faint", children: ["Avg ", m.label] }), _jsxs("div", { className: "mono wpb-s960-fontsize-22px wpb-s956-fontweight-700 wpb-s960-letterspacing-neg-0-5px", children: [fmt(series.avg), " ", _jsx("span", { style: { fontSize: 14, color: C.faint, fontWeight: 600 }, children: unitLabel })] })] }), _jsxs("div", { children: [_jsxs("div", { className: "wpb-type-micro-faint", children: ["Best ", m.label] }), _jsxs("div", { className: "mono wpb-s960-fontsize-22px wpb-s956-fontweight-700 wpb-s960-letterspacing-neg-0-5px", children: [fmt(series.best), " ", _jsx("span", { style: { fontSize: 14, color: C.faint, fontWeight: 600 }, children: unitLabel })] })] }), _jsxs("div", { className: "wpb-s960-marginleft-auto wpb-s956-textalign-right", children: [_jsx("div", { className: "wpb-type-micro-faint", children: "Change" }), _jsxs("div", { className: "mono", style: { fontSize: 16, fontWeight: 700, color: series.delta > 0 ? C.accentInk : series.delta < 0 ? C.warn : C.muted }, children: [series.delta > 0 ? "+" : "", fmt(series.delta)] })] })] }), _jsxs("div", { className: "wpb-exercise-chart-range", "data-range-label": true, children: [dF(series.from), " \u2013 ", dF(series.to), " \u00B7 ", series.sessions, " session", series.sessions === 1 ? "" : "s"] }), _jsx("div", { className: "wpb-exercise-chart-surface", style: { background: C.card, borderRadius: 16, padding: "12px 6px 4px" }, children: _jsx(MetricChart, { series: series }) }), _jsx("div", { className: "wpb-exercise-chart-blurb", children: m.blurb })] })) : (_jsxs("div", { "data-empty-window": true, style: { textAlign: "center", padding: "34px 16px", color: C.faint, background: C.card, borderRadius: 16 }, children: [_jsx(TrendingUp, { size: 24, className: "wpb-b977-muted-empty-icon" }), _jsx("div", { style: { fontSize: 16, fontWeight: 600, color: C.muted, marginTop: 8 }, children: "Nothing logged in this range" }), _jsx("div", { className: "wpb-s956-fontsize-14 wpb-s957-margintop-4 wpb-s957-lineheight-1-5", children: "Widen the range below, or log a session with this lift." })] })), _jsx("div", { className: "wpb-exercise-window-tabs", role: "tablist", "aria-label": "Exercise chart range", style: { display: "flex", gap: 4, background: C.card, borderRadius: 12, padding: 4, marginTop: 12 }, children: EX_WINDOWS.map(w => (_jsx("button", { role: "tab", "data-window-tab": w.id, "aria-selected": win === w.id, "aria-pressed": win === w.id, onClick: () => setWin(w.id), className: "pressable", style: { flex: 1, padding: "8px 2px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 14, fontWeight: 700,
                         background: win === w.id ? C.accent : "none", color: win === w.id ? C.accentText : C.muted }, children: w.label }, w.id))) })] }));
 }
 /* 1000 lb Club tracker — sums best estimated 1RM on squat + bench + deadlift (the powerlifting

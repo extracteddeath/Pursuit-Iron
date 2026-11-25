@@ -2,10 +2,10 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 1049,
+  "build": 1050,
   "engineVersion": "0.65.10",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "c2d290142ea30f338a95c3e96a40fff61b577d6deb72357ea8b0b4bb4e442162",
+  "runtimeAggregate": "4e82c233635b45bf7fa79485db5542aebaf685d906b77b060cd5ec782f7b8f93",
   "runtimeFiles": {
     "modules/app-storage-ownership.js": "765ef4d37d4f73967fee7ef1942de229e905e112c7735b53de86a8e7106b3e39",
     "modules/backup-restore-panel.js": "194d953c2478a300c21e303c19fd7dd27ac436ddef21bcacaa7b8299d60123df",
@@ -24,7 +24,7 @@
     "modules/injury-tools.js": "54a14efe3d96a41d2f6288bb59889f43807232c3a93998740553895c8db43688",
     "modules/legacy-research-data.js": "8b09be67d7c80da7602bb168726d7f7bc3f6ddb9a43b29293acdd18e208ba206",
     "modules/loading-calculator.js": "ac681c83d3b4a8f7b1f7368c0fc51e84149c02bf2c8bfa276dcc605606d217cb",
-    "modules/machine-chart-scope.js": "a28cfd4029dc0ba4925324e1f0e488473e79bf0a96b6b812f8181f9103a4cd67",
+    "modules/machine-chart-scope.js": "4c5824ca511a60a77b21e0093d4d621afee617776728561535c0636a215804a7",
     "modules/main.js": "0547cb25708ed6a5a4b62a80d306986e694b35789854114f515707845c1ce5fb",
     "modules/mobile-lifecycle.js": "458023a822f15a8f03dba82ab4e7eeb005f965968a3d92bc07568e248a46ff47",
     "modules/next-engine/adaptive-cycle-upgrade.js": "9aca95fb3fb63e7968694df0b10032f47aca5ad1906f65d795f62edd9437bf9b",
@@ -162,18 +162,18 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "ee963ea15ff2d1e3600f7191f6f77145179651bc1ece7a5d622994ce83ff7f45",
-    "index.html": "84f147a40b92ae7f0527d521c25e553e00e7e76503fb583d725f07f7546d209a",
-    "sw.js": "2ef7d041c8aa10427903a8cc34db17d4db92d9e44826cec089b3996ec5340837",
-    "BUILD_PROFILE.json": "8baf9df36366c10c5bb65aa48afd798a70dd7505035dfb449fe4704571fd828a",
+    "modules/App.js": "2e7a628be93db6f66c1da34cecf04d12ba07ab0c15c8bc02280ee08772292c67",
+    "index.html": "cc2a6a0efa1ded696ffbe754befc7cb5e076ad68cf6b9a50e2d4d281f1afae52",
+    "sw.js": "4266120e32de2e8a03c23e2ff4e64b2f8420741602dc213460dc17d4a3a72083",
+    "BUILD_PROFILE.json": "cccebb18ac426cbe32f384aa0c71eaad529edffd3c64654b07aef7b09aeb52c0",
     "CHANGELOG.md": "b2652caa581ef510ddbf292f8422749da1a1616e8c07b2de372922a2782a2539",
-    "app.css": "10805e8c60eb293ea11e5f76ecff03a5398643e46db2943f2052d1c9ac666404",
+    "app.css": "e084045c7bb0e755e15fe7c358ec65cc6959bbc6b406999a9dce718df310c8ff",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1049-rb43e5841619bc173",
-  "uiMilestone": "Build 1049 · M3 type scale (14/16 body) and 48px touch targets"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1050-r5d94f5d0b0fd5162",
+  "uiMilestone": "Build 1050 · M3 type scale (14/16 body) and 48px touch targets"
 }

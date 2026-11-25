@@ -9,6 +9,7 @@ import { InfoCard, MotionReveal } from './ui-disclosure.js';
 import { SetupCard, ProgressionCard, ProgramReferenceSheet, ProgressionChoiceSheet } from './program-reference-surfaces.js';
 import { CHANGELOG } from './release-notes.js';
 import { UiHeader, UiRootHeader, UiCard, UiMetric, UiAction, UiChoice, UiSegmented, UiStatus, UiSection, UiWavyProgress, UiListItem, UiSheetClose, UiBanner, UiStatTile } from './ui-primitives.js';
+import { UiSheet } from './ui-sheet.js';
 import { ProgramSettingsSheet } from './program-settings-sheet.js';
 import { ProgramManualTargets } from './program-manual-targets.js';
 import { LoadWaveCard } from './program-load-wave.js';
@@ -17016,22 +17017,17 @@ function profileCardRows({ history, unit, score, level, milestones, prefs }) {
     }
     return rows;
 }
-function ProfileShareCard({ prefs, rows, onEdit, onShare, expanded, levelContent, identity }) {
-    return _jsxs(UiCard, { as: "section", className: "wpb-profile-share-card", "aria-label": "Your share card", children: [
-        _jsx("h2", { children: prefs.cardName.trim() || "My training" }),
-        _jsx("p", { className: "wpb-profile-card-caption", children: identity }),
-        levelContent,
-        _jsx("dl", { className: "wpb-profile-card-metrics", children: rows.filter(row => !levelContent || row.id !== "level").map(row => _jsxs("div", { "data-card-metric": row.id, children: [
+// B1055: the card shows exactly what Share exports; who you are, your level and the two actions sit above it.
+function ProfileShareCard({ rows }) {
+    return _jsxs(UiCard, { as: "section", className: "wpb-profile-share-card", "aria-labelledby": "profile-share-heading", children: [
+        _jsx("h2", { id: "profile-share-heading", className: "wpb-profile-share-heading", children: "On your share card" }),
+        _jsx("dl", { className: "wpb-profile-card-metrics", children: rows.map(row => _jsxs("div", { "data-card-metric": row.id, children: [
             _jsx("dt", { children: row.label }),
             _jsx("dd", { children: row.lines?.length ? row.lines.map((line,i) => _jsx("span", { children: line }, i)) : row.value }),
         ] }, row.id)) }),
         _jsxs("details", { className: "wpb-profile-card-details", children: [
             _jsx("summary", { children: "About these metrics" }),
             ...rows.map(row => _jsxs("p", { children: [_jsx("strong", { children: row.label + ": " }), row.detail] }, row.id))
-        ] }),
-        _jsxs("div", { className: "wpb-ui-row wpb-profile-card-actions", children: [
-            _jsxs(UiAction, { variant: "tonal", type: "button", "aria-expanded": expanded, "aria-controls": "profile-card-editor", onClick: onEdit, children: [_jsx(Pencil, { size: 15 }), "Edit card"] }),
-            _jsxs(UiAction, { variant: "tonal", type: "button", className: "wpb-profile-share-action", "data-emphasis": "accent", onClick: onShare, children: [_jsx(Share2, { size: 15 }), "Share profile"] })
         ] })
     ] });
 }
@@ -17047,17 +17043,32 @@ function ProfileCardCustomization({ prefs, onChange, onClose }) {
         favorites[index] = id;
         onChange({ ...prefs, favorites: favorites.filter(Boolean) });
     };
-    return _jsxs("section", { id: "profile-card-editor", className: "wpb-profile-customize wpb-profile-card-editor", "aria-label": "Edit share card", children: [
-        _jsxs("div", { className: "wpb-profile-customize-header", children: [_jsxs("div", { children: [_jsx("strong", { children: "Your share card" }), _jsx("p", { children: "Choose what you want to show. Changes save automatically." })] }), _jsx(UiAction, { variant: "tonal", type: "button", "data-icon-only": true, "aria-label": "Close share card editor", onClick: onClose, children: _jsx(X, { size: 18 }) })] }),
-        _jsxs("label", { className: "wpb-ui-field wpb-profile-card-field", children: ["Name on card", _jsx("input", { className: "wpb-ui-control", type: "text", maxLength: 60, value: prefs.cardName, placeholder: "My training", onChange: e => onChange({ ...prefs, cardName: e.target.value }) })] }),
-        _jsx("div", { className: "wpb-profile-customize-label", children: "Show on card" }),
-        _jsx("div", { className: "wpb-profile-share-toggles", children: PROFILE_SHARE_CHOICES.map(c => {
+    return _jsxs("section", { id: "profile-card-editor", className: "wpb-profile-edit-section wpb-profile-card-editor", "aria-labelledby": "profile-card-editor-title", children: [
+        _jsx("h3", { id: "profile-card-editor-title", className: "wpb-profile-edit-heading", children: "Share card" }),
+        _jsx("div", { className: "wpb-profile-edit-label", children: "Show on card" }),
+        _jsx("div", { className: "wpb-profile-share-toggles wpb-profile-chip-row", role: "group", "aria-label": "Show on card", children: PROFILE_SHARE_CHOICES.map(c => {
             const selected = prefs.share.includes(c.id);
-            return _jsxs(UiAction, { variant: "tonal", type: "button", "data-align": "start", "aria-pressed": selected, disabled: selected && prefs.share.length === 1, onClick: () => toggleShare(c.id), children: [_jsx("span", { "aria-hidden": true, children: selected ? "✓" : "+" }), c.label] }, c.id);
+            return _jsx(UiChoice, { kind: "filter", selected, disabled: selected && prefs.share.length === 1, onClick: () => toggleShare(c.id), children: c.label }, c.id);
         }) }),
         prefs.share.includes("favorites") && _jsxs("div", { className: "wpb-profile-card-favorites", children: [_jsx("p", { children: "Pick up to three lifts. Logged records appear with them." }), ...[0,1,2].map(index => _jsxs("label", { className: "wpb-ui-field wpb-profile-card-field", children: [`Favorite lift ${index + 1}`, _jsxs("select", { className: "wpb-ui-control", value: prefs.favorites[index] || "", onChange: e => favorite(index, e.target.value), children: [_jsx("option", { value: "", children: "Choose a lift" }), ...lifts.filter(lift => !prefs.favorites.includes(lift.id) || prefs.favorites[index] === lift.id).map(lift => _jsx("option", { value: lift.id, children: lift.name }, lift.id))] })] }, index))] }),
-        _jsx(UiAction, { variant: "tonal", type: "button", className: "wpb-profile-reset", onClick: onClose, children: "Done" })
     ] });
+}
+// B1055: one place to edit the profile: who you are (name, bodyweight, sex, birthday — the same values
+// Settings shows) and what the share card shows. Every change saves as it is made.
+function ProfileEditSheet({ prefs, onChange, onClose, bodyweight, setBodyweight, sex, setSex, birth, setBirth, unit }) {
+    return _jsx(UiSheet, { id: "profile-edit", title: "Edit profile", onClose, className: "wpb-profile-edit-sheet",
+        footer: _jsx(UiAction, { variant: "primary", onClick: onClose, children: "Done" }),
+        children: _jsxs("div", { className: "wpb-profile-edit-body", children: [
+            _jsxs("section", { className: "wpb-profile-edit-section", "aria-labelledby": "profile-about-title", children: [
+                _jsx("h3", { id: "profile-about-title", className: "wpb-profile-edit-heading", children: "About you" }),
+                _jsxs("label", { className: "wpb-ui-field wpb-profile-card-field", children: ["Name", _jsx("input", { className: "wpb-ui-control", type: "text", maxLength: 60, value: prefs.cardName, placeholder: "My training", onChange: e => onChange({ ...prefs, cardName: e.target.value }) })] }),
+                setBodyweight && _jsxs("label", { className: "wpb-ui-field wpb-profile-card-field", children: [`Bodyweight (${unit})`, _jsx("input", { className: "mono wpb-ui-control", inputMode: "decimal", value: bodyweight || "", placeholder: "\u2014", onFocus: selectNumericInput, onChange: e => setBodyweight(e.target.value) })] }),
+                setSex && _jsxs("div", { className: "wpb-ui-field wpb-profile-card-field", children: [_jsx("span", { id: "profile-sex-label", children: "Sex" }), _jsx("div", { className: "wpb-profile-chip-row", role: "group", "aria-labelledby": "profile-sex-label", children: [["male", "Male"], ["female", "Female"]].map(([id, text]) => _jsx(UiChoice, { kind: "filter", selected: sex === id, onClick: () => setSex(id), children: text }, id)) })] }),
+                setBirth && _jsxs("label", { className: "wpb-ui-field wpb-profile-card-field", children: ["Birthday", _jsx("input", { className: "mono wpb-ui-control", type: "date", value: birth || "", max: todayISO(), min: "1900-01-01", onChange: e => setBirth(e.target.value) })] }),
+                _jsx("small", { className: "wpb-ui-field-help", children: "Bodyweight, sex and age set your strength-standard level." })
+            ] }),
+            _jsx(ProfileCardCustomization, { prefs, onChange, onClose })
+        ] }) });
 }
 function shareCustomProfileCard({ history, unit, score, level, milestones, prefs, theme }) {
     if (typeof document === "undefined") return;
@@ -17097,7 +17108,7 @@ function shareCustomProfileCard({ history, unit, score, level, milestones, prefs
     link.click();
 }
 
-function ProfileView({ history, bodyweight, sex, age, unit, onSettings, onStrength }) {
+function ProfileView({ history, bodyweight, sex, age, birth, unit, onSettings, onStrength, setBodyweight, setSex, setBirth }) {
     const bw = parseFloat(bodyweight);
     const ms = useMemo(() => computeMilestones(history, { unit, bodyweight }), [history, unit, bodyweight]);
     const lvl = useMemo(() => computeLevel(history, ms), [history, ms]);
@@ -17362,16 +17373,7 @@ function ProfileView({ history, bodyweight, sex, age, unit, onSettings, onStreng
             _jsx(UiRootHeader, {
                 title: "Profile",
                 titleClassName: "wpb-profile-title",
-                className: "wpb-profile-head",
-                actions:
-                    onSettings &&
-                    _jsxs(UiAction, {
-                        variant: "tonal",
-                        onClick: onSettings,
-                        "aria-label": "Edit profile",
-                        className: "wpb-profile-edit",
-                        children: [_jsx(Pencil, { size: 16 }), "Edit"]
-                    })
+                className: "wpb-profile-head"
             }),
             _jsxs("div", {
                 className: "wpb-scroll wpb-page-scroll wpb-profile-scroll",
@@ -17379,30 +17381,27 @@ function ProfileView({ history, bodyweight, sex, age, unit, onSettings, onStreng
                     _jsxs("div", {
                         className: "wpb-profile-inner",
                         children: [
-                            _jsx(ProfileShareCard, {
-                                prefs: profilePrefs,
-                                rows: cardRows,
-                                identity: [bodyLabel, ageLabel].filter(Boolean).join(" · "),
-                                levelContent: sectionContent.level,
-                                expanded: showShareCustomize,
-                                onEdit: () => setShowShareCustomize((x) => !x),
-                                onShare: () =>
-                                    shareCustomProfileCard({
-                                        history,
-                                        unit,
-                                        score: sscore,
-                                        level: lvl,
-                                        milestones: ms,
-                                        prefs: profilePrefs,
-                                        theme: C
+                            // B1055: who you are, then the only two actions: one Edit (name, body details
+                            // and the share card, in one sheet) and Share.
+                            _jsxs("header", {
+                                className: "wpb-profile-person",
+                                children: [
+                                    _jsx("h2", { className: "wpb-profile-name", children: profilePrefs.cardName.trim() || "My training" }),
+                                    _jsx("p", { className: "wpb-profile-card-caption", children: [bodyLabel, ageLabel].filter(Boolean).join(" \u00B7 ") }),
+                                    sectionContent.level,
+                                    _jsxs("div", {
+                                        className: "wpb-profile-card-actions",
+                                        children: [
+                                            _jsxs(UiAction, { variant: "tonal", className: "wpb-profile-edit", "aria-haspopup": "dialog", "aria-expanded": showShareCustomize,
+                                                onClick: () => setShowShareCustomize(true), children: [_jsx(Pencil, { size: 16, "aria-hidden": true }), "Edit profile"] }),
+                                            _jsxs(UiAction, { variant: "primary", className: "wpb-profile-share-action", "aria-label": "Share profile",
+                                                onClick: () => shareCustomProfileCard({ history, unit, score: sscore, level: lvl, milestones: ms, prefs: profilePrefs, theme: C }),
+                                                children: [_jsx(Share2, { size: 16, "aria-hidden": true }), "Share"] })
+                                        ]
                                     })
+                                ]
                             }),
-                            showShareCustomize &&
-                                _jsx(ProfileCardCustomization, {
-                                    prefs: profilePrefs,
-                                    onChange: saveProfilePrefs,
-                                    onClose: () => setShowShareCustomize(false)
-                                }),
+                            _jsx(ProfileShareCard, { rows: cardRows }),
                             // B1030: Profile is identity. Score, standards, the 1,000 lb club and lifetime
                             // totals are the record, and live once, in Progress.
                             // Until bodyweight is set the score cannot exist, so the row is the setup step.
@@ -17428,7 +17427,9 @@ function ProfileView({ history, bodyweight, sex, age, unit, onSettings, onStreng
                             sectionContent.achievements
                         ]
                     }),
-                    _jsx(AchievementDetailSheet, { m: detail, onClose: () => setDetail(null) })
+                    _jsx(AchievementDetailSheet, { m: detail, onClose: () => setDetail(null) }),
+                    showShareCustomize && _jsx(ProfileEditSheet, { prefs: profilePrefs, onChange: saveProfilePrefs, onClose: () => setShowShareCustomize(false),
+                        bodyweight, setBodyweight, sex, setSex, birth, setBirth, unit })
                 ]
             })
         ]
@@ -21546,7 +21547,7 @@ function App() {
                                         setSex(patch.sex); if (patch.birth !== undefined) {
                                         setBirth(patch.birth);
                                         setBirthEst(false);
-                                    } }, bwLog: bwLog, onLogBodyweight: logBodyweight, goals: goals, onRepeat: repeatWorkout, measurements: measurements, onLogMeasurement: logMeasurement, cycles: cycles, saved: saved })) : view === "profile" ? (_jsx(ProfileView, { history: history, bodyweight: bodyweight, sex: sex, age: age, unit: unit, onStrength: () => { setProgressFocus("strength"); navToTab("progress"); }, onSettings: () => { setSettingsFocus("profile"); navToTab("settings"); } })) : view === "settings" ? (_jsx(SettingsView, { experience: experience, setExperience: setExperience, selfTestData: { saved, history, perf }, gymName: activeGym ? activeGym.name : "All equipment", gymCount: gyms.length, onGyms: () => setGymsOpen(true), initialFocus: settingsFocus, onFocusHandled: () => setSettingsFocus(null), theme: theme, setTheme: chooseTheme, unit: unit, setUnit: switchUnit, loadMode: loadMode, setLoadMode: setLoadMode, restAutoStart: restAutoStart, setRestAutoStart: setRestAutoStart, warmupCard: warmupCard, setWarmupCard: setWarmupCard, haptics: haptics, setHaptics: setHaptics, restScale: restScale, setRestScale: setRestScale, reminders: reminders, setReminders: setReminders, minInc: minInc, setMinInc: setMinInc, plates: plates, setPlates: setPlates, bodyweight: bodyweight, setBodyweight: setBodyweight, sex: sex, setSex: setSex, age: age, birth: birth, setBirth: (b) => { setBirth(b); setBirthEst(false); }, birthEst: birthEst, bannedCount: banned.length, customCount: custom.length, historyCount: history.length, onClearBanned: () => { const prev = banned; setBanned([]); if (prev.length)
+                                    } }, bwLog: bwLog, onLogBodyweight: logBodyweight, goals: goals, onRepeat: repeatWorkout, measurements: measurements, onLogMeasurement: logMeasurement, cycles: cycles, saved: saved })) : view === "profile" ? (_jsx(ProfileView, { history: history, bodyweight: bodyweight, sex: sex, age: age, birth: birth, unit: unit, setBodyweight: setBodyweight, setSex: setSex, setBirth: (b) => { setBirth(b); setBirthEst(false); }, onStrength: () => { setProgressFocus("strength"); navToTab("progress"); }, onSettings: () => { setSettingsFocus("profile"); navToTab("settings"); } })) : view === "settings" ? (_jsx(SettingsView, { experience: experience, setExperience: setExperience, selfTestData: { saved, history, perf }, gymName: activeGym ? activeGym.name : "All equipment", gymCount: gyms.length, onGyms: () => setGymsOpen(true), initialFocus: settingsFocus, onFocusHandled: () => setSettingsFocus(null), theme: theme, setTheme: chooseTheme, unit: unit, setUnit: switchUnit, loadMode: loadMode, setLoadMode: setLoadMode, restAutoStart: restAutoStart, setRestAutoStart: setRestAutoStart, warmupCard: warmupCard, setWarmupCard: setWarmupCard, haptics: haptics, setHaptics: setHaptics, restScale: restScale, setRestScale: setRestScale, reminders: reminders, setReminders: setReminders, minInc: minInc, setMinInc: setMinInc, plates: plates, setPlates: setPlates, bodyweight: bodyweight, setBodyweight: setBodyweight, sex: sex, setSex: setSex, age: age, birth: birth, setBirth: (b) => { setBirth(b); setBirthEst(false); }, birthEst: birthEst, bannedCount: banned.length, customCount: custom.length, historyCount: history.length, onClearBanned: () => { const prev = banned; setBanned([]); if (prev.length)
                                         setAppToast({ msg: `Cleared ${prev.length} banned exercise${prev.length === 1 ? "" : "s"}`, undo: () => { setBanned(prev); setAppToast(null); } }); }, onClearHistory: () => { const prev = history; setHistory([]); if (prev.length)
                                         setAppToast({ msg: `Cleared ${prev.length} logged workout${prev.length === 1 ? "" : "s"}`, undo: () => { setHistory(prev); setAppToast(null); } }); }, onResetAll: resetAll, onExport: () => exportData(), onBackupSaved: () => setLastBackup(Date.now()), onExportCSV: exportCSV, onExportBodyCSV: exportBodyCSV, onImport: importData, onPreviewImport: (text, options) => importData(text, { ...(options || {}), preview: true }), onLibrary: () => pushView("library", "settings"), onShowIntro: () => { setSeenIntroV(0); rootView("home"); }, onShowWhatsNew: () => setWhatsNewModal(true) })) : view === "library" ? (_jsx(LibraryView, { onBack: goBack, navigationMemory: screenNavigationMemory.current.library, banned: banned, onBan: addBan, onSetBan: setBanFor, goals: goals, onSetGoal: setGoalWeight, unit: unit, history: history, gyms: gyms, onCreateCustom: () => pushView("wizard", "library"), onCompare: () => { setCompareMode("exercises"); pushView("compare", "library"); }, exNotes: exNotes, onSetExNote: updatePinnedNote, exSetup: exSetup, onSetExSetup: updateExerciseSetup })) : view === "compare" ? (_jsx(CompareView, { saved: saved, initialMode: compareMode, onBack: goBack })) : view === "gallery" ? (_jsx(GalleryView, { onBack: goBack, onImport: importProgramText })) : view === "cycles" ? (_jsx(CyclesView, { onBack: () => { setFocusCycle(null); goBack(); }, focusId: focusCycle, cycles: cycles, saved: saved, history: history, cycleInfo: liveCycleInfo, onNew: () => pushView("cycleWizard", "cycles"), onOpenBlock: (c, i) => openCycleBlock(c, i, "cycles"), onCompleteBlock: completeCycleBlock, onDelete: deleteCycle, onOpenCycle: (c) => openCycleDetail(c.id, "cycles"), onReview: (c, i) => { setReviewOf({ cycleId: c.id, blockIdx: i }); pushView("blockReview", "cycles"); } })) : view === "cycleDetail" ? ((() => {
                                     const dc = cycles.find(c => c.id === detailCycleId);

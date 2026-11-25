@@ -39,6 +39,24 @@ class KotlinVerifiedPlateLayoutDomainTest {
             stock(),d("10"),LoadUnit.LB))
     }
 
+    @Test fun counterbalancedSmithUsesConfirmedEmptyResistanceAndExactPairsOnly() {
+        val smith=VerifiedLoadStock.Smith(LoadUnit.KG,d("0"),
+            mapOf(d("2.5") to 1,d("10") to 1))
+        val empty=checkNotNull(KotlinVerifiedPlateLayoutDomain.inspect(smith,d("0"),LoadUnit.KG))
+        assertEquals(LoadBasis.SMITH_TOTAL,empty.basis)
+        assertEquals(d("0"),empty.barWeight)
+        assertTrue(empty.perSide.isEmpty())
+        val loaded=checkNotNull(KotlinVerifiedPlateLayoutDomain.inspect(smith,d("25"),LoadUnit.KG))
+        assertEquals(LoadBasis.SMITH_TOTAL,loaded.basis)
+        assertEquals(d("25"),loaded.total)
+        assertEquals(listOf(KotlinPlateSide(d("10"),1),KotlinPlateSide(d("2.5"),1)),loaded.perSide)
+        assertNull(KotlinVerifiedPlateLayoutDomain.inspect(smith,d("15"),LoadUnit.KG))
+        assertNull(KotlinVerifiedPlateLayoutDomain.inspect(smith,d("25"),LoadUnit.LB))
+        val landmine=VerifiedLoadStock.Totals(LoadUnit.KG,LoadBasis.LANDMINE_ADDED_PLATES,
+            listOf(d("0"),d("25")))
+        assertNull(KotlinVerifiedPlateLayoutDomain.inspect(landmine,d("25"),LoadUnit.KG))
+    }
+
     @Test fun doesNotInventMissingPlatePairs() {
         val limited=stock(plates=mapOf("45" to 1))
         assertNotNull(KotlinVerifiedPlateLayoutDomain.inspect(

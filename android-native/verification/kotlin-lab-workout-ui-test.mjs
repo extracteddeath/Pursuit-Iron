@@ -1842,6 +1842,8 @@ assert.ok(
   basicPreviewScreen.includes('if (slot.slotId in loadStepSlots) maxStep else BigDecimal.ZERO') &&
   basicPreviewScreen.includes('checkNotNull(basicStep)') &&
   basicPreviewScreen.includes('Preview basic progression') &&
+  basicPreviewScreen.includes('Review e1RM progression') &&
+  basicPreviewScreen.includes('ProgramProgressionRoute.E1RM_COACH_REVIEW') &&
   basicPreviewScreen.includes('!session.prescriptionEditedForTime') &&
   basicPreviewScreen.includes('state.basicDayProgressionSlotId==slot.slotId') &&
   !basicPreviewScreen.includes('state.progressionCoachingEnabled &&\n                            slot.slotId in basicSlots') &&

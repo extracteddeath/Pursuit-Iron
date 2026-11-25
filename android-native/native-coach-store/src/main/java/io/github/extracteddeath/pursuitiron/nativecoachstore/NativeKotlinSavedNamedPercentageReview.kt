@@ -590,7 +590,9 @@ class NativeKotlinSavedNamedPercentageReview(
                             it.workoutId!=multiNext.nextWorkoutId && finalFact?.completed!=true} ||
                         NativeCustomNextCycleSlotDomain.select(candidate,facts) is NativeCustomNextCycleSlot.Rejected)
                         return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.PROTECTED_WEEK)
-                    // The public inventory caller receives only a Boolean.
+                    if(identity.signedInIdentity()!=owner || audit.coachingPolicyRevisions!=prior.policyReferences)
+                        return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
+                    // The inventory caller receives only a Boolean.
                     return@withOwnerTransaction NativeSavedNamedReview.Signed(candidate,stamp,receipts.toList(),
                         prior,evidence.toList(),inputs,audit,timeline.manifestRevision,initial,tierEvidence,
                         null,roots,tierEvidences,null)

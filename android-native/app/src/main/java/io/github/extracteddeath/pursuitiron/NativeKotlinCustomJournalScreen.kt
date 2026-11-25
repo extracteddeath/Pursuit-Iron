@@ -1852,6 +1852,7 @@ private fun NativeKotlinCustomVisitEditor(
     // observations or authorize a future session after cold restart.
     val referenceKey=WorkoutReferenceKey(set.setKey,part==CustomWorkoutVisitPart.FOLLOW_UP,stageOrdinal)
     val exactMainTarget = prescription.exactRepTarget.takeIf { part == CustomWorkoutVisitPart.MAIN }
+    val mainRepOut=part==CustomWorkoutVisitPart.MAIN && prescription.percentageIntent?.repOut==true
     val expectedReps=if(part==CustomWorkoutVisitPart.FOLLOW_UP)
         follower?.followUpReps?.let{RepBand(it,it)} ?:prescription.reps
     else prescription.reps
@@ -2161,7 +2162,7 @@ private fun NativeKotlinCustomVisitEditor(
         if(saved==null && (editing || initiallyExpanded)) {
             PursuitWorkoutSetReference(referenceMode,target,expectedReps,
                 if(part==CustomWorkoutVisitPart.FOLLOW_UP)null else prescription.targetRir,
-                physicalMachineLastReferences(lastReferences,machineInstanceId),referenceKey, exactRepTarget = exactMainTarget)
+                physicalMachineLastReferences(lastReferences,machineInstanceId),referenceKey, exactRepTarget = exactMainTarget, repOut = mainRepOut)
         }
         if(saved!=null){
             Text(nativeSavedSetCaption("Recorded",saved.outcome,saved.performed,
@@ -2198,7 +2199,7 @@ private fun NativeKotlinCustomVisitEditor(
             PursuitWorkoutSetReference(referenceMode,target,expectedReps,
                 if(part==CustomWorkoutVisitPart.FOLLOW_UP)null else prescription.targetRir,
                 physicalMachineLastReferences(lastReferences,machineInstanceId),
-                referenceKey, exactRepTarget = exactMainTarget)
+                referenceKey, exactRepTarget = exactMainTarget, repOut = mainRepOut)
             entryFields()
         }
     }

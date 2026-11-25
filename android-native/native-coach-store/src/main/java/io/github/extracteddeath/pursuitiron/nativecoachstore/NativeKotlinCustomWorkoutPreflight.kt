@@ -203,13 +203,9 @@ class NativeKotlinCustomWorkoutPreflight(
                 val selection=signed.initialTierReceipt?.selection
                     ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
                 val receipt=checkNotNull(signed.initialTierReceipt)
-                val block=signed.draft.blocks.singleOrNull{it.blockId==receipt.blockId}
-                    ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.INVALID_SELECTION)
                 val valid=if(supportingDay)
-                    workoutId!=selection.nextWorkoutId && weekday!=selection.weekday &&
-                        absoluteWeek in selection.absoluteWeek..(selection.absoluteWeek+block.weeks-receipt.weekInBlock) &&
-                        (absoluteWeek!=selection.absoluteWeek || weekday>selection.weekday) &&
-                        block.days.any{it.weekday==weekday}
+                    workoutId!=selection.nextWorkoutId &&
+                        NativeCustomNextCycleSlotDomain.isTieredSupportDay(signed.draft,receipt,absoluteWeek,weekday)
                     else selection.nextWorkoutId==workoutId && selection.absoluteWeek==absoluteWeek &&
                         selection.weekday==weekday
                 if(!valid || selection.cycleId!=cycleId || signed.initialTierEvidence==null)
@@ -232,6 +228,29 @@ class NativeKotlinCustomWorkoutPreflight(
                 else !session.completed || (session.cycleId==cycleId &&
                     session.absoluteWeek==absoluteWeek && session.weekday==weekday)
             })return@withOwnerTransaction deny(NativeCustomPreflightRefusal.SESSION_UNAVAILABLE)
+            if(supportingDay) {
+                val initial=checkNotNull(signed.initialTierReceipt)
+                val facts=census.sessions.filter{it.cycleId==cycleId}.map{item->
+                    val origin=outstanding.preparedOrigin(ownerKey,item.workoutId)
+                        ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.SESSION_UNAVAILABLE)
+                    if(origin.authority==NativeCustomPreparationAuthority.TIERED_INITIAL ||
+                        origin.authority==NativeCustomPreparationAuthority.TIERED_SUPPORT) {
+                        if(origin.consentRevision!=signed.consent.recordRevision ||
+                            origin.consentFingerprint!=signed.consent.fingerprintSha256)
+                            return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
+                    }
+                    NativeCustomNextCycleSlotDomain.tieredFact(signed.draft,initial,item,origin,true)
+                        ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.SESSION_UNAVAILABLE)
+                }
+                val next=NativeCustomNextCycleSlotDomain.select(signed.draft,facts)
+                val allowed=when(next) {
+                    is NativeCustomNextCycleSlot.Next -> next.absoluteWeek==absoluteWeek && next.weekday==weekday
+                    is NativeCustomNextCycleSlot.Prepared -> next.workoutId==workoutId &&
+                        next.absoluteWeek==absoluteWeek && next.weekday==weekday
+                    else -> false
+                }
+                if(!allowed)return@withOwnerTransaction deny(NativeCustomPreflightRefusal.SESSION_UNAVAILABLE)
+            }
             val source=(sources.read(ownerKey) as? NativeAuthoringSourceRead.Found)?.source
                 ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.NO_REVIEWED_GYM)
             if(source.ownerKey!=ownerKey || source.athleteId!=owner.athleteId ||

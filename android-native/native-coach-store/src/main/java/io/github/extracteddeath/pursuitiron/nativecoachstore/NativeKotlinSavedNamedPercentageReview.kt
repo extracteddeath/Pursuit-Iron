@@ -8,6 +8,21 @@ enum class NativeSavedNamedReviewRefusal {
     FULL_CYCLE_AUDIT_FAILED, STORAGE_UNAVAILABLE
 }
 
+/** One proposed next session on the same authenticated tier thread.
+ * No caller-supplied reference, increment, slot, history or stock. */
+data class NativeTieredNextSelection(val nextWorkoutId:String,val absoluteWeek:Int,
+    val recovery:Boolean=false)
+
+data class NativeTieredNextCandidate(
+    val selection:NativeTieredNextSelection,val request:TieredLinearRequest,
+    val result:TieredLinearResult.Candidate,val draft:CustomPercentageDraftResult.Proposed,
+    val historyRevision:Long
+) {
+    val mayIssueWorkout:Boolean get()=false
+    val maySaveProgram:Boolean get()=false
+    val requiresExplicitResetReview:Boolean get()=result.requiresReviewedReset
+}
+
 sealed interface NativeSavedNamedReview {
     data class Ready(
         val draft:CustomTrainingCycle,
@@ -35,7 +50,8 @@ sealed interface NativeSavedNamedReview {
         val audit:CustomCoachAudit,
         val historyRevision:Long,
         val initialTierReceipt:NativeTieredInitialDraftReceipt?=null,
-        val initialTierEvidence:CustomTieredInitialWeekEvidence?=null
+        val initialTierEvidence:CustomTieredInitialWeekEvidence?=null,
+        val nextTierCandidate:NativeTieredNextCandidate?=null
     ):NativeSavedNamedReview {
         val mayIssueWorkout:Boolean get()=false
         val mayModifyHistory:Boolean get()=false
@@ -79,8 +95,15 @@ class NativeKotlinSavedNamedPercentageReview(
     fun reviewSignedTieredInitial(ownerKey:String,cycleId:String,inputs:CustomCoachAuditInputs):NativeSavedNamedReview =
         evaluate(ownerKey,cycleId,inputs,signed=true,tiered=true)
 
+    /** First post-initial transition is a read-only proposal. The original
+     * signed initial recipe stays immutable; future receipt/consent and
+     * full-cycle transition audit are separate from this preview. */
+    fun previewTieredNext(ownerKey:String,cycleId:String,inputs:CustomCoachAuditInputs,
+        selection:NativeTieredNextSelection):NativeSavedNamedReview =
+        evaluate(ownerKey,cycleId,inputs,signed=true,tiered=true,next=selection)
+
     private fun evaluate(ownerKey:String,cycleId:String,inputs:CustomCoachAuditInputs,
-        signed:Boolean,tiered:Boolean=false):NativeSavedNamedReview {
+        signed:Boolean,tiered:Boolean=false,next:NativeTieredNextSelection?=null):NativeSavedNamedReview {
         fun deny(reason:NativeSavedNamedReviewRefusal,audit:CustomCoachAudit?=null)=
             NativeSavedNamedReview.Rejected(reason,audit)
         if(!id.matches(ownerKey)||!id.matches(cycleId))
@@ -153,7 +176,7 @@ class NativeKotlinSavedNamedPercentageReview(
             val timeline=(history.read(ownerKey,owner.athleteId)
                 as? NativeKotlinMixedHistoryReadResult.Review)?.timeline
                 ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
-            if(if(signed && initial==null)timeline.manifestRevision<historyRevision
+            if(if(signed && (initial==null || next!=null))timeline.manifestRevision<historyRevision
                 else timeline.manifestRevision!=historyRevision)
                 return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
             val completed=timeline.completions.filterIsInstance<NativeKotlinMixedHistoryCompletion.Custom>()
@@ -200,7 +223,7 @@ class NativeKotlinSavedNamedPercentageReview(
                 val selection=initial.selection
                 if((!signed && (NativeFutureWeekProposalInventoryPolicy.blocks(census.sessions,cycleId,selection.absoluteWeek) ||
                     census.sessions.any{it.cycleId==cycleId && it.absoluteWeek>=selection.absoluteWeek})) ||
-                    timeline.completions.any{it.manifest.workoutId==selection.nextWorkoutId})
+                    (next==null && timeline.completions.any{it.manifest.workoutId==selection.nextWorkoutId}))
                     return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.PROTECTED_WEEK)
                 val original=(CustomWorkoutSnapshotDomain.reviewForConsent(base,source.setup,
                     source.catalog,source.revision,inputs,selection.absoluteWeek,selection.weekday)
@@ -225,14 +248,21 @@ class NativeKotlinSavedNamedPercentageReview(
                 val scope=BasicProgressionScope(owner.athleteId,cycleId,stamp.gymId,
                     initial.blockId,initial.blockId+":d"+selection.weekday,selected.exerciseId,
                     selected.machineInstanceId,stock.unit,stock.basis)
-                val ledger=history.readTieredLedger(ownerKey,owner.athleteId,scope,
-                    selection.slotId,selection.tier,selection.absoluteWeek)
-                    as? NativeOwnerTieredLedgerResult.Review
-                    ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
-                if(ledger.manifestRevision!=historyRevision || ledger.exposures.isNotEmpty())
-                    return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
+                // An initial review requires an empty actual ledger. A
+                // transition instead proves the immutable initial journal
+                // below, then replays the full corrected ledger for the
+                // next week. Never rederive the old issued recipe using
+                // newer actuals.
+                if(next==null) {
+                    val ledger=history.readTieredLedger(ownerKey,owner.athleteId,scope,
+                        selection.slotId,selection.tier,selection.absoluteWeek)
+                        as? NativeOwnerTieredLedgerResult.Review
+                        ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
+                    if(ledger.manifestRevision!=historyRevision || ledger.exposures.isNotEmpty())
+                        return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
+                }
                 val request=TieredLinearRequest(selection.nextWorkoutId,scope,selection.tier,
-                    TieredLinearState(0,selection.initialLoad),true,ledger.exposures,stock,
+                    TieredLinearState(0,selection.initialLoad),true,emptyList(),stock,
                     selection.maximumAuthorizedIncrease,
                     selected.sets.count{it.prescription.type==DraftSetType.WORKING},sourceSlotId=selection.slotId)
                 CustomTieredInitialWeekEvidence(CustomNamedPercentageWeekKey(initial.blockId,
@@ -244,13 +274,61 @@ class NativeKotlinSavedNamedPercentageReview(
                 audit.issues.isNotEmpty() || audit.auditedCycleRevision!=candidate.revision ||
                 audit.structuralReview?.verifiedDraft!=candidate)
                 return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.FULL_CYCLE_AUDIT_FAILED,audit)
+            val nextCandidate=if(next!=null) {
+                val receipt=initial
+                    ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.NO_CONFIRMED_DRAFT)
+                val initialRequest=tierEvidence?.request
+                    ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.NO_CONFIRMED_DRAFT)
+                val selection=receipt.selection
+                val block=candidate.blocks.single{it.blockId==receipt.blockId}
+                if(!id.matches(next.nextWorkoutId) ||
+                    next.absoluteWeek!=selection.absoluteWeek+1 ||
+                    receipt.weekInBlock>=block.weeks ||
+                    next.nextWorkoutId==selection.nextWorkoutId ||
+                    timeline.completions.any{it.manifest.workoutId==next.nextWorkoutId} ||
+                    census.sessions.any{it.workoutId==next.nextWorkoutId || !it.completed ||
+                        (it.cycleId==cycleId && it.absoluteWeek>=next.absoluteWeek)})
+                    return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.PROTECTED_WEEK)
+                if(census.sessions.singleOrNull{it.workoutId==selection.nextWorkoutId &&
+                    it.cycleId==cycleId && it.absoluteWeek==selection.absoluteWeek &&
+                    it.weekday==selection.weekday && it.issued && it.completed}==null)
+                    return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
+                val origin=outstanding.preparedOrigin(ownerKey,selection.nextWorkoutId)
+                    ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
+                val exact=(CustomWorkoutSnapshotDomain.reviewSpecialistForConsent(candidate,
+                    source.setup,source.catalog,source.revision,inputs,evidence,listOf(tierEvidence),
+                    selection.absoluteWeek,selection.weekday)
+                    as? CustomWorkoutSnapshotResult.Preview)?.snapshot
+                    ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.FULL_CYCLE_AUDIT_FAILED)
+                if(origin.authority!=NativeCustomPreparationAuthority.TIERED_INITIAL ||
+                    origin.consentRevision!=prior.recordRevision ||
+                    origin.consentFingerprint!=prior.fingerprintSha256 || origin.snapshot!=exact)
+                    return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
+                val ledger=history.readTieredLedger(ownerKey,owner.athleteId,initialRequest.scope,
+                    selection.slotId,selection.tier,next.absoluteWeek)
+                    as? NativeOwnerTieredLedgerResult.Review
+                    ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
+                if(ledger.manifestRevision!=timeline.manifestRevision ||
+                    ledger.exposures.singleOrNull()?.workoutId!=selection.nextWorkoutId)
+                    return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
+                val request=initialRequest.copy(nextWorkoutId=next.nextWorkoutId,
+                    completed=ledger.exposures,recovery=next.recovery)
+                val numeric=TieredLinearProgressionDomain.review(request) as? TieredLinearResult.Candidate
+                    ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
+                val proposed=CustomPercentageDraftDomain.reviewTiered(
+                    CustomPercentageDraftSource(candidate,stamp,receipt.blockId,
+                        receipt.weekInBlock+1,selection.weekday,selection.slotId),request)
+                    as? CustomPercentageDraftResult.Proposed
+                    ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.FULL_CYCLE_AUDIT_FAILED)
+                NativeTieredNextCandidate(next,request,numeric,proposed,ledger.manifestRevision)
+            } else null
             if(identity.signedInIdentity()!=owner)
                 return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.NOT_AUTHORIZED)
             if(signed) {
                 if(audit.coachingPolicyRevisions!=prior.policyReferences)
                     return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
                 NativeSavedNamedReview.Signed(candidate,stamp,receipts.toList(),prior,
-                    evidence.toList(),inputs,audit,timeline.manifestRevision,initial,tierEvidence)
+                    evidence.toList(),inputs,audit,timeline.manifestRevision,initial,tierEvidence,nextCandidate)
             } else NativeSavedNamedReview.Ready(candidate,stamp,receipts.toList(),prior,evidence.toList(),inputs,audit,initial,tierEvidence)
         }}.getOrElse{deny(NativeSavedNamedReviewRefusal.STORAGE_UNAVAILABLE)}
     }

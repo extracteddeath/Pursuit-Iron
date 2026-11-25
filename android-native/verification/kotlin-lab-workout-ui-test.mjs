@@ -1876,3 +1876,21 @@ assert.ok(customRepEditor.includes('val mainRepOut=part==CustomWorkoutVisitPart.
   weekRepLabel.includes('percentageIntent?.repOut==true && exactRepTarget!=null') &&
   weekRepLabel.includes('nativeTargetRepMetric(reps,exactRepTarget,true)'),
   'Named rep-out must show the issued minimum in Plan and Target, including saved-set correction, without changing Last or follow-ups');
+
+// Fixed specialist review is a separate explicit path; no ordinary consent
+// or issuer is substituted for the named receipt chain.
+assert.ok(basicPreviewScreen.includes('NativeFixedNamedSelectionPanel(draft,state,controller)') &&
+  basicPreviewScreen.includes('} else if(state.fixedNamedDraft) {') &&
+  basicPreviewScreen.includes('NativeFixedNamedExecutionPanel(state,controller,onOpenIssuedWorkout)') &&
+  basicPreviewScreen.includes('controller.acceptFixedNamedChoices(shown)') &&
+  basicPreviewScreen.includes('controller.approveFixedNamedCycle(review)') &&
+  basicPreviewScreen.includes('controller::prepareNextFixedNamedWorkout') &&
+  basicPreviewScreen.includes('controller::issueNextFixedNamedWorkout') &&
+  basicPreviewController.includes('fixedNamedDraft=result.namedReceipts.isNotEmpty()') &&
+  basicPreviewController.includes('host.recoverFixedNamedCycle(cycleId)') &&
+  basicPreviewController.includes('host.previewFixedNamedWorkout(id,draft.cycleId,week,day,review.inputs)') &&
+  basicPreviewController.includes('host.prepareFixedNamedWorkout(id,review.draft.cycleId,') &&
+  basicPreviewController.includes('host.issueFixedNamedWorkout(saved.workoutId,review.draft.cycleId,') &&
+  basicPreviewController.includes('saved.consentFingerprint!=shown.receipt.fingerprintSha256') &&
+  basicPreviewController.includes('it.originalSnapshot==saved.snapshot'),
+  'Fixed named Plan must expose explicit reference review, revised consent, exact preview/preparation and independent issuance; route actual logging to the existing Train journal');

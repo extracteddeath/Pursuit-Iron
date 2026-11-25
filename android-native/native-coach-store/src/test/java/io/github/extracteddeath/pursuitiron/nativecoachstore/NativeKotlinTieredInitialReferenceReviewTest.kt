@@ -299,6 +299,39 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         assertFalse(transition.mayIssueWorkout)
         assertFalse(transition.maySaveProgram)
         assertEquals(transition, (preview(nextSelection) as NativeSavedNamedReview.Signed).nextMultiTierCandidate)
+        fun transitionStore()=NativeKotlinFirstTierTransitionConsentStore(root,
+            NativeKotlinApprovalRevisionFence(root),identity,coldDrafts,sources,coldSignoffs,reader,inventory)
+        fun recoverDay(week:Int=2,day:Int=0)=transitionStore().recoverMulti("owner-1","cycle-1",week,day)
+        fun confirmDay(review:NativeSavedNamedReview.Signed=proposed,confirmed:Boolean=true,
+            resets:Set<String> = emptySet(),recoveries:Set<String> = emptySet())=
+            transitionStore().confirmMulti("owner-1","cycle-1",review,confirmed,resets,recoveries)
+        assertEquals(NativeTieredTransitionRecovery.Refused(NativeTieredTransitionConsentResult.MISSING),recoverDay())
+        assertEquals(NativeTieredTransitionConsentResult.CONFIRMATION_REQUIRED,confirmDay(confirmed=false))
+        assertEquals(NativeTieredTransitionConsentResult.CONFIRMATION_REQUIRED,confirmDay(resets=setOf("slot-0")))
+        val recoveryReview=preview(nextSelection.copy(recoverySlotIds=setOf("slot-0"))) as NativeSavedNamedReview.Signed
+        assertEquals(NativeTieredTransitionConsentResult.CONFIRMATION_REQUIRED,confirmDay(recoveryReview))
+        assertEquals(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED,
+            confirmDay(proposed.copy(nextMultiTierCandidate=transition.copy(historyRevision=transition.historyRevision+1))))
+        assertEquals(NativeTieredTransitionConsentResult.RECORDED,confirmDay())
+        val restoredDay=recoverDay() as NativeTieredTransitionRecovery.Ready
+        assertEquals(proposed,restoredDay.review)
+        assertFalse(restoredDay.mayIssueWorkout)
+        assertEquals(restoredDay,recoverDay())
+        assertEquals(NativeTieredTransitionConsentResult.REPLAYED,confirmDay())
+        assertEquals(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT,
+            confirmDay(recoveryReview,recoveries=setOf("slot-0")))
+        assertEquals(NativeTieredTransitionRecovery.Refused(NativeTieredTransitionConsentResult.MISSING),recoverDay(day=2))
+        assertEquals(NativeTieredTransitionRecovery.Refused(NativeTieredTransitionConsentResult.MISSING),recoverDay(week=3))
+        assertEquals(restoredDay,recoverDay())
+        val file=java.nio.file.Files.list(root).use{files->
+            files.filter{it.fileName.toString().startsWith("tier-day-transition-")}.toList().single()
+        }
+        val frozen=java.nio.file.Files.readAllBytes(file)
+        java.nio.file.Files.write(file,frozen.copyOf().also{it[10]=(it[10].toInt() xor 1).toByte()})
+        assertEquals(NativeTieredTransitionRecovery.Refused(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT),recoverDay())
+        assertEquals(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT,confirmDay())
+        java.nio.file.Files.write(file,frozen)
+        assertEquals(restoredDay,recoverDay())
         assertEquals(saved,coldDrafts.read("owner-1","cycle-1"))
         assertEquals(NativeCustomPreparedRead.Missing,coldPrepared().open("owner-1",nextSelection.nextWorkoutId))
         active=NativeKotlinOwnerIdentity("other-owner","other-athlete")

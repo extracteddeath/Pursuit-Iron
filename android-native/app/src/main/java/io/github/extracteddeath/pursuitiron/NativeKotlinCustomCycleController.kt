@@ -27,6 +27,7 @@ internal data class NativeKotlinCustomCycleState(
     val tieredInitialReview:NativeSavedNamedReview?=null,
     val tieredCalendar:NativeCustomNextCycleSlot?=null,
     val tieredReceipt:NativeTieredInitialDraftReceipt?=null,
+    val tieredReceipts:List<NativeTieredInitialDraftReceipt> = emptyList(),
     val tieredSupportAvailable:Boolean=false,
     val tieredSupportWorkoutId:String?=null,
     val tieredSupportPreview:NativeCustomPreflightResult.ReviewedPreview?=null,
@@ -201,8 +202,9 @@ internal class NativeKotlinCustomCycleController(
                 NativeKotlinCustomCycleState(
                     draft = result.draft,
                     fixedNamedDraft=result.namedReceipts.isNotEmpty(),
-                    tieredDraft=result.tieredInitialReceipt!=null,
+                    tieredDraft=result.tieredInitialReceipts.isNotEmpty(),
                     tieredReceipt=result.tieredInitialReceipt,
+                    tieredReceipts=result.tieredInitialReceipts,
                     cycleId = result.draft.cycleId,
                     availableChoices = choices,
                     sourceRevision = source?.revision,
@@ -210,7 +212,7 @@ internal class NativeKotlinCustomCycleController(
                     progressionCoachingEnabled = assistance?.offersProgression==true,
                     fatigueCoachingEnabled = assistance?.offersFatigueAdvice==true,
                     reviewedSourceSetup = source?.setup,
-                    signoff = if(result.tieredInitialReceipt==null)
+                    signoff = if(result.tieredInitialReceipts.isEmpty())
                         host.readCustomCycleConsent(result.draft.cycleId) else null,
                     message = "Saved custom cycle restored · revision ${result.draft.revision}")
             NativeCustomDraftReadResult.Missing ->
@@ -715,13 +717,15 @@ internal class NativeKotlinCustomCycleController(
         if(!before.tieredDraft || draft.cycleId!=cycleId)return
         val review=host.recoverTieredInitialCycle(cycleId)
         val ready=(review as? NativeSavedNamedReview.Ready)?.takeIf{
-            it.draft==draft && it.initialTierReceipt!=null
+            it.draft==draft && it.initialTierReceipts==before.tieredReceipts && it.initialTierReceipts.isNotEmpty()
         }
         val signed=(review as? NativeSavedNamedReview.Signed)?.takeIf{
-            it.draft==draft && it.initialTierReceipt!=null && it.nextTierCandidate==null
+            it.draft==draft && it.initialTierReceipts==before.tieredReceipts &&
+                it.initialTierReceipts.isNotEmpty() && it.nextTierCandidate==null
         }
-        val initialNext=signed?.let{host.reviewTieredInitialSession(cycleId,it.inputs)}
-        val calendar=if(ready==null && (initialNext==null || initialNext is NativeCustomNextCycleSlot.Rejected))
+        val singleThread=before.tieredReceipts.size==1
+        val initialNext=signed?.takeIf{singleThread}?.let{host.reviewTieredInitialSession(cycleId,it.inputs)}
+        val calendar=if(singleThread && ready==null && (initialNext==null || initialNext is NativeCustomNextCycleSlot.Rejected))
             host.reviewTieredCalendar(cycleId) else null
         val position=when(calendar) {
             is NativeCustomNextCycleSlot.Next -> calendar.absoluteWeek to calendar.weekday
@@ -749,7 +753,8 @@ internal class NativeKotlinCustomCycleController(
             nextSlotCycleRevision=signed?.draft?.revision,
             tieredInitialPreview=null,tieredInitialPrepared=null,
             message=when {
-                ready!=null -> "Initial tier reference verified. Review this exact revision."
+                ready!=null -> "Initial tier references verified. Review this exact revision."
+                signed!=null && !singleThread -> "Multi-thread approval verified. Scheduled execution is not enabled yet."
                 signed!=null -> "Exact initial tier approval restored and rechecked."
                 calendar!=null && calendar !is NativeCustomNextCycleSlot.Rejected ->
                     "Initial tier review closed. Review the next scheduled workout."
@@ -765,7 +770,8 @@ internal class NativeKotlinCustomCycleController(
         val before=current.value
         val draft=before.draft ?:return@run
         if(!before.tieredDraft || before.tieredInitialReview!=displayed ||
-            displayed.draft!=draft || displayed.initialTierReceipt==null)return@run
+            displayed.draft!=draft || displayed.initialTierReceipts.isEmpty() ||
+            displayed.initialTierReceipts!=before.tieredReceipts)return@run
         val result=host.confirmTieredInitialCycle(draft.cycleId,displayed,true)
         refreshTieredInitialReview(draft.cycleId)
         if(result !is NativeCustomSignoffWrite.Committed)

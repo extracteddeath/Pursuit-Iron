@@ -242,6 +242,45 @@ class NativeKotlinFirstTierTransitionConsentStore(
         }.sortedWith(compareBy<NativeFrozenTierDay>{it.selection.absoluteWeek}.thenBy{it.selection.weekday})
     }
 
+    /** Calendar facts only: the inventory authenticates the immutable
+     * preparation/journal origin; this binds it to its exact day receipt.
+     * Numeric review and issuance still rederive the complete ledger. */
+    internal fun multiTransitionCalendarFact(
+        signed:NativeSavedNamedReview.Signed,item:NativeCustomInventoryFact,
+        origin:NativeCustomPreparedWorkout
+    ):NativeCustomCycleSessionFact? = runCatching {
+        val consent=signed.consent
+        require(identity.signedInIdentity()==NativeKotlinOwnerIdentity(consent.ownerKey,consent.athleteId))
+        require(signed.initialTierReceipts.size>1 && item.cycleId==consent.cycleId &&
+            origin.authority==NativeCustomPreparationAuthority.TIERED_TRANSITION &&
+            origin.ownerKey==consent.ownerKey && origin.athleteId==consent.athleteId &&
+            origin.workoutId==item.workoutId && origin.consentRevision==consent.recordRevision)
+        val frozen=decodeMulti(readMulti(multiPath(consent.ownerKey,consent.cycleId,
+            item.absoluteWeek,item.weekday)))
+        val selection=frozen.selection
+        require(frozen.owner==consent.ownerKey && frozen.athlete==consent.athleteId &&
+            frozen.cycle==consent.cycleId && frozen.consentRevision==consent.recordRevision &&
+            frozen.cycleRevision==consent.cycleRevision && frozen.sourceRevision==consent.sourceRevision &&
+            frozen.consentFingerprint==consent.fingerprintSha256 && frozen.inputs==signed.inputs &&
+            frozen.fingerprint==origin.consentFingerprint &&
+            selection.nextWorkoutId==item.workoutId && selection.absoluteWeek==item.absoluteWeek &&
+            selection.weekday==item.weekday && frozen.historyRevision<=signed.historyRevision &&
+            (!item.completed || frozen.historyRevision<signed.historyRevision))
+        val snapshot=origin.snapshot
+        val projected=NativeCustomCycleDraftCodec.decode(frozen.proposed)
+        val due=signed.initialTierReceipts.filter{it.blockId==snapshot.blockId &&
+            it.selection.weekday==item.weekday && it.selection.absoluteWeek<item.absoluteWeek}
+            .map{it.selection.slotId}.toSet()
+        require(projected.cycleId==consent.cycleId && projected.athleteId==consent.athleteId &&
+            projected.revision>signed.draft.revision &&
+            snapshot.stamp==signed.stamp.copy(cycleRevision=projected.revision) &&
+            snapshot.absoluteWeek==item.absoluteWeek && snapshot.weekday==item.weekday &&
+            due.isNotEmpty() && frozen.slots.keys==due &&
+            due.all{id->snapshot.slots.any{it.slotId==id}})
+        NativeCustomCycleSessionFact(item.workoutId,item.absoluteWeek,item.weekday,
+            signed.draft.revision,item.issued,item.completed)
+    }.getOrNull()
+
     /** Same saved rules and authenticated prior receipts used by approval
      * and cold recovery. A review never modifies the cycle or the journal. */
     fun previewMultiUsingSavedRules(ownerKey:String,cycleId:String,

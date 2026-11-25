@@ -158,9 +158,10 @@ class NativeKotlinSavedNamedPercentageReview(
      * preparation. All other outstanding sessions remain protected. */
     internal fun previewMultiTieredNextForPreparation(ownerKey:String,cycleId:String,inputs:CustomCoachAuditInputs,
         selection:NativeMultiTierNextSelection,receiptFingerprint:String?,
-        priorDays:List<NativeFrozenTierDay> = emptyList()):NativeSavedNamedReview =
+        priorDays:List<NativeFrozenTierDay> = emptyList(),
+        staleDay:NativeFrozenTierDay?=null):NativeSavedNamedReview =
         evaluate(ownerKey,cycleId,inputs,signed=true,tiered=true,multiNext=selection,
-            preparedReceiptFingerprint=receiptFingerprint,priorMultiDays=priorDays)
+            preparedReceiptFingerprint=receiptFingerprint,priorMultiDays=priorDays,staleMultiDay=staleDay)
 
     /** Only receipt-backed recovery may re-review an already prepared
      * transition. A plain preview must still refuse every outstanding day.
@@ -180,7 +181,8 @@ class NativeKotlinSavedNamedPercentageReview(
         priorTransitions:List<NativeFrozenTierTransition> = emptyList(),
         supportingDay:Boolean=false,staleReceipt:NativeFrozenTierTransition?=null,
         multiNext:NativeMultiTierNextSelection?=null,
-        priorMultiDays:List<NativeFrozenTierDay> = emptyList()):NativeSavedNamedReview {
+        priorMultiDays:List<NativeFrozenTierDay> = emptyList(),
+        staleMultiDay:NativeFrozenTierDay?=null):NativeSavedNamedReview {
         fun deny(reason:NativeSavedNamedReviewRefusal,audit:CustomCoachAudit?=null)=
             NativeSavedNamedReview.Rejected(reason,audit)
         if(!id.matches(ownerKey)||!id.matches(cycleId))
@@ -545,7 +547,22 @@ class NativeKotlinSavedNamedPercentageReview(
                 val projected=projectDay(multiNext,null)
                     ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
                 val snapshot=projected.snapshot
-                if(ownPreparation!=null && ownPreparation.snapshot!=snapshot)
+                if(staleMultiDay!=null) {
+                    val old=staleMultiDay
+                    if(old.owner!=ownerKey || old.athlete!=owner.athleteId || old.cycle!=cycleId ||
+                        old.selection!=multiNext || old.inputs!=inputs ||
+                        old.consentRevision!=prior.recordRevision || old.cycleRevision!=candidate.revision ||
+                        old.sourceRevision!=prior.sourceRevision || old.consentFingerprint!=prior.fingerprintSha256 ||
+                        old.historyRevision<=lastRevision || old.historyRevision>=timeline.manifestRevision ||
+                        (ownPreparation!=null && ownPreparation.consentFingerprint!=old.fingerprint))
+                        return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
+                    val oldProjection=projectDay(multiNext,old)
+                        ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
+                    if(!NativeCustomCycleDraftCodec.encode(oldProjection.draft).contentEquals(old.proposed) ||
+                        old.resets!=oldProjection.slots.filter{it.requiresExplicitResetReview}.map{it.evidence.key.slotId}.toSet() ||
+                        (ownPreparation!=null && ownPreparation.snapshot!=oldProjection.snapshot))
+                        return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
+                } else if(ownPreparation!=null && ownPreparation.snapshot!=snapshot)
                     return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
                 projected
             } else null

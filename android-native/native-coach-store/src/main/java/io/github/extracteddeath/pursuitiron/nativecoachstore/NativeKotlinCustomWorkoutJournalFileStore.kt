@@ -248,11 +248,18 @@ class NativeKotlinCustomWorkoutJournalFileStore(
         issueReviewed(ownerKey,workoutId,cycleId,absoluteWeek,weekday,inputs,
             NativeCustomPreparationAuthority.TIERED_INITIAL,null,historyReader)
 
+    internal fun issueFirstTierTransition(ownerKey:String,workoutId:String,cycleId:String,
+        absoluteWeek:Int,weekday:Int,transitionConsent:NativeKotlinFirstTierTransitionConsentStore
+    ):NativeCustomJournalResult =
+        issueReviewed(ownerKey,workoutId,cycleId,absoluteWeek,weekday,CustomCoachAuditInputs(),
+            NativeCustomPreparationAuthority.TIERED_TRANSITION,null,null,transitionConsent)
+
     private fun issueReviewed(ownerKey:String,workoutId:String,cycleId:String,
         absoluteWeek:Int,weekday:Int,inputs:CustomCoachAuditInputs,
         authority:NativeCustomPreparationAuthority,
         calibration:NativeKotlinBlockCalibrationConsentStore?,
-        namedHistory:NativeKotlinMixedHistoryReadCoordinator?
+        namedHistory:NativeKotlinMixedHistoryReadCoordinator?,
+        transitionConsent:NativeKotlinFirstTierTransitionConsentStore?=null
     ):NativeCustomJournalResult {
         if(!id.matches(workoutId)||!id.matches(cycleId) ||
             absoluteWeek !in 1..104 || weekday !in 0..6)
@@ -323,6 +330,23 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                     other.reason!=NativeJournalFileRefusal.NOT_ISSUED)
                     return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                         NativeCustomJournalRefusal.WORKOUT_ID_CONFLICT)
+                if(authority==NativeCustomPreparationAuthority.TIERED_TRANSITION) {
+                    if(transitionConsent==null ||
+                        NativeKotlinBlockCalibrationConsentStore.hasRecord(root,ownerKey,workoutId))
+                        return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                            NativeCustomJournalRefusal.CONSENT_CHANGED)
+                    val reviewed=preflight.inspectFirstTierTransition(ownerKey,workoutId,
+                        cycleId,absoluteWeek,weekday,transitionConsent)
+                        as? NativeFirstTierTransitionPreflight.Reviewed
+                        ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                            NativeCustomJournalRefusal.CONSENT_CHANGED)
+                    if(reviewed.review.consent.recordRevision!=selected.consentRevision ||
+                        reviewed.receiptFingerprint!=selected.consentFingerprint ||
+                        reviewed.session!=selected.snapshot)
+                        return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                            NativeCustomJournalRefusal.CONSENT_CHANGED)
+                    return@withOwnerTransaction commitFirstIssue(current,selected)
+                }
                 if(authority in setOf(NativeCustomPreparationAuthority.NAMED_CYCLE,
                     NativeCustomPreparationAuthority.TIERED_INITIAL)) {
                     if(namedHistory==null ||

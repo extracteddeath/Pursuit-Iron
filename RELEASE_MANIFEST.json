@@ -164,16 +164,16 @@
   "uiFiles": {
     "modules/App.js": "b1dc8cd5a00380f7b71da0a00358ffec2c0646b47088dd485d1bdff6b31a185e",
     "index.html": "6f289588ff0fb9beee71eb55bf8182fb240e3d91131ba623eb6a1dba1a20ef24",
-    "sw.js": "c92b3b288d26480b681756f04e6e7a39e9971ba744203690249c816019ba1ea9",
-    "BUILD_PROFILE.json": "8808b2fb887465638b590d5412e3542097a213c9656e8afcdb8a436f1266b4e6",
+    "sw.js": "183d5e5b53b8a67d6c46e53515b7a15e18504798030f50fdb45bce98b6285b17",
+    "BUILD_PROFILE.json": "691507702b5a0a9711504f03576f49cc3f3d847df7989f62817f96627ed00ba1",
     "CHANGELOG.md": "b2652caa581ef510ddbf292f8422749da1a1616e8c07b2de372922a2782a2539",
-    "app.css": "b5e218e4bb4a0e112a28dab5dc57a95ed4a56f1c72f18f3a9dc6a06ef05dd4b3",
+    "app.css": "b51ee393f918b306d7263a4a40dc882414a29208866cc0d3d2a2e31a765adaaa",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1052-r9e5ef1d328d09d93",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1052-r4367266d6540700b",
   "uiMilestone": "Build 1052 · M3 type scale (14/16 body) and 48px touch targets"
 }

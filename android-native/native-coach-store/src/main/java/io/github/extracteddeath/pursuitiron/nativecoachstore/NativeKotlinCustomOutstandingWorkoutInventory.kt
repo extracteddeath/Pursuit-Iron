@@ -106,6 +106,11 @@ class NativeKotlinCustomOutstandingWorkoutInventory(
     private val prepared:NativeKotlinCustomWorkoutPreparedStore,
     private val issued:NativeKotlinCustomWorkoutJournalFileStore
 ) {
+    /** Read the original preparation only after the caller's complete
+     * inventory/manifest reconciliation. No new authority is granted. */
+    internal fun preparedOrigin(ownerKey:String,workoutId:String):NativeCustomPreparedWorkout? =
+        (prepared.open(ownerKey,workoutId) as? NativeCustomPreparedRead.Found)?.workout
+
     internal fun inspect(
         ownerKey:String,athleteId:String,
         completedCustomWorkoutIds:Set<String>

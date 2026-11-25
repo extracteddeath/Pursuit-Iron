@@ -18,6 +18,26 @@ data class NativeNamedPercentageSelection(
     val reference:BigDecimal
 )
 
+/** Explicit first GZCLP entry at stage zero. No hidden restart or inferred
+ * training max; the next ID and maximum earned increment are reviewed. */
+data class NativeTieredInitialSelection(
+    val ownerKey:String,val cycleId:String,val absoluteWeek:Int,val weekday:Int,
+    val slotId:String,val nextWorkoutId:String,val tier:PercentageTier,
+    val initialLoad:BigDecimal,val maximumAuthorizedIncrease:BigDecimal
+)
+
+sealed interface NativeTieredInitialReview {
+    data class Ready(val selection:NativeTieredInitialSelection,
+        val source:CustomPercentageDraftSource,val request:TieredLinearRequest,
+        val proposal:CustomPercentageDraftResult.Proposed,val consentRevision:Long,
+        val historyRevision:Long,val machineRosterRevision:Long):NativeTieredInitialReview {
+        val maySaveProgram:Boolean get()=false
+        val mayIssueWorkout:Boolean get()=false
+        val mayModifyHistory:Boolean get()=false
+    }
+    data class Rejected(val reason:NativeNamedPercentageRefusal):NativeTieredInitialReview
+}
+
 enum class NativeNamedPercentageRefusal {
     INVALID_SELECTION, NOT_AUTHORIZED, CURRENT_CONSENT_REQUIRED,
     SOURCE_OR_STOCK_UNAVAILABLE, HISTORY_UNVERIFIED, PROTECTED_WEEK,
@@ -91,12 +111,24 @@ class NativeKotlinNamedPercentageDraftReview(
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
-    private fun evaluate(s:NativeNamedPercentageSelection):NativeNamedPercentageReview {
-        fun deny(reason:NativeNamedPercentageRefusal)=NativeNamedPercentageReview.Rejected(reason)
-        if(!id.matches(s.ownerKey) || !id.matches(s.cycleId) || !id.matches(s.slotId) ||
-            s.absoluteWeek !in 1..104 || s.weekday !in 0..6 ||
-            s.scheme==NamedPercentageScheme.GZCLP || s.reference<=BigDecimal.ZERO ||
-            !KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(s.reference))
+    private data class SourceSelection(val ownerKey:String,val cycleId:String,
+        val absoluteWeek:Int,val weekday:Int,val slotId:String)
+    private sealed interface SourceReview {
+        data class Rejected(val reason:NativeNamedPercentageRefusal):SourceReview
+        data class Ready(
+            val source:CustomPercentageDraftSource,val scope:BasicProgressionScope,
+            val stock:VerifiedLoadStock,val budget:Int,val blockWeeks:Int,
+            val consentRevision:Long,val historyRevision:Long,val rosterRevision:Long,
+            val knownWorkoutIds:Set<String>
+        ):SourceReview
+    }
+
+    /** Shared authority for fixed and tiered specialist reference previews.
+     * The caller supplies identities, never a stock or history receipt. */
+    private fun reviewSource(s:SourceSelection):SourceReview {
+        fun deny(reason:NativeNamedPercentageRefusal)=SourceReview.Rejected(reason)
+        if(!id.matches(s.ownerKey)||!id.matches(s.cycleId)||!id.matches(s.slotId)||
+            s.absoluteWeek !in 1..104 || s.weekday !in 0..6)
             return deny(NativeNamedPercentageRefusal.INVALID_SELECTION)
         val owner=identity.signedInIdentity()?.takeIf{it.ownerKey==s.ownerKey}
             ?:return deny(NativeNamedPercentageRefusal.NOT_AUTHORIZED)
@@ -157,18 +189,86 @@ class NativeKotlinNamedPercentageDraftReview(
             selected.machineInstanceId,stock.unit,stock.basis)
         val source=CustomPercentageDraftSource(cycle,next.stamp,block.blockId,
             next.weekInBlock,s.weekday,s.slotId)
-        // The athlete's supplied number is the proposed review reference,
-        // not a durable confirmed maximum or approval to issue anything.
-        val request=NamedPercentageRequest(scope,s.scheme,s.tier,s.dayRole,s.referenceKind,
-            s.reference,true,next.weekInBlock,block.weeks,
-            selected.sets.count{it.prescription.type==DraftSetType.WORKING},stock)
-        val proposed=CustomPercentageDraftDomain.review(source,request)
-            as? CustomPercentageDraftResult.Proposed
-            ?:return deny(NativeNamedPercentageRefusal.RECIPE_REFUSED)
         if(identity.signedInIdentity()!=owner)
             return deny(NativeNamedPercentageRefusal.NOT_AUTHORIZED)
-        return NativeNamedPercentageReview.Ready(s,source,request,proposed,
-            approved.receipt.recordRevision,timeline.manifestRevision,roster?.revision?:0)
+        return SourceReview.Ready(source,scope,stock,
+            selected.sets.count{it.prescription.type==DraftSetType.WORKING},block.weeks,
+            approved.receipt.recordRevision,timeline.manifestRevision,roster?.revision?:0L,
+            (timeline.completions.map{it.manifest.workoutId}+census.sessions.map{it.workoutId}).toSet())
+    }
+
+    private fun evaluate(s:NativeNamedPercentageSelection):NativeNamedPercentageReview {
+        fun deny(reason:NativeNamedPercentageRefusal)=NativeNamedPercentageReview.Rejected(reason)
+        if(s.scheme==NamedPercentageScheme.GZCLP || s.reference<=BigDecimal.ZERO ||
+            !KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(s.reference))
+            return deny(NativeNamedPercentageRefusal.INVALID_SELECTION)
+        val context=when(val checked=reviewSource(SourceSelection(s.ownerKey,s.cycleId,
+            s.absoluteWeek,s.weekday,s.slotId))) {
+            is SourceReview.Rejected -> return deny(checked.reason)
+            is SourceReview.Ready -> checked
+        }
+        val request=NamedPercentageRequest(context.scope,s.scheme,s.tier,s.dayRole,s.referenceKind,
+            s.reference,true,context.source.weekInBlock,context.blockWeeks,context.budget,context.stock)
+        val proposed=CustomPercentageDraftDomain.review(context.source,request)
+            as? CustomPercentageDraftResult.Proposed
+            ?:return deny(NativeNamedPercentageRefusal.RECIPE_REFUSED)
+        if(identity.signedInIdentity()!=NativeKotlinOwnerIdentity(s.ownerKey,context.scope.athleteId))
+            return deny(NativeNamedPercentageRefusal.NOT_AUTHORIZED)
+        return NativeNamedPercentageReview.Ready(s,context.source,request,proposed,
+            context.consentRevision,context.historyRevision,context.rosterRevision)
+    }
+
+    /** First tier entry only. A reference may not replace an existing
+     * history-dependent tier ledger. Later tier decisions require a durable
+     * initial receipt and explicit transition approval, not this method. */
+    private fun evaluateTieredInitial(s:NativeTieredInitialSelection):NativeTieredInitialReview {
+        fun deny(reason:NativeNamedPercentageRefusal)=NativeTieredInitialReview.Rejected(reason)
+        if(!id.matches(s.nextWorkoutId)||s.initialLoad<=BigDecimal.ZERO ||
+            s.maximumAuthorizedIncrease<=BigDecimal.ZERO ||
+            !KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(s.initialLoad) ||
+            !KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(s.maximumAuthorizedIncrease))
+            return deny(NativeNamedPercentageRefusal.INVALID_SELECTION)
+        val context=when(val checked=reviewSource(SourceSelection(s.ownerKey,s.cycleId,
+            s.absoluteWeek,s.weekday,s.slotId))) {
+            is SourceReview.Rejected -> return deny(checked.reason)
+            is SourceReview.Ready -> checked
+        }
+        if(s.nextWorkoutId in context.knownWorkoutIds)
+            return deny(NativeNamedPercentageRefusal.PROTECTED_WEEK)
+        val ledger=history.readTieredLedger(s.ownerKey,context.scope.athleteId,context.scope,
+            s.slotId,s.tier,s.absoluteWeek) as? NativeOwnerTieredLedgerResult.Review
+            ?:return deny(NativeNamedPercentageRefusal.HISTORY_UNVERIFIED)
+        if(ledger.manifestRevision!=context.historyRevision)
+            return deny(NativeNamedPercentageRefusal.HISTORY_UNVERIFIED)
+        if(ledger.exposures.isNotEmpty())
+            return deny(NativeNamedPercentageRefusal.PROTECTED_WEEK)
+        val request=TieredLinearRequest(s.nextWorkoutId,context.scope,s.tier,
+            TieredLinearState(0,s.initialLoad),true,ledger.exposures,context.stock,
+            s.maximumAuthorizedIncrease,context.budget,sourceSlotId=s.slotId)
+        val proposed=CustomPercentageDraftDomain.reviewTiered(context.source,request)
+            as? CustomPercentageDraftResult.Proposed
+            ?:return deny(NativeNamedPercentageRefusal.RECIPE_REFUSED)
+        if(identity.signedInIdentity()!=NativeKotlinOwnerIdentity(s.ownerKey,context.scope.athleteId))
+            return deny(NativeNamedPercentageRefusal.NOT_AUTHORIZED)
+        return NativeTieredInitialReview.Ready(s,context.source,request,proposed,
+            context.consentRevision,context.historyRevision,context.rosterRevision)
+    }
+
+    fun previewTieredInitial(selection:NativeTieredInitialSelection):NativeTieredInitialReview =
+        runCatching{fence.withOwnerTransaction(selection.ownerKey){evaluateTieredInitial(selection)}}
+            .getOrElse{NativeTieredInitialReview.Rejected(NativeNamedPercentageRefusal.STORAGE_UNAVAILABLE)}
+
+    fun reconfirmTieredInitial(selection:NativeTieredInitialSelection,
+        displayed:NativeTieredInitialReview.Ready,athleteConfirmed:Boolean):NativeTieredInitialReview {
+        if(!athleteConfirmed)return NativeTieredInitialReview.Rejected(
+            NativeNamedPercentageRefusal.CONFIRMATION_REQUIRED)
+        return runCatching{fence.withOwnerTransaction(selection.ownerKey){
+            when(val fresh=evaluateTieredInitial(selection)) {
+                is NativeTieredInitialReview.Rejected -> fresh
+                is NativeTieredInitialReview.Ready -> if(fresh==displayed)fresh
+                    else NativeTieredInitialReview.Rejected(NativeNamedPercentageRefusal.REVIEW_CHANGED)
+            }
+        }}.getOrElse{NativeTieredInitialReview.Rejected(NativeNamedPercentageRefusal.STORAGE_UNAVAILABLE)}
     }
 
     fun preview(selection:NativeNamedPercentageSelection):NativeNamedPercentageReview =

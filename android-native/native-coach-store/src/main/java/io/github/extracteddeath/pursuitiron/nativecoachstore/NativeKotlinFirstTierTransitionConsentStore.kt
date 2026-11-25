@@ -55,6 +55,17 @@ internal data class NativeFrozenTierTransition(
     val fingerprint:String
 )
 
+/** Frozen receipt bytes are untrusted until every historical origin and
+ * thread prefix is reauthenticated by the owner-fenced reviewer. */
+internal data class NativeFrozenTierDay(
+    val owner:String,val athlete:String,val cycle:String,
+    val selection:NativeMultiTierNextSelection,val inputs:CustomCoachAuditInputs,
+    val consentRevision:Long,val cycleRevision:Long,val sourceRevision:Long,
+    val consentFingerprint:String,val historyRevision:Long,
+    val slots:Map<String,ByteArray>,val resets:Set<String>,val proposed:ByteArray,
+    val fingerprint:String
+)
+
 class NativeKotlinFirstTierTransitionConsentStore(
     private val directory:Path,
     private val fence:NativeKotlinApprovalRevisionFence,
@@ -123,13 +134,7 @@ class NativeKotlinFirstTierTransitionConsentStore(
     private val multiMaxBytes=NativeCustomCycleDraftCodec.MAX_BYTES+
         32*NativeTieredHistoryPrefixCodec.MAX_BYTES+NativeCustomCoachAuditInputsCodec.MAX_BYTES+32768
 
-    private data class FrozenDay(
-        val owner:String,val athlete:String,val cycle:String,
-        val selection:NativeMultiTierNextSelection,val inputs:CustomCoachAuditInputs,
-        val consentRevision:Long,val cycleRevision:Long,val sourceRevision:Long,
-        val consentFingerprint:String,val historyRevision:Long,
-        val slots:Map<String,ByteArray>,val resets:Set<String>,val proposed:ByteArray
-    )
+
 
     private fun multiPath(owner:String,cycle:String,week:Int,weekday:Int):Path {
         val key=fingerprint("$owner/$cycle".toByteArray(Charsets.UTF_8))
@@ -174,7 +179,7 @@ class NativeKotlinFirstTierTransitionConsentStore(
 
     private fun readMulti(file:Path):ByteArray=readBytes(file,multiMaxBytes)
 
-    private fun decodeMulti(stored:ByteArray):FrozenDay {
+    private fun decodeMulti(stored:ByteArray):NativeFrozenTierDay {
         require(stored.size in 40..multiMaxBytes)
         val body=stored.copyOfRange(0,stored.size-32)
         require(MessageDigest.isEqual(digest(body),stored.copyOfRange(stored.size-32,stored.size)))
@@ -209,10 +214,48 @@ class NativeKotlinFirstTierTransitionConsentStore(
             val inputBytes=segment(NativeCustomCoachAuditInputsCodec.MAX_BYTES)
             val inputs=NativeCustomCoachAuditInputsCodec.decode(inputBytes)
             require(input.available()==0 && NativeCustomCoachAuditInputsCodec.encode(inputs).contentEquals(inputBytes))
-            FrozenDay(owner,athlete,cycle,NativeMultiTierNextSelection(workout,week,weekday,recovery.toSet()),
-                inputs,consentRev,cycleRev,sourceRev,consentHash,historyRev,slots.toMap(),resets.toSet(),proposed)
+            NativeFrozenTierDay(owner,athlete,cycle,NativeMultiTierNextSelection(workout,week,weekday,recovery.toSet()),
+                inputs,consentRev,cycleRev,sourceRev,consentHash,historyRev,slots.toMap(),resets.toSet(),proposed,
+                fingerprint(stored))
         }
     }
+
+    /** All earlier day receipts for this cycle, in calendar order. A
+     * malformed path, duplicate, future receipt or missing completed origin
+     * cannot be silently ignored. The reviewer validates the census. */
+    private fun priorMultiDays(owner:String,cycle:String,week:Int,weekday:Int):List<NativeFrozenTierDay> {
+        require(!Files.isSymbolicLink(directory))
+        if(!Files.exists(directory,LinkOption.NOFOLLOW_LINKS))return emptyList()
+        require(Files.isDirectory(directory,LinkOption.NOFOLLOW_LINKS))
+        val prefix="tier-day-transition-"+fingerprint("$owner/$cycle".toByteArray(Charsets.UTF_8))+"-"
+        val files=Files.list(directory).use{stream->
+            stream.filter{it.fileName.toString().startsWith(prefix)}.limit(729).toList()
+        }
+        require(files.size<=728)
+        val target=week*7+weekday
+        return files.filter{it!=multiPath(owner,cycle,week,weekday)}.map{file->
+            decodeMulti(readMulti(file)).also{old->
+                require(old.owner==owner && old.cycle==cycle &&
+                    file==multiPath(owner,cycle,old.selection.absoluteWeek,old.selection.weekday) &&
+                    old.selection.absoluteWeek*7+old.selection.weekday<target)
+            }
+        }.sortedWith(compareBy<NativeFrozenTierDay>{it.selection.absoluteWeek}.thenBy{it.selection.weekday})
+    }
+
+    /** Same saved rules and authenticated prior receipts used by approval
+     * and cold recovery. A review never modifies the cycle or the journal. */
+    fun previewMultiUsingSavedRules(ownerKey:String,cycleId:String,
+        selection:NativeMultiTierNextSelection):NativeSavedNamedReview =
+        runCatching{fence.withOwnerTransaction(ownerKey){
+            if(identity.signedInIdentity()?.ownerKey!=ownerKey)
+                return@withOwnerTransaction NativeSavedNamedReview.Rejected(NativeSavedNamedReviewRefusal.NOT_AUTHORIZED)
+            val signed=signoffs.recoverTieredInitialReview(ownerKey,cycleId,history,outstanding,machineRosters)
+                as? NativeSavedNamedReview.Signed
+                ?:return@withOwnerTransaction NativeSavedNamedReview.Rejected(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
+            val prior=priorMultiDays(ownerKey,cycleId,selection.absoluteWeek,selection.weekday)
+            NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,signoffs,history,outstanding,machineRosters)
+                .previewMultiTieredNextForPreparation(ownerKey,cycleId,signed.inputs,selection,null,prior)
+        }}.getOrElse{NativeSavedNamedReview.Rejected(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)}
 
     /** The only new write path is another day-keyed receipt in this store.
      * It reopens the signed review under the owner fence and requires exact
@@ -229,8 +272,10 @@ class NativeKotlinFirstTierTransitionConsentStore(
                 ?:return@withOwnerTransaction NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED
             val reviewer=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
                 signoffs,history,outstanding,machineRosters)
-            val fresh=reviewer.previewMultiTieredNext(ownerKey,cycleId,displayed.inputs,shown.selection)
-                as? NativeSavedNamedReview.Signed
+            val prior=runCatching{priorMultiDays(ownerKey,cycleId,shown.selection.absoluteWeek,shown.selection.weekday)}.getOrNull()
+                ?:return@withOwnerTransaction NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT
+            val fresh=reviewer.previewMultiTieredNextForPreparation(ownerKey,cycleId,displayed.inputs,
+                shown.selection,null,prior) as? NativeSavedNamedReview.Signed
                 ?:return@withOwnerTransaction NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED
             if(fresh!=displayed || fresh.consent.ownerKey!=ownerKey ||
                 fresh.consent.athleteId!=owner.athleteId || fresh.consent.cycleId!=cycleId)
@@ -278,8 +323,10 @@ class NativeKotlinFirstTierTransitionConsentStore(
                 return@withOwnerTransaction no(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT)
             val reviewer=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
                 signoffs,history,outstanding,machineRosters)
+            val prior=runCatching{priorMultiDays(ownerKey,cycleId,week,weekday)}.getOrNull()
+                ?:return@withOwnerTransaction no(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT)
             val fresh=reviewer.previewMultiTieredNextForPreparation(ownerKey,cycleId,old.inputs,old.selection,
-                fingerprint(bytes)) as? NativeSavedNamedReview.Signed
+                fingerprint(bytes),prior) as? NativeSavedNamedReview.Signed
                 ?:return@withOwnerTransaction no(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED)
             if(identity.signedInIdentity()!=owner)
                 return@withOwnerTransaction no(NativeTieredTransitionConsentResult.NOT_AUTHORIZED)

@@ -230,6 +230,70 @@ class CustomCycleCoachAuditDomainTest {
         assertNull(missing.structuralReview?.verifiedDraft)
     }
 
+    @Test fun specialistSnapshotPreservesReviewedIntentAndCannotBypassWholeCycleAudit() {
+        val stock=VerifiedLoadStock.Barbell(LoadUnit.LB,n("10"),
+            mapOf(n("5") to 4,n("2.5") to 2))
+        val reviewedSetup=setup(gym=GymProfileDraft("gym-1",LoadUnit.LB,
+            mapOf("straight-bar" to stock),setOf("flat-bench","rack"),emptySet()),
+            maxBarbells=1)
+        val base=cycle(days=listOf(0,2,4).map{day->authoredDay(day).copy(
+            slots=listOf(CustomExerciseSlot("slot-$day","barbell_bench",ComposerRole.PRIMARY,
+                listOf(authoredSet().copy(load=DraftSetLoad.Verified(LoadUnit.LB,
+                    LoadBasis.BARBELL_TOTAL,n("20")))))))})
+        val stamp=CustomWorkoutSourceStamp("athlete-1","rev-1","cycle-1",base.revision,"gym-1",1)
+        val key=CustomNamedPercentageWeekKey("block-1",1,0,"slot-0")
+        val request=NamedPercentageRequest(BasicProgressionScope("athlete-1","cycle-1","gym-1",
+            "block-1","block-1:d0","barbell_bench",null,LoadUnit.LB,LoadBasis.BARBELL_TOTAL),
+            NamedPercentageScheme.FIVE_THREE_ONE,PercentageTier.PRIMARY,PercentageDayRole.STANDARD,
+            PercentageReferenceKind.TRAINING_MAX,n("30"),true,1,3,1,stock)
+        val draft=(CustomPercentageDraftDomain.review(CustomPercentageDraftSource(
+            base,stamp,"block-1",1,0,"slot-0"),request) as CustomPercentageDraftResult.Proposed)
+            .proposal.draft
+        val evidence=listOf(CustomNamedPercentageWeekEvidence(key,request))
+        val catalog=StarterExerciseTranche.movements()
+        val chest=TrainingMuscle.entries.map{muscle->
+            val main=muscle==TrainingMuscle.CHEST
+            DeclaredMuscleDoseBounds(muscle,n(if(main)"3" else "0"),
+                n(if(main)"4" else "0"),n("5"),if(main)3 else 0)
+        }
+        val coach=inputs(policy=policy(chest))
+        fun review(week:Int=1,day:Int=0,proof:List<CustomNamedPercentageWeekEvidence> = evidence,
+            coaching:CustomCoachAuditInputs=coach,source:CustomTrainingCycle=draft)=
+            CustomWorkoutSnapshotDomain.reviewNamedForConsent(source,reviewedSetup,catalog,1,
+                coaching,proof,week,day)
+        val projected=review()
+        assertTrue(projected.toString(),projected is CustomWorkoutSnapshotResult.Preview)
+        val snapshot=(projected as CustomWorkoutSnapshotResult.Preview).snapshot
+        val set=snapshot.slots.single().sets.single()
+        val original=draft.weekOverrides.getValue("block-1").single().sets.single()
+        assertEquals(original,set.prescription)
+        assertEquals("cycle-1:w1:d0:slot-0:s1",set.setKey)
+        assertEquals(5,set.prescription.exactRepTarget)
+        assertEquals(n("25"),(set.prescription.load as DraftSetLoad.Verified).value)
+        assertTrue(set.prescription.percentageIntent!!.repOut)
+        assertEquals(stamp.copy(cycleRevision=draft.revision),snapshot.stamp)
+        assertEquals(200,snapshot.declaredNonSetSeconds)
+        assertFalse(snapshot.isIssued)
+        assertFalse(snapshot.mayRecordSets)
+        assertFalse(snapshot.mayFinishWorkout)
+        val next=(review(week=2) as CustomWorkoutSnapshotResult.Preview).snapshot
+        assertNull(next.slots.single().sets.single().prescription.percentageIntent)
+        assertEquals(n("20"),(next.slots.single().sets.single().prescription.load as DraftSetLoad.Verified).value)
+        assertTrue(CustomWorkoutSnapshotDomain.preview(draft,reviewedSetup,catalog,1,1,0)
+            is CustomWorkoutSnapshotResult.Rejected)
+        assertTrue(CustomWorkoutSnapshotDomain.reviewForConsent(draft,reviewedSetup,catalog,1,coach,1,0)
+            is CustomWorkoutSnapshotResult.Rejected)
+        assertTrue(review(proof=emptyList()) is CustomWorkoutSnapshotResult.Rejected)
+        assertTrue(review(week=2,proof=listOf(evidence.single().copy(request=request.copy(
+            confirmedReference=n("35"))))) is CustomWorkoutSnapshotResult.Rejected)
+        assertTrue(review(week=2,coaching=coach.copy(nonSetSecondsByWeekday=mapOf(0 to 3600,2 to 200,4 to 200)))
+            is CustomWorkoutSnapshotResult.Rejected)
+        val changed=draft.copy(weekOverrides=mapOf("block-1" to listOf(
+            draft.weekOverrides.getValue("block-1").single().copy(sets=listOf(
+                original.copy(load=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.BARBELL_TOTAL,n("20"))))))))
+        assertTrue(review(week=2,source=changed) is CustomWorkoutSnapshotResult.Rejected)
+    }
+
     @Test fun noAuthoredPolicyOrTimeEvidenceMeansNeverApproved() {
         val result=CustomCycleCoachAuditDomain.review(
             cycle(),setup(),StarterExerciseTranche.movements())

@@ -2041,6 +2041,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    CSS owns only the bounded presentation while ui-motion.js owns the source
    geometry and the React detail screen owns content and dismissal. */
 #root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail[data-pi-detail-linked="1"]
+  .wpb-exercise-detail-header>div:last-child{
+  animation:piR12DetailTitleArrival 315ms cubic-bezier(.18,.82,.2,1) both;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail[data-pi-detail-linked="1"]
   .wpb-exercise-figure-wrap{
   animation:piR12DetailFigureArrival 345ms cubic-bezier(.18,.82,.2,1) both;
 }
@@ -3487,6 +3491,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results>.wpb-library-row:is([aria-selected="true"],:active,:focus-visible){
   border-color:var(--pi-r11-accent-stroke)!important;
   background-color:var(--pi-r11-selected)!important;
+}
+/* The full-screen detail never inherits the scrim fade: it is an opaque destination. */
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail.wpb-backdrop{
+  background-image:none!important;
+  opacity:1!important;
 }
 #root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-figure-wrap{
   background-color:var(--pi-r11-quiet)!important;

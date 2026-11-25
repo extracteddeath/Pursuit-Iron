@@ -249,9 +249,11 @@ object CustomTrainingCycleDomain {
         input:CustomTrainingCycle,
         availableExercises:List<CustomExerciseAvailability>,
         stamp:CustomWorkoutSourceStamp,
-        evidence:List<CustomNamedPercentageWeekEvidence>
+        evidence:List<CustomNamedPercentageWeekEvidence>,
+        initialTiers:List<CustomTieredInitialWeekEvidence> = emptyList()
     ):CustomCycleReview {
-        val exact=CustomNamedPercentageCycleAuditDomain.review(input,stamp,evidence)
+        val exact=CustomNamedPercentageCycleAuditDomain.reviewWithInitialTiers(
+            input,stamp,evidence,initialTiers)
         if(exact !is CustomNamedPercentageCycleAudit.Verified)
             return CustomCycleReview(CustomCycleReviewStatus.UNRESOLVED,
                 listOf(CustomCycleIssue(CustomCycleIssueKind.INVALID_SET,

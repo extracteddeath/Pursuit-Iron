@@ -16,7 +16,8 @@ data class NativeTieredNextSelection(val nextWorkoutId:String,val absoluteWeek:I
 data class NativeTieredNextCandidate(
     val selection:NativeTieredNextSelection,val request:TieredLinearRequest,
     val result:TieredLinearResult.Candidate,val draft:CustomPercentageDraftResult.Proposed,
-    val historyRevision:Long
+    val historyRevision:Long,
+    val transitionAudit:CustomCoachAudit
 ) {
     val mayIssueWorkout:Boolean get()=false
     val maySaveProgram:Boolean get()=false
@@ -96,8 +97,8 @@ class NativeKotlinSavedNamedPercentageReview(
         evaluate(ownerKey,cycleId,inputs,signed=true,tiered=true)
 
     /** First post-initial transition is a read-only proposal. The original
-     * signed initial recipe stays immutable; future receipt/consent and
-     * full-cycle transition audit are separate from this preview. */
+     * signed initial recipe stays immutable. The new cycle also must pass
+     * full specialist/coach review; durable consent remains separate. */
     fun previewTieredNext(ownerKey:String,cycleId:String,inputs:CustomCoachAuditInputs,
         selection:NativeTieredNextSelection):NativeSavedNamedReview =
         evaluate(ownerKey,cycleId,inputs,signed=true,tiered=true,next=selection)
@@ -320,7 +321,26 @@ class NativeKotlinSavedNamedPercentageReview(
                         receipt.weekInBlock+1,selection.weekday,selection.slotId),request)
                     as? CustomPercentageDraftResult.Proposed
                     ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.FULL_CYCLE_AUDIT_FAILED)
-                NativeTieredNextCandidate(next,request,numeric,proposed,ledger.manifestRevision)
+                // Audit the newly proposed full cycle, not only the signed
+                // initial recipe. Bind the authenticated next-week proof and
+                // the existing initial evidence to the proposed revision.
+                val proposedCycle=proposed.proposal.draft
+                val nextEvidence=CustomTieredTransitionWeekEvidence(
+                    CustomNamedPercentageWeekKey(receipt.blockId,receipt.weekInBlock+1,
+                        selection.weekday,selection.slotId),request)
+                val transitionAudit=CustomCycleCoachAuditDomain.reviewSpecialistForReview(
+                    proposedCycle,source.setup,source.catalog,inputs,
+                    stamp.copy(cycleRevision=proposedCycle.revision),evidence,
+                    listOf(checkNotNull(tierEvidence)),listOf(nextEvidence))
+                if(transitionAudit.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW ||
+                    transitionAudit.issues.isNotEmpty() ||
+                    transitionAudit.auditedCycleRevision!=proposedCycle.revision ||
+                    transitionAudit.structuralReview?.verifiedDraft!=proposedCycle ||
+                    transitionAudit.coachingPolicyRevisions!=prior.policyReferences)
+                    return@withOwnerTransaction deny(
+                        NativeSavedNamedReviewRefusal.FULL_CYCLE_AUDIT_FAILED,transitionAudit)
+                NativeTieredNextCandidate(next,request,numeric,proposed,ledger.manifestRevision,
+                    transitionAudit)
             } else null
             if(identity.signedInIdentity()!=owner)
                 return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.NOT_AUTHORIZED)

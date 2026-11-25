@@ -393,11 +393,26 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         assertFalse(transition.mayIssueWorkout)
         assertFalse(transition.maySaveProgram)
         assertFalse(transition.requiresExplicitResetReview)
+        assertEquals(CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,
+            transition.transitionAudit.status)
+        assertTrue(transition.transitionAudit.issues.isEmpty())
+        assertEquals(transition.draft.proposal.draft,
+            transition.transitionAudit.structuralReview?.verifiedDraft)
+        assertEquals(transition.draft.proposal.draft.revision,
+            transition.transitionAudit.auditedCycleRevision)
+        assertEquals(consent.receipt.policyReferences,
+            transition.transitionAudit.coachingPolicyRevisions)
         val recovery=reviewer.previewTieredNext("owner-1","cycle-1",inputs(),nextSelection.copy(recovery=true))
         assertTrue(recovery.toString(),recovery is NativeSavedNamedReview.Signed)
         val light=checkNotNull((recovery as NativeSavedNamedReview.Signed).nextTierCandidate)
         assertEquals(candidate.state,light.result.state)
         assertTrue(light.result.recovery)
+        assertEquals(CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,
+            light.transitionAudit.status)
+        assertEquals(light.draft.proposal.draft,
+            light.transitionAudit.structuralReview?.verifiedDraft)
+        assertNotEquals(transition.transitionAudit.structuralReview?.verifiedDraft,
+            light.transitionAudit.structuralReview?.verifiedDraft)
         assertEquals(n("15"),light.result.targets.single().load)
         assertFalse(light.result.targets.single().repOut)
         // Identical history is necessary but insufficient for consent:

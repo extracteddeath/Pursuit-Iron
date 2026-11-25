@@ -13,7 +13,7 @@ const fixture=[
  "import React from '/vendor/react.js';",
  "import {createRoot} from '/vendor/react-dom-client.js';",
  "import {UiCard,UiAction,UiIconAction,UiChoice,UiSegmented} from '/modules/ui-primitives.js';",
- "function Demo(){const [on,setOn]=React.useState(false);return React.createElement('main',{className:'wpb',id:'expressive-harness'},",
+ "function Demo(){const [on,setOn]=React.useState(false);return React.createElement('main',{className:'wpb',id:'expressive-harness',style:{'--wpb-theme-accent-dim':'rgb(60, 44, 85)','--wpb-theme-accent-ink':'rgb(230, 208, 255)','--wpb-theme-accent':'rgb(190, 150, 244)','--wpb-theme-on-accent':'rgb(30, 15, 48)','--wpb-theme-border':'rgb(100, 90, 110)','--wpb-theme-text':'rgb(240, 230, 250)'}},",
  "React.createElement(UiCard,{as:'section',id:'standard-card'},'Standard surface'),",
  "React.createElement(UiCard,{as:'section',tone:'featured',id:'feature-card','aria-label':'Featured training summary'},'Featured training summary'),",
  "React.createElement(UiAction,{variant:'primary',id:'primary-action',onClick:()=>{}},'Save changes'),",
@@ -99,8 +99,12 @@ try {
    await page.click('#select-chip');
    assert.equal(await page.$eval('#select-chip',el=>el.getAttribute('aria-pressed')),'true',
      'Selection change must remain semantic and immediate');
+   // The isolated component harness must supply the same semantic roles
+   // as the real app; unset custom properties resolve to transparent.
+   await page.waitForFunction(()=>getComputedStyle(document.getElementById('filter-chip')).backgroundColor==='rgb(60, 44, 85)' &&
+     getComputedStyle(document.querySelector('.wpb-split-choices>button:last-child')).borderTopLeftRadius==='20px',{timeout:3000});
    const after=await shapes();
-   assert.notEqual(after.paint,before.paint,'Filter selection uses variant paint');
+   assert.equal(after.paint,'rgb(60, 44, 85)','Filter selection uses the supplied variant paint');
    assert.deepEqual(after.segment.map(x=>x.corners),[['20px','6px'],['20px','20px']],'Selection changes only the appropriate segment shape');
    assert.ok(after.segment.every(x=>x.height>=48),'Connected segments retain accessible sizing');
    assert.deepEqual(errors,[],'No browser runtime exception at '+width);

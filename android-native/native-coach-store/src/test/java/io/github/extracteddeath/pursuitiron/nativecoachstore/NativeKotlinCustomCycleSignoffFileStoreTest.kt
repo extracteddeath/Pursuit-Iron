@@ -3190,12 +3190,23 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     @Test fun gvtNamedJourney()=fixedNamedJourney(NamedPercentageScheme.GVT,
         PercentageDayRole.STANDARD,"15",10,false)
     @Test fun ripplerNamedJourney()=fixedNamedJourney(NamedPercentageScheme.RIPPLER,
-        PercentageDayRole.STANDARD,"20",5,true)
+        PercentageDayRole.STANDARD,"20",5,true,"25",2,false)
     @Test fun jtNamedJourney()=fixedNamedJourney(NamedPercentageScheme.JT,
-        PercentageDayRole.STANDARD,"25",1,true)
+        PercentageDayRole.STANDARD,"25",1,true,"25",3,false)
+
+    // Independent positive next-issuance branches: retain the revocation
+    // cases above, but also actually issue and finish the next prescription.
+    @Test fun beginnerNamedSecondWeekFinishes()=fixedNamedJourney(NamedPercentageScheme.FIVE_THREE_ONE_BEGINNER,
+        PercentageDayRole.STANDARD,"25",5,false,finishNext=true)
+    @Test fun ripplerNamedSecondWeekFinishes()=fixedNamedJourney(NamedPercentageScheme.RIPPLER,
+        PercentageDayRole.STANDARD,"20",5,true,"25",2,false,finishNext=true)
+    @Test fun jtNamedSecondWeekFinishes()=fixedNamedJourney(NamedPercentageScheme.JT,
+        PercentageDayRole.STANDARD,"25",1,true,"25",3,false,finishNext=true)
 
     private fun fixedNamedJourney(scheme:NamedPercentageScheme,role:PercentageDayRole,
-        expectedLoad:String,expectedReps:Int,repOut:Boolean) {
+        expectedLoad:String,expectedReps:Int,repOut:Boolean,
+        nextLoad:String=expectedLoad,nextReps:Int=expectedReps,nextRepOut:Boolean=repOut,
+        finishNext:Boolean=false) {
         val f=authoredCoachFixture(initializeHistory=false,phaseTransition=true)
         initialize()
         approved()
@@ -3271,9 +3282,44 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(proposed.draft.weekOverrides.getValue("base").single{
             it.weekInBlock==2 && it.weekday==2
         }.sets,nextSnapshot.slots.single().sets.map{it.prescription})
-        assertTrue(store().revoke("owner-1","cycle-1",(signed as NativeCustomSignoffWrite.Committed).receipt.recordRevision)
-            is NativeCustomSignoffWrite.Committed)
-        assertTrue(issue("fixed-named-w2",2,2) is NativeCustomJournalResult.Rejected)
+        val nextTarget=nextSnapshot.slots.single().sets.single()
+        val nextIntent=checkNotNull(nextTarget.prescription.percentageIntent)
+        // Compare with independently specified week-two numbers, not only
+        // with the draft produced by the same implementation.
+        assertEquals(0,n(nextLoad).compareTo((nextTarget.prescription.load as DraftSetLoad.Verified).value))
+        assertEquals(nextReps,nextTarget.prescription.exactRepTarget)
+        assertEquals(nextRepOut,nextIntent.repOut)
+        if(!finishNext) {
+            assertTrue(store().revoke("owner-1","cycle-1",(signed as NativeCustomSignoffWrite.Committed).receipt.recordRevision)
+                is NativeCustomSignoffWrite.Committed)
+            assertTrue(issue("fixed-named-w2",2,2) is NativeCustomJournalResult.Rejected)
+            return
+        }
+        val secondId="fixed-named-w2"
+        val second=issue(secondId,2,2)
+        assertTrue(second.toString(),second is NativeCustomJournalResult.Durable)
+        assertEquals(nextSnapshot,(second as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
+        val nextVisit=CustomWorkoutVisitKey(nextTarget.setKey,CustomWorkoutVisitPart.MAIN)
+        assertTrue(coldIssuer().record("owner-1",secondId,
+            CustomWorkoutJournalOperation.Record("next-actual",0,nextVisit,
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n(nextLoad),LoadUnit.LB,nextReps+1,1))) is NativeCustomJournalResult.Durable)
+        val secondFinish=NativeKotlinCustomHistoryTransaction(f.history,coldIssuer(),fence,identity)
+            .complete("owner-1","athlete-1",secondId,CustomWorkoutJournalOperation.Finish("next-finish",1))
+        assertTrue(secondFinish.toString(),secondFinish is NativeCustomFinishResult.Committed)
+        val nextFact=(secondFinish as NativeCustomFinishResult.Committed).evidence.visits.single()
+        assertEquals(nextIntent,nextFact.percentageIntent)
+        assertEquals(RepBand(nextReps,nextReps),nextFact.prescribedReps)
+        assertEquals(nextReps+1,nextFact.actual?.reps)
+        val coldTimeline=(f.reader.read("owner-1","athlete-1") as NativeKotlinMixedHistoryReadResult.Review).timeline
+        assertEquals(2,coldTimeline.completions.size)
+        val facts=coldTimeline.completions.map{(it as NativeKotlinMixedHistoryCompletion.Custom).evidence.visits.single()}
+        assertTrue(fact in facts)
+        assertTrue(nextFact in facts)
+        assertEquals(snapshot,(coldIssuer().open("owner-1",workout) as NativeCustomJournalResult.Durable)
+            .issued.journal.originalSnapshot)
+        assertEquals(nextSnapshot,(coldIssuer().open("owner-1",secondId) as NativeCustomJournalResult.Durable)
+            .issued.journal.originalSnapshot)
     }
 
     @Test fun namedIssueUsesCanonicalJournalAndFinishWithExactRepOutAcrossColdReplay() {

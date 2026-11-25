@@ -17,10 +17,11 @@ import java.security.MessageDigest
 
 /** Immutable per-week transition consent. It cannot update the authored
  * source or rewrite past prescriptions. Preparation/issuance use separate
- * owner-fenced transactions; a conflicting consent is never overwritten.
+ * owner-fenced transactions; only a stale, never-prepared approval can be
+ * explicitly replaced with an exact fingerprint compare-and-swap.
  */
 internal enum class NativeTieredTransitionConsentResult {
-    RECORDED, REPLAYED, VERIFIED, MISSING, CONFIRMATION_REQUIRED,
+    RECORDED, REPLAYED, VERIFIED, REPLACED, MISSING, CONFIRMATION_REQUIRED,
     NOT_AUTHORIZED, STALE_OR_UNVERIFIED, CONFLICT_OR_CORRUPT, STORAGE_UNAVAILABLE
 }
 
@@ -114,6 +115,18 @@ internal class NativeKotlinFirstTierTransitionConsentStore(
         athleteConfirmed:Boolean,resetConfirmed:Boolean=false,recoveryConfirmed:Boolean=false):
         NativeTieredTransitionConsentResult =
         evaluate(ownerKey,cycleId,displayed,true,athleteConfirmed,resetConfirmed,recoveryConfirmed)
+
+    /** Replace ONLY an unprepared stale approval for the same workout.
+     * The old digest is the athlete-reviewed compare-and-swap token.
+     * Ordinary confirm cannot replace a different prescription. A prepared
+     * or issued workout requires a separate cancellation protocol.
+     */
+    fun replaceStaleUnprepared(ownerKey:String,cycleId:String,
+        displayed:NativeSavedNamedReview.Signed,expectedReceiptFingerprint:String,
+        athleteConfirmed:Boolean,resetConfirmed:Boolean=false,recoveryConfirmed:Boolean=false):
+        NativeTieredTransitionConsentResult =
+        evaluate(ownerKey,cycleId,displayed,true,athleteConfirmed,resetConfirmed,
+            recoveryConfirmed,expectedReceiptFingerprint)
 
     /** Revalidation requires the exact displayed review again; this is not
      * a general cold-start discovery API or permission to issue a workout. */
@@ -243,10 +256,13 @@ internal class NativeKotlinFirstTierTransitionConsentStore(
     }
 
     private fun evaluate(ownerKey:String,cycleId:String,displayed:NativeSavedNamedReview.Signed,
-        write:Boolean,confirmed:Boolean,reset:Boolean,recovery:Boolean):NativeTieredTransitionConsentResult {
+        write:Boolean,confirmed:Boolean,reset:Boolean,recovery:Boolean,
+        replaceFingerprint:String?=null):NativeTieredTransitionConsentResult {
         if(!id.matches(ownerKey)||!id.matches(cycleId))
             return NativeTieredTransitionConsentResult.NOT_AUTHORIZED
         if(write&&!confirmed)return NativeTieredTransitionConsentResult.CONFIRMATION_REQUIRED
+        if(replaceFingerprint!=null && !sha.matches(replaceFingerprint))
+            return NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT
         return runCatching{fence.withOwnerTransaction(ownerKey){
             val owner=identity.signedInIdentity()?.takeIf{it.ownerKey==ownerKey}
                 ?:return@withOwnerTransaction NativeTieredTransitionConsentResult.NOT_AUTHORIZED
@@ -269,7 +285,7 @@ internal class NativeKotlinFirstTierTransitionConsentStore(
                 MessageDigest.isEqual(Files.readAllBytes(existingFile),displayBytes)
             val fresh=reviewer.previewTieredNextForPreparation(
                 ownerKey,cycleId,displayed.inputs,shown.selection,
-                fingerprint(displayBytes).takeIf{sameReceipt},prior)
+                fingerprint(displayBytes).takeIf{sameReceipt && replaceFingerprint==null},prior)
                 as? NativeSavedNamedReview.Signed
                 ?:return@withOwnerTransaction NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED
             if(fresh!=displayed || fresh.consent.athleteId!=owner.athleteId ||
@@ -285,14 +301,37 @@ internal class NativeKotlinFirstTierTransitionConsentStore(
             if(Files.isSymbolicLink(directory))
                 return@withOwnerTransaction NativeTieredTransitionConsentResult.STORAGE_UNAVAILABLE
             val file=existingFile
-            if(Files.exists(file,LinkOption.NOFOLLOW_LINKS)){
-                if(Files.isSymbolicLink(file)||!Files.isRegularFile(file,LinkOption.NOFOLLOW_LINKS)||
-                    Files.size(file)!=bytes.size.toLong()||
-                    !MessageDigest.isEqual(Files.readAllBytes(file),bytes))
-                    return@withOwnerTransaction NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT
-                return@withOwnerTransaction if(write)NativeTieredTransitionConsentResult.REPLAYED
+            val exists=Files.exists(file,LinkOption.NOFOLLOW_LINKS)
+            if(exists){
+                val oldBytes=try{readBytes(file)}
+                    catch(_:Exception){return@withOwnerTransaction NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT}
+                if(MessageDigest.isEqual(oldBytes,bytes))
+                    return@withOwnerTransaction if(replaceFingerprint!=null)
+                        NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT
+                    else if(write)NativeTieredTransitionConsentResult.REPLAYED
                     else NativeTieredTransitionConsentResult.VERIFIED
-            }
+                if(replaceFingerprint==null)
+                    return@withOwnerTransaction NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT
+                val old=try{decode(oldBytes)}
+                    catch(_:Exception){return@withOwnerTransaction NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT}
+                if(old.fingerprint!=replaceFingerprint ||
+                    old.ownerKey!=ownerKey || old.athleteId!=owner.athleteId || old.cycleId!=cycleId ||
+                    old.selection.nextWorkoutId!=next.selection.nextWorkoutId ||
+                    old.selection.absoluteWeek!=next.selection.absoluteWeek ||
+                    old.consentRevision!=fresh.consent.recordRevision ||
+                    old.consentFingerprint!=fresh.consent.fingerprintSha256 ||
+                    old.cycleRevision!=fresh.consent.cycleRevision ||
+                    old.sourceRevision!=fresh.consent.sourceRevision ||
+                    old.historyRevision>=next.historyRevision)
+                    return@withOwnerTransaction NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT
+                // The fresh review above excluded ALL outstanding workouts,
+                // even matching self-preparation. Also refuse a later receipt
+                // (a gap/corrupt chain is never repaired by overwriting it).
+                if((next.selection.absoluteWeek+1..104).any{week->
+                    Files.exists(path(ownerKey,cycleId,week,first),LinkOption.NOFOLLOW_LINKS)})
+                    return@withOwnerTransaction NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT
+            }else if(replaceFingerprint!=null)
+                return@withOwnerTransaction NativeTieredTransitionConsentResult.MISSING
             if(!write)return@withOwnerTransaction NativeTieredTransitionConsentResult.MISSING
             Files.createDirectories(directory)
             val pending=Files.createTempFile(directory,"tier-first-transition-", ".pending")
@@ -305,9 +344,11 @@ internal class NativeKotlinFirstTierTransitionConsentStore(
                 }
                 if(identity.signedInIdentity()!=owner)
                     return@withOwnerTransaction NativeTieredTransitionConsentResult.NOT_AUTHORIZED
-                Files.move(pending,file,StandardCopyOption.ATOMIC_MOVE)
+                if(exists)Files.move(pending,file,StandardCopyOption.ATOMIC_MOVE,
+                    StandardCopyOption.REPLACE_EXISTING)
+                else Files.move(pending,file,StandardCopyOption.ATOMIC_MOVE)
             }finally{Files.deleteIfExists(pending)}
-            NativeTieredTransitionConsentResult.RECORDED
+            if(exists)NativeTieredTransitionConsentResult.REPLACED else NativeTieredTransitionConsentResult.RECORDED
         }}.getOrElse{NativeTieredTransitionConsentResult.STORAGE_UNAVAILABLE}
     }
 }

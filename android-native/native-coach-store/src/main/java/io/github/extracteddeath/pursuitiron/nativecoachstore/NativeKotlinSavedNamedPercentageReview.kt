@@ -154,6 +154,13 @@ class NativeKotlinSavedNamedPercentageReview(
         evaluate(ownerKey,cycleId,inputs,signed=true,tiered=true,
             multiNext=selection.copy(recoverySlotIds=selection.recoverySlotIds.toSet()))
 
+    /** Only an exact persisted day receipt may re-review its own unissued
+     * preparation. All other outstanding sessions remain protected. */
+    internal fun previewMultiTieredNextForPreparation(ownerKey:String,cycleId:String,inputs:CustomCoachAuditInputs,
+        selection:NativeMultiTierNextSelection,receiptFingerprint:String?):NativeSavedNamedReview =
+        evaluate(ownerKey,cycleId,inputs,signed=true,tiered=true,multiNext=selection,
+            preparedReceiptFingerprint=receiptFingerprint)
+
     /** Only receipt-backed recovery may re-review an already prepared
      * transition. A plain preview must still refuse every outstanding day.
      */
@@ -389,22 +396,40 @@ class NativeKotlinSavedNamedPercentageReview(
                     return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
             }
             val nextMultiCandidate=if(multiNext!=null) {
+                val ownPreparation=census.sessions.singleOrNull{it.workoutId==multiNext.nextWorkoutId}
+                    ?.takeIf{!it.issued && !it.completed && it.cycleId==cycleId &&
+                        it.absoluteWeek==multiNext.absoluteWeek && it.weekday==multiNext.weekday}
+                    ?.let{outstanding.preparedOrigin(ownerKey,it.workoutId)}
+                    ?.takeIf{preparedReceiptFingerprint!=null &&
+                        it.authority==NativeCustomPreparationAuthority.TIERED_TRANSITION &&
+                        it.consentFingerprint==preparedReceiptFingerprint &&
+                        it.consentRevision==prior.recordRevision && it.athleteId==owner.athleteId}
                 if(!signed || roots.size<2 || !id.matches(multiNext.nextWorkoutId) ||
                     multiNext.absoluteWeek !in 1..104 || multiNext.weekday !in 0..6 ||
                     roots.any{it.selection.nextWorkoutId==multiNext.nextWorkoutId} ||
                     timeline.completions.any{it.manifest.workoutId==multiNext.nextWorkoutId} ||
-                    census.sessions.any{!it.completed || it.workoutId==multiNext.nextWorkoutId})
+                    census.sessions.any{it.workoutId!=ownPreparation?.workoutId &&
+                        (!it.completed || it.workoutId==multiNext.nextWorkoutId)})
                     return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.PROTECTED_WEEK)
                 val facts=census.sessions.filter{it.cycleId==cycleId}.map{item->
-                    val origin=outstanding.preparedOrigin(ownerKey,item.workoutId)
-                        ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
-                    NativeCustomNextCycleSlotDomain.multiInitialFact(candidate,roots,item,origin,prior)
-                        ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
+                    if(item.workoutId==ownPreparation?.workoutId)
+                        NativeCustomCycleSessionFact(item.workoutId,item.absoluteWeek,item.weekday,
+                            candidate.revision,item.issued,item.completed)
+                    else {
+                        val origin=outstanding.preparedOrigin(ownerKey,item.workoutId)
+                            ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
+                        NativeCustomNextCycleSlotDomain.multiInitialFact(candidate,roots,item,origin,prior)
+                            ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
+                    }
                 }
-                val scheduled=NativeCustomNextCycleSlotDomain.select(candidate,facts) as? NativeCustomNextCycleSlot.Next
-                    ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.PROTECTED_WEEK)
-                if(scheduled.absoluteWeek!=multiNext.absoluteWeek || scheduled.weekday!=multiNext.weekday)
-                    return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.PROTECTED_WEEK)
+                val allowed=when(val scheduled=NativeCustomNextCycleSlotDomain.select(candidate,facts)) {
+                    is NativeCustomNextCycleSlot.Next -> scheduled.absoluteWeek==multiNext.absoluteWeek &&
+                        scheduled.weekday==multiNext.weekday && ownPreparation==null
+                    is NativeCustomNextCycleSlot.Prepared -> scheduled.absoluteWeek==multiNext.absoluteWeek &&
+                        scheduled.weekday==multiNext.weekday && scheduled.workoutId==ownPreparation?.workoutId
+                    else -> false
+                }
+                if(!allowed)return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.PROTECTED_WEEK)
                 var preceding=0
                 val block=candidate.blocks.firstOrNull{b->
                     val match=multiNext.absoluteWeek in (preceding+1)..(preceding+b.weeks)
@@ -462,6 +487,8 @@ class NativeKotlinSavedNamedPercentageReview(
                 if(snapshot.stamp!=stamp.copy(cycleRevision=combined.revision) ||
                     snapshot.blockId!=block.blockId || snapshot.weekInBlock!=localWeek)
                     return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.FULL_CYCLE_AUDIT_FAILED)
+                if(ownPreparation!=null && ownPreparation.snapshot!=snapshot)
+                    return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
                 NativeMultiTierNextCandidate(multiNext,slots.toList(),combined,snapshot,timeline.manifestRevision,transitionAudit)
             } else null
             val nextCandidate=if(next!=null) {

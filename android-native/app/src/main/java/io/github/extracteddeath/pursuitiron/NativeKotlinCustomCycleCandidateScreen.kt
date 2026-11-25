@@ -481,7 +481,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
         }
     }
     NativeKotlinPlanWorkspace(
-        showNavigator=showProgramEditor && draft!=null,
+        showNavigator=showProgramEditor && draft!=null && !state.fixedNamedDraft,
         navigationKey=draft?.let { it.athleteId to it.cycleId },
         scrollState=pageScroll,
         navigator={
@@ -596,7 +596,11 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     ) { Text("Create and save my draft") }
                 }
             }
+        } else if(state.fixedNamedDraft) {
+            NativeFixedNamedExecutionPanel(state,controller,onOpenIssuedWorkout)
         } else {
+            if(signed && policyReady)
+                NativeFixedNamedSelectionPanel(draft,state,controller)
             programSwapReview?.let {request->
                 val matched=NativeKotlinProgramSwapHandoffDomain
                     .canOpenExactEdit(request,draft)
@@ -2325,5 +2329,169 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
             dismissButton = { TextButton(onClick = { deleteConfirm = false }) {
                 Text("Keep draft")
             } })
+    }
+}
+
+
+/** Explicit athlete choices; the host derives reference kind and verifies
+ * owner, signed ordinary base, physical stock and every selected week. */
+@Composable
+private fun NativeFixedNamedSelectionPanel(draft:CustomTrainingCycle,
+    state:NativeKotlinCustomCycleState,controller:NativeKotlinCustomCycleController) {
+    var expanded by remember(draft.cycleId,draft.revision){mutableStateOf(false)}
+    var blockId by remember(draft.cycleId,draft.revision){mutableStateOf(draft.blocks.firstOrNull()?.blockId.orEmpty())}
+    val block=draft.blocks.firstOrNull{it.blockId==blockId}
+    var weekday by remember(blockId){mutableStateOf(block?.days?.firstOrNull()?.weekday ?: -1)}
+    val day=block?.days?.firstOrNull{it.weekday==weekday}
+    var slotId by remember(blockId,weekday){mutableStateOf(day?.slots?.firstOrNull()?.slotId.orEmpty())}
+    val slot=day?.slots?.firstOrNull{it.slotId==slotId}
+    var scheme by remember(draft.cycleId,draft.revision){mutableStateOf(NamedPercentageScheme.FIVE_THREE_ONE)}
+    var tier by remember{mutableStateOf(PercentageTier.PRIMARY)}
+    var role by remember{mutableStateOf(PercentageDayRole.TEXAS_VOLUME)}
+    var from by remember(blockId){mutableStateOf("1")}
+    var through by remember(blockId){mutableStateOf(block?.weeks?.toString().orEmpty())}
+    var reference by remember(blockId,weekday,slotId,scheme){mutableStateOf("")}
+    var choices by remember(draft.cycleId,draft.revision){mutableStateOf(emptyList<NativeFixedNamedChoice>())}
+    val busy=state.busy
+    PursuitCard {
+        TextButton(onClick={expanded=!expanded},enabled=!busy){
+            Text(if(expanded)"Close specialist progression" else "Choose specialist progression")
+        }
+        if(expanded && block!=null && day!=null && slot!=null) {
+            Text("Review a named recipe for selected exercise slots and weeks. Add all intended choices before saving the revised program.",
+                style=MaterialTheme.typography.bodySmall)
+            CycleChoiceRow("Block",draft.blocks.map{it.blockId},blockId,
+                {id->draft.blocks.first{it.blockId==id}.label}){blockId=it}
+            CycleChoiceRow("Training day",block.days.map{it.weekday},weekday,
+                {d->block.days.first{it.weekday==d}.label}){weekday=it}
+            CycleChoiceRow("Exercise",day.slots.map{it.slotId},slotId,
+                {id->kotlinExerciseLabel(day.slots.first{it.slotId==id}.exerciseId)}){slotId=it}
+            CycleChoiceRow("Protocol",NamedPercentageScheme.entries.filter{it!=NamedPercentageScheme.GZCLP},
+                scheme,::pretty){scheme=it}
+            CycleChoiceRow("Tier",PercentageTier.entries,tier,::pretty){tier=it}
+            if(scheme==NamedPercentageScheme.TEXAS)
+                CycleChoiceRow("Texas day",PercentageDayRole.entries.filter{it!=PercentageDayRole.STANDARD},
+                    role,::pretty){role=it}
+            val unit=(slot.sets.firstOrNull{it.type==DraftSetType.WORKING}?.load as? DraftSetLoad.Verified)?.unit
+            OutlinedTextField(reference,{reference=it},singleLine=true,
+                label={Text(pretty(NamedPercentageProtocolDomain.referenceKind(scheme))+" · "+(unit?.name?.lowercase()?:"unit unavailable"))},
+                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
+                modifier=Modifier.fillMaxWidth())
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                OutlinedTextField(from,{from=it},singleLine=true,label={Text("Block week from")},
+                    keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),modifier=Modifier.weight(1f))
+                OutlinedTextField(through,{through=it},singleLine=true,label={Text("Through")},
+                    keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),modifier=Modifier.weight(1f))
+            }
+            val first=from.toIntOrNull()
+            val last=through.toIntOrNull()
+            val value=reference.toBigDecimalOrNull()
+            val offset=draft.blocks.takeWhile{it.blockId!=blockId}.sumOf{it.weeks}
+            val newChoices=if(first!=null && last!=null && first in 1..block.weeks &&
+                last in first..block.weeks && value!=null && value.signum()>0 && unit!=null)
+                (first..last).map{week->NativeFixedNamedChoice(offset+week,weekday,slotId,scheme,tier,
+                    if(scheme==NamedPercentageScheme.TEXAS)role else PercentageDayRole.STANDARD,value)}
+            else emptyList()
+            Button(onClick={choices=choices+newChoices},enabled=!busy && newChoices.isNotEmpty() &&
+                choices.size+newChoices.size<=104 &&
+                newChoices.none{n->choices.any{it.absoluteWeek==n.absoluteWeek && it.weekday==n.weekday && it.slotId==n.slotId}},
+                modifier=Modifier.fillMaxWidth()){Text("Add selected weeks")}
+            Text("${choices.size} selected slot-weeks",style=MaterialTheme.typography.labelLarge)
+            choices.forEachIndexed{index,choice->
+                Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+                    Text("Week ${choice.absoluteWeek} · ${customWeekdays.getOrElse(choice.weekday){"Day"}} · ${pretty(choice.scheme)} · ${choice.reference.toPlainString()}",
+                        modifier=Modifier.weight(1f),style=MaterialTheme.typography.bodySmall)
+                    TextButton(onClick={choices=choices.filterIndexed{i,_->i!=index}},enabled=!busy){Text("Remove")}
+                }
+            }
+            Button(onClick={controller.reviewFixedNamedChoices(choices)},
+                enabled=!busy && choices.isNotEmpty(),modifier=Modifier.fillMaxWidth()){Text("Review specialist targets")}
+            state.message?.let{Text(it,style=MaterialTheme.typography.bodySmall)}
+            val shown=state.fixedNamedBatch?.takeIf{review->
+                review.selections.map{NativeFixedNamedChoice(it.absoluteWeek,it.weekday,it.slotId,
+                    it.scheme,it.tier,it.dayRole,it.reference)}==choices
+            }
+            if(shown!=null) {
+                shown.individual.forEach{review->
+                    val src=review.source
+                    Text("Week ${review.selection.absoluteWeek} · ${kotlinExerciseLabel(review.request.scope.exerciseId)}",
+                        style=MaterialTheme.typography.labelLarge)
+                    val edit=review.proposal.proposal.draft.weekOverrides[src.blockId].orEmpty()
+                        .singleOrNull{it.weekInBlock==src.weekInBlock && it.weekday==src.weekday && it.slotId==src.slotId}
+                    edit?.sets?.forEach{set->
+                        Text("${kotlinIssuedLoadLabel(set.load)} · ${set.repTargetLabel()}",style=MaterialTheme.typography.bodySmall)
+                    }
+                }
+                Button(onClick={controller.acceptFixedNamedChoices(shown)},enabled=!busy,
+                    modifier=Modifier.fillMaxWidth()){Text("Confirm references and save unsigned revision")}
+            }
+        }
+    }
+}
+
+/** Dedicated fixed-protocol consent and issuance surface. The ordinary
+ * editor and issuer are not used for a saved specialist revision. */
+@Composable
+private fun NativeFixedNamedExecutionPanel(state:NativeKotlinCustomCycleState,
+    controller:NativeKotlinCustomCycleController,onOpenIssuedWorkout:(String)->Unit) {
+    val busy=state.busy
+    val review=state.fixedNamedReview
+    PursuitCard(highlighted=true) {
+        Text("Specialist progression",style=MaterialTheme.typography.titleLarge)
+        state.message?.let{Text(it,style=MaterialTheme.typography.bodyMedium)}
+        when(review) {
+            is io.github.extracteddeath.pursuitiron.nativecoachstore.NativeSavedNamedReview.Ready -> {
+                Text("Review revised program · ${review.audit.weeks.size} weeks audited")
+                review.receipts.forEach{receipt->
+                    Text("Week ${receipt.selection.absoluteWeek} · ${pretty(receipt.selection.scheme)} · ${receipt.selection.reference.toPlainString()}",
+                        style=MaterialTheme.typography.bodySmall)
+                }
+                Button(onClick={controller.approveFixedNamedCycle(review)},enabled=!busy,
+                    modifier=Modifier.fillMaxWidth()){Text("Approve this reviewed specialist cycle")}
+            }
+            is io.github.extracteddeath.pursuitiron.nativecoachstore.NativeSavedNamedReview.Signed -> {
+                val next=state.nextCycleSlot
+                Text("Current signed specialist cycle",style=MaterialTheme.typography.labelLarge)
+                when(next) {
+                    is NativeCustomNextCycleSlot.ResumeIssued ->
+                        Button(onClick={onOpenIssuedWorkout(next.workoutId)},enabled=!busy,
+                            modifier=Modifier.fillMaxWidth()){Text("Resume issued workout")}
+                    is NativeCustomNextCycleSlot.Next,is NativeCustomNextCycleSlot.Prepared ->
+                        Button(onClick=controller::previewNextFixedNamedWorkout,enabled=!busy,
+                            modifier=Modifier.fillMaxWidth()){Text("Verify next specialist workout")}
+                    is NativeCustomNextCycleSlot.Rejected -> Text(next.reason,color=MaterialTheme.colorScheme.error)
+                    NativeCustomNextCycleSlot.CycleComplete -> Text("All scheduled workouts completed.")
+                    null -> {}
+                }
+                val shown=state.fixedNamedPreview
+                if(shown!=null) {
+                    Text("Week ${shown.session.absoluteWeek} · ${shown.session.dayLabel}",
+                        style=MaterialTheme.typography.titleMedium)
+                    shown.session.slots.forEach{slot->
+                        Text(kotlinExerciseLabel(slot.exerciseId),style=MaterialTheme.typography.labelLarge)
+                        slot.sets.forEach{set->
+                            Text("${kotlinIssuedLoadLabel(set.prescription.load)} · ${set.prescription.repTargetLabel()}",
+                                style=MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    if(state.fixedNamedPrepared!=null)
+                        Button(onClick=controller::issueNextFixedNamedWorkout,enabled=!busy,
+                            modifier=Modifier.fillMaxWidth()){Text("Issue this exact workout")}
+                    else if(next is NativeCustomNextCycleSlot.Next)
+                        Button(onClick=controller::prepareNextFixedNamedWorkout,enabled=!busy,
+                            modifier=Modifier.fillMaxWidth()){Text("Prepare reviewed workout")}
+                }
+                state.fixedNamedIssuedId?.let{id->
+                    Button(onClick={onOpenIssuedWorkout(id)},enabled=!busy,
+                        modifier=Modifier.fillMaxWidth()){Text("Open issued workout in Train")}
+                }
+                TextButton(onClick=controller::revokeFixedNamedCycle,enabled=!busy){
+                    Text("Revoke specialist consent")
+                }
+            }
+            else -> Text("Saved specialist approval is unavailable. No new workout can start.")
+        }
+        OutlinedButton(onClick=controller::refreshFixedNamedCycle,enabled=!busy,
+            modifier=Modifier.fillMaxWidth()){Text("Refresh saved specialist review")}
     }
 }

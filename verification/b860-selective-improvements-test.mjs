@@ -95,8 +95,8 @@ assert.match(themeCss, /--pi-color-feature:light-dark\(var\(--pi-m3e-primary-con
     'R78 derives strong containers from the selected card and accent instead of the legacy saturated feature');
 assert.match(app, /className: "wpb-program-amplifier wpb-b973-amp-panel"/,
     'R78 amplifier retains its exercise-attached semantic class');
-assert.match(themeCss, /#root \.wpb-program \.wpb-b973-amp-panel\{margin:2px 0 10px;/,
-    'R78 amplifier still attaches to exercise slot without the old 34px horizontal offset');
+assert.match(themeCss, /#root \.wpb-program \.wpb-b973-amp-panel\{margin:0 0 12px 28px;padding:0;border:0;/,
+    'B1054 amplifier is one unframed tonal row aligned with the exercise name column');
 assert.doesNotMatch(app, /margin: "-3px 8px 8px 34px"/,
     'the legacy amplifier stagger must not return');
 assert.match(app, /className: "wpb-training-calendar"/,

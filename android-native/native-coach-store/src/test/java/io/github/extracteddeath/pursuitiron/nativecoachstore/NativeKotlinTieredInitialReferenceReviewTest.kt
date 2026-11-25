@@ -386,12 +386,12 @@ class NativeKotlinTieredInitialReferenceReviewTest {
             assertEquals(saved,coldDrafts.read("owner-1","cycle-1"))
             return
         }
-        val original=(coldPrepared().open("owner-1",first.nextWorkoutId) as NativeCustomPreparedRead.Found).workout
+        val initialWorkout=(coldPrepared().open("owner-1",first.nextWorkoutId) as NativeCustomPreparedRead.Found).workout
         val correction=NativeKotlinCustomHistoryCorrectionTransaction(history,coldJournal(),
             NativeKotlinCustomSavedCorrectionFileStore(root,fence,identity,coldJournal(),history),fence,identity)
             .correct("owner-1","athlete-1",first.nextWorkoutId,
                 CustomSavedVisitCorrection("multi-tier-correction",0,
-                    CustomWorkoutVisitKey(original.snapshot.slots.single().sets.single().setKey,
+                    CustomWorkoutVisitKey(initialWorkout.snapshot.slots.single().sets.single().setKey,
                         CustomWorkoutVisitPart.MAIN),"${first.nextWorkoutId}-actual",
                     KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(n("25"),LoadUnit.LB,1,0)))
         assertTrue(correction.toString(),correction is NativeCustomCorrectionTransactionResult.Committed)

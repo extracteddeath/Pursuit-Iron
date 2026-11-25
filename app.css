@@ -1602,12 +1602,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   
   
 }
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile :is(.wpb-profile-achievement-board){
-  border-radius:27px 27px 17px 27px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-achievement-toggle{
-  border-radius:16px;
-}
 /* Library: make the search the prominent instrument, distinct from a
    segmented filter and genuinely tactile but still dense exercise results. */
 #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-row:active{
@@ -1994,7 +1988,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* PROFILE. Strength summary leads through measured size and its distinctive
    corner; supporting strength records and the profile identity are quiet. */
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-section,#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-achievement-board{
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-section{
   background-image:none!important;
   background-color:var(--pi-r11-quiet)!important;
   border-color:var(--pi-r11-edge)!important;
@@ -7210,7 +7204,7 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-profile .wpb-profile-achievement-total{font-size:12px;font-weight:700;color:var(--wpb-theme-muted)}
 #root .wpb .wpb-profile .wpb-profile-achievement-progress{height:5px;border-radius:999px;background:var(--wpb-theme-bg-tint);overflow:hidden;margin-top:6px}
 #root .wpb .wpb-profile .wpb-profile-progress-fill{height:100%;background:var(--wpb-theme-accent);border-radius:999px}
-#root .wpb .wpb-profile .wpb-profile-next-achievement{min-height:58px;width:100%;display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 0;background:none;border:none;border-top:1px solid var(--wpb-theme-border-soft);color:var(--wpb-theme-text);cursor:pointer;text-align:left}
+#root .wpb .wpb-profile .wpb-profile-next-achievement{border-radius:0;min-height:58px;width:100%;display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 0;background:none;border:none;border-top:1px solid var(--wpb-theme-border-soft);color:var(--wpb-theme-text);cursor:pointer;text-align:left}
 #root .wpb .wpb-profile .wpb-profile-next-mark{width:36px;height:36px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;background:var(--wpb-theme-bg-tint)}
 #root .wpb .wpb-profile .wpb-profile-target-caption{font-size:11px;color:var(--wpb-theme-muted);font-weight:650}
 #root .wpb .wpb-profile .wpb-profile-next-title-row{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:1px}
@@ -7218,7 +7212,7 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-profile .wpb-profile-target-value{font-size:11px;color:var(--wpb-theme-faint);flex-shrink:0}
 #root .wpb .wpb-profile .wpb-profile-target-progress{height:4px;border-radius:999px;background:var(--wpb-theme-bg-tint);overflow:hidden;margin-top:5px}
 #root .wpb .wpb-profile .wpb-profile-fixed-icon{flex-shrink:0}
-#root .wpb .wpb-profile .wpb-profile-achievement-toggle{border-radius:8px;width:100%;min-height:48px;display:flex;align-items:center;justify-content:center;gap:6px;background:none;border:none;border-top:1px solid var(--wpb-theme-border-soft);color:var(--wpb-theme-muted);cursor:pointer;padding:9px 0 0;font-size:12px;font-weight:700}
+#root .wpb .wpb-profile .wpb-profile-achievement-toggle{border-radius:0;width:100%;min-height:48px;display:flex;align-items:center;justify-content:center;gap:6px;background:none;border:none;border-top:1px solid var(--wpb-theme-border-soft);color:var(--wpb-theme-muted);cursor:pointer;padding:9px 0 0;font-size:12px;font-weight:700}
 #root .wpb .wpb-profile .wpb-profile-achievement-board,#root .wpb .wpb-profile-score-trend{margin-top:12px;padding-top:12px;border-top:1px solid var(--wpb-theme-border-soft)}
 #root .wpb .wpb-profile .wpb-profile-group-head{display:flex;justify-content:space-between;margin-bottom:7px}
 #root .wpb .wpb-profile .wpb-profile-eyebrow{font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--wpb-theme-faint);text-transform:uppercase}

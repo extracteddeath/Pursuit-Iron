@@ -77,7 +77,7 @@ import com.pursuitiron.app.ui.common.s
 import java.util.Locale
 
 /* The design's You → Settings (Main.dc.html profSettings): the everyday controls as one grouped list,
-   every other page one row away, the banned list, and the est. 1RM calculator. */
+   every other page one row away, the banned list, and a row to the calculators (one 1RM calculator, in Tools). */
 
 /** The design's compact pill toggle (kg | lb, cm | in, Short | Standard | Long). */
 @Composable
@@ -252,49 +252,6 @@ fun BannedSection(vm: AppViewModel) {
                     Box(Modifier.height(40.dp).clip(CircleShape).background(cs.secondaryContainer).clickable { vm.setBan(b.s("id"), false) }
                         .semantics { contentDescription = "Unban ${b.s("name")}"; role = Role.Button }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
                         Text("Unban", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = cs.onSecondaryContainer)
-                    }
-                }
-            }
-        }
-    }
-}
-
-/** The design's e1RM calculator: load, reps and reps in reserve, and the loads for common rep targets. */
-@Composable
-fun E1rmCalcCard(vm: AppViewModel) {
-    val cs = MaterialTheme.colorScheme
-    val u = vm.settings.s("unit", "kg")
-    val lb = u == "lb"
-    var load by remember(u) { mutableFloatStateOf(if (lb) 225f else 100f) }
-    var reps by remember { mutableIntStateOf(5) }
-    var rir by remember { mutableIntStateOf(1) }
-    val e1 = load * (1 + (reps + rir) / 30.0)
-    val inc = if (lb) 5.0 else 2.5
-    val snap = { v: Double, s: Double -> Math.round(v / s) * s }
-    val sliderColors = SliderDefaults.colors(thumbColor = cs.primary, activeTrackColor = cs.primary)
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("1RM calculator", style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(start = 4.dp, top = 8.dp).semantics { heading() })
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surfaceContainerLow).padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text("Estimated 1RM", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), color = cs.onSurfaceVariant, modifier = Modifier.weight(1f).padding(bottom = 8.dp))
-                AnimatedContent(fmtNum(snap(e1, 0.5)), transitionSpec = { com.pursuitiron.app.ui.theme.Motion.tick() }, label = "e1") {
-                    Text(it, style = MaterialTheme.typography.displaySmall.copy(fontSize = 36.sp))
-                }
-                Text(" $u", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(bottom = 8.dp))
-            }
-            Text("Load · ${fmtNum(load.toDouble())} $u", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold))
-            val (mn, mx) = if (lb) 45f to 550f else 20f to 250f
-            Slider(load, { load = (snap(it.toDouble(), inc)).toFloat() }, valueRange = mn..mx, colors = sliderColors, modifier = Modifier.semantics { contentDescription = "Load in $u" })
-            Text("Reps · $reps", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold))
-            Slider(reps.toFloat(), { reps = Math.round(it) }, valueRange = 1f..15f, steps = 13, colors = sliderColors, modifier = Modifier.semantics { contentDescription = "Reps" })
-            Text("Reps in reserve · $rir", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold))
-            Slider(rir.toFloat(), { rir = Math.round(it) }, valueRange = 0f..4f, steps = 3, colors = sliderColors, modifier = Modifier.semantics { contentDescription = "Reps in reserve" })
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf(95 to "2–3", 85 to "5–6", 75 to "8–10", 65 to "12–15").forEach { (p, r) ->
-                    Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(cs.surfaceContainerHigh).padding(vertical = 10.dp, horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("$p%", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp), color = cs.onSurfaceVariant)
-                        Text(fmtNum(snap(e1 * p / 100, inc)), style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold))
-                        Text("$r reps", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp), color = cs.onSurfaceVariant)
                     }
                 }
             }

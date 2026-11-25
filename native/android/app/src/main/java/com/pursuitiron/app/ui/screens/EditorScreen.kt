@@ -2,6 +2,8 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.bleedRail
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.animation.AnimatedVisibility
@@ -161,19 +163,27 @@ fun ProgramEditorScreen(vm: AppViewModel) {
             item(key = "weeks") {
                 val cur = e.optInt("currentWeek", 0)
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LazyRow(Modifier.fillMaxWidth().layout { m, k -> val x = (if (wide) 32 else 16).dp.roundToPx(); val pl = m.measure(k.copy(minWidth = 0, maxWidth = k.maxWidth + 2 * x)); layout(pl.width - 2 * x, pl.height) { pl.place(-x, 0) } },
+                    LazyRow(Modifier.bleedRail(if (wide) 32.dp else 16.dp),
                         contentPadding = PaddingValues(horizontal = if (wide) 32.dp else 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(e.list("weeks"), key = { "w" + it.i("week") }) { w ->
                             val on = w.i("week") == e.i("weekIndex")
                             val r by animateDpAsState(if (on) 16.dp else 28.dp, Motion.spatialFast(), label = "wk")
                             val label = if (w.b("deload")) (if (w.i("week") <= e.i("weeksTotal")) "Week ${w.i("week")} · DL" else "Deload") else "Week ${w.i("week")}"
+                            // One dot per training day, filled once logged: the chips read as the block's weeks × days grid.
+                            val dots = w.optJSONArray("dayDots")?.let { a -> List(a.length()) { a.optBoolean(it) } } ?: emptyList()
                             Column(Modifier.widthIn(min = 104.dp).height(56.dp).clip(RoundedCornerShape(r)).background(if (on) cs.primary else androidx.compose.ui.graphics.Color.Transparent)
                                 .then(if (on) Modifier else Modifier.border(1.5.dp, cs.outlineVariant, RoundedCornerShape(r)))
                                 .clickable { vm.editWeek(w.i("week")) }
-                                .semantics { role = Role.RadioButton; selected = on; contentDescription = "$label: ${w.i("sets")} sets, ${w.i("minutes")} minutes" + if (w.i("week") == cur) ", this week" else "" }
+                                .semantics { role = Role.RadioButton; selected = on; contentDescription = "$label: ${w.i("sets")} sets, ${w.i("minutes")} minutes" +
+                                    (if (dots.isNotEmpty()) ", ${dots.count { it }} of ${dots.size} days done" else "") + if (w.i("week") == cur) ", this week" else "" }
                                 .padding(horizontal = 14.dp), verticalArrangement = Arrangement.Center) {
                                 val fg = if (on) cs.onPrimary else cs.onSurface
-                                Text(label, style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = fg)
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text(label, style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = fg)
+                                    if (dots.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                        dots.forEach { d -> Box(Modifier.size(6.dp).clip(CircleShape).background(if (d) (if (on) cs.onPrimary else cs.primary) else fg.copy(alpha = 0.25f))) }
+                                    }
+                                }
                                 Text(if (w.i("sets") == 0) "No sets yet" else "${w.i("sets")} sets · ${com.pursuitiron.app.ui.common.minutesLabel(w.i("minutes"))}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = fg.copy(alpha = 0.8f))
                             }
                         }
@@ -561,10 +571,12 @@ private fun ExerciseCard(vm: AppViewModel, e: JSONObject, dayId: String, x: JSON
                 Text(if (open == "swap") "Close" else "Swap", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = cs.onSecondaryContainer)
             }
             Row(Modifier.weight(1f).height(42.dp).clip(CircleShape).background(cs.surfaceContainerHigh).clickable(enabled = !e.b("percent")) { onToggle("prog") }
-                .semantics(mergeDescendants = true) { role = Role.Button; contentDescription = "How ${x.s("name")} progresses: ${x.s("styleLabel")}" }.padding(horizontal = 12.dp),
+                .semantics(mergeDescendants = true) { role = Role.Button; contentDescription = "How ${x.s("name")} progresses: ${if (x.s("style").let { it.isNotBlank() && it != "auto" }) "pinned to " + x.s("styleLabel") else "Auto"}" }.padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
-                Icon(PiIcons.Trend, null, modifier = Modifier.size(15.dp))
-                Text("Progression: " + x.s("styleLabel").ifBlank { "Auto" },
+                // Who chose the method is always visible: "Auto · <what Auto picked>" or "Pinned · <your pick>".
+                val pinned = x.s("style").let { it.isNotBlank() && it != "auto" }
+                Icon(if (pinned) PiIcons.Pin else PiIcons.Trend, null, modifier = Modifier.size(15.dp))
+                Text(if (pinned) "Pinned · " + x.s("styleLabel") else "Auto" + x.s("autoLabel").takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty(),
                     style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Box(Modifier.size(42.dp).clip(CircleShape).background(cs.surfaceContainerHigh).clickable { onToggle("more") }
@@ -724,7 +736,7 @@ private fun AddExerciseSheet(vm: AppViewModel, dayId: String, onClose: () -> Uni
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Add exercise", style = MaterialTheme.typography.headlineSmall)
             OutlinedTextField(q, { q = it }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Search") })
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            LazyRow(Modifier.bleedRail(16.dp), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 item { MorphChip("All", part == null, { part = null }, height = 36.dp) }
                 items(res.list("parts")) { p -> MorphChip(p.s("label"), part == p.s("id"), { part = if (part == p.s("id")) null else p.s("id") }, height = 36.dp) }
             }

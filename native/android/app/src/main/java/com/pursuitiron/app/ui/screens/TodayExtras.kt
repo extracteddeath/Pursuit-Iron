@@ -404,32 +404,6 @@ fun CoachCard(h: JSONObject) {
     }
 }
 
-/** "This week": the program's days with their status, the next one highlighted. */
-@Composable
-fun ThisWeekList(vm: AppViewModel, h: JSONObject) {
-    val days = h.list("weekDays"); if (days.isEmpty()) return
-    val cs = MaterialTheme.colorScheme
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionTitle("This week")
-        Column(Modifier.clip(RoundedCornerShape(28.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            days.forEach { d ->
-                val st = d.s("status"); val today = st == "today"; val done = st == "done"
-                Row(Modifier.fillMaxWidth().background(if (today) cs.primaryContainer else cs.surfaceContainerLow).padding(horizontal = 14.dp, vertical = 12.dp)
-                    .semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(Modifier.size(44.dp).clip(if (done) RoundedCornerShape(16.dp) else CircleShape).background(if (done || today) cs.primary else cs.secondaryContainer), contentAlignment = Alignment.Center) {
-                        Text(d.s("weekday").ifBlank { "D${days.indexOf(d) + 1}" }, style = MaterialTheme.typography.labelMedium, color = if (done || today) cs.onPrimary else cs.onSecondaryContainer)
-                    }
-                    Column(Modifier.weight(1f)) {
-                        Text(d.s("label"), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text("${d.i("exercises")} exercises · ${d.i("sets")} sets" + (if (d.i("minutes") > 0) " · ~${d.i("minutes")} min" else ""), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-                    }
-                    Text(when (st) { "done" -> "Done"; "today" -> "Up next"; else -> "Planned" }, style = MaterialTheme.typography.labelMedium, color = if (today) cs.onPrimaryContainer else cs.onSurfaceVariant)
-                }
-            }
-        }
-    }
-}
-
 /** App.js needsBackup as the design's banner: back up straight from Today, or hide it for a week. */
 @Composable
 fun BackupBanner(vm: AppViewModel, b: JSONObject) {

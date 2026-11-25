@@ -277,6 +277,15 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const dr = JSON.parse(C.exportStore()).drafts?.[pid]?.days?.[0];
   ok(ed.days[0].focus === null && dr && dr.focus === raw0 && !('baseFocus' in dr), 'Auto puts the engine\'s own day tag back (' + raw0 + ')'); }
 
+// 16a2. Week chips carry a dot per day of that week, filled once the day is logged in this pass
+{ C.init({}); const mk = C.createProgram({ config: { name: 'Dots', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 2, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 3 });
+  const pid = mk.programId; let ed = C.editor({ programId: pid });
+  ok(ed.weeks.every((w) => Array.isArray(w.dayDots) && w.dayDots.length === ed.days.length && w.dayDots.every((d) => d === false)), 'a fresh block shows empty day dots on every week');
+  const d0 = ed.days[0].id; C.startSession({ programId: pid, dayId: d0, weekIndex: 1 });
+  for (const e of C.session().exercises) for (const x of e.sets) { if (x.warm || x.sub) continue; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: '40' }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: '8' }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); }
+  C.finishSession(); ed = C.editor({ programId: pid });
+  ok(ed.weeks[0].dayDots.filter(Boolean).length === 1 && ed.weeks[0].dayDots[0] === true && ed.weeks.slice(1).every((w) => !w.dayDots.some(Boolean)), 'logging day 1 of week 1 fills only that dot: ' + JSON.stringify(ed.weeks.map((w) => w.dayDots))); }
+
 // 16b. Plateau options (App.js workoutPlateau / lighterPendingWorkout), queued from Today or the editor
 { C.init({}); const mk = C.createProgram({ config: { name: 'Stall', goal: 'both', experience: 'intermediate', split: 'full_body', days: 3, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 4 });
   const pid = mk.programId, d0 = C.editor({ programId: pid }).days[0].id;

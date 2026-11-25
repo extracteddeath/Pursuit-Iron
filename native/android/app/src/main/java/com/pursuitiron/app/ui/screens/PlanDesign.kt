@@ -2,6 +2,8 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.bleedRail
+
 import com.pursuitiron.app.ui.common.o
 import com.pursuitiron.app.ui.common.has
 import androidx.compose.foundation.layout.imePadding
@@ -410,7 +412,7 @@ fun IconPickerSheet(vm: AppViewModel, key: String, onClose: () -> Unit) {
                 }
             }
             Kicker("Colour")
-            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            androidx.compose.foundation.lazy.LazyRow(Modifier.bleedRail(20.dp), contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(com.pursuitiron.app.ui.common.ProgramIconStyle.colors.size) { k ->
                     val (id, col) = com.pursuitiron.app.ui.common.ProgramIconStyle.colors[k]
                     val on = c.s("color") == id
@@ -435,7 +437,7 @@ fun IconPickerSheet(vm: AppViewModel, key: String, onClose: () -> Unit) {
             androidx.compose.material3.OutlinedTextField(q, { q = it }, Modifier.fillMaxWidth(), singleLine = true, shape = CircleShape,
                 placeholder = { Text("Search icons — flame, trophy, mountain…") }, leadingIcon = { Icon(PiIcons.Focus, null) })
             val groups = listOf("Suggested") + com.pursuitiron.app.ui.common.ProgramIconLib.all.map { it.second }.distinct()
-            if (q.isBlank()) androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (q.isBlank()) androidx.compose.foundation.lazy.LazyRow(Modifier.bleedRail(20.dp), contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(groups.size) { k -> com.pursuitiron.app.ui.common.MorphChip(groups[k], tab == groups[k], { tab = groups[k] }, height = 36.dp) }
             }
             val all = com.pursuitiron.app.ui.common.ProgramIconLib.all

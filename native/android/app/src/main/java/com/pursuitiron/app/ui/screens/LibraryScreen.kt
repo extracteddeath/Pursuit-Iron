@@ -2,6 +2,8 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.bleedRail
+
 import com.pursuitiron.app.ui.common.lazyFade
 import com.pursuitiron.app.ui.common.Rise
 import androidx.compose.foundation.lazy.grid.itemsIndexed
@@ -120,7 +122,8 @@ fun LibraryScreen(vm: AppViewModel) {
         }}
         item(span = { GridItemSpan(maxLineSpan) }) { Rise {
             run { val fs = androidx.compose.foundation.lazy.rememberLazyListState()
-            LazyRow(state = fs, horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 6.dp).lazyFade(fs)) {
+            LazyRow(state = fs, horizontalArrangement = Arrangement.spacedBy(6.dp), contentPadding = PaddingValues(horizontal = if (wide) 32.dp else 16.dp),
+                modifier = Modifier.padding(bottom = 6.dp).bleedRail(if (wide) 32.dp else 16.dp)) {
                 items(PARTS) { (id, label) -> MorphChip(label, part == id, { part = id; vm.searchLibrary(q, id, equip) }, check = true) }
             } }
         }}

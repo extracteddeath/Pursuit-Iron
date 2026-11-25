@@ -427,7 +427,11 @@ export function sessionReview({ programId, dayId, weekIndex } = {}) {
     let r = null; try { r = buildSessionReview(p, day, wk, u, history(), perf()); } catch { r = null; }
     if (!r) return null;
     const restScale = Number(S.store.restScale) || 1;
-    const ranked = [...r.exercises].sort((a, b) => { const sc = (x) => (x.opportunity ? 8 : 0) + (x.change.undone ? 4 : 0) + (x.protocol.type !== 'straight' ? 2 : 0) + (x.change ? 1 : 0); return sc(b) - sc(a); }); // the card shows three, Show all reveals the rest
+    /* A plain lift's protocol type is null (techniqueProtocolFromCell), not 'straight', and `x.change` is always an
+       object: the old test marked every lift a technique and every lift changed, so the ranking and the sparkle icon
+       said nothing. Only a named technique is a technique; only a changed or held load is a change. */
+    const hasTech = (x) => !!x.protocol?.type && x.protocol.type !== 'straight';
+    const ranked = [...r.exercises].sort((a, b) => { const sc = (x) => (x.opportunity ? 8 : 0) + (x.change.undone ? 4 : 0) + (hasTech(x) ? 2 : 0) + (x.change.changed ? 1 : 0); return sc(b) - sc(a); }); // the card shows three, Show all reveals the rest
     // The engine's reasons are written for the web's detail view ("This exposure will establish a reference…"); Today's
     // card says the same thing the way a coach would.
     const plainWhy = (x) => {
@@ -447,6 +451,7 @@ export function sessionReview({ programId, dayId, weekIndex } = {}) {
         let c = null; try { c = E.computeCell(p, day, x.id, x.slot, wk); } catch { c = null; }
         return c ? pctCell(p, day, ex, x.slot, wk, c) : null;
     };
+    const noLoad = (x) => (x.effective || []).every((t) => t?.weight === '' || t?.weight == null);
     const gamePlan = ranked.map((x) => {
         const pc = pctNoMax(x);
         const pctTail = pc ? ` Set its max to run the plan's ${pc.sets} × ${pc.range}${pc.load ? ' at ' + pc.load : ''}.` : '';
@@ -456,12 +461,12 @@ export function sessionReview({ programId, dayId, weekIndex } = {}) {
         // What kind of note it is, so the card can mark it the way the design does (a PR chance, a technique, a first
         // estimate, load going up, load coming down for a reset, or targets the program sets).
         const estimate = (x.proposed || []).some((t) => t?.target?.estimate);
-        const kind = pr ? 'pr' : x.protocol.type !== 'straight' ? 'technique' : estimate ? 'estimate'
+        const kind = pr ? 'pr' : hasTech(x) ? 'technique' : estimate || noLoad(x) ? 'estimate'
             : x.category === 'Progression' ? 'up' : x.category === 'Load adjustment' ? 'down' : x.category === 'Programmed targets' ? 'plan' : 'trend';
-        return { id: x.id, slot: x.slot, name: x.name, kind, title: pr ? `PR chance · ${x.name}` : x.name,
+        return { id: x.id, slot: x.slot, name: x.name, kind, action: !!pc, title: pr ? `PR chance · ${x.name}` : x.name,
             // With no load to show yet the reason already says to choose one; leading with "Choose load × 8" repeated it.
             dose: targetsText(x.effective, u), guidance: ((x.effective || []).every((t) => t?.weight === '' || t?.weight == null) ? (tech || why) : `${targetsText(x.effective, u)} · ${tech || why}`) + pctTail };
-    });
+    }).filter((g) => g.kind !== 'trend' || g.action); // Today's outline lists every lift; the game plan carries only what to act on.
     const changes = r.changes.map((x) => {
         const prev = x.change.previous, prop = x.proposed;
         const uniform = prop.length === prev.length && prop.every((t) => t.weight === prop[0]?.weight && t.reps === prop[0]?.reps) && prev.every((t) => t.weight === prev[0]?.weight && t.reps === prev[0]?.reps);
@@ -3529,7 +3534,15 @@ export function editor({ programId, weekIndex = 1 } = {}) {
     const weekTotals = (w) => p.days.reduce((acc, d) => { d.exercises.forEach((id, slot) => { let c = null; try { c = E.computeCell(p, d, id, slot, w); } catch { c = null; } acc.sets += Number(c?.sets) || 0; });
         try { acc.minutes += E.estimateMinutes(p, d, w) || 0; } catch { /* unknown */ } return acc; }, { sets: 0, minutes: 0 });
     const lastWeek = E.weeksOf(p) + (p.config?.deload && !p.config?.endless ? 1 : 0);
-    const weeks = Array.from({ length: Math.max(1, lastWeek) }, (_, k) => k + 1).map((w) => { const t = weekTotals(w); return { week: w, deload: w > E.weeksOf(p) || E.isSchemeDeloadWeek(p.config?.percentScheme, w, E.weeksOf(p)), sets: Math.round(t.sets), minutes: Math.round(t.minutes) }; });
+    // Which of each week's days are logged (the web's week-chip dots): sessions from this pass of the block only.
+    const loggedDays = new Set();
+    try {
+        const H = history(), earlier = E.earlierPassIds(p, H);
+        E.historyForProgram(H, p).forEach((h) => { if (!h || h.weekIndex == null || (h.id != null && earlier.has(h.id))) return;
+            const idx = E.historyDayIndex(p.days, h); const id = idx >= 0 ? p.days[idx].id : h.dayId; if (id) loggedDays.add(`${id}:${h.weekIndex}`); });
+    } catch { /* no history yet */ }
+    const dayDots = (w) => { let days = []; try { days = E.daysInWeek(p, w) || []; } catch { days = []; } return days.map((d) => loggedDays.has(`${d.id}:${w}`)); };
+    const weeks = Array.from({ length: Math.max(1, lastWeek) }, (_, k) => k + 1).map((w) => { const t = weekTotals(w); return { week: w, deload: w > E.weeksOf(p) || E.isSchemeDeloadWeek(p.config?.percentScheme, w, E.weeksOf(p)), sets: Math.round(t.sets), minutes: Math.round(t.minutes), dayDots: dayDots(w) }; });
     const strip = Object.keys(sched).length ? [1, 2, 3, 4, 5, 6, 0].map((k) => ({ weekday: WD[k], dayId: sched[k] || null, label: sched[k] ? (p.days.find((d) => d.id === sched[k])?.label || null) : null })) : [];
     return { programId: p.id, name: p.name, weekIndex: wk, weeksTotal: E.weeksOf(p), manual, cycleId: p.cycleId || null, percent: !!p.config?.percentScheme, weeks, strip, buildOwn: !!stored?.buildOwn,
         currentWeek: (() => { const nx = upNext(); return nx && nx.program.id === p.id ? nx.weekIndex : null; })(),
@@ -3550,6 +3563,8 @@ export function editor({ programId, weekIndex = 1 } = {}) {
                     type: ex?.type === 'compound' ? 'compound' : 'isolation', last: lastTop(id),
                     plateau: plateauFor(stored || p, (stored || p).days.find((x) => x.id === d.id) || d, id), plateauChoice: plateauQueue()[`${p.id}:${d.id}`]?.[id] || null,
                     style: style || 'auto', styleLabel: STYLE_LABEL[style] || (style ? (E.PROG_STYLES?.[style] || style) : 'Auto'), styleLocked: !!p.progStyleLifter?.[id],
+                    // The method Auto resolved to this week, so the editor says 'Auto · Dynamic double', not a bare 'Auto'.
+                    autoLabel: (!style || style === 'auto') && cell?.progressionStyle && cell.progressionStyle !== 'auto' ? (STYLE_LABEL[cell.progressionStyle] || E.PROG_STYLES?.[cell.progressionStyle] || cell.progressionStyle) : '',
                     superset: !!p.ss?.[`${d.id}:${slot}`], rounds: Number(p.rounds?.[`${d.id}:${slot}`]) || null, added: !!ov.added, sets: Number(p.rounds?.[`${d.id}:${slot}`]) || sets, reps: ov.reps ?? cell?.reps ?? null, rir: cell?.rir ?? null,
                     pinSum: (() => { const pn = pinnedNote({ id }); return pn ? [pn.fields.filter((f) => f.value).map((f) => `${f.label} ${f.value}`).join(' · '), pn.note].filter(Boolean).join(' — ') : ''; })() };
             });

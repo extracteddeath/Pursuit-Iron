@@ -2,7 +2,10 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.bleedRail
+
 import com.pursuitiron.app.ui.common.lazyFade
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -182,7 +185,7 @@ fun TrainingMaxSheet(vm: AppViewModel) {
                     dismissButton = { androidx.compose.material3.TextButton(onClick = { pickMethod = null }) { Text("Cancel") } })
             }
             val weeks = d.list("weeks")
-            if (weeks.size > 1) LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.semantics { contentDescription = "Week" }) {
+            if (weeks.size > 1) LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.bleedRail(20.dp).semantics { contentDescription = "Week" }) {
                 items(weeks) { w ->
                     val n = w.i("w")
                     MorphChip(

@@ -198,13 +198,13 @@ fun TodayScreen(vm: AppViewModel) {
         else if (next != null) item { Rise {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val wk = h.o("week")
-                StatTile("Sessions", "${wk.i("sessions")}", "/ ${wk.i("planned")}", Modifier.weight(1f))
                 StatTile("Volume", if (wk.i("volume") < 1000) "${wk.i("volume")}" else com.pursuitiron.app.ui.common.fmt1(wk.i("volume") / 1000.0), if (wk.i("volume") < 1000) h.s("unit", "kg") else com.pursuitiron.app.ui.common.volUnit(h.s("unit", "kg")), Modifier.weight(1f))
                 StatTile("Readiness", "${readinessToday(vm, h)}", "%", Modifier.weight(1f), color = cs.tertiaryContainer, onClick = { readinessOpen = true })
             }
         }}
 
-        if (next != null) item(span = full) { Rise { ThisWeekList(vm, h) }}
+        // Today is today: the hero's ring and the week strip already say where this week stands, and the week's
+        // days with their sets live in Plan, so Today no longer repeats them as a third list.
     }
 
     if (altOpen) FresherDaySheet(vm, h) { altOpen = false }

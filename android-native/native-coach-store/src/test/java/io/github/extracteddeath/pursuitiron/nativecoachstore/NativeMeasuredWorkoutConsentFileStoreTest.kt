@@ -505,16 +505,50 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
             (parent().reviewUnfinished("owner-1")
                 as NativeMeasuredInventoryResult.Ready).workouts.map{it.workoutId})
         for((index,set) in plan.sets.withIndex()) {
-            val actual=MeasuredExerciseActual(set.physicalSetupId,
-                set.sides.sortedBy{it.ordinal}.map {
-                    MeasuredSideResult(it,when(set.exerciseId) {
-                        "farmers"->2400
-                        "band-pushup"->15
-                        else->43
-                    })
-                },actualExternalLoad=set.intendedExternalLoad,
-                unit=set.unit,bandId=set.bandId,
-                elapsedSeconds=if(set.exerciseId=="farmers")36 else null)
+            // Use the actual typed input boundary used by the native logger.
+            // Targets are not copied into performed observations.
+            val (unit,quantity)=when(set.exerciseId){
+                "farmers"->MeasuredEntryUnit.FEET to "80"
+                "band-pushup"->MeasuredEntryUnit.REPETITIONS to "15"
+                else->MeasuredEntryUnit.MINUTES_SECONDS to "0:43"
+            }
+            val input=MeasuredExerciseEntryInput(
+                set.sides.associateWith{quantity},unit,
+                externalLoadText=when(set.exerciseId){
+                    "farmers"->"30"
+                    "plate-pinch"->"25"
+                    else->null
+                },externalLoadUnit=set.unit,physicalSetupId=set.physicalSetupId,
+                bandId=set.bandId,carryElapsedSecondsText=if(set.exerciseId=="farmers")"36" else null)
+            fun parse(value:MeasuredExerciseEntryInput)=MeasuredExerciseEntryDomain.parse(
+                set,MeasuredSetOutcome.COMPLETED,value)
+            val untouched=(parent().open("owner-1",plan.workoutId)
+                as NativeMeasuredWorkoutStoreResult.Durable).stored.journal
+            assertEquals(MeasuredExerciseEntryDecision.Rejected(MeasuredEntryRefusal.WRONG_PHYSICAL_SETUP),
+                parse(input.copy(physicalSetupId="unverified-station")))
+            if(set.exerciseId=="farmers" || set.exerciseId=="plate-pinch"){
+                assertEquals(MeasuredExerciseEntryDecision.Rejected(MeasuredEntryRefusal.UNVERIFIED_LOAD),
+                    parse(input.copy(externalLoadText="27")))
+                assertEquals(MeasuredExerciseEntryDecision.Rejected(MeasuredEntryRefusal.UNVERIFIED_LOAD),
+                    parse(input.copy(externalLoadUnit=LoadUnit.KG)))
+                assertEquals(MeasuredExerciseEntryDecision.Rejected(MeasuredEntryRefusal.LOAD_ENTRY_REQUIRED),
+                    parse(input.copy(externalLoadText=null)))
+            }
+            if(set.exerciseId=="band-pushup")
+                assertEquals(MeasuredExerciseEntryDecision.Rejected(MeasuredEntryRefusal.WRONG_OR_UNVERIFIED_BAND),
+                    parse(input.copy(bandId="rope-attachment")))
+            assertEquals(untouched,(parent().open("owner-1",plan.workoutId)
+                as NativeMeasuredWorkoutStoreResult.Durable).stored.journal)
+            val parsed=parse(input) as MeasuredExerciseEntryDecision.Accepted
+            assertFalse(parsed.isSaved)
+            assertFalse(parsed.mayPublishHistory)
+            assertEquals(set.exerciseId=="farmers",parsed.approximateDistanceConversion)
+            val actual=checkNotNull(parsed.actual)
+            assertEquals(set.sides.associateWith{when(set.exerciseId){
+                "farmers"->2438
+                "band-pushup"->15
+                else->43
+            }},actual.sides.associate{it.side to it.amount})
             val saved=parent().record("owner-1",plan.workoutId,
                 MeasuredWorkoutOperation.Record("measured-${index+1}",
                     index.toLong(),set.setKey,
@@ -522,13 +556,25 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
             assertTrue("${set.exerciseId}: $saved",
                 saved is NativeMeasuredWorkoutStoreResult.Durable)
         }
+        // Correct only the carry before Finish: typed meters and a different
+        // physical dumbbell load. Earlier receipts and approved targets stay exact.
+        val carry=plan.sets.single{it.exerciseId=="farmers"}
+        val carryInput=MeasuredExerciseEntryInput(setOf(MeasuredSide.BOTH).associateWith{"24.50"},
+            MeasuredEntryUnit.METERS,"25",LoadUnit.LB,carry.physicalSetupId,
+            carryElapsedSecondsText="35")
+        val revised=MeasuredExerciseEntryDomain.parse(carry,MeasuredSetOutcome.COMPLETED,carryInput)
+            as MeasuredExerciseEntryDecision.Accepted
+        assertFalse(revised.approximateDistanceConversion)
+        assertTrue(parent().record("owner-1",plan.workoutId,MeasuredWorkoutOperation.Record(
+            "carry-corrected",5L,carry.setKey,MeasuredSetOutcome.COMPLETED,revised.actual,
+            "measured-3")) is NativeMeasuredWorkoutStoreResult.Durable)
         val beforeFinish=parent().open("owner-1",plan.workoutId)
         assertTrue(beforeFinish is NativeMeasuredWorkoutStoreResult.Durable)
-        assertEquals(5L,(beforeFinish as NativeMeasuredWorkoutStoreResult.Durable)
+        assertEquals(6L,(beforeFinish as NativeMeasuredWorkoutStoreResult.Durable)
             .stored.journal.revision)
         val completed=NativeKotlinMeasuredHistoryTransaction(
             history,parent(),fence,identity).complete("owner-1","athlete-1",
-                plan.workoutId,MeasuredWorkoutOperation.Finish("mixed-finish",5L))
+                plan.workoutId,MeasuredWorkoutOperation.Finish("mixed-finish",6L))
         assertTrue(completed.toString(),
             completed is NativeMeasuredFinishResult.Committed)
         val replayed=NativeKotlinMeasuredHistoryReadCoordinator(
@@ -540,6 +586,19 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
         assertEquals(plan.sets.map{it.exerciseId},
             historySet.approvedPlan.sets.map{it.exerciseId})
         assertEquals(5,historySet.bySetKey.values.count{it.effectiveRecord!=null})
+        assertEquals(plan,historySet.approvedPlan)
+        val expected=listOf("43 s","43 s","24.5 m · External 25 lb per hand · Elapsed 35 s",
+            "15 reps · Band band-blue","Left 43 s · External 25 lb added")
+        for((index,set) in plan.sets.withIndex()){
+            val result=MeasuredWorkoutResultReviewDomain.review(set,historySet.bySetKey.getValue(set.setKey))
+            assertEquals(set.exerciseId,MeasuredSetReviewStatus.COMPLETED,result.status)
+            assertEquals(set.exerciseId,expected[index],result.actualSummary)
+        }
+        assertEquals(historySet,(parent().open("owner-1",plan.workoutId)
+            as NativeMeasuredWorkoutStoreResult.Durable).stored.journal)
+        assertEquals(1,(NativeKotlinMeasuredHistoryReadCoordinator(history,parent(),fence,identity)
+            .read("owner-1","athlete-1") as NativeMeasuredHistoryReadResult.Review)
+            .history.verifiedMeasured.size)
         assertTrue((parent().reviewUnfinished("owner-1")
             as NativeMeasuredInventoryResult.Ready).workouts.isEmpty())
     }

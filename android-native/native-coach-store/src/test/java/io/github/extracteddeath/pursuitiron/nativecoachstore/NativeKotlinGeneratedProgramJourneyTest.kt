@@ -241,6 +241,75 @@ class NativeKotlinGeneratedProgramJourneyTest {
             day.weekday,inputs,Disk().timeline)
         assertTrue(issued.toString(),issued is NativeCustomJournalResult.Durable)
         assertEquals(snapshot,(issued as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
+        // Independent numerical oracle for the actual confirmed bar/plates:
+        // 45 lb plus symmetric pairs of 5, 10, 25, 45 lb; 160 lb reference.
+        // The raw percentages 104/120/136 and 112/128/144 are down-only.
+        fun assertRecipe(sets:List<CustomAuthoredSet>,week:Int) {
+            val loads=if(week==1)listOf("95","115","135") else listOf("105","125","135")
+            val percents=if(week==1)listOf("65","75","85") else listOf("70","80","90")
+            val reps=if(week==1)5 else 3
+            val working=sets.filter{it.type==DraftSetType.WORKING}
+            assertEquals(slot.sets.count{it.type==DraftSetType.WORKING},working.size)
+            for(set in working) {
+                val intent=checkNotNull(set.percentageIntent)
+                val ordinal=intent.sourceOrdinal-1
+                assertEquals(0,n(loads[ordinal]).compareTo((set.load as DraftSetLoad.Verified).value))
+                assertEquals(0,n(percents[ordinal]).compareTo(intent.sourcePercent))
+                assertEquals(reps,set.exactRepTarget)
+                assertEquals(ordinal==2,intent.repOut)
+            }
+            assertEquals(1,working.count{it.percentageIntent?.repOut==true})
+        }
+        assertRecipe(actual.map{it.prescription},1)
+        var journal=issued.issued.journal
+        for((index,set) in snapshot.slots.flatMap{it.sets}.withIndex()) {
+            val prescription=set.prescription
+            assertNull(prescription.amplifier)
+            val reps=prescription.exactRepTarget ?: prescription.reps.minimum
+            val performedReps=reps+if(prescription.percentageIntent?.repOut==true)2 else 0
+            val performed=when(val load=prescription.load) {
+                is DraftSetLoad.Verified -> KotlinPerformedSet(load.value,load.unit,performedReps,null)
+                DraftSetLoad.ExplicitBodyweight -> KotlinPerformedSet(null,null,performedReps,null)
+            }
+            val visit=CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN)
+            val saved=Disk().journals.record(owner,"generated-named",
+                CustomWorkoutJournalOperation.Record("named-log-$index",journal.revision,
+                    visit,KotlinJournalSetOutcome.COMPLETED,performed))
+            assertTrue(saved.toString(),saved is NativeCustomJournalResult.Durable)
+            journal=(saved as NativeCustomJournalResult.Durable).issued.journal
+            assertEquals(snapshot,journal.originalSnapshot)
+        }
+        assertEquals(0,journal.unresolvedVisitCount)
+        val finishDisk=Disk()
+        val finished=NativeKotlinCustomHistoryTransaction(finishDisk.history,finishDisk.journals,
+            finishDisk.fence,identity).complete(owner,athlete,"generated-named",
+                CustomWorkoutJournalOperation.Finish("named-finish",journal.revision))
+        assertTrue(finished.toString(),finished is NativeCustomFinishResult.Committed)
+        val facts=(finished as NativeCustomFinishResult.Committed).evidence.visits
+        val repOut=named.single{it.prescription.percentageIntent?.repOut==true}
+        val fact=facts.single{it.setKey==repOut.setKey}
+        assertEquals(repOut.prescription.percentageIntent,fact.percentageIntent)
+        assertEquals(RepBand(5,5),fact.prescribedReps)
+        assertEquals(7,fact.actual?.reps)
+        assertNull(fact.actual?.actualRir)
+        val reopened=Disk()
+        val timeline=(reopened.timeline.read(owner,athlete) as NativeKotlinMixedHistoryReadResult.Review).timeline
+        assertEquals(facts,(timeline.completions.single() as NativeKotlinMixedHistoryCompletion.Custom).evidence.visits)
+        assertEquals(snapshot,(reopened.journals.open(owner,"generated-named")
+            as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
+        val next=reopened.prepared.prepareNamed(owner,"generated-named-w2",cycleId,2,
+            day.weekday,inputs,reopened.timeline,
+            NativeKotlinCustomOutstandingWorkoutInventory(reopened.prepared,reopened.journals))
+        assertTrue(next.toString(),next is NativeCustomPrepareResult.Prepared)
+        val nextSnapshot=(next as NativeCustomPrepareResult.Prepared).workout.snapshot
+        val second=nextSnapshot.slots.single{it.slotId==slot.slotId}.sets.map{it.prescription}
+        assertRecipe(second,2)
+        val secondIssue=Disk().journals.issueNamed(owner,"generated-named-w2",cycleId,2,
+            day.weekday,inputs,Disk().timeline)
+        assertTrue(secondIssue.toString(),secondIssue is NativeCustomJournalResult.Durable)
+        assertEquals(nextSnapshot,(secondIssue as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
+        assertEquals(snapshot,(Disk().journals.open(owner,"generated-named")
+            as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
     }
 
     @Test fun nativeStagedAuditPreservesAnUnfinishedGeneratedCustomWorkout() {

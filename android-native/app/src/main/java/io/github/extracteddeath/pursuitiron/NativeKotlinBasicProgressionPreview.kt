@@ -70,7 +70,9 @@ internal fun NativeKotlinBasicProgressionPreview(
         if (changed && current != null) "$current → $proposed reps" else "$proposed reps"
 
     Column(verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-        Text("Basic progression",style=MaterialTheme.typography.titleSmall)
+        val e1rm=(projection as? CustomBasicHistoryResult.Reviewed)?.candidate?.e1rmEvidence
+        Text(if(e1rm==null)"Basic progression" else "e1RM progression review",
+            style=MaterialTheme.typography.titleSmall)
         when(projection) {
             is CustomBasicHistoryResult.ManualBodyweight -> {
                 Text("Manual logging · bodyweight", style=MaterialTheme.typography.bodySmall)
@@ -104,7 +106,9 @@ internal fun NativeKotlinBasicProgressionPreview(
                     BasicProgressionDecision.MANUAL_REPEAT ->
                         "Manual logging: keep your exact prescribed targets."
                     BasicProgressionDecision.BUILD_REPS ->
-                        "Keep the current working weights and build completed reps."
+                        if(candidate.e1rmEvidence?.everySetMeetsGoal==false)
+                            "Effort was below the prescribed reserve. Hold the working weight and restore target effort."
+                        else "Keep the current working weights and build completed reps."
                     BasicProgressionDecision.EARNED_INCREMENT ->
                         if(assisted)
                             "A lower counterweight means less assistance, making this assisted movement harder."
@@ -122,6 +126,14 @@ internal fun NativeKotlinBasicProgressionPreview(
                 if (candidate.dynamicSetDecisions.isEmpty())
                     Text(description,style=MaterialTheme.typography.bodySmall)
                 val working = workingSets(projection.slotId)
+                candidate.e1rmEvidence?.let{evidence->
+                    val unit=if((working.first().prescription.load as DraftSetLoad.Verified).unit==LoadUnit.LB)"lb" else "kg"
+                    Text("Estimated 1RM: ${evidence.estimatedOneRepMax.stripTrailingZeros().toPlainString()} $unit · not a tested maximum",
+                        style=MaterialTheme.typography.bodySmall)
+                    if(evidence.assumedGoalRirSetCount>0)
+                        Text(ProgressionEffortDomain.assumptionNote(evidence.assumedGoalRirSetCount).trim(),
+                            style=MaterialTheme.typography.bodySmall)
+                }
                 candidate.proposedWorkingLoads.forEachIndexed { index, weight ->
                     val prescription = working[index].prescription
                     val original = prescription.load as DraftSetLoad.Verified

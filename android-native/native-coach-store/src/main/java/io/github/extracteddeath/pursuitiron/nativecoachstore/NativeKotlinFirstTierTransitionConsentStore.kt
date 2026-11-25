@@ -172,11 +172,7 @@ class NativeKotlinFirstTierTransitionConsentStore(
         return (body+digest(body)).also{require(it.size<=multiMaxBytes)}
     }
 
-    private fun readMulti(file:Path):ByteArray {
-        require(!Files.isSymbolicLink(file) && Files.isRegularFile(file,LinkOption.NOFOLLOW_LINKS))
-        require(Files.size(file) in 40L..multiMaxBytes.toLong())
-        return Files.readAllBytes(file).also{require(it.size in 40..multiMaxBytes)}
-    }
+    private fun readMulti(file:Path):ByteArray=readBytes(file,multiMaxBytes)
 
     private fun decodeMulti(stored:ByteArray):FrozenDay {
         require(stored.size in 40..multiMaxBytes)
@@ -497,10 +493,10 @@ class NativeKotlinFirstTierTransitionConsentStore(
             issued.issueFirstTierTransition(ownerKey,id,cycleId,week,day,this)
         }}.getOrElse{NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.STORAGE_UNAVAILABLE)}
 
-    private fun readBytes(file:Path):ByteArray {
+    private fun readBytes(file:Path,limit:Int=maxBytes):ByteArray {
         require(!Files.isSymbolicLink(file) && Files.isRegularFile(file,LinkOption.NOFOLLOW_LINKS))
-        require(Files.size(file) in 40L..maxBytes.toLong())
-        return Files.readAllBytes(file).also{require(it.size in 40..maxBytes)}
+        require(Files.size(file) in 40L..limit.toLong())
+        return Files.readAllBytes(file).also{require(it.size in 40..limit)}
     }
     private fun decode(stored:ByteArray):NativeFrozenTierTransition {
         val payload=stored.copyOfRange(0,stored.size-32)

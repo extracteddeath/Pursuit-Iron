@@ -21,6 +21,14 @@ class NativeKotlinRecordedLoadLabelsTest {
             authoredSetDescription(ranged,1))
     }
 
+    @Test fun namedRepOutIsAMinimumNotAnOrdinaryFixedSetOrInventedRange() {
+        assertEquals("5+",nativeTargetRepMetric(RepBand(5,5),5,true))
+        assertEquals("5",nativeTargetRepMetric(RepBand(5,5),5,false))
+        assertEquals("10",nativeTargetRepMetric(RepBand(8,12),10))
+        assertEquals("8–12",nativeTargetRepMetric(RepBand(8,12),null))
+        assertEquals("5",nativeTargetRepMetric(RepBand(5,5),null,true))
+    }
+
     @Test fun dumbbellsAndKettlebellsRemainPerImplementWithoutDoubling() {
         val db=target(LoadBasis.DUMBBELL_PER_HAND)
         val bell=target(LoadBasis.KETTLEBELL_EACH)

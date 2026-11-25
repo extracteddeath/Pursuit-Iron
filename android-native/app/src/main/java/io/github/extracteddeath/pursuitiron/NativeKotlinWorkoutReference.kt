@@ -137,13 +137,22 @@ internal fun PursuitPreviousWorkingSetRir(
         color=MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
+/** Display-only projection of the issued target. A plus set still seeds
+ * the exact minimum, not an invented upper target or a past actual. */
+internal fun nativeTargetRepMetric(reps:RepBand,exactRepTarget:Int?,repOut:Boolean=false):String =
+    if(repOut && exactRepTarget!=null) "${exactRepTarget}+"
+    else if(exactRepTarget != null) exactRepTarget.toString()
+    else if(reps.minimum==reps.maximum)reps.minimum.toString()
+    else "${reps.minimum}–${reps.maximum}"
+
 /** Fixed weight → reps → RIR order for BOTH references, with the same layout. */
 @Composable
 internal fun PursuitWorkoutSetReference(
     mode:WorkoutReferenceMode,
     load:DraftSetLoad,reps:RepBand,targetRir:Int?,
     history:WorkoutLastReferenceResult?,key:WorkoutReferenceKey,
-    exactRepTarget: Int? = null
+    exactRepTarget: Int? = null,
+    repOut:Boolean=false
 ) {
     val last=(history as? WorkoutLastReferenceResult.Ready)?.sets?.get(key)
     val actual=last?.actual
@@ -153,17 +162,16 @@ internal fun PursuitWorkoutSetReference(
         "${it.value.stripTrailingZeros().toPlainString()} ${it.unit.name.lowercase()}"
     } ?:"Bodyweight"
     else kotlinLastWeightMetricLabel(actual,load)
-    val repText=if(target) {
-        if(exactRepTarget != null) exactRepTarget.toString()
-        else if(reps.minimum==reps.maximum)reps.minimum.toString()
-        else "${reps.minimum}–${reps.maximum}"
-    } else actual?.reps?.toString() ?:"—"
+    val repText=if(target) nativeTargetRepMetric(reps,exactRepTarget,repOut)
+        else actual?.reps?.toString() ?:"—"
     val rir=if(target)targetRir?.toString() ?:"—"
         else actual?.actualRir?.toString() ?:"—"
     Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
         PursuitMetricStrip(listOf("Weight" to weight,"Reps" to repText,"RIR" to rir))
         val caption=if(target) "Planned · ${kotlinLoadBasisLabel(verified?.basis)}" +
-            (if (exactRepTarget != null && reps.minimum != reps.maximum)
+            (if(repOut && exactRepTarget!=null)
+                " · minimum reps; record actual reps"
+            else if (exactRepTarget != null && reps.minimum != reps.maximum)
                 " · ${reps.minimum}–${reps.maximum} rep range" else "")
         else when {
             history==null -> "Loading verified history…"

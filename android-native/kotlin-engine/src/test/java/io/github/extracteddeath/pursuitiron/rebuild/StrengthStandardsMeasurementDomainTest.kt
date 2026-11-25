@@ -16,6 +16,17 @@ class StrengthStandardsMeasurementDomainTest {
         assertNull(measure.epley(BigDecimal.ZERO,5))
     }
 
+    @Test fun boundedEffortAdjustedEstimateMatchesTrainingMathButNeverClaimsTestedMaximum() {
+        val domain=StrengthStandardsMeasurementDomain
+        assertEquals(BigDecimal("140.0"),domain.effortAdjustedEpley(BigDecimal("100"),10,2))
+        assertEquals(BigDecimal("106.7"),domain.effortAdjustedEpley(BigDecimal("100"),1,1))
+        assertEquals(BigDecimal("150.0"),domain.effortAdjustedEpley(BigDecimal("100"),13,2))
+        assertNull(domain.effortAdjustedEpley(BigDecimal("100"),14,2))
+        assertNull(domain.effortAdjustedEpley(BigDecimal("100"),5,-1))
+        assertNull(domain.effortAdjustedEpley(BigDecimal.ZERO,5,0))
+        assertEquals(BigDecimal("100"),domain.epley(BigDecimal("100"),1))
+    }
+
     @Test fun changingWeightUnitsNeverChangesThePhysicalBodyweightRatio() {
         val measure=StrengthStandardsMeasurementDomain
         val kilograms=measure.convert(BigDecimal("220.462262"),LoadUnit.LB,LoadUnit.KG)

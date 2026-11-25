@@ -394,6 +394,22 @@ class NativeKotlinCustomCycleSignoffFileStore(
         history:NativeKotlinMixedHistoryReadCoordinator,
         outstanding:NativeKotlinCustomOutstandingWorkoutInventory,
         machineRosters:NativeKotlinMachineRosterFileStore?=null
+    ):NativeSavedNamedReview =
+        recoverSpecialistReview(ownerKey,cycleId,history,outstanding,machineRosters,false)
+
+    /** Only initial-tier approval recovery; after its completed exposure,
+     * use the separately authenticated transition preview/recovery path. */
+    fun recoverTieredInitialReview(ownerKey:String,cycleId:String,
+        history:NativeKotlinMixedHistoryReadCoordinator,
+        outstanding:NativeKotlinCustomOutstandingWorkoutInventory,
+        machineRosters:NativeKotlinMachineRosterFileStore?=null
+    ):NativeSavedNamedReview =
+        recoverSpecialistReview(ownerKey,cycleId,history,outstanding,machineRosters,true)
+
+    private fun recoverSpecialistReview(ownerKey:String,cycleId:String,
+        history:NativeKotlinMixedHistoryReadCoordinator,
+        outstanding:NativeKotlinCustomOutstandingWorkoutInventory,
+        machineRosters:NativeKotlinMachineRosterFileStore?,tiered:Boolean
     ):NativeSavedNamedReview {
         fun deny(reason:NativeSavedNamedReviewRefusal)=NativeSavedNamedReview.Rejected(reason)
         if(current(ownerKey)==null || !id.matches(cycleId))
@@ -412,17 +428,55 @@ class NativeKotlinCustomCycleSignoffFileStore(
                 ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
             val stored=(drafts.read(ownerKey,cycleId) as? NativeCustomDraftReadResult.Found)
                 ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.NO_CONFIRMED_DRAFT)
-            if(stored.namedReceipts.isEmpty() || stored.tieredInitialReceipt!=null)
+            if(if(tiered) stored.tieredInitialReceipt==null || stored.namedReceipts.isNotEmpty()
+                else stored.namedReceipts.isEmpty() || stored.tieredInitialReceipt!=null)
                 return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.NO_CONFIRMED_DRAFT)
             val reviewer=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
                 this,history,outstanding,machineRosters)
-            val result=if(receipt.cycleRevision==stored.draft.revision)
-                reviewer.reviewSigned(ownerKey,cycleId,inputs)
-            else reviewer.review(ownerKey,cycleId,inputs)
+            val signed=receipt.cycleRevision==stored.draft.revision
+            val result=when {
+                tiered && signed->reviewer.reviewSignedTieredInitial(ownerKey,cycleId,inputs)
+                tiered->reviewer.reviewTieredInitial(ownerKey,cycleId,inputs)
+                signed->reviewer.reviewSigned(ownerKey,cycleId,inputs)
+                else->reviewer.review(ownerKey,cycleId,inputs)
+            }
             if(current(ownerKey)!=owner)
                 return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.NOT_AUTHORIZED)
             result
         }}.getOrElse{deny(NativeSavedNamedReviewRefusal.STORAGE_UNAVAILABLE)}
+    }
+
+    /** Internal input recovery for a *new* tier transition review after the
+     * initial session is finished. A signed fingerprint authenticates the
+     * rules only; the transition store must still revalidate every original
+     * preparation, current history, physical source, stock and proposed cycle.
+     * Never return these rules as ordinary consent or as a workout grant. */
+    internal fun signedTieredInputs(ownerKey:String,cycleId:String):CustomCoachAuditInputs? {
+        if(current(ownerKey)==null || !id.matches(cycleId))return null
+        return runCatching{fence.withOwnerTransaction(ownerKey){
+            val owner=current(ownerKey) ?:return@withOwnerTransaction null
+            val stored=decode(path(ownerKey,cycleId)) ?:return@withOwnerTransaction null
+            val consent=stored.consent ?:return@withOwnerTransaction null
+            val inputs=stored.reviewedInputs ?:return@withOwnerTransaction null
+            val draft=drafts.read(ownerKey,cycleId) as? NativeCustomDraftReadResult.Found
+                ?:return@withOwnerTransaction null
+            val tier=draft.tieredInitialReceipt ?:return@withOwnerTransaction null
+            val source=(sources.read(ownerKey) as? NativeAuthoringSourceRead.Found)?.source
+                ?:return@withOwnerTransaction null
+            if(stored.ownerKey!=ownerKey || stored.athleteId!=owner.athleteId ||
+                stored.cycleId!=cycleId || stored.revision!=consent.recordRevision ||
+                consent.ownerKey!=ownerKey || consent.athleteId!=owner.athleteId ||
+                consent.cycleId!=cycleId || consent.cycleRevision!=draft.draft.revision ||
+                consent.recordRevision!=tier.consentRevision+1 ||
+                consent.sourceRevision!=source.revision ||
+                source.ownerKey!=ownerKey || source.athleteId!=owner.athleteId ||
+                draft.namedReceipts.isNotEmpty() ||
+                !NativeTieredInitialDraftReceiptCodec.valid(tier,ownerKey,draft.draft) ||
+                NativeCustomCycleSignoffFingerprint.calculateTieredInitial(
+                    draft.draft,source,inputs,tier)!=consent.fingerprintSha256 ||
+                current(ownerKey)!=owner)return@withOwnerTransaction null
+            inputs
+        }}.getOrNull()
     }
 
     /** Cold recovery requires the original unrevoked consent, exact current

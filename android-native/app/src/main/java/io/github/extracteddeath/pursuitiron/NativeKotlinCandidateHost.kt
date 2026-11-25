@@ -994,8 +994,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
     fun issueTieredSupportWorkout(cycleId:String,shown:NativeCustomPreparedWorkout):NativeCustomJournalResult {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.NOT_AUTHORIZED)
+        val workoutId=shown.workoutId
         val issued=revisionFence.withOwnerTransaction(owner.ownerKey) {
-            val workoutId=shown.workoutId
             val week=shown.snapshot.absoluteWeek
             val day=shown.snapshot.weekday
             val preview=previewTieredSupportWorkout(workoutId,cycleId,week,day)
@@ -1009,7 +1009,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
             customIssuedStore.issueTieredSupport(owner.ownerKey,workoutId,cycleId,week,day,mixedHistoryReader)
         }
         if(issued is NativeCustomJournalResult.Durable)
-            pinMachineChoiceForIssuedWorkout(shown.workoutId,custom=true)
+            pinMachineChoiceForIssuedWorkout(workoutId,custom=true)
         return issued
     }
 

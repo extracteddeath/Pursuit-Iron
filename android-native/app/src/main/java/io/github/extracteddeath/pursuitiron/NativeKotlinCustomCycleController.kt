@@ -23,6 +23,8 @@ import kotlinx.coroutines.isActive
 internal data class NativeKotlinCustomCycleState(
     val draft: CustomTrainingCycle? = null,
     val fixedNamedDraft:Boolean=false,
+    val tieredDraft:Boolean=false,
+    val tieredInitialReview:NativeSavedNamedReview?=null,
     val fixedNamedBatch:NativeNamedBatchReview.Ready?=null,
     val fixedNamedReview:NativeSavedNamedReview?=null,
     val fixedNamedWorkoutId:String?=null,
@@ -185,6 +187,7 @@ internal class NativeKotlinCustomCycleController(
                 NativeKotlinCustomCycleState(
                     draft = result.draft,
                     fixedNamedDraft=result.namedReceipts.isNotEmpty(),
+                    tieredDraft=result.tieredInitialReceipt!=null,
                     cycleId = result.draft.cycleId,
                     availableChoices = choices,
                     sourceRevision = source?.revision,
@@ -192,7 +195,8 @@ internal class NativeKotlinCustomCycleController(
                     progressionCoachingEnabled = assistance?.offersProgression==true,
                     fatigueCoachingEnabled = assistance?.offersFatigueAdvice==true,
                     reviewedSourceSetup = source?.setup,
-                    signoff = host.readCustomCycleConsent(result.draft.cycleId),
+                    signoff = if(result.tieredInitialReceipt==null)
+                        host.readCustomCycleConsent(result.draft.cycleId) else null,
                     message = "Saved custom cycle restored · revision ${result.draft.revision}")
             NativeCustomDraftReadResult.Missing ->
                 NativeKotlinCustomCycleState(cycleId = cycleId,
@@ -221,6 +225,10 @@ internal class NativeKotlinCustomCycleController(
      * generated draft may still recover its original calibrated preview. */
     private fun recoverSavedCoachPolicy(cycleId:String) {
         if(current.value.draft?.cycleId!=cycleId)return
+        if(current.value.tieredDraft) {
+            refreshTieredInitialReview(cycleId)
+            return
+        }
         if(current.value.fixedNamedDraft) {
             refreshFixedNamedReview(cycleId)
             return
@@ -620,6 +628,7 @@ internal class NativeKotlinCustomCycleController(
      * the review NEVER creates an approved workout or a storage grant.
      */
     private fun auditReviewedSavedCycle(inputs:CustomCoachAuditInputs) {
+        if(current.value.tieredDraft)return
         pendingWeekEdit=null
         current.value=current.value.copy(weekEditReview=null)
         val requested = current.value.draft ?: return
@@ -676,13 +685,50 @@ internal class NativeKotlinCustomCycleController(
      * journal/manifest census. No calendar-start date is inferred. */
     private fun selectNextSessionIfReviewed() {
         val value=current.value
-        if(value.fixedNamedDraft)return
+        if(value.fixedNamedDraft || value.tieredDraft)return
         if(value.coachingAudit?.status==CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW &&
             (value.signoff as? NativeCustomSignoffRead.Found)?.isCurrent==true)
             selectNextCycleSession()
     }
 
     fun findNextCycleSession()=run {selectNextCycleSession()}
+
+    // Dedicated initial-tier approval never supplies ordinary session authority.
+    private fun refreshTieredInitialReview(cycleId:String) {
+        val before=current.value
+        val draft=before.draft ?:return
+        if(!before.tieredDraft || draft.cycleId!=cycleId)return
+        val review=host.recoverTieredInitialCycle(cycleId)
+        val ready=(review as? NativeSavedNamedReview.Ready)?.takeIf{
+            it.draft==draft && it.initialTierReceipt!=null
+        }
+        val signed=(review as? NativeSavedNamedReview.Signed)?.takeIf{
+            it.draft==draft && it.initialTierReceipt!=null && it.nextTierCandidate==null
+        }
+        current.value=before.copy(tieredInitialReview=ready ?:signed,
+            signoff=null,coachingAudit=null,reviewedCoachInputs=null,
+            nextCycleSlot=null,nextSlotCycleRevision=null,
+            message=when {
+                ready!=null -> "Initial tier reference verified. Review this exact revision."
+                signed!=null -> "Exact initial tier approval restored and rechecked."
+                else -> "Initial tier review is unavailable or already completed. No ordinary workout can start."
+            })
+    }
+
+    fun refreshTieredInitialCycle()=run {
+        current.value.draft?.cycleId?.let{refreshTieredInitialReview(it)}
+    }
+
+    fun approveTieredInitialCycle(displayed:NativeSavedNamedReview.Ready)=run {
+        val before=current.value
+        val draft=before.draft ?:return@run
+        if(!before.tieredDraft || before.tieredInitialReview!=displayed ||
+            displayed.draft!=draft || displayed.initialTierReceipt==null)return@run
+        val result=host.confirmTieredInitialCycle(draft.cycleId,displayed,true)
+        refreshTieredInitialReview(draft.cycleId)
+        if(result !is NativeCustomSignoffWrite.Committed)
+            current.value=current.value.copy(message="Initial tier approval refused. Refresh the saved review.")
+    }
 
     // Fixed named flow owns distinct review state. Never publish ordinary
     // consent flags for a specialist draft or turn a preview into a grant.
@@ -713,7 +759,7 @@ internal class NativeKotlinCustomCycleController(
         val before=current.value
         val draft=before.draft ?:return@run
         current.value=before.copy(fixedNamedBatch=null)
-        if(before.fixedNamedDraft)return@run
+        if(before.fixedNamedDraft || before.tieredDraft)return@run
         val result=host.previewFixedNamedCycle(draft.cycleId,choices)
         val ready=(result as? NativeNamedBatchReview.Ready)?.takeIf{
             it.individual.all{review->review.source.cycle==draft}
@@ -727,7 +773,7 @@ internal class NativeKotlinCustomCycleController(
     fun acceptFixedNamedChoices(displayed:NativeNamedBatchReview.Ready)=run {
         val before=current.value
         val draft=before.draft ?:return@run
-        if(before.fixedNamedDraft || before.fixedNamedBatch!=displayed ||
+        if(before.fixedNamedDraft || before.tieredDraft || before.fixedNamedBatch!=displayed ||
             displayed.individual.any{it.source.cycle!=draft})return@run
         val saved=host.acceptFixedNamedCycle(displayed,true)
         if(saved !is NativeNamedBatchAcceptance.Saved) {
@@ -834,6 +880,7 @@ internal class NativeKotlinCustomCycleController(
 
     private fun selectNextCycleSession() {
         val before=current.value
+        if(before.tieredDraft)return
         val cycle=before.draft ?:return
         val inputs=auditedInputs
         if(inputs==null ||

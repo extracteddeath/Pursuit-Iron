@@ -481,7 +481,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
         }
     }
     NativeKotlinPlanWorkspace(
-        showNavigator=showProgramEditor && draft!=null && !state.fixedNamedDraft,
+        showNavigator=showProgramEditor && draft!=null && !state.fixedNamedDraft && !state.tieredDraft,
         navigationKey=draft?.let { it.athleteId to it.cycleId },
         scrollState=pageScroll,
         navigator={
@@ -596,6 +596,8 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     ) { Text("Create and save my draft") }
                 }
             }
+        } else if(state.tieredDraft) {
+            NativeTieredInitialExecutionPanel(state,controller)
         } else if(state.fixedNamedDraft) {
             NativeFixedNamedExecutionPanel(state,controller,onOpenIssuedWorkout)
         } else {
@@ -2426,6 +2428,50 @@ private fun NativeFixedNamedSelectionPanel(draft:CustomTrainingCycle,
                     modifier=Modifier.fillMaxWidth()){Text("Confirm references and save unsigned revision")}
             }
         }
+    }
+}
+
+/** Initial-tier approval is never an ordinary or fixed workout grant. */
+@Composable
+private fun NativeTieredInitialExecutionPanel(state:NativeKotlinCustomCycleState,
+    controller:NativeKotlinCustomCycleController) {
+    val review=state.tieredInitialReview
+    val receipt=when(review) {
+        is io.github.extracteddeath.pursuitiron.nativecoachstore.NativeSavedNamedReview.Ready ->
+            review.initialTierReceipt
+        is io.github.extracteddeath.pursuitiron.nativecoachstore.NativeSavedNamedReview.Signed ->
+            review.initialTierReceipt
+        else -> null
+    }
+    PursuitCard(highlighted=true) {
+        Text("GZCLP · Initial tier review",style=MaterialTheme.typography.titleLarge)
+        state.message?.let{Text(it,style=MaterialTheme.typography.bodyMedium)}
+        receipt?.let {
+            Text(kotlinExerciseLabel(it.exerciseId),style=MaterialTheme.typography.titleMedium)
+            Text("Week ${it.selection.absoluteWeek} · ${pretty(it.selection.tier)}",
+                style=MaterialTheme.typography.labelLarge)
+            Text("Initial reference: ${it.selection.initialLoad.toPlainString()} ${it.unit} · ${kotlinLoadBasisLabel(it.basis)}",
+                style=MaterialTheme.typography.bodyMedium)
+            Text("Maximum authorized increase: ${it.selection.maximumAuthorizedIncrease.toPlainString()} ${it.unit}",
+                style=MaterialTheme.typography.bodySmall)
+        }
+        when(review) {
+            is io.github.extracteddeath.pursuitiron.nativecoachstore.NativeSavedNamedReview.Ready -> {
+                Text("Revised cycle · ${review.audit.weeks.size} weeks audited")
+                if(receipt!=null)
+                    Button(onClick={controller.approveTieredInitialCycle(review)},
+                        enabled=!state.busy,modifier=Modifier.fillMaxWidth()){
+                        Text("Approve reviewed initial tier")
+                    }
+            }
+            is io.github.extracteddeath.pursuitiron.nativecoachstore.NativeSavedNamedReview.Signed ->
+                Text("Initial tier approval verified.",style=MaterialTheme.typography.labelLarge)
+            else -> {}
+        }
+        Text("Initial approval does not start a workout. Scheduled tier and supporting-day workout review is not available here yet.",
+            style=MaterialTheme.typography.bodySmall)
+        OutlinedButton(onClick=controller::refreshTieredInitialCycle,enabled=!state.busy,
+            modifier=Modifier.fillMaxWidth()){Text("Refresh initial tier review")}
     }
 }
 

@@ -163,6 +163,16 @@ class NativeKotlinSavedNamedPercentageReview(
         evaluate(ownerKey,cycleId,inputs,signed=true,tiered=true,multiNext=selection,
             preparedReceiptFingerprint=receiptFingerprint,priorMultiDays=priorDays,staleMultiDay=staleDay)
 
+    /** Recovery inventory verifies frozen numeric evidence only. It cannot
+     * return a live candidate or provide preparation/issuance authority. */
+    internal fun verifyMultiTierRecoveryInventory(ownerKey:String,cycleId:String,
+        days:List<NativeFrozenTierDay>):Boolean {
+        val last=days.lastOrNull() ?:return false
+        return evaluate(ownerKey,cycleId,last.inputs,signed=true,tiered=true,
+            multiNext=last.selection,priorMultiDays=days.dropLast(1),
+            inventoryMultiDay=last) is NativeSavedNamedReview.Signed
+    }
+
     /** Only receipt-backed recovery may re-review an already prepared
      * transition. A plain preview must still refuse every outstanding day.
      */
@@ -182,7 +192,8 @@ class NativeKotlinSavedNamedPercentageReview(
         supportingDay:Boolean=false,staleReceipt:NativeFrozenTierTransition?=null,
         multiNext:NativeMultiTierNextSelection?=null,
         priorMultiDays:List<NativeFrozenTierDay> = emptyList(),
-        staleMultiDay:NativeFrozenTierDay?=null):NativeSavedNamedReview {
+        staleMultiDay:NativeFrozenTierDay?=null,
+        inventoryMultiDay:NativeFrozenTierDay?=null):NativeSavedNamedReview {
         fun deny(reason:NativeSavedNamedReviewRefusal,audit:CustomCoachAudit?=null)=
             NativeSavedNamedReview.Rejected(reason,audit)
         if(!id.matches(ownerKey)||!id.matches(cycleId))
@@ -411,9 +422,10 @@ class NativeKotlinSavedNamedPercentageReview(
                 if(!signed || roots.size<2 || !id.matches(multiNext.nextWorkoutId) ||
                     multiNext.absoluteWeek !in 1..104 || multiNext.weekday !in 0..6 ||
                     roots.any{it.selection.nextWorkoutId==multiNext.nextWorkoutId} ||
-                    timeline.completions.any{it.manifest.workoutId==multiNext.nextWorkoutId} ||
-                    census.sessions.any{it.workoutId!=ownPreparation?.workoutId &&
-                        (!it.completed || it.workoutId==multiNext.nextWorkoutId)})
+                    (inventoryMultiDay==null &&
+                        (timeline.completions.any{it.manifest.workoutId==multiNext.nextWorkoutId} ||
+                            census.sessions.any{it.workoutId!=ownPreparation?.workoutId &&
+                                (!it.completed || it.workoutId==multiNext.nextWorkoutId)})))
                     return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.PROTECTED_WEEK)
                 // Historical and live days share one projection. A historical
                 // receipt supplies its frozen observations, not a new load.
@@ -459,7 +471,8 @@ class NativeKotlinSavedNamedPercentageReview(
                             val saved=runCatching{NativeTieredHistoryPrefixCodec.decode(bytes,
                                 initialRequest.scope,s.tier,s.slotId)}.getOrNull() ?:return null
                             if(saved.size!=live.exposures.size || saved.zip(live.exposures).any{(a,b)->
-                                a.copy(observations=b.observations)!=b})return null
+                                a.copy(observations=b.observations)!=b} ||
+                                (frozen.historyRevision==live.manifestRevision && saved!=live.exposures))return null
                             saved
                         }
                         val request=initialRequest.copy(nextWorkoutId=selection.nextWorkoutId,
@@ -525,8 +538,39 @@ class NativeKotlinSavedNamedPercentageReview(
                     lastPosition=position
                     lastRevision=old.historyRevision
                 }
+                // Verify the final frozen day through the identical projection
+                // as completed predecessors. It may be approved-only, prepared,
+                // issued, completed, or stale after a verified correction.
+                val inventoryProjection=inventoryMultiDay?.let{old->
+                    if(old.owner!=ownerKey || old.athlete!=owner.athleteId || old.cycle!=cycleId ||
+                        old.selection!=multiNext || old.inputs!=inputs ||
+                        old.consentRevision!=prior.recordRevision || old.cycleRevision!=candidate.revision ||
+                        old.sourceRevision!=prior.sourceRevision || old.consentFingerprint!=prior.fingerprintSha256 ||
+                        old.historyRevision<=lastRevision || old.historyRevision>timeline.manifestRevision)
+                        return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
+                    val replay=projectDay(multiNext,old)
+                        ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
+                    if(!NativeCustomCycleDraftCodec.encode(replay.draft).contentEquals(old.proposed) ||
+                        old.resets!=replay.slots.filter{it.requiresExplicitResetReview}.map{it.evidence.key.slotId}.toSet())
+                        return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
+                    val fact=census.sessions.singleOrNull{it.workoutId==multiNext.nextWorkoutId}
+                    if(fact!=null) {
+                        val origin=outstanding.preparedOrigin(ownerKey,fact.workoutId)
+                            ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
+                        if(fact.cycleId!=cycleId || fact.absoluteWeek!=multiNext.absoluteWeek ||
+                            fact.weekday!=multiNext.weekday || (fact.completed && old.historyRevision>=timeline.manifestRevision) ||
+                            origin.authority!=NativeCustomPreparationAuthority.TIERED_TRANSITION ||
+                            origin.consentRevision!=prior.recordRevision || origin.consentFingerprint!=old.fingerprint ||
+                            origin.snapshot!=replay.snapshot)
+                            return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
+                    }
+                    replay
+                }
                 val facts=census.sessions.filter{it.cycleId==cycleId}.map{item->
-                    if(item.workoutId==ownPreparation?.workoutId)
+                    if(inventoryProjection!=null && item.workoutId==multiNext.nextWorkoutId)
+                        NativeCustomCycleSessionFact(item.workoutId,item.absoluteWeek,item.weekday,
+                            candidate.revision,item.issued,item.completed)
+                    else if(item.workoutId==ownPreparation?.workoutId)
                         NativeCustomCycleSessionFact(item.workoutId,item.absoluteWeek,item.weekday,
                             candidate.revision,item.issued,item.completed)
                     else historicalFacts[item.workoutId] ?:run {
@@ -535,6 +579,21 @@ class NativeKotlinSavedNamedPercentageReview(
                         NativeCustomNextCycleSlotDomain.multiInitialFact(candidate,roots,item,origin,prior)
                             ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
                     }
+                }
+                if(inventoryProjection!=null) {
+                    val before=facts.filter{it.absoluteWeek*7+it.weekday<currentPosition}
+                    val position=NativeCustomNextCycleSlotDomain.select(candidate,before)
+                    val finalFact=facts.singleOrNull{it.workoutId==multiNext.nextWorkoutId}
+                    if(position !is NativeCustomNextCycleSlot.Next || position.absoluteWeek!=multiNext.absoluteWeek ||
+                        position.weekday!=multiNext.weekday ||
+                        facts.any{it.absoluteWeek*7+it.weekday>=currentPosition &&
+                            it.workoutId!=multiNext.nextWorkoutId && finalFact?.completed!=true} ||
+                        NativeCustomNextCycleSlotDomain.select(candidate,facts) is NativeCustomNextCycleSlot.Rejected)
+                        return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.PROTECTED_WEEK)
+                    // The public inventory caller receives only a Boolean.
+                    return@withOwnerTransaction NativeSavedNamedReview.Signed(candidate,stamp,receipts.toList(),
+                        prior,evidence.toList(),inputs,audit,timeline.manifestRevision,initial,tierEvidence,
+                        null,roots,tierEvidences,null)
                 }
                 val allowed=when(val scheduled=NativeCustomNextCycleSlotDomain.select(candidate,facts)) {
                     is NativeCustomNextCycleSlot.Next -> scheduled.absoluteWeek==multiNext.absoluteWeek &&

@@ -176,7 +176,13 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         assertEquals(NativeTieredInitialBatchReview.Rejected(NativeNamedPercentageRefusal.NOT_AUTHORIZED),preview())
     }
 
-    @Test fun batchReferencesAreStoredSignedAndIssuedInOrderWithoutOrdinaryFallback() {
+    @Test fun batchReferencesAreStoredSignedAndIssuedInOrderWithoutOrdinaryFallback() =
+        batchJourney(correctAfterPreparation=false)
+
+    @Test fun correctedMultiTierHistoryCannotIssuePreviouslyPreparedTargets() =
+        batchJourney(correctAfterPreparation=true)
+
+    private fun batchJourney(correctAfterPreparation:Boolean) {
         initialize()
         val original=approved()
         enroll()
@@ -305,7 +311,16 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         fun confirmDay(review:NativeSavedNamedReview.Signed=proposed,confirmed:Boolean=true,
             resets:Set<String> = emptySet(),recoveries:Set<String> = emptySet())=
             transitionStore().confirmMulti("owner-1","cycle-1",review,confirmed,resets,recoveries)
+        fun inspectDay()=preflight.inspectFirstTierTransition("owner-1",nextSelection.nextWorkoutId,
+            "cycle-1",2,0,transitionStore())
+        fun prepareDay()=coldPrepared().prepareFirstTierTransition("owner-1",nextSelection.nextWorkoutId,
+            "cycle-1",2,0,transitionStore())
+        fun issueDay()=coldJournal().issueFirstTierTransition("owner-1",nextSelection.nextWorkoutId,
+            "cycle-1",2,0,transitionStore())
         assertEquals(NativeTieredTransitionRecovery.Refused(NativeTieredTransitionConsentResult.MISSING),recoverDay())
+        assertTrue(inspectDay() is NativeFirstTierTransitionPreflight.Rejected)
+        assertTrue(prepareDay() is NativeCustomPrepareResult.Rejected)
+        assertTrue(issueDay() is NativeCustomJournalResult.Rejected)
         assertEquals(NativeTieredTransitionConsentResult.CONFIRMATION_REQUIRED,confirmDay(confirmed=false))
         assertEquals(NativeTieredTransitionConsentResult.CONFIRMATION_REQUIRED,confirmDay(resets=setOf("slot-0")))
         val recoveryReview=preview(nextSelection.copy(recoverySlotIds=setOf("slot-0"))) as NativeSavedNamedReview.Signed
@@ -332,6 +347,45 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         assertEquals(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT,confirmDay())
         java.nio.file.Files.write(file,frozen)
         assertEquals(restoredDay,recoverDay())
+        val reviewed=inspectDay() as NativeFirstTierTransitionPreflight.Reviewed
+        assertEquals(transition.snapshot,reviewed.session)
+        assertEquals(restoredDay.receiptFingerprint,reviewed.receiptFingerprint)
+        assertTrue(coldPrepared().prepareFirstTierTransition("owner-1","wrong-id",
+            "cycle-1",2,0,transitionStore()) is NativeCustomPrepareResult.Rejected)
+        assertTrue(coldPrepared().prepareFirstTierTransition("owner-1",nextSelection.nextWorkoutId,
+            "cycle-1",2,2,transitionStore()) is NativeCustomPrepareResult.Rejected)
+        val staged=(prepareDay() as NativeCustomPrepareResult.Prepared).workout
+        assertEquals(NativeCustomPreparationAuthority.TIERED_TRANSITION,staged.authority)
+        assertEquals(transition.snapshot,staged.snapshot)
+        assertEquals(restoredDay.receiptFingerprint,staged.consentFingerprint)
+        assertEquals(NativeCustomPrepareResult.Prepared(staged,true),prepareDay())
+        assertEquals(restoredDay,recoverDay())
+        assertEquals(reviewed,inspectDay())
+        assertTrue(preview(nextSelection) is NativeSavedNamedReview.Rejected)
+        if(!correctAfterPreparation) {
+            val issued=issueDay()
+            assertTrue(issued.toString(),issued is NativeCustomJournalResult.Durable)
+            assertEquals(staged.snapshot,(issued as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
+            val target=staged.snapshot.slots.single().sets.single()
+            assertTrue(coldJournal().record("owner-1",nextSelection.nextWorkoutId,
+                CustomWorkoutJournalOperation.Record("multi-next-actual",0,
+                    CustomWorkoutVisitKey(target.setKey,CustomWorkoutVisitPart.MAIN),
+                    KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(n("30"),LoadUnit.LB,5,0)))
+                is NativeCustomJournalResult.Durable)
+            val finished=NativeKotlinCustomHistoryTransaction(history,coldJournal(),coldFence,identity)
+                .complete("owner-1","athlete-1",nextSelection.nextWorkoutId,
+                    CustomWorkoutJournalOperation.Finish("multi-next-finish",1))
+            assertTrue(finished.toString(),finished is NativeCustomFinishResult.Committed)
+            val request=transition.slots.single().evidence.request
+            val ledger=reader.readTieredLedger("owner-1","athlete-1",request.scope,first.slotId,first.tier,3)
+                as NativeOwnerTieredLedgerResult.Review
+            assertEquals(listOf(first.nextWorkoutId,nextSelection.nextWorkoutId),ledger.exposures.map{it.workoutId})
+            val numeric=TieredLinearProgressionDomain.review(request.copy(nextWorkoutId="week-three",
+                completed=ledger.exposures)) as TieredLinearResult.Candidate
+            assertEquals(TieredLinearState(0,n("35")),numeric.state)
+            assertEquals(saved,coldDrafts.read("owner-1","cycle-1"))
+            return
+        }
         val original=(coldPrepared().open("owner-1",first.nextWorkoutId) as NativeCustomPreparedRead.Found).workout
         val correction=NativeKotlinCustomHistoryCorrectionTransaction(history,coldJournal(),
             NativeKotlinCustomSavedCorrectionFileStore(root,fence,identity,coldJournal(),history),fence,identity)
@@ -342,12 +396,13 @@ class NativeKotlinTieredInitialReferenceReviewTest {
                     KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(n("25"),LoadUnit.LB,1,0)))
         assertTrue(correction.toString(),correction is NativeCustomCorrectionTransactionResult.Committed)
         assertEquals(NativeTieredTransitionRecovery.Refused(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED),recoverDay())
-        val corrected=preview(nextSelection) as NativeSavedNamedReview.Signed
-        assertEquals(TieredLinearState(1,n("25")),corrected.nextMultiTierCandidate?.slots?.single()?.result?.state)
-        assertEquals(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT,confirmDay(corrected))
+        assertTrue(inspectDay() is NativeFirstTierTransitionPreflight.Rejected)
+        assertTrue(prepareDay() is NativeCustomPrepareResult.Rejected)
+        assertTrue(issueDay() is NativeCustomJournalResult.Rejected)
+        assertTrue(preview(nextSelection) is NativeSavedNamedReview.Rejected)
         assertArrayEquals(frozen,java.nio.file.Files.readAllBytes(file))
         assertEquals(saved,coldDrafts.read("owner-1","cycle-1"))
-        assertEquals(NativeCustomPreparedRead.Missing,coldPrepared().open("owner-1",nextSelection.nextWorkoutId))
+        assertEquals(staged,(coldPrepared().open("owner-1",nextSelection.nextWorkoutId) as NativeCustomPreparedRead.Found).workout)
         active=NativeKotlinOwnerIdentity("other-owner","other-athlete")
         assertTrue(preview(nextSelection) is NativeSavedNamedReview.Rejected)
         assertTrue(coldSignoffs.recoverTieredInitialReview("owner-1","cycle-1",reader,inventory)

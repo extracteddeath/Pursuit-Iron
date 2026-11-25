@@ -15,4 +15,12 @@ assert.ok(css.slice(glance, nav).includes('.wpb-progress-glance-item:first-child
 // plain base rules in the StyleTag are gone.
 assert.ok(!/\n\.wpb-tabbar(\s|\{)|\n\.wpb-tabbar \.wpb-tab\{/.test(style), 'No StyleTag base rules for the nav bar');
 assert.ok(css.includes('#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab{border-radius:16px!important;}'), 'Tabs keep their shape against the press morph');
-console.log('PASS B1048/B1049: Progress glance and navigation bar each have one owner.');
+// B1050: library search and rows are owned once; only their interaction states and media variants remain elsewhere.
+const lib = css.indexOf('/* B1050 — Exercise library');
+assert.ok(lib > 0, 'Library owner exists');
+const baseLib = css.slice(0, lib).replace(/@media[^{]*\{(?:[^{}]*\{[^{}]*\})*\s*\}/g, '');
+for (const m of baseLib.matchAll(/([^{}]+)\{/g)) for (const sel of m[1].split(','))
+    if (/\.wpb-library-(row|search)(?![\w-])/.test(sel) && !/:(hover|active|focus|focus-visible|focus-within|is\()/.test(sel))
+        assert.fail('Library base rule outside its owner: ' + sel.trim());
+assert.ok(app.includes(':not(.wpb-ui-control):not(.wpb-library-search-input)'), 'Shared input chrome steps aside for the library search');
+console.log('PASS B1048-B1050: Progress glance, navigation bar and library rows each have one owner.');

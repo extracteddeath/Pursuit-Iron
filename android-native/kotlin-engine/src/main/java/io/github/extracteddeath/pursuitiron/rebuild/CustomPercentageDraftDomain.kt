@@ -32,7 +32,8 @@ sealed interface CustomPercentageDraftResult {
         val weekInBlock:Int,
         val originalSets:List<CustomAuthoredSet>,
         val proposal:CustomCycleBuilderResult.Proposed,
-        val tierTransitions:List<TieredLinearTransition> = emptyList()
+        val tierTransitions:List<TieredLinearTransition> = emptyList(),
+        val tieredResult:TieredLinearResult.Candidate?=null
     ):CustomPercentageDraftResult {
         val requiresReviewedReset:Boolean get()=tierTransitions.any{it.decision==TieredLinearDecision.RESET_REVIEW}
         val mayIssueWorkout:Boolean get()=false
@@ -99,7 +100,7 @@ object CustomPercentageDraftRecheckDomain {
 object CustomPercentageDraftDomain {
     private data class Projected(val load:BigDecimal,val reps:Int,val intent:CustomPercentageSetIntent)
     private data class Projection(val sets:List<Projected>,
-        val transitions:List<TieredLinearTransition> = emptyList())
+        val tieredResult:TieredLinearResult.Candidate?=null)
 
     fun review(source:CustomPercentageDraftSource,request:NamedPercentageRequest):CustomPercentageDraftResult =
         reviewSource(source,request.scope,request.tier,request.approvedSetBudget,
@@ -135,7 +136,7 @@ object CustomPercentageDraftDomain {
                     NamedPercentageScheme.GZCLP,request.tier,PercentageDayRole.STANDARD,
                     source.weekInBlock,block.weeks,indexes[index]+1,size,numeric.state.load,
                     hundred,effective,numeric.state.stage,set.repOut,numeric.recovery))
-            },numeric.transitions)
+            },numeric)
         }
     }
 
@@ -248,6 +249,7 @@ object CustomPercentageDraftDomain {
             ProgramProgressionSlotKey(block.blockId,day.weekday,slot.slotId),
             source.weekInBlock,edited.receipt.original.blocks.single{it.blockId==block.blockId}
                 .days.single{it.weekday==day.weekday}.slots.single{it.slotId==slot.slotId}.sets,
-            edited,Collections.unmodifiableList(numeric.transitions.toList()))
+            edited,Collections.unmodifiableList(numeric.tieredResult?.transitions.orEmpty().toList()),
+            numeric.tieredResult)
     }
 }

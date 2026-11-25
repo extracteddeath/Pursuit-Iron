@@ -2641,17 +2641,44 @@ private fun NativeTieredTransitionControls(state:NativeKotlinCustomCycleState,
     var recovery by remember(state.draft?.cycleId,state.tieredCalendar){mutableStateOf(false)}
     val review=state.tieredTransitionReview
     val candidate=review?.nextTierCandidate
+    val multi=review?.nextMultiTierCandidate
+    val multiThread=state.tieredReceipts.size>1
+    val position=when(val slot=state.tieredCalendar) {
+        is NativeCustomNextCycleSlot.Next -> slot.absoluteWeek to slot.weekday
+        is NativeCustomNextCycleSlot.Prepared -> slot.absoluteWeek to slot.weekday
+        else -> null
+    }
+    val due=state.tieredReceipts.filter{r->
+        val block=state.draft?.blocks?.singleOrNull{it.blockId==r.blockId}
+        position!=null && block!=null && position.second==r.selection.weekday &&
+            position.first in (r.selection.absoluteWeek+1)..(r.selection.absoluteWeek+block.weeks-r.weekInBlock)
+    }
+    var recoverySlots by remember(state.draft?.cycleId,state.tieredCalendar){mutableStateOf(emptySet<String>())}
+    var resetSlots by remember(multi){mutableStateOf(emptySet<String>())}
+    var confirmedRecoverySlots by remember(multi){mutableStateOf(emptySet<String>())}
     val shown=state.tieredTransitionPreview
     val stale=state.staleTieredTransition
     var resetConfirmed by remember(candidate,stale){mutableStateOf(false)}
     var recoveryConfirmed by remember(candidate,stale){mutableStateOf(false)}
     if(shown==null) {
-        Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+        if(multiThread) {
+            due.forEach{root->
+                val id=root.selection.slotId
+                Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+                    Checkbox(checked=id in recoverySlots,onCheckedChange={
+                        recoverySlots=if(it)recoverySlots+id else recoverySlots-id
+                    },enabled=!state.busy)
+                    Text("Recovery · "+kotlinExerciseLabel(root.exerciseId))
+                }
+            }
+        } else Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
             Checkbox(checked=recovery,onCheckedChange={recovery=it},enabled=!state.busy)
             Text("Review a recovery workout instead")
         }
-        OutlinedButton(onClick={controller.previewTieredTransition(recovery)},enabled=!state.busy,
-            modifier=Modifier.fillMaxWidth()){Text("Review next tier workout")}
+        OutlinedButton(onClick={
+            if(multiThread)controller.previewTieredTransition(false,recoverySlots)
+            else controller.previewTieredTransition(recovery)
+        },enabled=!state.busy,modifier=Modifier.fillMaxWidth()){Text("Review next tier workout")}
     }
     stale?.let{old->
         Text("Previous approved targets",style=MaterialTheme.typography.titleMedium)
@@ -2695,6 +2722,36 @@ private fun NativeTieredTransitionControls(state:NativeKotlinCustomCycleState,
                     (!next.selection.recovery || recoveryConfirmed),modifier=Modifier.fillMaxWidth()){
                 Text(if(stale!=null)"Replace approval with corrected targets" else "Approve exact tier targets")
             }
+        }
+    }
+    multi?.let{next->
+        Text("Week ${next.selection.absoluteWeek} · ${next.snapshot.dayLabel}",style=MaterialTheme.typography.titleMedium)
+        next.slots.forEach{slot->
+            val id=slot.evidence.key.slotId
+            Text(kotlinExerciseLabel(slot.evidence.request.scope.exerciseId)+" · Tier stage ${slot.result.state.stage+1}",
+                style=MaterialTheme.typography.labelLarge)
+            Text(if(slot.evidence.request.recovery)"Recovery exposure · no earned increase"
+                else pretty(slot.result.transitions.lastOrNull()?.decision ?: TieredLinearDecision.INITIAL),
+                style=MaterialTheme.typography.bodyMedium)
+            slot.result.targets.forEach{target->
+                Text("${target.load.toPlainString()} ${slot.evidence.request.scope.unit} · ${target.minimumReps}${if(target.repOut)"+" else ""} reps",
+                    style=MaterialTheme.typography.bodySmall)
+            }
+            if(shown==null && slot.requiresExplicitResetReview)Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+                Checkbox(checked=id in resetSlots,onCheckedChange={resetSlots=if(it)resetSlots+id else resetSlots-id},enabled=!state.busy)
+                Text("Confirm this tier reset")
+            }
+            if(shown==null && slot.evidence.request.recovery)Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+                Checkbox(checked=id in confirmedRecoverySlots,onCheckedChange={
+                    confirmedRecoverySlots=if(it)confirmedRecoverySlots+id else confirmedRecoverySlots-id
+                },enabled=!state.busy)
+                Text("Confirm this recovery exposure")
+            }
+        }
+        if(shown==null)Button(onClick={controller.approveTieredTransition(false,false,resetSlots,confirmedRecoverySlots)},
+            enabled=!state.busy && resetSlots==next.slots.filter{it.requiresExplicitResetReview}.map{it.evidence.key.slotId}.toSet() &&
+                confirmedRecoverySlots==next.selection.recoverySlotIds,modifier=Modifier.fillMaxWidth()){
+            Text("Approve exact tier targets")
         }
     }
     shown?.let{verified->

@@ -1,0 +1,146 @@
+package io.github.extracteddeath.pursuitiron.nativecoachstore
+
+import java.io.ByteArrayOutputStream
+import java.io.DataOutputStream
+import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
+import java.nio.file.Files
+import java.nio.file.LinkOption
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+import java.nio.file.StandardOpenOption
+import java.security.MessageDigest
+
+/** First-transition consent evidence only. No draft update or issuance grant.
+ * A conflicting receipt is never overwritten; a later revisioned replacement
+ * and multi-week transaction must be designed before this can authorize use.
+ */
+internal enum class NativeTieredTransitionConsentResult {
+    RECORDED, REPLAYED, VERIFIED, MISSING, CONFIRMATION_REQUIRED,
+    NOT_AUTHORIZED, STALE_OR_UNVERIFIED, CONFLICT_OR_CORRUPT, STORAGE_UNAVAILABLE
+}
+
+internal class NativeKotlinFirstTierTransitionConsentStore(
+    private val directory:Path,
+    private val fence:NativeKotlinApprovalRevisionFence,
+    private val identity:NativeKotlinCurrentIdentity,
+    private val drafts:NativeCustomCycleDraftFileStore,
+    private val sources:NativeKotlinCustomAuthoringSourceFileStore,
+    private val signoffs:NativeKotlinCustomCycleSignoffFileStore,
+    private val history:NativeKotlinMixedHistoryReadCoordinator,
+    private val outstanding:NativeKotlinCustomOutstandingWorkoutInventory,
+    private val machineRosters:NativeKotlinMachineRosterFileStore?=null
+) {
+    private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
+    private val sha=Regex("^[a-f0-9]{64}$")
+    private val maxBytes=NativeCustomCycleDraftCodec.MAX_BYTES+
+        NativeTieredHistoryPrefixCodec.MAX_BYTES+NativeCustomCoachAuditInputsCodec.MAX_BYTES+8192
+    private fun digest(bytes:ByteArray)=MessageDigest.getInstance("SHA-256").digest(bytes)
+    private fun path(owner:String,cycle:String):Path {
+        val key=digest("$owner/$cycle".toByteArray(Charsets.UTF_8))
+            .joinToString(""){"%02x".format(it.toInt() and 255)}
+        return directory.resolve("tier-first-transition-$key.bin")
+    }
+
+    // Only freshly rederived candidates enter this representation. The
+    // original signed fingerprint authenticates initial recipe, source,
+    // policy and stock; the complete proposed cycle binds the exact new
+    // prescription, not merely the same underlying history.
+    private fun encode(review:NativeSavedNamedReview.Signed):ByteArray {
+        val next=checkNotNull(review.nextTierCandidate)
+        val consent=review.consent
+        val slot=checkNotNull(next.request.sourceSlotId)
+        require(sha.matches(consent.fingerprintSha256))
+        require(next.historyRevision==review.historyRevision)
+        val prefix=NativeTieredHistoryPrefixCodec.encode(next.request.scope,
+            next.request.tier,slot,next.request.completed)
+        val cycle=NativeCustomCycleDraftCodec.encode(next.draft.proposal.draft)
+        val inputs=NativeCustomCoachAuditInputsCodec.encode(review.inputs)
+        val payload=ByteArrayOutputStream().also{buffer->
+            DataOutputStream(buffer).use{out->
+                out.writeInt(0x50495443);out.writeInt(1) // PITC
+                out.writeUTF(consent.ownerKey);out.writeUTF(consent.athleteId)
+                out.writeUTF(consent.cycleId);out.writeLong(consent.recordRevision)
+                out.writeLong(consent.cycleRevision);out.writeLong(consent.sourceRevision)
+                out.writeUTF(consent.fingerprintSha256)
+                out.writeLong(next.historyRevision)
+                out.writeUTF(next.selection.nextWorkoutId);out.writeInt(next.selection.absoluteWeek)
+                out.writeBoolean(next.selection.recovery)
+                out.writeBoolean(next.requiresExplicitResetReview)
+                out.writeUTF(next.request.initialState.load.toString())
+                out.writeInt(next.request.initialState.stage)
+                out.writeUTF(next.request.maximumAuthorizedIncrease.toString())
+                out.writeInt(next.request.approvedSetBudget)
+                out.writeInt(prefix.size);out.write(prefix)
+                out.writeInt(cycle.size);out.write(cycle)
+                out.writeInt(inputs.size);out.write(inputs)
+            }
+        }.toByteArray()
+        return (payload+digest(payload)).also{require(it.size<=maxBytes)}
+    }
+
+    fun confirm(ownerKey:String,cycleId:String,displayed:NativeSavedNamedReview.Signed,
+        athleteConfirmed:Boolean,resetConfirmed:Boolean=false,recoveryConfirmed:Boolean=false):
+        NativeTieredTransitionConsentResult =
+        evaluate(ownerKey,cycleId,displayed,true,athleteConfirmed,resetConfirmed,recoveryConfirmed)
+
+    /** Revalidation requires the exact displayed review again; this is not
+     * a general cold-start discovery API or permission to issue a workout. */
+    fun verify(ownerKey:String,cycleId:String,displayed:NativeSavedNamedReview.Signed):
+        NativeTieredTransitionConsentResult =
+        evaluate(ownerKey,cycleId,displayed,false,false,false,false)
+
+    private fun evaluate(ownerKey:String,cycleId:String,displayed:NativeSavedNamedReview.Signed,
+        write:Boolean,confirmed:Boolean,reset:Boolean,recovery:Boolean):NativeTieredTransitionConsentResult {
+        if(!id.matches(ownerKey)||!id.matches(cycleId))
+            return NativeTieredTransitionConsentResult.NOT_AUTHORIZED
+        if(write&&!confirmed)return NativeTieredTransitionConsentResult.CONFIRMATION_REQUIRED
+        return runCatching{fence.withOwnerTransaction(ownerKey){
+            val owner=identity.signedInIdentity()?.takeIf{it.ownerKey==ownerKey}
+                ?:return@withOwnerTransaction NativeTieredTransitionConsentResult.NOT_AUTHORIZED
+            val shown=displayed.nextTierCandidate
+                ?:return@withOwnerTransaction NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED
+            val reviewer=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
+                signoffs,history,outstanding,machineRosters)
+            val fresh=reviewer.previewTieredNext(ownerKey,cycleId,displayed.inputs,shown.selection)
+                as? NativeSavedNamedReview.Signed
+                ?:return@withOwnerTransaction NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED
+            if(fresh!=displayed || fresh.consent.athleteId!=owner.athleteId ||
+                fresh.consent.ownerKey!=ownerKey || fresh.consent.cycleId!=cycleId)
+                return@withOwnerTransaction NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED
+            val next=checkNotNull(fresh.nextTierCandidate)
+            if(write && ((next.requiresExplicitResetReview&&!reset) ||
+                (next.selection.recovery&&!recovery)))
+                return@withOwnerTransaction NativeTieredTransitionConsentResult.CONFIRMATION_REQUIRED
+            val bytes=encode(fresh)
+            if(identity.signedInIdentity()!=owner)
+                return@withOwnerTransaction NativeTieredTransitionConsentResult.NOT_AUTHORIZED
+            if(Files.isSymbolicLink(directory))
+                return@withOwnerTransaction NativeTieredTransitionConsentResult.STORAGE_UNAVAILABLE
+            val file=path(ownerKey,cycleId)
+            if(Files.exists(file,LinkOption.NOFOLLOW_LINKS)){
+                if(Files.isSymbolicLink(file)||!Files.isRegularFile(file,LinkOption.NOFOLLOW_LINKS)||
+                    Files.size(file)!=bytes.size.toLong()||
+                    !MessageDigest.isEqual(Files.readAllBytes(file),bytes))
+                    return@withOwnerTransaction NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT
+                return@withOwnerTransaction if(write)NativeTieredTransitionConsentResult.REPLAYED
+                    else NativeTieredTransitionConsentResult.VERIFIED
+            }
+            if(!write)return@withOwnerTransaction NativeTieredTransitionConsentResult.MISSING
+            Files.createDirectories(directory)
+            val pending=Files.createTempFile(directory,"tier-first-transition-", ".pending")
+            try {
+                FileChannel.open(pending,StandardOpenOption.WRITE,
+                    StandardOpenOption.TRUNCATE_EXISTING).use{channel->
+                    val buffer=ByteBuffer.wrap(bytes)
+                    while(buffer.hasRemaining())channel.write(buffer)
+                    channel.force(true)
+                }
+                if(identity.signedInIdentity()!=owner)
+                    return@withOwnerTransaction NativeTieredTransitionConsentResult.NOT_AUTHORIZED
+                Files.move(pending,file,StandardCopyOption.ATOMIC_MOVE)
+            }finally{Files.deleteIfExists(pending)}
+            NativeTieredTransitionConsentResult.RECORDED
+        }}.getOrElse{NativeTieredTransitionConsentResult.STORAGE_UNAVAILABLE}
+    }
+}

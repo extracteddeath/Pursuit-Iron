@@ -420,6 +420,28 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         assertArrayEquals(frozen,NativeTieredHistoryPrefixCodec.encode(
             light.request.scope,s.tier,s.slotId,light.request.completed))
         assertNotEquals(transition.result.targets,light.result.targets)
+        // Persist consent under the same owner fence only after a fresh
+        // full-cycle review, with separate acceptance for recovery.
+        fun transitionStore()=NativeKotlinFirstTierTransitionConsentStore(root,
+            NativeKotlinApprovalRevisionFence(root),identity,drafts,sources,store(),reader,inventory)
+        assertEquals(NativeTieredTransitionConsentResult.MISSING,
+            transitionStore().verify("owner-1","cycle-1",reviewed))
+        assertEquals(NativeTieredTransitionConsentResult.CONFIRMATION_REQUIRED,
+            transitionStore().confirm("owner-1","cycle-1",reviewed,false))
+        assertEquals(NativeTieredTransitionConsentResult.CONFIRMATION_REQUIRED,
+            transitionStore().confirm("owner-1","cycle-1",recovery,true))
+        assertEquals(NativeTieredTransitionConsentResult.RECORDED,
+            transitionStore().confirm("owner-1","cycle-1",reviewed,true))
+        assertEquals(NativeTieredTransitionConsentResult.VERIFIED,
+            transitionStore().verify("owner-1","cycle-1",reviewed))
+        assertEquals(NativeTieredTransitionConsentResult.REPLAYED,
+            transitionStore().confirm("owner-1","cycle-1",reviewed,true))
+        assertEquals(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT,
+            transitionStore().confirm("owner-1","cycle-1",recovery,true,recoveryConfirmed=true))
+        active=NativeKotlinOwnerIdentity("other-owner","other-athlete")
+        assertEquals(NativeTieredTransitionConsentResult.NOT_AUTHORIZED,
+            transitionStore().verify("owner-1","cycle-1",reviewed))
+        active=NativeKotlinOwnerIdentity("owner-1","athlete-1")
         assertTrue(reviewer.previewTieredNext("owner-1","cycle-1",inputs(),nextSelection.copy(absoluteWeek=3))
             is NativeSavedNamedReview.Rejected)
         assertTrue(reviewer.previewTieredNext("owner-1","cycle-1",inputs(),nextSelection.copy(nextWorkoutId=s.nextWorkoutId))
@@ -430,6 +452,8 @@ class NativeKotlinTieredInitialReferenceReviewTest {
             is NativeSavedNamedReview.Rejected)
         assertTrue(store().revoke("owner-1","cycle-1",consent.receipt.recordRevision)
             is NativeCustomSignoffWrite.Committed)
+        assertEquals(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED,
+            transitionStore().verify("owner-1","cycle-1",reviewed))
         assertTrue(reviewer.previewTieredNext("owner-1","cycle-1",inputs(),nextSelection)
             is NativeSavedNamedReview.Rejected)
         assertTrue(issue() is NativeCustomJournalResult.Durable)

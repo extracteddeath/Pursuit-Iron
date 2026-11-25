@@ -18,16 +18,12 @@ assert.ok(laterWizard.includes('border-radius:19px 25px 25px 25px!important;') &
  laterWizard.includes('border-color:var(--pi-r11-accent-stroke)!important;'),
  'Selected wizard keeps its actual final shape and accent edge');
 
-const librarySurface='#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-header{';
-// B1046: the early surface-container painter was always overridden by the later R11 list owner
-// with the identical selector, so it was removed; the R11 owner is the one that paints.
-const libraryOwner='#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-header,\n';
-const libraryPaint=css.split(libraryOwner)[1]?.split('}')[0]||'';
-assert.ok(!css.includes(librarySurface) && libraryPaint.includes('background-image:none!important;') &&
- libraryPaint.includes('background-color:var(--pi-r11-quiet)!important;'),
- 'Library header has one painter: the R11 owner');
-assert.ok(!css.includes(librarySurface.replace(/\{$/,'')+',\n#root[data-pi-motion="expressive"] .wpb-exercise-detail'),
- 'Exercise Detail is no longer redundantly included in the early Library owner');
+// B1053: the Library header has no tonal painter at all; it is a flat top app bar on the
+// shared page-header canvas, and its actions are uncontained icon/text buttons.
+assert.ok(!css.includes('.wpb-library.wpb-library.wpb-library .wpb-library-header'),
+ 'Library header has no tonal R11 surface painter');
+assert.ok(/\.wpb-library-headline>\.wpb-library-back,\.wpb-library-headline>\.wpb-library-find\{[^}]*border:0;[^}]*border-radius:50%;[^}]*background:transparent/.test(css),
+ 'Library header icon actions are standard uncontained icon buttons');
 
 // B1052: the exercise detail header now has one owner, a flat full-width top app bar.
 const detailOwner=css.slice(css.indexOf('/* B1052 — Exercise detail'));

@@ -920,9 +920,13 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-library-header{position:sticky;top:0;z-index:10;padding:var(--pi-space-2) var(--pi-page-inset);border-bottom:1px solid var(--pi-color-divider);background:var(--pi-color-card)}
 .wpb-library-headline{display:flex;align-items:center;gap:var(--pi-space-2);min-width:0;flex-wrap:wrap}
 .wpb-library-title{flex:1 1 3em;min-width:min-content;margin:0;font-size:var(--pi-type-heading);line-height:1.2;letter-spacing:-.025em;color:var(--pi-color-on-control)}
-.wpb-library-back,.wpb-library-find,.wpb-library-compare{display:inline-flex;align-items:center;justify-content:center;flex:0 0 48px;width:48px;min-width:48px;min-height:48px;padding:0;border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-action);background:var(--pi-color-control);color:var(--pi-color-on-control);cursor:pointer}
-.wpb-library-compare{flex:0 0 auto;flex-direction:column;gap:2px;width:auto;padding:var(--pi-space-1)}
-.wpb-library-compare-label{font-size:var(--pi-type-caption);font-weight:650;line-height:1.2;white-space:nowrap}
+/* B1053: the Library header is an M3 small top app bar: flat canvas, standard (uncontained)
+   48dp icon buttons, and Compare as a labelled text action rather than a stacked caption. */
+.wpb-library-headline>.wpb-library-back,.wpb-library-headline>.wpb-library-find{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;min-width:48px;min-height:48px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--pi-color-on-control);cursor:pointer}
+.wpb-library-headline>.wpb-library-compare{display:inline-flex;align-items:center;justify-content:center;gap:8px;flex:0 0 auto;min-width:48px;min-height:48px;margin:0;padding:0 16px;border:0;border-radius:999px;background:transparent;color:var(--pi-m3e-primary,var(--wpb-theme-accent));cursor:pointer}
+.wpb-library-compare-label{font-size:.875rem;font-weight:600;line-height:1.43;letter-spacing:.006em;white-space:nowrap}
+.wpb-library-headline>.wpb-library-back:active,.wpb-library-headline>.wpb-library-find:active,.wpb-library-headline>.wpb-library-compare:active{background:color-mix(in srgb,currentColor 12%,transparent)}
+@media(max-width:374px){.wpb-library-headline>.wpb-library-compare{width:48px;color:var(--pi-color-on-control);padding:0;border-radius:50%}.wpb-library-compare-label{display:none}}
 .wpb-library-result-count{position:absolute;width:1px;height:1px;white-space:nowrap;overflow:hidden;clip-path:inset(50%)}
 .wpb-library-controls{display:grid;gap:var(--pi-space-2);min-width:0;margin-bottom:var(--pi-space-4)}
 .wpb-library-search-icon{position:absolute;left:var(--pi-space-3);top:50%;transform:translateY(-50%);color:var(--pi-color-on-muted);pointer-events:none}
@@ -2003,12 +2007,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* LIBRARY. Search is the primary tool, filters are one connected set, and
    exercise rows are low-emphasis contiguous list items until focus/selection.
    Existing spring press/shape and accessible per-row targets remain active. */
-#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-header,
-#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-flag-filter{
-  background-image:none!important;
-  background-color:var(--pi-r11-quiet)!important;
-  box-shadow:none!important;
-}
 
 #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results>.wpb-library-row:is(:active,:focus-visible){
   background-color:var(--pi-r11-selected)!important;

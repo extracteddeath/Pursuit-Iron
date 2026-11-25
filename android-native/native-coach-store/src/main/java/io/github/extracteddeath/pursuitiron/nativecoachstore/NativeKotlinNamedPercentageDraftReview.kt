@@ -317,16 +317,8 @@ class NativeKotlinNamedPercentageDraftReview(
             return deny(NativeNamedPercentageRefusal.REVIEW_CHANGED)
         if(reviews.map{Triple(it.source.blockId,it.source.weekday,it.source.slotId)}.distinct().size!=reviews.size)
             return deny(NativeNamedPercentageRefusal.INVALID_SELECTION)
-        val overrides=base.weekOverrides.toMutableMap()
-        for(review in reviews) {
-            val src=review.source
-            val edit=review.proposal.proposal.draft.weekOverrides[src.blockId].orEmpty()
-                .singleOrNull{it.weekInBlock==src.weekInBlock && it.weekday==src.weekday &&
-                    it.slotId==src.slotId}
-                ?:return deny(NativeNamedPercentageRefusal.RECIPE_REFUSED)
-            overrides[src.blockId]=overrides[src.blockId].orEmpty()+edit
-        }
-        val candidate=base.copy(revision=base.revision+1,weekOverrides=overrides.toMap())
+        val candidate=CustomPercentageDraftDomain.combineReviewedWeekEdits(base,reviews.map{it.proposal})
+            ?:return deny(NativeNamedPercentageRefusal.RECIPE_REFUSED)
         val receipts=reviews.map(::tierReceipt)
         val evidence=reviews.map{review->
             val src=review.source
@@ -466,16 +458,8 @@ class NativeKotlinNamedPercentageDraftReview(
             it.consentRevision!=initial.consentRevision || it.historyRevision!=initial.historyRevision ||
             it.machineRosterRevision!=initial.machineRosterRevision})
             return deny(NativeNamedPercentageRefusal.REVIEW_CHANGED)
-        val overrides=base.weekOverrides.toMutableMap()
-        for(review in reviews) {
-            val src=review.source
-            val edit=review.proposal.proposal.draft.weekOverrides[src.blockId].orEmpty()
-                .singleOrNull{it.weekInBlock==src.weekInBlock && it.weekday==src.weekday &&
-                    it.slotId==src.slotId}
-                ?:return deny(NativeNamedPercentageRefusal.RECIPE_REFUSED)
-            overrides[src.blockId]=overrides[src.blockId].orEmpty()+edit
-        }
-        val candidate=base.copy(revision=base.revision+1,weekOverrides=overrides.toMap())
+        val candidate=CustomPercentageDraftDomain.combineReviewedWeekEdits(base,reviews.map{it.proposal})
+            ?:return deny(NativeNamedPercentageRefusal.RECIPE_REFUSED)
         val receipts=reviews.map(::receipt)
         val evidence=reviews.map{review->
             val src=review.source

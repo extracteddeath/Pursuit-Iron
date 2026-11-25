@@ -426,6 +426,8 @@ class NativeKotlinTieredInitialReferenceReviewTest {
             NativeKotlinApprovalRevisionFence(root),identity,drafts,sources,store(),reader,inventory)
         assertEquals(NativeTieredTransitionConsentResult.MISSING,
             transitionStore().verify("owner-1","cycle-1",reviewed))
+        assertEquals(NativeTieredTransitionRecovery.Refused(NativeTieredTransitionConsentResult.MISSING),
+            transitionStore().recover("owner-1","cycle-1"))
         assertEquals(NativeTieredTransitionConsentResult.CONFIRMATION_REQUIRED,
             transitionStore().confirm("owner-1","cycle-1",reviewed,false))
         assertEquals(NativeTieredTransitionConsentResult.CONFIRMATION_REQUIRED,
@@ -434,6 +436,19 @@ class NativeKotlinTieredInitialReferenceReviewTest {
             transitionStore().confirm("owner-1","cycle-1",reviewed,true))
         assertEquals(NativeTieredTransitionConsentResult.VERIFIED,
             transitionStore().verify("owner-1","cycle-1",reviewed))
+        val cold=transitionStore().recover("owner-1","cycle-1")
+        assertEquals(NativeTieredTransitionRecovery.Ready(reviewed),cold)
+        assertFalse((cold as NativeTieredTransitionRecovery.Ready).mayIssueWorkout)
+        val receiptFile=java.nio.file.Files.list(root).use{files->
+            files.filter{it.fileName.toString().startsWith("tier-first-transition-") &&
+                it.fileName.toString().endsWith(".bin")}.findFirst().get()
+        }
+        val originalBytes=java.nio.file.Files.readAllBytes(receiptFile)
+        java.nio.file.Files.write(receiptFile,originalBytes.copyOf(originalBytes.size-1))
+        assertEquals(NativeTieredTransitionRecovery.Refused(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT),
+            transitionStore().recover("owner-1","cycle-1"))
+        java.nio.file.Files.write(receiptFile,originalBytes)
+        assertEquals(cold,transitionStore().recover("owner-1","cycle-1"))
         assertEquals(NativeTieredTransitionConsentResult.REPLAYED,
             transitionStore().confirm("owner-1","cycle-1",reviewed,true))
         assertEquals(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT,
@@ -454,6 +469,8 @@ class NativeKotlinTieredInitialReferenceReviewTest {
             is NativeCustomSignoffWrite.Committed)
         assertEquals(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED,
             transitionStore().verify("owner-1","cycle-1",reviewed))
+        assertEquals(NativeTieredTransitionRecovery.Refused(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED),
+            transitionStore().recover("owner-1","cycle-1"))
         assertTrue(reviewer.previewTieredNext("owner-1","cycle-1",inputs(),nextSelection)
             is NativeSavedNamedReview.Rejected)
         assertTrue(issue() is NativeCustomJournalResult.Durable)

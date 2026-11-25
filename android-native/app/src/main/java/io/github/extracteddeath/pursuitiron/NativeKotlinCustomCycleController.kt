@@ -949,7 +949,7 @@ internal class NativeKotlinCustomCycleController(
             is NativeTieredTransitionRecovery.Refused -> {
                 if(restored.reason!=NativeTieredTransitionConsentResult.MISSING ||
                     next !is NativeCustomNextCycleSlot.Next) {
-                    val stale=if(before.tieredReceipts.size==1)host.reviewStaleTieredTransition(draft.cycleId,week,day) else null
+                    val stale=host.reviewStaleTieredTransition(draft.cycleId,week,day)
                     current.value=before.copy(tieredTransitionReview=stale?.review,staleTieredTransition=stale,
                         tieredTransitionPreview=null,tieredTransitionPrepared=null,
                         message=if(stale!=null)"Corrected history changed the approval. Review the old and new targets."
@@ -1006,7 +1006,9 @@ internal class NativeKotlinCustomCycleController(
             shown.draft!=draft)return@run
         val stale=before.staleTieredTransition
         if(stale?.preparation!=null)return@run
-        val result=if(stale!=null)host.replaceStaleTieredTransition(draft.cycleId,stale,reset,recovery)
+        val result=if(stale!=null && shown.nextMultiTierCandidate!=null)
+                host.replaceStaleMultiTieredTransition(draft.cycleId,stale,resetSlots,recoverySlots)
+            else if(stale!=null)host.replaceStaleTieredTransition(draft.cycleId,stale,reset,recovery)
             else if(shown.nextMultiTierCandidate!=null)
                 host.confirmMultiTieredTransition(draft.cycleId,shown,resetSlots,recoverySlots)
             else host.confirmTieredTransition(draft.cycleId,shown,reset,recovery)

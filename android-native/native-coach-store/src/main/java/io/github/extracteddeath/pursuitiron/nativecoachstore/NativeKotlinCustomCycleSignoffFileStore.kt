@@ -311,6 +311,62 @@ class NativeKotlinCustomCycleSignoffFileStore(
         }
     }
 
+    /**
+     * Explicit final consent to a previously confirmed specialist draft.
+     * Uses the SAME owner lock, CAS record, and atomic persistence as ordinary
+     * consent. Reopens all authoritative sources, never accepts a UI-provided
+     * stock or audit verdict. The dedicated named preflight must separately
+     * revalidate this receipt before any session may issue.
+     */
+    fun confirmNamed(
+        ownerKey:String,cycleId:String,displayed:NativeSavedNamedReview.Ready,
+        athleteConfirmed:Boolean,
+        history:NativeKotlinMixedHistoryReadCoordinator,
+        outstanding:NativeKotlinCustomOutstandingWorkoutInventory,
+        machineRosters:NativeKotlinMachineRosterFileStore?=null
+    ):NativeCustomSignoffWrite {
+        fun deny(reason:NativeCustomSignoffRefusal)=NativeCustomSignoffWrite.Rejected(reason)
+        if(!athleteConfirmed)return deny(NativeCustomSignoffRefusal.CONFIRMATION_REQUIRED)
+        if(!id.matches(ownerKey)||!id.matches(cycleId))return deny(NativeCustomSignoffRefusal.NOT_AUTHORIZED)
+        return runCatching{fence.withOwnerTransaction(ownerKey){
+            val owner=current(ownerKey)
+                ?:return@withOwnerTransaction deny(NativeCustomSignoffRefusal.NOT_AUTHORIZED)
+            val file=path(ownerKey,cycleId)
+            val previous=try{decode(file)}catch(_:Exception){
+                return@withOwnerTransaction deny(NativeCustomSignoffRefusal.CORRUPT_RECORD)
+            }?:return@withOwnerTransaction deny(NativeCustomSignoffRefusal.STALE_CONSENT)
+            if(previous.ownerKey!=ownerKey || previous.athleteId!=owner.athleteId ||
+                previous.cycleId!=cycleId)
+                return@withOwnerTransaction deny(NativeCustomSignoffRefusal.NOT_AUTHORIZED)
+            if(previous.consent!=displayed.priorConsent ||
+                previous.revision !in 1 until maximumRevision)
+                return@withOwnerTransaction deny(NativeCustomSignoffRefusal.STALE_CONSENT)
+            val savedInputs=try{NativeCustomCoachAuditInputsCodec.decode(
+                NativeCustomCoachAuditInputsCodec.encode(displayed.inputs))}
+            catch(_:Exception){
+                return@withOwnerTransaction deny(NativeCustomSignoffRefusal.COACH_REVIEW_UNRESOLVED)
+            }
+            val fresh=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
+                this,history,outstanding,machineRosters).review(ownerKey,cycleId,savedInputs)
+                as? NativeSavedNamedReview.Ready
+                ?:return@withOwnerTransaction deny(NativeCustomSignoffRefusal.COACH_REVIEW_UNRESOLVED)
+            if(fresh!=displayed || fresh.priorConsent!=previous.consent)
+                return@withOwnerTransaction deny(NativeCustomSignoffRefusal.STALE_CONSENT)
+            val source=(sources.read(ownerKey) as? NativeAuthoringSourceRead.Found)?.source
+                ?:return@withOwnerTransaction deny(NativeCustomSignoffRefusal.SOURCE_MISSING)
+            if(source.revision!=fresh.stamp.gymCatalogSourceRevision ||
+                source.athleteId!=owner.athleteId || current(ownerKey)!=owner)
+                return@withOwnerTransaction deny(NativeCustomSignoffRefusal.STALE_SOURCE)
+            val approved=NativeKotlinCustomCycleSignoff(ownerKey,owner.athleteId,cycleId,
+                fresh.draft.revision,source.revision,previous.revision+1,
+                NativeCustomCycleSignoffFingerprint.calculateNamed(fresh.draft,source,savedInputs,fresh.receipts),
+                fresh.audit.coachingPolicyRevisions)
+            atomicWrite(file,encode(SignoffFileRecord(ownerKey,owner.athleteId,cycleId,
+                approved.recordRevision,approved,savedInputs)))
+            NativeCustomSignoffWrite.Committed(approved)
+        }}.getOrElse{deny(NativeCustomSignoffRefusal.STORAGE_UNAVAILABLE)}
+    }
+
     /** Cold recovery requires the original unrevoked consent, exact current
      * cycle/source, fresh full-cycle audit AND unchanged fingerprint. A valid
      * checksum alone cannot turn altered review inputs into approved rules. */

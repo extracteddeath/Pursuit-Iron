@@ -113,4 +113,26 @@ internal object NativeCustomCycleSignoffFingerprint {
         return MessageDigest.getInstance("SHA-256").digest(bytes.toByteArray())
             .joinToString("") { "%02x".format(it.toInt() and 255) }
     }
+
+    /** Domain-separated specialist consent: binds every durable reference
+     * receipt as well as the exact ordinary draft/source/policy fingerprint.
+     * An ordinary fingerprint can never masquerade as named consent. */
+    fun calculateNamed(
+        cycle:CustomTrainingCycle,source:NativeCustomAuthoringSnapshot,
+        inputs:CustomCoachAuditInputs,receipts:List<NativeNamedPercentageDraftReceipt>
+    ):String {
+        require(NativeNamedPercentageDraftReceiptCodec.validBatch(receipts,source.ownerKey,cycle))
+        val bytes=ByteArrayOutputStream()
+        DataOutputStream(bytes).use{out->
+            out.writeUTF("PursuitIron/named-cycle-consent/v1")
+            out.writeUTF(calculate(cycle,source,inputs))
+            out.writeInt(receipts.size)
+            receipts.sortedWith(compareBy<NativeNamedPercentageDraftReceipt>(
+                {it.selection.absoluteWeek},{it.selection.weekday},{it.selection.slotId}))
+                .forEach{NativeNamedPercentageDraftReceiptCodec.write(out,it)}
+        }
+        return MessageDigest.getInstance("SHA-256").digest(bytes.toByteArray())
+            .joinToString(""){"%02x".format(it.toInt() and 255)}
+    }
+
 }

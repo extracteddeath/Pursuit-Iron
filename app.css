@@ -9910,6 +9910,13 @@ background:var(--pi-color-card)!important;
   #root .wpb .wpb-progress .wpb-progress-glance-item:first-child{min-height:89px;padding:10px 7px;}
   #root .wpb .wpb-progress .wpb-progress-glance-item:first-child>.wpb-progress-glance-value{font-size:22px;}
 }
+@media(min-width:1120px) and (min-height:720px){
+  #root .wpb .wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]>[data-progress-glance]{grid-column:1/-1;margin-bottom:4px;}
+}
+@media(forced-colors:active){
+  #root .wpb .wpb-progress .wpb-progress-glance-item{background:Canvas;color:CanvasText;border:1px solid CanvasText;box-shadow:none;}
+  #root .wpb .wpb-progress .wpb-progress-glance-label{color:CanvasText;}
+}
 /* B1049 — Navigation bar: the one owner for the phone bar (the rail at 840px+ keeps its own layout
    rules). Replaces 62 layered rules across app.css and the StyleTag. */
 #root[data-pi-motion] .wpb .wpb-tabbar{

@@ -950,7 +950,7 @@ assert.ok(css.includes('.wpb-root-title-row{display:flex;flex-wrap:wrap;'),
 assert.ok(!css.includes('--pi-r35-control-outline') &&
   !css.includes('outline:2px solid var(--pi-r35-control-outline);'),
   'Nav selection must not regain a normal-theme gray outline');
-assert.ok(css.includes('.wpb-tabbar[data-pi-m3-track]::before{\n  background:var(--pi-color-active)!important;'),
+assert.ok(/\.wpb-tabbar\[data-pi-m3-track\]::before\{[^}]*background:var\(--pi-color-active\);/.test(css.slice(css.indexOf('/* B1049 — Navigation bar'))),
   'Active nav indicator retains the saved theme tonal fill');
 assert.ok(css.includes('outline:2px solid Highlight!important;') &&
   css.includes('.wpb .wpb-tabbar .wpb-tab:focus-visible{'),

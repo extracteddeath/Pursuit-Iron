@@ -767,7 +767,23 @@ class NativeKotlinMixedHistoryReadCoordinator(
     fun readTieredLedger(
         owner: String, athlete: String, scope: BasicProgressionScope,
         slotId: String, tier: PercentageTier, nextAbsoluteWeek: Int
-    ): NativeOwnerTieredLedgerResult {
+    ): NativeOwnerTieredLedgerResult =
+        readTieredLedgerInternal(owner,athlete,scope,slotId,tier,nextAbsoluteWeek,false)
+
+    /** Historical evidence only. Later completed workouts must not prevent
+     * revalidation of an older frozen receipt during staged recovery.
+     * Live coaching always uses readTieredLedger and refuses trained targets.
+     */
+    internal fun readTieredHistoryPrefixForRecovery(
+        owner:String,athlete:String,scope:BasicProgressionScope,
+        slotId:String,tier:PercentageTier,nextAbsoluteWeek:Int
+    ):NativeOwnerTieredLedgerResult =
+        readTieredLedgerInternal(owner,athlete,scope,slotId,tier,nextAbsoluteWeek,true)
+
+    private fun readTieredLedgerInternal(
+        owner:String,athlete:String,scope:BasicProgressionScope,
+        slotId:String,tier:PercentageTier,nextAbsoluteWeek:Int,historicalPrefix:Boolean
+    ):NativeOwnerTieredLedgerResult {
         fun deny(reason: NativeOwnerTieredLedgerRefusal) =
             NativeOwnerTieredLedgerResult.Rejected(reason)
         if (!id.matches(owner) || !id.matches(athlete) ||
@@ -786,7 +802,7 @@ class NativeKotlinMixedHistoryReadCoordinator(
                         NativeOwnerTieredLedgerResult.HistoryRejected(history.reason)
                     is NativeKotlinMixedHistoryReadResult.Review ->
                         NativeTieredHistoryLedgerDomain.project(history.timeline,
-                            sessions, scope, slotId, tier, nextAbsoluteWeek)
+                            sessions, scope, slotId, tier, nextAbsoluteWeek,historicalPrefix)
                 }
             }
         }.getOrElse { deny(NativeOwnerTieredLedgerRefusal.STORAGE_UNAVAILABLE) }

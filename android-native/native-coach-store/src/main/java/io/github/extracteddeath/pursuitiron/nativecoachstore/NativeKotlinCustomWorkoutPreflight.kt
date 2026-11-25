@@ -199,7 +199,15 @@ class NativeKotlinCustomWorkoutPreflight(
                 else if(tiered)reviewer.reviewSignedTieredInitial(ownerKey,cycleId,inputs)
                 else reviewer.reviewSigned(ownerKey,cycleId,inputs)) as? NativeSavedNamedReview.Signed
                 ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
-            if(tiered) {
+            val multiInitial=tiered && !supportingDay && signed.initialTierReceipts.size>1
+            if(multiInitial) {
+                val matching=signed.initialTierReceipts.filter{r->
+                    r.selection.absoluteWeek==absoluteWeek && r.selection.weekday==weekday
+                }
+                if(matching.isEmpty() || matching.any{it.selection.nextWorkoutId!=workoutId} ||
+                    signed.initialTierEvidences.size!=signed.initialTierReceipts.size)
+                    return@withOwnerTransaction deny(NativeCustomPreflightRefusal.INVALID_SELECTION)
+            } else if(tiered) {
                 val selection=signed.initialTierReceipt?.selection
                     ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
                 val receipt=checkNotNull(signed.initialTierReceipt)
@@ -228,7 +236,23 @@ class NativeKotlinCustomWorkoutPreflight(
                 else !session.completed || (session.cycleId==cycleId &&
                     session.absoluteWeek==absoluteWeek && session.weekday==weekday)
             })return@withOwnerTransaction deny(NativeCustomPreflightRefusal.SESSION_UNAVAILABLE)
-            if(supportingDay) {
+            if(multiInitial) {
+                val facts=census.sessions.filter{it.cycleId==cycleId}.map{item->
+                    val origin=outstanding.preparedOrigin(ownerKey,item.workoutId)
+                        ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.SESSION_UNAVAILABLE)
+                    NativeCustomNextCycleSlotDomain.multiInitialFact(signed.draft,signed.initialTierReceipts,
+                        item,origin,signed.consent)
+                        ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.SESSION_UNAVAILABLE)
+                }
+                val next=NativeCustomNextCycleSlotDomain.select(signed.draft,facts)
+                val allowed=when(next) {
+                    is NativeCustomNextCycleSlot.Next -> next.absoluteWeek==absoluteWeek && next.weekday==weekday
+                    is NativeCustomNextCycleSlot.Prepared -> next.workoutId==workoutId &&
+                        next.absoluteWeek==absoluteWeek && next.weekday==weekday
+                    else -> false
+                }
+                if(!allowed)return@withOwnerTransaction deny(NativeCustomPreflightRefusal.SESSION_UNAVAILABLE)
+            } else if(supportingDay) {
                 val initial=checkNotNull(signed.initialTierReceipt)
                 val facts=census.sessions.filter{it.cycleId==cycleId}.map{item->
                     val origin=outstanding.preparedOrigin(ownerKey,item.workoutId)
@@ -258,7 +282,7 @@ class NativeKotlinCustomWorkoutPreflight(
                 return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
             val preview=CustomWorkoutSnapshotDomain.reviewSpecialistForConsent(signed.draft,
                 source.setup,source.catalog,source.revision,inputs,signed.evidence,
-                listOfNotNull(signed.initialTierEvidence),absoluteWeek,weekday)
+                signed.initialTierEvidences,absoluteWeek,weekday)
                 as? CustomWorkoutSnapshotResult.Preview
                 ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.COACH_AUDIT_FAILED)
             if(preview.snapshot.stamp!=signed.stamp ||

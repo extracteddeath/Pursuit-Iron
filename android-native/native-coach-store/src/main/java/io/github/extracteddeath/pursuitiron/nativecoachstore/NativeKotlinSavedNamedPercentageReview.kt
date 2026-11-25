@@ -18,7 +18,7 @@ data class NativeTieredNextSelection(val nextWorkoutId:String,val absoluteWeek:I
  * exposure; an earlier reset is authenticated by its own frozen receipt.
  * A recovery exposure contributes no reset decision of its own.
  */
-private fun needsNewTierResetConsent(request:TieredLinearRequest,result:TieredLinearResult.Candidate):Boolean =
+internal fun needsNewTierResetConsent(request:TieredLinearRequest,result:TieredLinearResult.Candidate):Boolean =
     request.completed.lastOrNull()?.workoutId?.let{latest->
         result.transitions.any{it.workoutId==latest && it.decision==TieredLinearDecision.RESET_REVIEW}
     } ?:false

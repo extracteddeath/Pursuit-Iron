@@ -2483,7 +2483,8 @@ private fun NativeTieredInitialExecutionPanel(state:NativeKotlinCustomCycleState
         else -> null
     }
     PursuitCard(highlighted=true) {
-        Text("GZCLP · Initial tier review",style=MaterialTheme.typography.titleLarge)
+        Text(if(state.tieredCalendar!=null)"GZCLP · Next workout" else "GZCLP · Initial tier review",
+            style=MaterialTheme.typography.titleLarge)
         state.message?.let{Text(it,style=MaterialTheme.typography.bodyMedium)}
         receipt?.let {
             Text(kotlinExerciseLabel(it.exerciseId),style=MaterialTheme.typography.titleMedium)
@@ -2540,22 +2541,49 @@ private fun NativeTieredInitialExecutionPanel(state:NativeKotlinCustomCycleState
         // In particular a recovered Prepared slot here is not an issue grant.
         when(val calendar=state.tieredCalendar) {
             is NativeCustomNextCycleSlot.Next ->
-                Text("Next scheduled: Week ${calendar.absoluteWeek} · ${calendar.dayLabel}. Dedicated review required.",
+                Text("Next scheduled: Week ${calendar.absoluteWeek} · ${calendar.dayLabel}",
                     style=MaterialTheme.typography.bodyMedium)
             is NativeCustomNextCycleSlot.Prepared ->
-                Text("Saved preparation: Week ${calendar.absoluteWeek} · ${calendar.dayLabel}. Dedicated review required.",
+                Text("Saved preparation: Week ${calendar.absoluteWeek} · ${calendar.dayLabel}",
                     style=MaterialTheme.typography.bodyMedium)
-            is NativeCustomNextCycleSlot.ResumeIssued ->
-                Text("Unfinished workout: Week ${calendar.absoluteWeek} · ${calendar.dayLabel}. Open Train to resume.",
+            is NativeCustomNextCycleSlot.ResumeIssued -> {
+                Text("Unfinished workout: Week ${calendar.absoluteWeek} · ${calendar.dayLabel}",
                     style=MaterialTheme.typography.bodyMedium)
+                Button(onClick={onOpenIssuedWorkout(calendar.workoutId)},enabled=!state.busy,
+                    modifier=Modifier.fillMaxWidth()){Text("Resume workout")}
+            }
             NativeCustomNextCycleSlot.CycleComplete ->
                 Text("All scheduled days have verified completion.",style=MaterialTheme.typography.bodyMedium)
             else -> {}
         }
-        Text("Initial approval does not start a workout. Later tier transitions and supporting-day workouts require their own review.",
+        if(state.tieredSupportAvailable) {
+            OutlinedButton(onClick=controller::previewTieredSupportWorkout,enabled=!state.busy,
+                modifier=Modifier.fillMaxWidth()){Text("Verify supporting workout")}
+            state.tieredSupportPreview?.let{shown->
+                Text("Week ${shown.session.absoluteWeek} · ${shown.session.dayLabel}",
+                    style=MaterialTheme.typography.titleMedium)
+                shown.session.slots.forEach{slot->
+                    Text(kotlinExerciseLabel(slot.exerciseId),style=MaterialTheme.typography.labelLarge)
+                    slot.sets.forEach{set->
+                        Text("${kotlinIssuedLoadLabel(set.prescription.load)} · ${set.prescription.repTargetLabel()}",
+                            style=MaterialTheme.typography.bodySmall)
+                    }
+                }
+                if(state.tieredSupportPrepared!=null)
+                    Button(onClick=controller::issueTieredSupportWorkout,enabled=!state.busy,
+                        modifier=Modifier.fillMaxWidth()){Text("Issue this exact workout")}
+                else if(state.tieredCalendar is NativeCustomNextCycleSlot.Next)
+                    Button(onClick=controller::prepareTieredSupportWorkout,enabled=!state.busy,
+                        modifier=Modifier.fillMaxWidth()){Text("Prepare reviewed workout")}
+            }
+        } else if(state.tieredCalendar is NativeCustomNextCycleSlot.Next ||
+            state.tieredCalendar is NativeCustomNextCycleSlot.Prepared) {
+            Text("The next tier transition requires its own review.",style=MaterialTheme.typography.bodySmall)
+        }
+        Text("Initial approval does not start a workout. Supporting-day targets remain authored; tier transitions require separate review.",
             style=MaterialTheme.typography.bodySmall)
         OutlinedButton(onClick=controller::refreshTieredInitialCycle,enabled=!state.busy,
-            modifier=Modifier.fillMaxWidth()){Text("Refresh initial tier review")}
+            modifier=Modifier.fillMaxWidth()){Text("Refresh tier review")}
     }
 }
 

@@ -485,13 +485,15 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         fun coldPrepared()=NativeKotlinCustomWorkoutPreparedStore(root,NativeKotlinApprovalRevisionFence(root),identity,preflight)
         fun coldJournal()=NativeKotlinCustomWorkoutJournalFileStore(root,fence,identity,coldPrepared(),preflight,history,composer)
         fun calendar()=NativeKotlinCustomNextCycleSessionReview(fence,identity,drafts,sources,store(),reader,inventory,coldPrepared())
-        fun next()=calendar().reviewMultiTieredInitial("owner-1","cycle-1")
+        fun transitions()=NativeKotlinFirstTierTransitionConsentStore(root,
+            NativeKotlinApprovalRevisionFence(root),identity,drafts,sources,store(),reader,inventory)
+        fun next()=calendar().reviewMultiTieredInitial("owner-1","cycle-1",transitions())
         fun prep(s:NativeTieredInitialSelection)=coldPrepared().prepareTieredInitial("owner-1",s.nextWorkoutId,
             "cycle-1",s.absoluteWeek,s.weekday,inputs(),reader,inventory)
         fun issue(s:NativeTieredInitialSelection)=coldJournal().issueTieredInitial("owner-1",s.nextWorkoutId,
             "cycle-1",s.absoluteWeek,s.weekday,inputs(),reader)
         fun prepSupport(id:String="support",week:Int=1,day:Int=2)=coldPrepared().prepareTieredSupport(
-            "owner-1",id,"cycle-1",week,day,reader,inventory)
+            "owner-1",id,"cycle-1",week,day,reader,inventory,transitions())
         fun finish(p:NativeCustomPreparedWorkout,load:BigDecimal,reps:Int) {
             val id=p.workoutId
             val target=p.snapshot.slots.single().sets.single()
@@ -544,6 +546,40 @@ class NativeKotlinTieredInitialReferenceReviewTest {
             assertEquals(if(r.selection.weekday==0)TieredLinearState(0,n("30"))
                 else TieredLinearState(1,n("35")),result.state)
         }
+        fun transition(day:Int,id:String,load:BigDecimal,reps:Int) {
+            val selection=NativeMultiTierNextSelection(id,2,day)
+            val shown=transitions().previewMultiScheduled("owner-1","cycle-1",selection,calendar()) as NativeSavedNamedReview.Signed
+            assertEquals(NativeTieredTransitionConsentResult.RECORDED,
+                transitions().confirmMultiScheduled("owner-1","cycle-1",shown,calendar(),true,emptySet(),emptySet()))
+            val verified=transitions().inspectScheduled("owner-1","cycle-1",id,2,day,calendar(),preflight)
+                as NativeFirstTierTransitionPreflight.Reviewed
+            val prepared=(transitions().prepareScheduled("owner-1","cycle-1",verified,calendar(),preflight,coldPrepared())
+                as NativeCustomPrepareResult.Prepared).workout
+            assertEquals(load,(prepared.snapshot.slots.single().sets.single().prescription.load as DraftSetLoad.Verified).value)
+            assertTrue(transitions().issueScheduled("owner-1","cycle-1",prepared,calendar(),preflight,coldPrepared(),coldJournal())
+                is NativeCustomJournalResult.Durable)
+            finish(prepared,load,reps)
+        }
+        transition(0,"tier-week-two-first",n("30"),5)
+        assertEquals(NativeCustomNextCycleSlot.Next(2,2,"Day 2"),next())
+        val dayReceipt=java.nio.file.Files.list(root).use{files->
+            files.filter{it.fileName.toString().startsWith("tier-day-transition-")}.toList().single()
+        }
+        val frozen=java.nio.file.Files.readAllBytes(dayReceipt)
+        java.nio.file.Files.delete(dayReceipt)
+        assertTrue(prepSupport("support-two",2) is NativeCustomPrepareResult.Rejected)
+        java.nio.file.Files.write(dayReceipt,frozen)
+        val supportTwo=(prepSupport("support-two",2) as NativeCustomPrepareResult.Prepared).workout
+        assertEquals(NativeCustomPreparationAuthority.TIERED_SUPPORT,supportTwo.authority)
+        assertEquals(receipt.fingerprintSha256,supportTwo.consentFingerprint)
+        assertEquals(set(),supportTwo.snapshot.slots.single().sets.single().prescription)
+        assertEquals(NativeCustomNextCycleSlot.Prepared("support-two",2,2,"Day 2"),next())
+        assertTrue(coldJournal().issueTieredSupport("owner-1","support-two","cycle-1",2,2,reader,transitions())
+            is NativeCustomJournalResult.Durable)
+        finish(supportTwo,n("20"),12)
+        assertEquals(NativeCustomNextCycleSlot.Next(2,4,"Day 4"),next())
+        transition(4,"tier-week-two-last",n("35"),5)
+        assertArrayEquals(frozen,java.nio.file.Files.readAllBytes(dayReceipt))
     }
 
     @Test fun initialTierRequiresRealOwnerConsentLedgerAndExactPhysicalReference() {

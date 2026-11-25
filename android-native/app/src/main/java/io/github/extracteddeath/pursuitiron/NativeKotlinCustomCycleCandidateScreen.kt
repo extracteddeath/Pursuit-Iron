@@ -2381,7 +2381,7 @@ private fun NativeFixedNamedSelectionPanel(draft:CustomTrainingCycle,
                 keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
                 modifier=Modifier.fillMaxWidth())
             if(scheme==NamedPercentageScheme.GZCLP) {
-                Text("Start one tier progression thread. Supporting-day and later transition scheduling are not yet available.",
+                Text("Start one tier progression thread. Review the authored supporting days and later tier transitions in Plan.",
                     style=MaterialTheme.typography.bodySmall)
                 OutlinedTextField(from,{from=it},singleLine=true,label={Text("Initial block week")},
                     keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),modifier=Modifier.fillMaxWidth())
@@ -2576,14 +2576,83 @@ private fun NativeTieredInitialExecutionPanel(state:NativeKotlinCustomCycleState
                     Button(onClick=controller::prepareTieredSupportWorkout,enabled=!state.busy,
                         modifier=Modifier.fillMaxWidth()){Text("Prepare reviewed workout")}
             }
+        } else if(state.tieredTransitionAvailable) {
+            NativeTieredTransitionControls(state,controller)
         } else if(state.tieredCalendar is NativeCustomNextCycleSlot.Next ||
             state.tieredCalendar is NativeCustomNextCycleSlot.Prepared) {
-            Text("The next tier transition requires its own review.",style=MaterialTheme.typography.bodySmall)
+            Text("This scheduled day is outside the approved tier block.",style=MaterialTheme.typography.bodySmall)
         }
         Text("Initial approval does not start a workout. Supporting-day targets remain authored; tier transitions require separate review.",
             style=MaterialTheme.typography.bodySmall)
         OutlinedButton(onClick=controller::refreshTieredInitialCycle,enabled=!state.busy,
             modifier=Modifier.fillMaxWidth()){Text("Refresh tier review")}
+    }
+}
+
+/** Review the engine-derived tier targets before consent and all workout
+ * targets before preparation. A recovery or reset is an explicit choice. */
+@Composable
+private fun NativeTieredTransitionControls(state:NativeKotlinCustomCycleState,
+    controller:NativeKotlinCustomCycleController) {
+    var recovery by remember(state.draft?.cycleId,state.tieredCalendar){mutableStateOf(false)}
+    val review=state.tieredTransitionReview
+    val candidate=review?.nextTierCandidate
+    val shown=state.tieredTransitionPreview
+    var resetConfirmed by remember(candidate){mutableStateOf(false)}
+    var recoveryConfirmed by remember(candidate){mutableStateOf(false)}
+    if(shown==null) {
+        Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+            Checkbox(checked=recovery,onCheckedChange={recovery=it},enabled=!state.busy)
+            Text("Review a recovery workout instead")
+        }
+        OutlinedButton(onClick={controller.previewTieredTransition(recovery)},enabled=!state.busy,
+            modifier=Modifier.fillMaxWidth()){Text("Review next tier workout")}
+    }
+    candidate?.let{next->
+        Text("Week ${next.selection.absoluteWeek} · Tier stage ${next.result.state.stage+1}",
+            style=MaterialTheme.typography.titleMedium)
+        Text(if(next.selection.recovery)"Recovery exposure · no earned increase"
+            else pretty(next.result.transitions.lastOrNull()?.decision ?: TieredLinearDecision.INITIAL),
+            style=MaterialTheme.typography.bodyMedium)
+        next.result.targets.forEach{target->
+            Text("${target.load.toPlainString()} ${next.request.scope.unit} · ${target.minimumReps}${if(target.repOut)"+" else ""} reps",
+                style=MaterialTheme.typography.bodySmall)
+        }
+        if(shown==null) {
+            if(next.requiresExplicitResetReview) {
+                Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+                    Checkbox(checked=resetConfirmed,onCheckedChange={resetConfirmed=it},enabled=!state.busy)
+                    Text("Confirm the reviewed tier reset")
+                }
+            }
+            if(next.selection.recovery) {
+                Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+                    Checkbox(checked=recoveryConfirmed,onCheckedChange={recoveryConfirmed=it},enabled=!state.busy)
+                    Text("Confirm this recovery exposure")
+                }
+            }
+            Button(onClick={controller.approveTieredTransition(resetConfirmed,recoveryConfirmed)},
+                enabled=!state.busy && (!next.requiresExplicitResetReview || resetConfirmed) &&
+                    (!next.selection.recovery || recoveryConfirmed),modifier=Modifier.fillMaxWidth()){
+                Text("Approve exact tier targets")
+            }
+        }
+    }
+    shown?.let{verified->
+        Text("Approved workout · ${verified.session.dayLabel}",style=MaterialTheme.typography.titleMedium)
+        verified.session.slots.forEach{slot->
+            Text(kotlinExerciseLabel(slot.exerciseId),style=MaterialTheme.typography.labelLarge)
+            slot.sets.forEach{set->
+                Text("${kotlinIssuedLoadLabel(set.prescription.load)} · ${set.prescription.repTargetLabel()}",
+                    style=MaterialTheme.typography.bodySmall)
+            }
+        }
+        if(state.tieredTransitionPrepared!=null)
+            Button(onClick=controller::issueTieredTransitionWorkout,enabled=!state.busy,
+                modifier=Modifier.fillMaxWidth()){Text("Issue this exact workout")}
+        else if(state.tieredCalendar is NativeCustomNextCycleSlot.Next)
+            Button(onClick=controller::prepareTieredTransitionWorkout,enabled=!state.busy,
+                modifier=Modifier.fillMaxWidth()){Text("Prepare reviewed workout")}
     }
 }
 

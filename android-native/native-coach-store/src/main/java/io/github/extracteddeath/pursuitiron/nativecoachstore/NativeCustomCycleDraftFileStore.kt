@@ -27,7 +27,10 @@ enum class NativeCustomDraftRefusal {
 sealed interface NativeCustomDraftReadResult {
     data class Found(val draft: CustomTrainingCycle,
         val namedReceipts:List<NativeNamedPercentageDraftReceipt> = emptyList(),
-        val tieredInitialReceipt:NativeTieredInitialDraftReceipt?=null) : NativeCustomDraftReadResult {
+        val tieredInitialReceipts:List<NativeTieredInitialDraftReceipt> = emptyList()) : NativeCustomDraftReadResult {
+        constructor(draft:CustomTrainingCycle,namedReceipts:List<NativeNamedPercentageDraftReceipt>,
+            tieredInitialReceipt:NativeTieredInitialDraftReceipt?):this(draft,namedReceipts,listOfNotNull(tieredInitialReceipt))
+        val tieredInitialReceipt:NativeTieredInitialDraftReceipt? get()=tieredInitialReceipts.singleOrNull()
         val namedReceipt:NativeNamedPercentageDraftReceipt? get()=namedReceipts.singleOrNull()
     }
     data object Missing : NativeCustomDraftReadResult
@@ -62,7 +65,7 @@ private data class CustomDraftRecord(
     val revision: Long,
     val draft: CustomTrainingCycle?,
     val namedReceipts:List<NativeNamedPercentageDraftReceipt> = emptyList(),
-    val tieredInitialReceipt:NativeTieredInitialDraftReceipt?=null
+    val tieredInitialReceipts:List<NativeTieredInitialDraftReceipt> = emptyList()
 )
 
 /**
@@ -108,9 +111,12 @@ class NativeCustomCycleDraftFileStore(
         val payload = ByteArrayOutputStream()
         DataOutputStream(payload).use { output ->
             output.writeInt(magic)
-            require(record.tieredInitialReceipt==null || record.namedReceipts.isEmpty())
-            output.writeInt(if(record.tieredInitialReceipt!=null)4 else
-                when(record.namedReceipts.size){0->version;1->2;else->3})
+            require(record.tieredInitialReceipts.isEmpty() || record.namedReceipts.isEmpty())
+            output.writeInt(when(record.tieredInitialReceipts.size) {
+                0->when(record.namedReceipts.size){0->version;1->2;else->3}
+                1->4
+                else->5
+            })
             output.writeUTF(record.ownerKey)
             output.writeUTF(record.athleteId)
             output.writeUTF(record.cycleId)
@@ -127,13 +133,15 @@ class NativeCustomCycleDraftFileStore(
                 if(record.namedReceipts.size>1)output.writeInt(record.namedReceipts.size)
                 record.namedReceipts.forEach{NativeNamedPercentageDraftReceiptCodec.write(output,it)}
             }
-            record.tieredInitialReceipt?.let{receipt->
-                require(NativeTieredInitialDraftReceiptCodec.valid(receipt,record.ownerKey,checkNotNull(record.draft)))
-                NativeTieredInitialDraftReceiptCodec.write(output,receipt)
+            if(record.tieredInitialReceipts.isNotEmpty()) {
+                require(NativeTieredInitialDraftReceiptCodec.validBatch(record.tieredInitialReceipts,
+                    record.ownerKey,checkNotNull(record.draft)))
+                if(record.tieredInitialReceipts.size>1)output.writeInt(record.tieredInitialReceipts.size)
+                record.tieredInitialReceipts.forEach{NativeTieredInitialDraftReceiptCodec.write(output,it)}
             }
         }
         val bytes = payload.toByteArray()
-        require(bytes.size + 36 <= if(record.namedReceipts.size>1)maxFileBytes else oldMaxFileBytes)
+        require(bytes.size + 36 <= if(record.namedReceipts.size>1 || record.tieredInitialReceipts.size>1)maxFileBytes else oldMaxFileBytes)
         val sha = MessageDigest.getInstance("SHA-256").digest(bytes)
         return ByteArrayOutputStream().also { buffer ->
             DataOutputStream(buffer).use { out ->
@@ -167,7 +175,7 @@ class NativeCustomCycleDraftFileStore(
             DataInputStream(ByteArrayInputStream(payload)).use { input ->
                 if(input.readInt()!=magic)throw IOException("Unknown custom draft file format")
                 val storedVersion=input.readInt()
-                if(storedVersion !in 1..4 || (storedVersion!=3 && bytes.size>oldMaxFileBytes))
+                if(storedVersion !in 1..5 || (storedVersion !in listOf(3,5) && bytes.size>oldMaxFileBytes))
                     throw IOException("Unknown or oversized custom draft file version")
                 val owner = input.readUTF()
                 val athlete = input.readUTF()
@@ -187,7 +195,7 @@ class NativeCustomCycleDraftFileStore(
                     NativeCustomCycleDraftCodec.decode(data)
                 } else null
                 val receipts=when(storedVersion) {
-                    1,4->emptyList()
+                    1,4,5->emptyList()
                     2->listOf(NativeNamedPercentageDraftReceiptCodec.read(input))
                     else->{
                         val count=input.readInt()
@@ -197,8 +205,18 @@ class NativeCustomCycleDraftFileStore(
                             NativeNamedPercentageDraftReceiptCodec.read(input)})
                     }
                 }
-                val tiered=if(storedVersion==4)NativeTieredInitialDraftReceiptCodec.read(input) else null
-                if(tiered!=null && (draft==null || !NativeTieredInitialDraftReceiptCodec.valid(tiered,owner,draft)))
+                val tiered=when(storedVersion) {
+                    4->listOf(NativeTieredInitialDraftReceiptCodec.read(input))
+                    5->{
+                        val count=input.readInt()
+                        if(count !in 2..NativeTieredInitialDraftReceiptCodec.MAX_RECEIPTS)
+                            throw IOException("Invalid tier reference confirmation count")
+                        java.util.Collections.unmodifiableList(List(count){
+                            NativeTieredInitialDraftReceiptCodec.read(input)})
+                    }
+                    else->emptyList()
+                }
+                if(tiered.isNotEmpty() && (draft==null || !NativeTieredInitialDraftReceiptCodec.validBatch(tiered,owner,draft)))
                     throw IOException("Invalid initial tier confirmation evidence")
                 if(receipts.isNotEmpty() && (draft==null ||
                     !NativeNamedPercentageDraftReceiptCodec.validBatch(receipts,owner,draft)))
@@ -263,7 +281,7 @@ class NativeCustomCycleDraftFileStore(
                         NativeCustomDraftRefusal.NOT_AUTHORIZED)
                 else if (record.draft == null)
                     NativeCustomDraftReadResult.Deleted(record.revision)
-                else NativeCustomDraftReadResult.Found(record.draft,record.namedReceipts,record.tieredInitialReceipt)
+                else NativeCustomDraftReadResult.Found(record.draft,record.namedReceipts,record.tieredInitialReceipts)
             }
         } catch (_: Exception) {
             NativeCustomDraftReadResult.Rejected(
@@ -361,7 +379,12 @@ class NativeCustomCycleDraftFileStore(
 
     internal fun saveReviewedTieredInitial(ownerKey:String,cycleId:String,expectedRevision:Long,
         draft:CustomTrainingCycle,receipt:NativeTieredInitialDraftReceipt):NativeCustomDraftWriteResult =
-        commit(ownerKey,cycleId,expectedRevision,draft,deleting=false,tieredInitialReceipt=receipt)
+        saveReviewedTieredInitialBatch(ownerKey,cycleId,expectedRevision,draft,listOf(receipt))
+
+    internal fun saveReviewedTieredInitialBatch(ownerKey:String,cycleId:String,expectedRevision:Long,
+        draft:CustomTrainingCycle,receipts:List<NativeTieredInitialDraftReceipt>):NativeCustomDraftWriteResult =
+        commit(ownerKey,cycleId,expectedRevision,draft,deleting=false,
+            tieredInitialReceipts=java.util.Collections.unmodifiableList(receipts.toList()))
 
     /** Versioned tombstone prevents queued offline autosaves restoring a delete. */
     fun delete(
@@ -373,7 +396,7 @@ class NativeCustomCycleDraftFileStore(
         ownerKey: String, cycleId: String, expectedRevision: Long,
         draft: CustomTrainingCycle?, deleting: Boolean,
         namedReceipts:List<NativeNamedPercentageDraftReceipt> = emptyList(),
-        tieredInitialReceipt:NativeTieredInitialDraftReceipt?=null
+        tieredInitialReceipts:List<NativeTieredInitialDraftReceipt> = emptyList()
     ): NativeCustomDraftWriteResult {
         if (!id.matches(cycleId) || expectedRevision !in 0..9_007_199_254_740_990L ||
             (!deleting && (draft == null || draft.cycleId != cycleId ||
@@ -407,7 +430,7 @@ class NativeCustomCycleDraftFileStore(
                     return@withOwnerTransaction NativeCustomDraftWriteResult.Rejected(
                         NativeCustomDraftRefusal.STALE_REVISION)
                 val next = CustomDraftRecord(ownerKey, owner.athleteId,
-                    cycleId, expectedRevision + 1, draft,namedReceipts,tieredInitialReceipt)
+                    cycleId, expectedRevision + 1, draft,namedReceipts,tieredInitialReceipts)
                 val bytes = try { encode(next) } catch (_: Exception) {
                     return@withOwnerTransaction NativeCustomDraftWriteResult.Rejected(
                         NativeCustomDraftRefusal.INVALID_DRAFT)

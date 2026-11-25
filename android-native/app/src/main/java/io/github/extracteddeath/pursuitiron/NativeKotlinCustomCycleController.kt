@@ -733,8 +733,11 @@ internal class NativeKotlinCustomCycleController(
         }
         val multiSupport=!singleThread && multiPosition!=null &&
             host.isMultiTieredSupportDay(cycleId,multiPosition.first,multiPosition.second)
-        val initialNext=reviewedNext.takeUnless{multiSupport}
-        val calendar=if(multiSupport)reviewedNext
+        val multiInitial=multiPosition!=null && before.tieredReceipts.any{
+            it.selection.absoluteWeek==multiPosition.first && it.selection.weekday==multiPosition.second
+        }
+        val initialNext=reviewedNext.takeIf{singleThread || multiInitial}
+        val calendar=if(!singleThread && !multiInitial)reviewedNext
             else if(singleThread && ready==null && (initialNext==null || initialNext is NativeCustomNextCycleSlot.Rejected))
                 host.reviewTieredCalendar(cycleId) else null
         val position=when(calendar) {
@@ -748,11 +751,11 @@ internal class NativeKotlinCustomCycleController(
                 position.first in r.selection.absoluteWeek..(r.selection.absoluteWeek+block.weeks-r.weekInBlock) &&
                 (position.first!=r.selection.absoluteWeek || position.second>r.selection.weekday)
         }==true
-        val transition=before.tieredReceipt?.let{r->
+        val transition=before.tieredReceipts.any{r->
             val block=draft.blocks.singleOrNull{it.blockId==r.blockId}
             position!=null && block!=null && position.second==r.selection.weekday &&
                 position.first in (r.selection.absoluteWeek+1)..(r.selection.absoluteWeek+block.weeks-r.weekInBlock)
-        }==true
+        }
         current.value=before.copy(tieredInitialReview=ready ?:signed,
             tieredCalendar=calendar,tieredSupportAvailable=supporting,
             tieredTransitionAvailable=transition,tieredTransitionReview=null,staleTieredTransition=null,
@@ -926,7 +929,7 @@ internal class NativeKotlinCustomCycleController(
 
     /** Restore an existing receipt before making a fresh candidate.
      * A changed history must never silently replace an approved transition. */
-    fun previewTieredTransition(recovery:Boolean)=run {
+    fun previewTieredTransition(recovery:Boolean,recoverySlots:Set<String> = emptySet())=run {
         val before=current.value
         val draft=before.draft ?:return@run
         if(!before.tieredDraft || !before.tieredTransitionAvailable)return@run
@@ -946,17 +949,22 @@ internal class NativeKotlinCustomCycleController(
             is NativeTieredTransitionRecovery.Refused -> {
                 if(restored.reason!=NativeTieredTransitionConsentResult.MISSING ||
                     next !is NativeCustomNextCycleSlot.Next) {
-                    val stale=host.reviewStaleTieredTransition(draft.cycleId,week,day)
+                    val stale=if(before.tieredReceipts.size==1)host.reviewStaleTieredTransition(draft.cycleId,week,day) else null
                     current.value=before.copy(tieredTransitionReview=stale?.review,staleTieredTransition=stale,
                         tieredTransitionPreview=null,tieredTransitionPrepared=null,
                         message=if(stale!=null)"Corrected history changed the approval. Review the old and new targets."
                             else "Saved tier approval cannot be verified. Review history before continuing.")
                     return@run
                 }
-                val selection=NativeTieredNextSelection("tier-"+UUID.randomUUID().toString(),week,recovery)
-                val shown=(host.previewTieredTransition(draft.cycleId,day,selection)
-                    as? NativeSavedNamedReview.Signed)?.takeIf{
-                    it.draft==draft && it.nextTierCandidate?.selection==selection
+                val id="tier-"+UUID.randomUUID().toString()
+                val shown=if(before.tieredReceipts.size>1) {
+                    val selection=NativeMultiTierNextSelection(id,week,day,recoverySlots)
+                    (host.previewMultiTieredTransition(draft.cycleId,selection) as? NativeSavedNamedReview.Signed)
+                        ?.takeIf{it.draft==draft && it.nextMultiTierCandidate?.selection==selection}
+                } else {
+                    val selection=NativeTieredNextSelection(id,week,recovery)
+                    (host.previewTieredTransition(draft.cycleId,day,selection) as? NativeSavedNamedReview.Signed)
+                        ?.takeIf{it.draft==draft && it.nextTierCandidate?.selection==selection}
                 }
                 current.value=before.copy(tieredTransitionReview=shown,staleTieredTransition=null,tieredTransitionPreview=null,
                     tieredTransitionPrepared=null,
@@ -968,11 +976,13 @@ internal class NativeKotlinCustomCycleController(
 
     private fun showApprovedTieredTransition(before:NativeKotlinCustomCycleState,review:NativeSavedNamedReview.Signed) {
         val draft=before.draft ?:return
-        val candidate=review.nextTierCandidate ?:return
-        val day=review.initialTierReceipt?.selection?.weekday ?:return
+        val multi=review.nextMultiTierCandidate?.selection
+        val single=review.nextTierCandidate?.selection
+        val day=multi?.weekday ?:review.initialTierReceipt?.selection?.weekday ?:return
+        val week=multi?.absoluteWeek ?:single?.absoluteWeek ?:return
         if(review.draft!=draft)return
-        val id=candidate.selection.nextWorkoutId
-        val shown=(host.previewTieredTransitionWorkout(draft.cycleId,id,candidate.selection.absoluteWeek,day)
+        val id=multi?.nextWorkoutId ?:single?.nextWorkoutId ?:return
+        val shown=(host.previewTieredTransitionWorkout(draft.cycleId,id,week,day)
             as? NativeFirstTierTransitionPreflight.Reviewed)?.takeIf{it.review==review}
         val next=host.reviewTieredCalendar(draft.cycleId)
         val saved=if(shown!=null && next is NativeCustomNextCycleSlot.Prepared && next.workoutId==id)
@@ -987,7 +997,8 @@ internal class NativeKotlinCustomCycleController(
                 else "Approved tier workout cannot be verified.")
     }
 
-    fun approveTieredTransition(reset:Boolean,recovery:Boolean)=run {
+    fun approveTieredTransition(reset:Boolean,recovery:Boolean,resetSlots:Set<String> = emptySet(),
+        recoverySlots:Set<String> = emptySet())=run {
         val before=current.value
         val draft=before.draft ?:return@run
         val shown=before.tieredTransitionReview ?:return@run
@@ -996,6 +1007,8 @@ internal class NativeKotlinCustomCycleController(
         val stale=before.staleTieredTransition
         if(stale?.preparation!=null)return@run
         val result=if(stale!=null)host.replaceStaleTieredTransition(draft.cycleId,stale,reset,recovery)
+            else if(shown.nextMultiTierCandidate!=null)
+                host.confirmMultiTieredTransition(draft.cycleId,shown,resetSlots,recoverySlots)
             else host.confirmTieredTransition(draft.cycleId,shown,reset,recovery)
         if(result in setOf(NativeTieredTransitionConsentResult.RECORDED,
                 NativeTieredTransitionConsentResult.REPLAYED,NativeTieredTransitionConsentResult.REPLACED))
@@ -1022,7 +1035,8 @@ internal class NativeKotlinCustomCycleController(
         val before=current.value
         val draft=before.draft ?:return@run
         val shown=before.tieredTransitionPreview ?:return@run
-        val id=shown.review.nextTierCandidate?.selection?.nextWorkoutId ?:return@run
+        val id=shown.review.nextMultiTierCandidate?.selection?.nextWorkoutId
+            ?:shown.review.nextTierCandidate?.selection?.nextWorkoutId ?:return@run
         if(!before.tieredTransitionAvailable || before.tieredCalendar !is NativeCustomNextCycleSlot.Next)return@run
         val result=host.prepareTieredTransitionWorkout(draft.cycleId,shown)
         val saved=(result as? NativeCustomPrepareResult.Prepared)?.workout?.takeIf{

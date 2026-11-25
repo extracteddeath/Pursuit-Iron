@@ -926,7 +926,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val saved=customDraftStore.read(owner.ownerKey,cycleId) as? NativeCustomDraftReadResult.Found
             ?:return NativeCustomNextCycleSlot.Rejected("Current tier references are unavailable.")
         return if(saved.tieredInitialReceipts.size>1)
-            nextCustomCycleSession.reviewMultiTieredInitial(owner.ownerKey,cycleId)
+            nextCustomCycleSession.reviewMultiTieredInitial(owner.ownerKey,cycleId,tieredTransitions)
         else nextCustomCycleSession.reviewTieredCalendar(owner.ownerKey,cycleId)
     }
 
@@ -945,7 +945,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val saved=customDraftStore.read(ownerKey,cycleId) as? NativeCustomDraftReadResult.Found
             ?:return NativeCustomNextCycleSlot.Rejected("Current tier references are unavailable.")
         return if(saved.tieredInitialReceipts.size>1)
-            nextCustomCycleSession.reviewMultiTieredInitial(ownerKey,cycleId)
+            nextCustomCycleSession.reviewMultiTieredInitial(ownerKey,cycleId,tieredTransitions)
         else nextCustomCycleSession.reviewTieredInitial(ownerKey,cycleId,inputs)
     }
 
@@ -1061,6 +1061,20 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeSavedNamedReview.Rejected(NativeSavedNamedReviewRefusal.NOT_AUTHORIZED)
         return tieredTransitions.previewScheduled(owner.ownerKey,cycleId,weekday,selection,nextCustomCycleSession)
+    }
+
+    fun previewMultiTieredTransition(cycleId:String,selection:NativeMultiTierNextSelection):NativeSavedNamedReview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeSavedNamedReview.Rejected(NativeSavedNamedReviewRefusal.NOT_AUTHORIZED)
+        return tieredTransitions.previewMultiScheduled(owner.ownerKey,cycleId,selection,nextCustomCycleSession)
+    }
+
+    fun confirmMultiTieredTransition(cycleId:String,shown:NativeSavedNamedReview.Signed,
+        resets:Set<String>,recoveries:Set<String>):NativeTieredTransitionConsentResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeTieredTransitionConsentResult.NOT_AUTHORIZED
+        return tieredTransitions.confirmMultiScheduled(owner.ownerKey,cycleId,shown,nextCustomCycleSession,
+            true,resets,recoveries)
     }
 
     fun reviewStaleTieredTransition(cycleId:String,week:Int,weekday:Int):NativeStaleTierTransitionReview? {

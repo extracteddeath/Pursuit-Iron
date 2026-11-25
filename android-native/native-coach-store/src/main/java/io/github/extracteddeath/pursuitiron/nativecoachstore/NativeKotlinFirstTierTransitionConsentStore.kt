@@ -242,6 +242,45 @@ class NativeKotlinFirstTierTransitionConsentStore(
         }.sortedWith(compareBy<NativeFrozenTierDay>{it.selection.absoluteWeek}.thenBy{it.selection.weekday})
     }
 
+    /** Calendar facts only: the inventory authenticates the immutable
+     * preparation/journal origin; this binds it to its exact day receipt.
+     * Numeric review and issuance still rederive the complete ledger. */
+    internal fun multiTransitionCalendarFact(
+        signed:NativeSavedNamedReview.Signed,item:NativeCustomInventoryFact,
+        origin:NativeCustomPreparedWorkout
+    ):NativeCustomCycleSessionFact? = runCatching {
+        val consent=signed.consent
+        require(identity.signedInIdentity()==NativeKotlinOwnerIdentity(consent.ownerKey,consent.athleteId))
+        require(signed.initialTierReceipts.size>1 && item.cycleId==consent.cycleId &&
+            origin.authority==NativeCustomPreparationAuthority.TIERED_TRANSITION &&
+            origin.ownerKey==consent.ownerKey && origin.athleteId==consent.athleteId &&
+            origin.workoutId==item.workoutId && origin.consentRevision==consent.recordRevision)
+        val frozen=decodeMulti(readMulti(multiPath(consent.ownerKey,consent.cycleId,
+            item.absoluteWeek,item.weekday)))
+        val selection=frozen.selection
+        require(frozen.owner==consent.ownerKey && frozen.athlete==consent.athleteId &&
+            frozen.cycle==consent.cycleId && frozen.consentRevision==consent.recordRevision &&
+            frozen.cycleRevision==consent.cycleRevision && frozen.sourceRevision==consent.sourceRevision &&
+            frozen.consentFingerprint==consent.fingerprintSha256 && frozen.inputs==signed.inputs &&
+            frozen.fingerprint==origin.consentFingerprint &&
+            selection.nextWorkoutId==item.workoutId && selection.absoluteWeek==item.absoluteWeek &&
+            selection.weekday==item.weekday && frozen.historyRevision<=signed.historyRevision &&
+            (!item.completed || frozen.historyRevision<signed.historyRevision))
+        val snapshot=origin.snapshot
+        val projected=NativeCustomCycleDraftCodec.decode(frozen.proposed)
+        val due=signed.initialTierReceipts.filter{it.blockId==snapshot.blockId &&
+            it.selection.weekday==item.weekday && it.selection.absoluteWeek<item.absoluteWeek}
+            .map{it.selection.slotId}.toSet()
+        require(projected.cycleId==consent.cycleId && projected.athleteId==consent.athleteId &&
+            projected.revision>signed.draft.revision &&
+            snapshot.stamp==signed.stamp.copy(cycleRevision=projected.revision) &&
+            snapshot.absoluteWeek==item.absoluteWeek && snapshot.weekday==item.weekday &&
+            due.isNotEmpty() && frozen.slots.keys==due &&
+            due.all{id->snapshot.slots.any{it.slotId==id}})
+        NativeCustomCycleSessionFact(item.workoutId,item.absoluteWeek,item.weekday,
+            signed.draft.revision,item.issued,item.completed)
+    }.getOrNull()
+
     /** Same saved rules and authenticated prior receipts used by approval
      * and cold recovery. A review never modifies the cycle or the journal. */
     fun previewMultiUsingSavedRules(ownerKey:String,cycleId:String,
@@ -392,10 +431,16 @@ class NativeKotlinFirstTierTransitionConsentStore(
      * independent of the full calendar for historical evidence. */
     private fun scheduled(ownerKey:String,cycleId:String,week:Int,weekday:Int,workoutId:String?,
         calendar:NativeKotlinCustomNextCycleSessionReview,requirePrepared:Boolean=false):Boolean {
-        val receipt=(drafts.read(ownerKey,cycleId) as? NativeCustomDraftReadResult.Found)
-            ?.tieredInitialReceipt ?:return false
-        if(weekday!=receipt.selection.weekday || week<=receipt.selection.absoluteWeek)return false
-        return when(val next=calendar.reviewTieredCalendar(ownerKey,cycleId)) {
+        val stored=drafts.read(ownerKey,cycleId) as? NativeCustomDraftReadResult.Found ?:return false
+        val roots=stored.tieredInitialReceipts
+        if(roots.none{r->
+            val block=stored.draft.blocks.singleOrNull{it.blockId==r.blockId}
+            block!=null && weekday==r.selection.weekday &&
+                week in (r.selection.absoluteWeek+1)..(r.selection.absoluteWeek+block.weeks-r.weekInBlock)
+        })return false
+        val next=if(roots.size>1)calendar.reviewMultiTieredInitial(ownerKey,cycleId,this)
+            else calendar.reviewTieredCalendar(ownerKey,cycleId)
+        return when(next) {
             is NativeCustomNextCycleSlot.Next -> !requirePrepared &&
                 next.absoluteWeek==week && next.weekday==weekday
             is NativeCustomNextCycleSlot.Prepared -> next.absoluteWeek==week && next.weekday==weekday &&
@@ -414,14 +459,37 @@ class NativeKotlinFirstTierTransitionConsentStore(
             previewUsingSavedRules(ownerKey,cycleId,selection)
         }}.getOrElse{NativeSavedNamedReview.Rejected(NativeSavedNamedReviewRefusal.STORAGE_UNAVAILABLE)}
 
+    fun previewMultiScheduled(ownerKey:String,cycleId:String,selection:NativeMultiTierNextSelection,
+        calendar:NativeKotlinCustomNextCycleSessionReview):NativeSavedNamedReview =
+        runCatching{fence.withOwnerTransaction(ownerKey){
+            if(!scheduled(ownerKey,cycleId,selection.absoluteWeek,selection.weekday,selection.nextWorkoutId,calendar) ||
+                (recoverMulti(ownerKey,cycleId,selection.absoluteWeek,selection.weekday) as? NativeTieredTransitionRecovery.Refused)
+                    ?.reason!=NativeTieredTransitionConsentResult.MISSING)
+                return@withOwnerTransaction NativeSavedNamedReview.Rejected(NativeSavedNamedReviewRefusal.PROTECTED_WEEK)
+            previewMultiUsingSavedRules(ownerKey,cycleId,selection)
+        }}.getOrElse{NativeSavedNamedReview.Rejected(NativeSavedNamedReviewRefusal.STORAGE_UNAVAILABLE)}
+
+    fun confirmMultiScheduled(ownerKey:String,cycleId:String,displayed:NativeSavedNamedReview.Signed,
+        calendar:NativeKotlinCustomNextCycleSessionReview,confirmed:Boolean,
+        resetSlots:Set<String>,recoverySlots:Set<String>):NativeTieredTransitionConsentResult =
+        runCatching{fence.withOwnerTransaction(ownerKey){
+            val s=displayed.nextMultiTierCandidate?.selection
+                ?:return@withOwnerTransaction NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED
+            if(!scheduled(ownerKey,cycleId,s.absoluteWeek,s.weekday,s.nextWorkoutId,calendar))
+                return@withOwnerTransaction NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED
+            confirmMulti(ownerKey,cycleId,displayed,confirmed,resetSlots,recoverySlots)
+        }}.getOrElse{NativeTieredTransitionConsentResult.STORAGE_UNAVAILABLE}
+
     fun recoverScheduled(ownerKey:String,cycleId:String,week:Int,weekday:Int,
         calendar:NativeKotlinCustomNextCycleSessionReview):NativeTieredTransitionRecovery =
         runCatching{fence.withOwnerTransaction(ownerKey){
             if(!scheduled(ownerKey,cycleId,week,weekday,null,calendar))
                 return@withOwnerTransaction NativeTieredTransitionRecovery.Refused(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED)
-            val result=recover(ownerKey,cycleId,week)
+            val result=recoverForSession(ownerKey,cycleId,week,weekday)
             if(result is NativeTieredTransitionRecovery.Ready &&
-                !scheduled(ownerKey,cycleId,week,weekday,result.review.nextTierCandidate?.selection?.nextWorkoutId,calendar))
+                !scheduled(ownerKey,cycleId,week,weekday,
+                    result.review.nextMultiTierCandidate?.selection?.nextWorkoutId
+                        ?:result.review.nextTierCandidate?.selection?.nextWorkoutId,calendar))
                 return@withOwnerTransaction NativeTieredTransitionRecovery.Refused(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED)
             result
         }}.getOrElse{NativeTieredTransitionRecovery.Refused(NativeTieredTransitionConsentResult.STORAGE_UNAVAILABLE)}
@@ -520,7 +588,8 @@ class NativeKotlinFirstTierTransitionConsentStore(
         calendar:NativeKotlinCustomNextCycleSessionReview,preflight:NativeKotlinCustomWorkoutPreflight,
         prepared:NativeKotlinCustomWorkoutPreparedStore):NativeCustomPrepareResult =
         runCatching{fence.withOwnerTransaction(ownerKey){
-            val id=shown.review.nextTierCandidate?.selection?.nextWorkoutId
+            val id=shown.review.nextMultiTierCandidate?.selection?.nextWorkoutId
+                ?:shown.review.nextTierCandidate?.selection?.nextWorkoutId
                 ?:return@withOwnerTransaction NativeCustomPrepareResult.Rejected(NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
             val week=shown.session.absoluteWeek
             val day=shown.session.weekday

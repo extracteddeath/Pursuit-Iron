@@ -215,9 +215,11 @@ class NativeKotlinCustomNextCycleSessionReview(
                 NativeCustomNextCycleSlotDomain.isMultiTieredSupportDay(stored.draft,stored.tieredInitialReceipts,week,weekday)
         }}.getOrDefault(false)
 
-    /** Multi-root schedule uses the same authenticated initial review and
-     * complete census. It does not enable a later tier transition. */
-    fun reviewMultiTieredInitial(ownerKey:String,cycleId:String):NativeCustomNextCycleSlot {
+    /** Multi-root schedule uses the authenticated initial review and full
+     * census. Transition facts require their exact durable day receipts;
+     * calendar discovery never grants preparation or issuance. */
+    fun reviewMultiTieredInitial(ownerKey:String,cycleId:String,
+        transitionConsent:NativeKotlinFirstTierTransitionConsentStore?=null):NativeCustomNextCycleSlot {
         fun no()=NativeCustomNextCycleSlot.Rejected("Current multi-thread approval or calendar is unavailable.")
         return runCatching{fence.withOwnerTransaction(ownerKey){
             val owner=identity.signedInIdentity()?.takeIf{it.ownerKey==ownerKey}
@@ -234,8 +236,11 @@ class NativeKotlinCustomNextCycleSessionReview(
                 ?:return@withOwnerTransaction no()
             val facts=census.sessions.filter{it.cycleId==cycleId}.map{item->
                 val origin=inventory.preparedOrigin(ownerKey,item.workoutId)?:return@withOwnerTransaction no()
-                NativeCustomNextCycleSlotDomain.multiInitialFact(signed.draft,signed.initialTierReceipts,item,origin,signed.consent)
-                    ?:return@withOwnerTransaction no()
+                val fact=if(origin.authority==NativeCustomPreparationAuthority.TIERED_TRANSITION)
+                    transitionConsent?.multiTransitionCalendarFact(signed,item,origin)
+                else NativeCustomNextCycleSlotDomain.multiInitialFact(
+                    signed.draft,signed.initialTierReceipts,item,origin,signed.consent)
+                fact ?:return@withOwnerTransaction no()
             }
             if(identity.signedInIdentity()!=owner)return@withOwnerTransaction no()
             NativeCustomNextCycleSlotDomain.select(signed.draft,facts)

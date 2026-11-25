@@ -241,7 +241,9 @@ class NativeKotlinTieredInitialReferenceReviewTest {
             coldPrepared(),preflight,history,composer)
         fun calendar()=NativeKotlinCustomNextCycleSessionReview(coldFence,identity,coldDrafts,sources,
             coldSignoffs,reader,inventory,coldPrepared())
-        fun next()=calendar().reviewMultiTieredInitial("owner-1","cycle-1")
+        fun transitionStore()=NativeKotlinFirstTierTransitionConsentStore(root,
+            NativeKotlinApprovalRevisionFence(root),identity,coldDrafts,sources,coldSignoffs,reader,inventory)
+        fun next()=calendar().reviewMultiTieredInitial("owner-1","cycle-1",transitionStore())
         fun prep(s:NativeTieredInitialSelection)=coldPrepared().prepareTieredInitial("owner-1",s.nextWorkoutId,
             "cycle-1",s.absoluteWeek,s.weekday,inputs(),reader,inventory)
         fun issue(s:NativeTieredInitialSelection)=coldJournal().issueTieredInitial("owner-1",s.nextWorkoutId,
@@ -305,8 +307,6 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         assertFalse(transition.mayIssueWorkout)
         assertFalse(transition.maySaveProgram)
         assertEquals(transition, (preview(nextSelection) as NativeSavedNamedReview.Signed).nextMultiTierCandidate)
-        fun transitionStore()=NativeKotlinFirstTierTransitionConsentStore(root,
-            NativeKotlinApprovalRevisionFence(root),identity,coldDrafts,sources,coldSignoffs,reader,inventory)
         fun recoverDay(week:Int=2,day:Int=0)=transitionStore().recoverMulti("owner-1","cycle-1",week,day)
         fun confirmDay(review:NativeSavedNamedReview.Signed=proposed,confirmed:Boolean=true,
             resets:Set<String> = emptySet(),recoveries:Set<String> = emptySet())=
@@ -360,12 +360,14 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         assertEquals(restoredDay.receiptFingerprint,staged.consentFingerprint)
         assertEquals(NativeCustomPrepareResult.Prepared(staged,true),prepareDay())
         assertEquals(restoredDay,recoverDay())
+        assertEquals(NativeCustomNextCycleSlot.Prepared(nextSelection.nextWorkoutId,2,0,"Day 0"),next())
         assertEquals(reviewed,inspectDay())
         assertTrue(preview(nextSelection) is NativeSavedNamedReview.Rejected)
         if(!correctAfterPreparation) {
             val issued=issueDay()
             assertTrue(issued.toString(),issued is NativeCustomJournalResult.Durable)
             assertEquals(staged.snapshot,(issued as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
+            assertEquals(NativeCustomNextCycleSlot.ResumeIssued(nextSelection.nextWorkoutId,2,0,"Day 0"),next())
             val target=staged.snapshot.slots.single().sets.single()
             assertTrue(coldJournal().record("owner-1",nextSelection.nextWorkoutId,
                 CustomWorkoutJournalOperation.Record("multi-next-actual",0,
@@ -385,29 +387,39 @@ class NativeKotlinTieredInitialReferenceReviewTest {
             assertEquals(TieredLinearState(0,n("35")),numeric.state)
             // Reopen from durable receipts and train the other independent
             // threads on the same week. A different day has its own receipt.
-            fun nextReview(s:NativeMultiTierNextSelection)=transitionStore().previewMultiUsingSavedRules("owner-1","cycle-1",s)
+            fun nextReview(s:NativeMultiTierNextSelection)=transitionStore().previewMultiScheduled("owner-1","cycle-1",s,calendar())
             val middle=NativeMultiTierNextSelection("week-two-day-two",2,2)
             val last=NativeMultiTierNextSelection("week-two-day-four",2,4)
+            assertEquals(NativeCustomNextCycleSlot.Next(2,2,"Day 2"),next())
             assertTrue(nextReview(last) is NativeSavedNamedReview.Rejected)
             // A missing earlier receipt cannot be replaced by trusting an
             // issued snapshot or simply recomputing past observations.
             java.nio.file.Files.delete(file)
             assertTrue(nextReview(middle) is NativeSavedNamedReview.Rejected)
+            assertTrue(next() is NativeCustomNextCycleSlot.Rejected)
             java.nio.file.Files.write(file,frozen)
+            assertEquals(NativeCustomNextCycleSlot.Next(2,2,"Day 2"),next())
             fun completeDay(s:NativeMultiTierNextSelection,expected:TieredLinearState,expectedLoad:BigDecimal,reps:Int) {
                 val shownDay=nextReview(s) as NativeSavedNamedReview.Signed
                 val day=checkNotNull(shownDay.nextMultiTierCandidate)
                 assertEquals(expected,day.slots.single().result.state)
                 assertEquals(expectedLoad,(day.snapshot.slots.single().sets.single().prescription.load as DraftSetLoad.Verified).value)
-                assertEquals(NativeTieredTransitionConsentResult.RECORDED,confirmDay(shownDay))
-                val recovered=recoverDay(s.absoluteWeek,s.weekday) as NativeTieredTransitionRecovery.Ready
+                val store=transitionStore()
+                assertEquals(NativeTieredTransitionConsentResult.CONFIRMATION_REQUIRED,
+                    store.confirmMultiScheduled("owner-1","cycle-1",shownDay,calendar(),false,emptySet(),emptySet()))
+                assertEquals(NativeTieredTransitionConsentResult.RECORDED,
+                    store.confirmMultiScheduled("owner-1","cycle-1",shownDay,calendar(),true,emptySet(),emptySet()))
+                val recovered=store.recoverScheduled("owner-1","cycle-1",s.absoluteWeek,s.weekday,calendar())
+                    as NativeTieredTransitionRecovery.Ready
                 assertEquals(shownDay,recovered.review)
-                val p=(coldPrepared().prepareFirstTierTransition("owner-1",s.nextWorkoutId,"cycle-1",
-                    s.absoluteWeek,s.weekday,transitionStore()) as NativeCustomPrepareResult.Prepared).workout
+                val verified=store.inspectScheduled("owner-1","cycle-1",s.nextWorkoutId,
+                    s.absoluteWeek,s.weekday,calendar(),preflight) as NativeFirstTierTransitionPreflight.Reviewed
+                val p=(store.prepareScheduled("owner-1","cycle-1",verified,calendar(),preflight,coldPrepared())
+                    as NativeCustomPrepareResult.Prepared).workout
                 assertEquals(day.snapshot,p.snapshot)
                 assertEquals(recovered.receiptFingerprint,p.consentFingerprint)
-                assertTrue(coldJournal().issueFirstTierTransition("owner-1",s.nextWorkoutId,"cycle-1",
-                    s.absoluteWeek,s.weekday,transitionStore()) is NativeCustomJournalResult.Durable)
+                assertTrue(store.issueScheduled("owner-1","cycle-1",p,calendar(),preflight,
+                    coldPrepared(),coldJournal()) is NativeCustomJournalResult.Durable)
                 val setKey=p.snapshot.slots.single().sets.single().setKey
                 assertTrue(coldJournal().record("owner-1",s.nextWorkoutId,
                     CustomWorkoutJournalOperation.Record("${s.nextWorkoutId}-actual",0,
@@ -420,7 +432,9 @@ class NativeKotlinTieredInitialReferenceReviewTest {
                 assertTrue(result.toString(),result is NativeCustomFinishResult.Committed)
             }
             completeDay(middle,TieredLinearState(1,n("30")),n("30"),5)
+            assertEquals(NativeCustomNextCycleSlot.Next(2,4,"Day 4"),next())
             completeDay(last,TieredLinearState(0,n("40")),n("40"),5)
+            assertEquals(NativeCustomNextCycleSlot.Next(3,0,"Day 0"),next())
             val weekThree=NativeMultiTierNextSelection("week-three-day-zero",3,0)
             val nextWeek=nextReview(weekThree) as NativeSavedNamedReview.Signed
             val nextCandidate=checkNotNull(nextWeek.nextMultiTierCandidate)

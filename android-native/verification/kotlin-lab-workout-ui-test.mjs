@@ -1980,8 +1980,16 @@ assert.ok(basicPreviewController.includes('selectedInitialTier(review,next)') &&
   'Multi-root initial execution uses the existing exact initial review and issuer');
 
 assert.ok(basicPreviewController.includes('host.isMultiTieredSupportDay') &&
-  basicPreviewController.includes('val calendar=if(multiSupport)reviewedNext') &&
+  basicPreviewController.includes('val calendar=if(!singleThread && !multiInitial)reviewedNext') &&
   machineChoiceHost.includes('nextCustomCycleSession.isMultiTieredSupportDay') &&
   basicPreviewScreen.includes('controller::previewTieredSupportWorkout') &&
   basicPreviewScreen.includes('controller::issueTieredSupportWorkout'),
   'Multi-root authored support days must reuse the existing supporting-day controls and authoritative calendar policy');
+
+assert.ok(basicPreviewScreen.includes('controller.previewTieredTransition(false,recoverySlots)') &&
+  basicPreviewScreen.includes('controller.approveTieredTransition(false,false,resetSlots,confirmedRecoverySlots)') &&
+  basicPreviewController.includes('host.previewMultiTieredTransition') &&
+  basicPreviewController.includes('host.confirmMultiTieredTransition') &&
+  machineChoiceHost.includes('tieredTransitions.previewMultiScheduled') &&
+  machineChoiceHost.includes('tieredTransitions.confirmMultiScheduled'),
+  'Multi-root transitions must review each slot and explicitly confirm reset/recovery through the shared scheduled workflow');

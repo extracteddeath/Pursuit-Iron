@@ -63,6 +63,16 @@ try{
     await toggle.focus();await page.keyboard.press('Space');
     assert.equal(await toggle.evaluate(e=>e.getAttribute('aria-expanded')),'true');
     await page.waitForSelector('.wpb-profile-achievement-board');
+    const seams=await page.evaluate(()=>['.wpb-profile-achievement-toggle','.wpb-profile-next-achievement','.wpb-profile-achievement-board'].flatMap(selector=>{
+      const e=document.querySelector(selector);if(!e)return [];
+      const s=getComputedStyle(e);return [{selector,top:[s.borderTopLeftRadius,s.borderTopRightRadius],bottom:[s.borderBottomLeftRadius,s.borderBottomRightRadius],divider:s.borderTopWidth,background:s.backgroundColor}];
+    }));
+    assert.ok(seams.length>=2,'Profile disclosure and expanded content are rendered');
+    for(const seam of seams){
+      assert.ok([...seam.top,...seam.bottom].every(x=>parseFloat(x)===0),'Profile internal list corners stay square '+JSON.stringify(seam));
+      assert.equal(parseFloat(seam.divider),1,'Profile preserves the internal divider');
+      if(seam.selector.endsWith('board'))assert.equal(seam.background,'rgba(0, 0, 0, 0)','Expanded achievements remain on the parent surface');
+    }
     const badges=await page.$$eval('.wpb-profile-achievement-tile',nodes=>nodes.map(n=>({label:n.getAttribute('aria-label'),earned:n.getAttribute('data-earned'),width:n.getBoundingClientRect().width,height:n.getBoundingClientRect().height})));
     assert.ok(badges.length>10&&badges.some(b=>b.earned==='1')&&badges.some(b=>b.earned==='0')&&badges.every(b=>b.width>=44&&b.height>=44),'earned and locked badges retain complete native targets');
     for(const earned of ['0','1']){

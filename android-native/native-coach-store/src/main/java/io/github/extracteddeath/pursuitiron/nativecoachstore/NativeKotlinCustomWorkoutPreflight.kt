@@ -98,7 +98,7 @@ class NativeKotlinCustomWorkoutPreflight(
     /** Named consent has its own authenticated projection, never a bypass
      * of ordinary preflight. The same exact selection is checked again at
      * first issuance; a completed day cannot be prepared under a new ID. */
-    internal fun inspectNamed(
+    fun inspectNamed(
         ownerKey:String,workoutId:String,cycleId:String,absoluteWeek:Int,weekday:Int,
         inputs:CustomCoachAuditInputs,history:NativeKotlinMixedHistoryReadCoordinator,
         outstanding:NativeKotlinCustomOutstandingWorkoutInventory

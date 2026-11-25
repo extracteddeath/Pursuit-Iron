@@ -7330,30 +7330,6 @@ background:var(--pi-color-card)!important;
   padding:14px 0;margin-bottom:var(--pi-space-3);background:transparent;border-radius:0;border:0;border-bottom:1px solid var(--section-rule);
 }
 
-/* B892 / UI polish pass 02 — Profile controls share Material-inspired tonal states.
-   Preserve Profile preference logic and DOM order. Only local micro-interactions
-   animate; no page or row geometry transitions that might cause flashing. */
-.wpb-profile-customize button:focus-visible{outline:3px solid var(--pi-focus,var(--wpb-theme-accent-ink,currentColor));outline-offset:2px}
-
-.wpb-profile-customize{padding:15px;margin:0 0 16px;border-radius:20px;background:var(--pi-color-card,var(--wpb-theme-card));border:1px solid var(--pi-color-divider,var(--wpb-theme-border));color:inherit}
-.wpb-profile-customize-header{display:flex;align-items:flex-start;gap:12px;justify-content:space-between}
-.wpb-profile-customize-header strong{font-size:16px;font-weight:750}
-.wpb-profile-customize-header p{font-size:14px;line-height:1.5;margin:5px 0 0;opacity:.85}
-.wpb-profile-customize-header>button{place-items:center;flex-shrink:0}
-.wpb-profile-customize-label{margin:18px 0 9px;font-size:12px;font-weight:800;letter-spacing:.03em}
-.wpb-profile-share-toggles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-/* Reflow with both root text scaling and Android-style local text enlargement. */
-@container pi-r77-profile (max-width:18rem) or (max-width:18em){
-  .wpb-profile-share-toggles{grid-template-columns:minmax(0,1fr)}
-}
-.wpb-profile-share-toggles button{text-align:left;min-width:0;white-space:normal;overflow-wrap:anywhere;flex-wrap:wrap}
-.wpb-profile-share-toggles button span{display:grid;place-items:center;width:22px;height:22px;flex-shrink:0;border-radius:8px;background:var(--pi-color-control,var(--wpb-theme-card-high))}
-.wpb-profile-reset{margin-top:12px}
-@media(hover:hover) and (pointer:fine){.wpb-profile-customize button:not(:disabled):hover{background:var(--wpb-theme-accent-dim)}}
-@media(prefers-reduced-motion:no-preference){.wpb-profile-customize button{transition:background-color 160ms ease,border-color 160ms ease,transform 140ms ease}.wpb-profile-customize button:not(:disabled):active{transform:scale(.97)}}
-@media(max-width:380px){.wpb-profile-customize{padding:12px}}
-@media(forced-colors:active){.wpb-profile-customize button{forced-color-adjust:auto;border:1px solid ButtonText}.wpb-profile-share-toggles button[aria-pressed="true"]{outline:2px solid Highlight;outline-offset:-3px}}
-
 /* B893 · Custom-cycle composer, responsive and theme-aware. */
 .wpb-custom-cycle{margin:var(--pi-space-3) 0;color:inherit}
 .wpb-custom-cycle-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
@@ -8274,7 +8250,7 @@ background:var(--pi-color-card)!important;
 /* B912 — Prototype-informed Profile hierarchy; presentation only.
    Root header ownership moved to UiRootHeader in M271. */
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-hero{
-  flex-shrink:0;margin:var(--pi-space-3) 0 0;padding:var(--pi-space-3) 0 0;border:0;
+  flex-shrink:0;margin:20px 0 0;padding:0;border:0;
   border-radius:0;
   background:transparent;
   box-shadow:none!important;
@@ -8297,35 +8273,27 @@ background:var(--pi-color-card)!important;
 /* Secondary actions use quiet controls and retain correct accessible reading order.
    No flex order: screen-reader and keyboard navigation match the visible flow. */
 
-#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-customize{
-  border-radius:var(--pi-shape-card)!important;background:var(--pi-color-card)!important;
-  border:1px solid var(--pi-color-divider)!important;
-}
 /* Preserve R77's large-text single-column facts when the available container shrinks. */
 
 /* Cohesion 05 — share-card components use the same semantic surface, type,
    shape and control roles as Profile, Progress and Settings. No inline layout. */
 .wpb-profile-share-card{margin:0 0 var(--pi-space-3);}
 
-.wpb-profile-share-card h2{margin:0 0 var(--pi-space-1);font-size:clamp(1.5rem,5vw,2rem);line-height:1.16;letter-spacing:-.035em;overflow-wrap:anywhere}
 .wpb-profile-card-caption{margin:0;color:var(--wpb-theme-muted);font-size:.875rem;line-height:1.5}
-.wpb-profile-card-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--pi-space-2) 0;margin:var(--pi-space-4) 0 0;overflow:hidden}
-.wpb-profile-card-metrics>div{min-width:0;padding:var(--pi-space-2) var(--pi-space-1);border:0;overflow-wrap:break-word}
-.wpb-profile-card-metrics>div:nth-child(-n+2){padding:var(--pi-space-1) var(--pi-space-3);border-radius:0;background:transparent;box-shadow:-1px 0 0 var(--pi-color-divider)}
+.wpb-profile-card-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--pi-space-4);margin:var(--pi-space-4) 0 0;overflow:hidden}
+.wpb-profile-card-metrics>div{min-width:0;padding:0;border:0;overflow-wrap:break-word}
 .wpb-profile-card-metrics dt{font-size:.75rem;font-weight:650;color:var(--wpb-theme-muted)}
-.wpb-profile-card-metrics dd{margin:var(--pi-space-1) 0;font-size:var(--pi-type-body);font-weight:750;line-height:1.35;overflow-wrap:break-word;font-variant-numeric:tabular-nums}
-.wpb-profile-card-metrics>div:nth-child(-n+2) dd{font-size:clamp(1.0625rem,2.6vw,1.375rem);letter-spacing:-.025em}
+.wpb-profile-card-metrics dd{margin:var(--pi-space-1) 0 0;font-size:1.0625rem;font-weight:700;line-height:1.35;overflow-wrap:break-word;font-variant-numeric:tabular-nums}
 .wpb-profile-card-metrics dd>span{display:block}
 .wpb-profile-card-metrics p{margin:0;font-size:.6875rem;line-height:1.5;color:var(--wpb-theme-muted)}
 .wpb-profile-card-actions{margin-top:var(--pi-space-2)}
-.wpb-profile-card-field{margin:var(--pi-space-4) 0 0}
 /* Share-card fields use the shared .wpb-ui-control. */
-.wpb-profile-card-favorites>p{margin:var(--pi-space-4) 0 0;font-size:.875rem;line-height:1.5;color:var(--wpb-theme-muted)}
+.wpb-profile-card-favorites{display:grid;gap:16px}
+.wpb-profile-card-favorites>p{margin:0;font-size:.875rem;line-height:1.5;color:var(--wpb-theme-muted)}
 @media(max-width:360px){.wpb-profile-share-card{padding:16px}}
 @media(forced-colors:active){.wpb-profile-share-card,.wpb-profile-card-actions>button{border:1px solid CanvasText}.wpb-profile-card-field input,.wpb-profile-card-field select{border-color:CanvasText}}
 
 @container pi-r77-profile (max-width:22em){.wpb-profile-card-metrics{grid-template-columns:minmax(0,1fr)}}
-.wpb-profile-share-toggles button[aria-pressed="true"] span{background:var(--pi-color-card,var(--wpb-theme-card))}
 
 /* Cohesion 20: switch tracks have explicit contrast and no legacy thumb geometry.
    Cohesion 08: one Settings control owner; Workout/Focus geometry is unchanged. */
@@ -9879,3 +9847,18 @@ background:var(--pi-color-card)!important;
 /* Settings copy outside cards aligns to the section title, not 4px inside it. */
 #root .wpb .wpb-backup .wpb-backup-intro{padding-inline:0;}
 #root .wpb .wpb-backup .wpb-backup-device-note{margin-inline:0;}
+
+/* B1055 — Profile: identity, then one Edit and one Share; the card is only the shareable stats. */
+#root .wpb .wpb-profile-person{padding:4px 0 20px;}
+#root .wpb .wpb-profile-person>.wpb-profile-name{margin:0;font-size:1.75rem;line-height:1.2;font-weight:750;letter-spacing:-.02em;overflow-wrap:anywhere;}
+#root .wpb .wpb-profile-person>.wpb-profile-card-caption{margin:4px 0 0;}
+#root .wpb .wpb-profile-share-card>.wpb-profile-card-metrics{margin-top:12px;}
+#root .wpb .wpb-profile-share-heading{margin:0;font-size:.875rem;line-height:1.43;font-weight:700;color:var(--wpb-theme-muted);}
+#root .wpb .wpb-profile-person>.wpb-profile-card-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,9.5rem),1fr));gap:8px;margin-top:16px;}
+#root .wpb .wpb-profile-person>.wpb-profile-card-actions>.wpb-ui-action.wpb-ui-action[data-action]{display:inline-flex;align-items:center;width:100%;min-height:48px;justify-content:center;gap:8px;border-radius:999px;}
+#root .wpb .wpb-profile-card-details{margin-top:var(--pi-space-3);}
+#root .wpb .wpb-profile-edit-body{display:grid;gap:28px;padding-bottom:8px;}
+#root .wpb .wpb-profile-edit-section{display:grid;gap:16px;min-width:0;}
+#root .wpb .wpb-profile-edit-heading{margin:0;font-size:.875rem;line-height:1.43;font-weight:700;letter-spacing:.006em;color:var(--wpb-theme-accent-ink);}
+#root .wpb .wpb-profile-edit-label{margin:4px 0 -8px;font-size:.75rem;font-weight:700;letter-spacing:.03em;color:var(--wpb-theme-muted);}
+#root .wpb .wpb-profile-edit-section .wpb-profile-chip-row{display:flex;flex-wrap:wrap;gap:8px;}

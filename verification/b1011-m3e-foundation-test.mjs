@@ -7,7 +7,7 @@ const report = fs.readFileSync('docs/design/M3_EXPRESSIVE_FOUNDATION_B1011.md','
 
 for(const token of ['--pi-shape-feature:32px','--pi-shape-card:20px','--pi-shape-action:20px','--pi-shape-pill:999px','--pi-shape-identity:32px 16px 32px 32px','--pi-type-screen-title:clamp('])
   assert.ok(css.includes(token),'Missing shared M3E token: '+token);
-for(const owner of ['.wpb .wpb-ui-card{','.wpb .wpb-settings-card.wpb-ui-card{','.wpb .wpb-settings .wpb-segmented{','.wpb-profile-card-metrics>div:nth-child(-n+2){','#root .wpb .wpb-home-session-preview{','#root .wpb .wpb-plan-change-banner{'])
+for(const owner of ['.wpb .wpb-ui-card{','.wpb .wpb-settings-card.wpb-ui-card{','.wpb .wpb-settings .wpb-segmented{','.wpb-profile-card-metrics>div{','#root .wpb .wpb-home-session-preview{','#root .wpb .wpb-plan-change-banner{'])
   assert.ok(css.includes(owner),'Missing shared screen role: '+owner);
 assert.equal((css.match(/\.wpb-profile-card-metrics\{display:grid/g)||[]).length,1,'Profile metric layout has more than one owner');
 assert.ok(css.includes('@container pi-r77-profile (max-width:22em)'),'Profile must reflow at large text');

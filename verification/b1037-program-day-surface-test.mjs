@@ -36,7 +36,8 @@ assert.ok(/@container pi-exercise-actions \(max-width:260px\)\{#root \.wpb \.wpb
 // B1039: stat tiles (Home's week recap, Profile's card metrics) are figures divided by a rule,
 // not filled tiles inside their card.
 assert.ok(css.includes('border-radius:0;background:transparent;box-shadow:-1px 0 0 var(--pi-color-divider);text-align:center}'), 'Home stat tiles are flat');
-assert.ok(css.includes('.wpb-profile-card-metrics>div:nth-child(-n+2){padding:var(--pi-space-1) var(--pi-space-3);border-radius:0;background:transparent;box-shadow:-1px 0 0 var(--pi-color-divider)}'), 'Profile metrics are flat');
+// B1055: every Profile metric shares one cell style (the first two no longer have their own inset and rule).
+assert.ok(css.includes('.wpb-profile-card-metrics>div{min-width:0;padding:0;border:0;') && !css.includes('.wpb-profile-card-metrics>div:nth-child(-n+2)'), 'Profile metrics are flat and uniform');
 // B1040: Plan's overview figures are the flat stat row, its program routes one grouped list,
 // and a finished session is marked by its check rather than struck through.
 assert.ok(app.includes('_jsxs("dl", { className: "wpb-ui-stat-row wpb-plan-glance"'), 'Plan overview uses the flat stat row');

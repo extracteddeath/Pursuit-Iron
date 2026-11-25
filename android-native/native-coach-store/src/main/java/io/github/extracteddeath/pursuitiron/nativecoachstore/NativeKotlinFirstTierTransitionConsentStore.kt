@@ -255,6 +255,153 @@ internal class NativeKotlinFirstTierTransitionConsentStore(
         }}.getOrElse{no(NativeTieredTransitionConsentResult.STORAGE_UNAVAILABLE)}
     }
 
+    /** Called only by the prepared store inside its owner transaction.
+     * The existing receipt authorizes re-review of this exact unissued
+     * preparation, not issuance of the freshly derived candidate.
+     * Require a strictly newer verified history revision and unchanged
+     * underlying cycle authority. Corruption, revocation, or unrelated
+     * outstanding sessions cannot be repaired by removing a preparation.
+     */
+    internal fun canCancelStalePreparation(saved:NativeCustomPreparedWorkout):Boolean {
+        val ownerKey=saved.ownerKey
+        val cycleId=saved.snapshot.stamp.cycleId
+        val week=saved.snapshot.absoluteWeek
+        if(!id.matches(ownerKey)||!id.matches(cycleId)||
+            saved.authority!=NativeCustomPreparationAuthority.TIERED_TRANSITION)return false
+        return runCatching{fence.withOwnerTransaction(ownerKey){
+            val owner=identity.signedInIdentity()?.takeIf{
+                it.ownerKey==ownerKey && it.athleteId==saved.athleteId
+            }?:return@withOwnerTransaction false
+            val first=firstWeek(ownerKey,cycleId)?:return@withOwnerTransaction false
+            if(Files.isSymbolicLink(directory)||week !in first..104)
+                return@withOwnerTransaction false
+            val old=decode(readBytes(path(ownerKey,cycleId,week,first)))
+            if(old.ownerKey!=ownerKey || old.athleteId!=owner.athleteId ||
+                old.cycleId!=cycleId || old.selection.absoluteWeek!=week ||
+                old.selection.nextWorkoutId!=saved.workoutId ||
+                old.consentRevision!=saved.consentRevision ||
+                old.fingerprint!=saved.consentFingerprint ||
+                outstanding.preparedOrigin(ownerKey,saved.workoutId)!=saved ||
+                (week+1..104).any{Files.exists(path(ownerKey,cycleId,it,first),LinkOption.NOFOLLOW_LINKS)})
+                return@withOwnerTransaction false
+            val prior=priorReceipts(ownerKey,cycleId,first,week)
+            val reviewer=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
+                signoffs,history,outstanding,machineRosters)
+            // The reviewer independently checks the complete issued/completed
+            // census, exact historical origins and corrected current ledger.
+            val fresh=reviewer.previewTieredNextForPreparation(ownerKey,cycleId,old.inputs,
+                old.selection,old.fingerprint,prior) as? NativeSavedNamedReview.Signed
+                ?:return@withOwnerTransaction false
+            val next=fresh.nextTierCandidate?:return@withOwnerTransaction false
+            identity.signedInIdentity()==owner &&
+                fresh.consent.recordRevision==old.consentRevision &&
+                fresh.consent.fingerprintSha256==old.consentFingerprint &&
+                fresh.consent.cycleRevision==old.cycleRevision &&
+                fresh.consent.sourceRevision==old.sourceRevision &&
+                next.selection==old.selection && next.historyRevision>old.historyRevision
+        }}.getOrDefault(false)
+    }
+
+    /**
+     * Recovery-only inventory. Scan physical files, not just selected weeks.
+     * Reconcile frozen consent prefixes with the verified completed census
+     * and exact prepared origins. Stale approvals remain evidence, never
+     * authority. Live preparation/issuance must still call recover().
+     * Null is an invalid, incomplete or foreign inventory.
+     */
+    internal fun inventoryForRecovery(ownerKey:String):Int? {
+        if(!id.matches(ownerKey))return null
+        return runCatching{fence.withOwnerTransaction(ownerKey){
+            val owner=identity.signedInIdentity()?.takeIf{it.ownerKey==ownerKey}
+                ?:return@withOwnerTransaction null
+            require(Files.isDirectory(directory,LinkOption.NOFOLLOW_LINKS))
+            val files=Files.walk(directory).use{stream->
+                stream.filter{it.fileName.toString().startsWith("tier-first-transition-")}
+                    .limit(4097).toList()
+            }
+            require(files.size<=4096)
+            val records=files.map{file->
+                val old=decode(readBytes(file))
+                require(old.ownerKey==ownerKey && old.athleteId==owner.athleteId)
+                val first=firstWeek(ownerKey,old.cycleId)?:error("missing initial tier receipt")
+                require(old.selection.absoluteWeek in first..104)
+                require(file==path(ownerKey,old.cycleId,old.selection.absoluteWeek,first))
+                old
+            }
+            val timeline=(history.read(ownerKey,owner.athleteId)
+                as? NativeKotlinMixedHistoryReadResult.Review)?.timeline
+                ?:return@withOwnerTransaction null
+            val completed=timeline.completions.filterIsInstance<NativeKotlinMixedHistoryCompletion.Custom>()
+                .map{it.manifest.workoutId}.toSet()
+            val census=(outstanding.inspect(ownerKey,owner.athleteId,completed)
+                as? NativeCustomInventoryReview.Reviewed)?:return@withOwnerTransaction null
+            require(records.map{it.selection.nextWorkoutId}.distinct().size==records.size)
+            for((cycleId,unordered) in records.groupBy{it.cycleId}){
+                val stored=drafts.read(ownerKey,cycleId) as? NativeCustomDraftReadResult.Found
+                    ?:return@withOwnerTransaction null
+                val initial=stored.tieredInitialReceipt?:return@withOwnerTransaction null
+                require(NativeTieredInitialDraftReceiptCodec.valid(initial,ownerKey,stored.draft))
+                val selection=initial.selection
+                val origin=outstanding.preparedOrigin(ownerKey,selection.nextWorkoutId)
+                    ?:return@withOwnerTransaction null
+                require(origin.authority==NativeCustomPreparationAuthority.TIERED_INITIAL &&
+                    origin.snapshot.stamp.cycleId==cycleId &&
+                    origin.snapshot.absoluteWeek==selection.absoluteWeek &&
+                    origin.snapshot.weekday==selection.weekday &&
+                    selection.nextWorkoutId in completed)
+                val scope=BasicProgressionScope(owner.athleteId,cycleId,initial.stamp.gymId,
+                    initial.blockId,initial.blockId+":d"+selection.weekday,initial.exerciseId,
+                    initial.machineInstanceId,initial.unit,initial.basis)
+                val sorted=unordered.sortedBy{it.selection.absoluteWeek}
+                val prefixIds=mutableListOf(selection.nextWorkoutId)
+                var priorRevision=initial.historyRevision
+                for((index,old) in sorted.withIndex()){
+                    val week=selection.absoluteWeek+index+1
+                    require(old.selection.absoluteWeek==week &&
+                        old.consentRevision==origin.consentRevision &&
+                        old.consentFingerprint==origin.consentFingerprint &&
+                        old.cycleRevision==stored.draft.revision &&
+                        old.sourceRevision==initial.stamp.gymCatalogSourceRevision &&
+                        old.initialState==TieredLinearState(0,selection.initialLoad) &&
+                        old.maximumIncrease==selection.maximumAuthorizedIncrease &&
+                        old.historyRevision>priorRevision &&
+                        old.historyRevision<=timeline.manifestRevision)
+                    val prefix=NativeTieredHistoryPrefixCodec.decode(old.prefix,scope,selection.tier,selection.slotId)
+                    require(prefix.map{it.workoutId}==prefixIds && prefixIds.all{it in completed})
+                    val proposed=NativeCustomCycleDraftCodec.decode(old.proposedCycle)
+                    require(NativeCustomCycleDraftCodec.encode(proposed).contentEquals(old.proposedCycle) &&
+                        proposed.cycleId==cycleId && proposed.athleteId==owner.athleteId)
+                    val workoutId=old.selection.nextWorkoutId
+                    val fact=census.sessions.singleOrNull{it.workoutId==workoutId}
+                    if(fact!=null){
+                        val prepared=outstanding.preparedOrigin(ownerKey,workoutId)
+                            ?:return@withOwnerTransaction null
+                        require(fact.cycleId==cycleId && fact.absoluteWeek==week &&
+                            fact.weekday==selection.weekday &&
+                            prepared.authority==NativeCustomPreparationAuthority.TIERED_TRANSITION &&
+                            prepared.consentRevision==old.consentRevision &&
+                            prepared.consentFingerprint==old.fingerprint &&
+                            prepared.snapshot.stamp.cycleRevision==proposed.revision)
+                    }
+                    if(index<sorted.lastIndex)require(fact?.completed==true)
+                    prefixIds+=workoutId
+                    priorRevision=old.historyRevision
+                }
+            }
+            // Missing receipt must be detected even when no matching file
+            // exists at all. Completed and unfinished origins both count.
+            for(fact in census.sessions){
+                val prepared=outstanding.preparedOrigin(ownerKey,fact.workoutId)
+                    ?:return@withOwnerTransaction null
+                if(prepared.authority==NativeCustomPreparationAuthority.TIERED_TRANSITION)
+                    require(records.any{it.selection.nextWorkoutId==fact.workoutId &&
+                        it.fingerprint==prepared.consentFingerprint})
+            }
+            if(identity.signedInIdentity()!=owner)return@withOwnerTransaction null
+            records.size
+        }}.getOrNull()
+    }
+
     private fun evaluate(ownerKey:String,cycleId:String,displayed:NativeSavedNamedReview.Signed,
         write:Boolean,confirmed:Boolean,reset:Boolean,recovery:Boolean,
         replaceFingerprint:String?=null):NativeTieredTransitionConsentResult {

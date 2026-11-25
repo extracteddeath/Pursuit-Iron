@@ -35,6 +35,7 @@ enum class NativeKotlinStagedCoreRefusal {
     FUTURE_CALENDARS_UNVERIFIED,
     HISTORY_UNVERIFIED,
     CUSTOM_INVENTORY_UNVERIFIED,
+    TIER_TRANSITION_INVENTORY_UNVERIFIED,
     GENERATED_INVENTORY_UNVERIFIED,
     JOURNAL_MANIFEST_MISMATCH,
     STORE_IO_UNAVAILABLE
@@ -68,7 +69,8 @@ sealed interface NativeKotlinStagedCoreAuditResult {
         val approvedFutureBlockCalendars:Int=0,
         val staleFutureBlockCalendars:Int=0,
         val appliedFutureActivationIntents:Int=0,
-        val preparedFutureActivationIntents:Int=0
+        val preparedFutureActivationIntents:Int=0,
+        val tierTransitionReceipts:Int=0
     ):NativeKotlinStagedCoreAuditResult
     data class Rejected(val reason:NativeKotlinStagedCoreRefusal):
         NativeKotlinStagedCoreAuditResult
@@ -276,6 +278,11 @@ object NativeKotlinStagedCoreStoreAudit {
                     as? NativeCustomInventoryReview.Reviewed
                     ?:return@withOwnerTransaction reject(
                         NativeKotlinStagedCoreRefusal.CUSTOM_INVENTORY_UNVERIFIED)
+                val tierTransitions=NativeKotlinFirstTierTransitionConsentStore(
+                    stagedRoot,fence,identity,drafts,sources,signoffs,mixed,outstanding,machineRosters)
+                    .inventoryForRecovery(expected.ownerKey)
+                    ?:return@withOwnerTransaction reject(
+                        NativeKotlinStagedCoreRefusal.TIER_TRANSITION_INVENTORY_UNVERIFIED)
                 // The generated inventory replays every issued journal.
                 // Do NOT use activation review here; it purposely refuses
                 // unfinished sessions which a backup MUST preserve.
@@ -363,7 +370,8 @@ object NativeKotlinStagedCoreStoreAudit {
                     savedCalendars.records.count{it.sourceStillCurrent},
                     savedCalendars.records.count{!it.sourceStillCurrent},
                     if(activationIntents.state is NativeFutureCommitReview.Applied)1 else 0,
-                    if(activationIntents.state is NativeFutureCommitReview.Prepared)1 else 0)
+                    if(activationIntents.state is NativeFutureCommitReview.Prepared)1 else 0,
+                    tierTransitions)
             }
         } catch(_:Exception) {
             reject(NativeKotlinStagedCoreRefusal.STORE_IO_UNAVAILABLE)

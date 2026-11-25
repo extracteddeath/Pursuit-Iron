@@ -2,6 +2,8 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.bleedRail
+
 import com.pursuitiron.app.ui.common.Rise
 import com.pursuitiron.app.ui.common.o
 import org.json.JSONObject
@@ -187,7 +189,7 @@ fun PlanScreen(vm: AppViewModel) {
             // On a tablet the chips share the row, as in the design; on a phone they scroll.
             if (wide) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 list.forEach { n -> PlanWeekChip(n, n > weeks || waveDl.contains(n), n == wk, cur, { vm.loadPlan(p.s("programId"), n) }, Modifier.weight(1f)) }
-            } else LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            } else LazyRow(Modifier.bleedRail(16.dp), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(list) { n -> PlanWeekChip(n, n > weeks || waveDl.contains(n), n == wk, cur, { vm.loadPlan(p.s("programId"), n) }) }
             }
         }}

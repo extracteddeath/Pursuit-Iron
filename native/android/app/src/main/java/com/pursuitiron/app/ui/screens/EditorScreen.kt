@@ -2,6 +2,8 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.bleedRail
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.animation.AnimatedVisibility
@@ -161,7 +163,7 @@ fun ProgramEditorScreen(vm: AppViewModel) {
             item(key = "weeks") {
                 val cur = e.optInt("currentWeek", 0)
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LazyRow(Modifier.fillMaxWidth().layout { m, k -> val x = (if (wide) 32 else 16).dp.roundToPx(); val pl = m.measure(k.copy(minWidth = 0, maxWidth = k.maxWidth + 2 * x)); layout(pl.width - 2 * x, pl.height) { pl.place(-x, 0) } },
+                    LazyRow(Modifier.bleedRail(if (wide) 32.dp else 16.dp),
                         contentPadding = PaddingValues(horizontal = if (wide) 32.dp else 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(e.list("weeks"), key = { "w" + it.i("week") }) { w ->
                             val on = w.i("week") == e.i("weekIndex")
@@ -732,7 +734,7 @@ private fun AddExerciseSheet(vm: AppViewModel, dayId: String, onClose: () -> Uni
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Add exercise", style = MaterialTheme.typography.headlineSmall)
             OutlinedTextField(q, { q = it }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Search") })
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            LazyRow(Modifier.bleedRail(16.dp), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 item { MorphChip("All", part == null, { part = null }, height = 36.dp) }
                 items(res.list("parts")) { p -> MorphChip(p.s("label"), part == p.s("id"), { part = if (part == p.s("id")) null else p.s("id") }, height = 36.dp) }
             }

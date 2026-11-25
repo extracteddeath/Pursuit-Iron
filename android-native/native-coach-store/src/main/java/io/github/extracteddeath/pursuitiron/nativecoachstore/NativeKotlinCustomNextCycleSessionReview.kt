@@ -34,6 +34,44 @@ sealed interface NativeCustomNextCycleSlot {
 }
 
 internal object NativeCustomNextCycleSlotDomain {
+    /** Supporting workouts retain the authored targets, only within the
+     * approved tier block and after the selected initial exposure. */
+    fun isTieredSupportDay(cycle:CustomTrainingCycle,initial:NativeTieredInitialDraftReceipt,
+        week:Int,weekday:Int):Boolean {
+        val selection=initial.selection
+        val block=cycle.blocks.singleOrNull{it.blockId==initial.blockId} ?:return false
+        return weekday!=selection.weekday &&
+            week in selection.absoluteWeek..(selection.absoluteWeek+block.weeks-initial.weekInBlock) &&
+            (week!=selection.absoluteWeek || weekday>selection.weekday) &&
+            block.days.any{it.weekday==weekday}
+    }
+
+    /** One factual mapping for both calendar discovery and supporting-day
+     * preflight. The transition's derived revision is normalized only here,
+     * never in the persisted preparation or its issuance proof. */
+    fun tieredFact(cycle:CustomTrainingCycle,initial:NativeTieredInitialDraftReceipt,
+        item:NativeCustomInventoryFact,original:NativeCustomPreparedWorkout,
+        includeLater:Boolean):NativeCustomCycleSessionFact? {
+        val selection=initial.selection
+        val revision=original.snapshot.stamp.cycleRevision
+        val offset=item.absoluteWeek-selection.absoluteWeek
+        val block=cycle.blocks.singleOrNull{it.blockId==initial.blockId} ?:return null
+        val transition=includeLater && original.authority==NativeCustomPreparationAuthority.TIERED_TRANSITION &&
+            item.weekday==selection.weekday && offset in 1..(block.weeks-initial.weekInBlock) &&
+            revision==cycle.revision+offset.toLong()
+        val permitted=transition ||
+            (original.authority==NativeCustomPreparationAuthority.TIERED_INITIAL &&
+                item.workoutId==selection.nextWorkoutId && item.absoluteWeek==selection.absoluteWeek &&
+                item.weekday==selection.weekday && revision==cycle.revision) ||
+            (includeLater && original.authority==NativeCustomPreparationAuthority.TIERED_SUPPORT &&
+                revision==cycle.revision && isTieredSupportDay(cycle,initial,item.absoluteWeek,item.weekday)) ||
+            (original.authority==NativeCustomPreparationAuthority.CUSTOM_CYCLE &&
+                item.completed && revision<cycle.revision)
+        if(!permitted)return null
+        return NativeCustomCycleSessionFact(item.workoutId,item.absoluteWeek,item.weekday,
+            if(transition)cycle.revision else revision,item.issued,item.completed)
+    }
+
     /** Called only with already owner-verified full manifest/census evidence. */
     fun select(cycle:CustomTrainingCycle,
         facts:List<NativeCustomCycleSessionFact>):NativeCustomNextCycleSlot {
@@ -219,38 +257,20 @@ class NativeKotlinCustomNextCycleSessionReview(
                     val original=byId[item.workoutId]
                         ?:return@withOwnerTransaction no(
                             "Original issued targets are unavailable.")
-                    // Transition previews use an incrementing derived revision;
-                    // the saved authored cycle does not change. Only for this
-                    // factual calendar read, normalize a scoped transition's
-                    // position to its authored revision. Issuance never uses
-                    // this projection and must check the real receipt/revision.
-                    val transitionOffset=initial?.let{item.absoluteWeek-it.selection.absoluteWeek} ?:0
-                    val tierBlock=initial?.let{receipt->cycle.blocks.singleOrNull{it.blockId==receipt.blockId}}
-                    val tierTransition=calendarOnly && initial!=null && tierBlock!=null &&
-                        original.authority==NativeCustomPreparationAuthority.TIERED_TRANSITION &&
-                        item.weekday==initial.selection.weekday &&
-                        transitionOffset in 1..(tierBlock.weeks-initial.weekInBlock) &&
-                        original.snapshot.stamp.cycleRevision==cycle.revision+transitionOffset.toLong()
-                    val permitted=if(tiered)
-                        tierTransition ||
-                        (original.authority==NativeCustomPreparationAuthority.TIERED_INITIAL &&
-                            initial!=null && item.workoutId==initial.selection.nextWorkoutId &&
-                            item.absoluteWeek==initial.selection.absoluteWeek &&
-                            item.weekday==initial.selection.weekday) ||
-                        (original.authority==NativeCustomPreparationAuthority.CUSTOM_CYCLE &&
-                            item.completed && original.snapshot.stamp.cycleRevision<cycle.revision)
-                    else if(fixedNamed)
-                        original.authority==NativeCustomPreparationAuthority.NAMED_CYCLE ||
-                        (original.authority==NativeCustomPreparationAuthority.CUSTOM_CYCLE &&
-                            item.completed && original.snapshot.stamp.cycleRevision<cycle.revision)
-                    else original.authority==NativeCustomPreparationAuthority.CUSTOM_CYCLE
-                    if(!permitted)
-                        return@withOwnerTransaction no(
-                            "A workout uses a separate or earlier training approval.")
-                    NativeCustomCycleSessionFact(
-                        item.workoutId,item.absoluteWeek,item.weekday,
-                        if(tierTransition)cycle.revision else original.snapshot.stamp.cycleRevision,
-                        item.issued,item.completed)
+                    if(tiered) {
+                        val receipt=initial ?:return@withOwnerTransaction no("Missing initial tier reference.")
+                        NativeCustomNextCycleSlotDomain.tieredFact(cycle,receipt,item,original,calendarOnly)
+                            ?:return@withOwnerTransaction no("A workout uses a separate or earlier training approval.")
+                    } else {
+                        val permitted=if(fixedNamed)
+                            original.authority==NativeCustomPreparationAuthority.NAMED_CYCLE ||
+                            (original.authority==NativeCustomPreparationAuthority.CUSTOM_CYCLE &&
+                                item.completed && original.snapshot.stamp.cycleRevision<cycle.revision)
+                        else original.authority==NativeCustomPreparationAuthority.CUSTOM_CYCLE
+                        if(!permitted)return@withOwnerTransaction no("A workout uses a separate or earlier training approval.")
+                        NativeCustomCycleSessionFact(item.workoutId,item.absoluteWeek,item.weekday,
+                            original.snapshot.stamp.cycleRevision,item.issued,item.completed)
+                    }
                 }
                 if(identity.signedInIdentity()!=owner)
                     return@withOwnerTransaction no("Active athlete changed.")

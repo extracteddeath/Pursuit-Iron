@@ -1141,12 +1141,14 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                             it.key.weekday==session.weekday &&
                             it.savedMethod!=null &&
                             (it.route in setOf(ProgramProgressionRoute.BASIC_WEIGHTED,
-                                ProgramProgressionRoute.MANUAL) ||
+                                ProgramProgressionRoute.MANUAL,
+                                ProgramProgressionRoute.E1RM_COACH_REVIEW) ||
                                 it.route == ProgramProgressionRoute.BASIC_BODYWEIGHT_REPS)
                     }?.associateBy { it.key.slotId }.orEmpty()
                     val loadStepSlots = basicSlots.filterValues { assignment ->
-                        assignment.route == ProgramProgressionRoute.BASIC_WEIGHTED &&
-                            assignment.basicStrategy != BasicProgressionStrategy.REP_TARGET_PROGRESSION
+                        assignment.route == ProgramProgressionRoute.E1RM_COACH_REVIEW ||
+                            (assignment.route == ProgramProgressionRoute.BASIC_WEIGHTED &&
+                                assignment.basicStrategy != BasicProgressionStrategy.REP_TARGET_PROGRESSION)
                     }.keys
                     if(state.reviewedCoachInputs!=null &&
                         (state.progressionCoachingEnabled || loadStepSlots.isNotEmpty()) &&
@@ -1227,7 +1229,8 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                         session.absoluteWeek,session.weekday,slot.slotId,
                                         checkNotNull(basicStep))
                                 }
-                            ) {Text("Preview basic progression")}
+                            ) {Text(if(basicSlots[slot.slotId]?.route==ProgramProgressionRoute.E1RM_COACH_REVIEW)
+                                "Review e1RM progression" else "Preview basic progression")}
                             state.basicDayProgression?.takeIf{result->
                                 basicProgressionVisible &&
                                 state.basicDayProgressionSlotId==slot.slotId &&

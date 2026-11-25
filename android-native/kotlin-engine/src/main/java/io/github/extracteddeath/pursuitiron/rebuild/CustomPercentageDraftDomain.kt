@@ -139,6 +139,39 @@ object CustomPercentageDraftDomain {
         }
     }
 
+    /** Combine independently rederived slot edits into ONE revision of
+     * their common base. Used for fixed prescriptions, tier roots and later
+     * same-session tier transitions. Numerical authority stays in review
+     * and reviewTiered; this structural projection never grants consent.
+     * A conflicting, stale or unrelated edit refuses the whole batch. */
+    fun combineReviewedWeekEdits(base:CustomTrainingCycle,
+        proposals:List<CustomPercentageDraftResult.Proposed>):CustomTrainingCycle? {
+        if(proposals.size !in 1..3000 || base.revision !in 1..9_007_199_254_740_990L)return null
+        val stamp=proposals.first().source
+        if(stamp.cycleRevision!=base.revision || stamp.cycleId!=base.cycleId ||
+            stamp.athleteId!=base.athleteId)return null
+        val keys=HashSet<CustomNamedPercentageWeekKey>()
+        val overrides=base.weekOverrides.toMutableMap()
+        for(p in proposals) {
+            if(p.source!=stamp || p.proposal.receipt.original!=base)return null
+            val key=CustomNamedPercentageWeekKey(p.key.blockId,p.weekInBlock,p.key.weekday,p.key.slotId)
+            if(!keys.add(key))return null
+            val original=base.weekOverrides[key.blockId].orEmpty()
+            if(original.any{it.weekInBlock==key.weekInBlock && it.weekday==key.weekday && it.slotId==key.slotId})
+                return null
+            val edit=p.proposal.draft.weekOverrides[key.blockId].orEmpty().singleOrNull{
+                it.weekInBlock==key.weekInBlock && it.weekday==key.weekday && it.slotId==key.slotId
+            }?:return null
+            // Each independent projection must change only its selected
+            // week-slot. Do not propagate other fields from a proposal.
+            val exact=base.copy(revision=base.revision+1,
+                weekOverrides=base.weekOverrides+(key.blockId to (original+edit)))
+            if(p.proposal.draft!=exact)return null
+            overrides[key.blockId]=overrides[key.blockId].orEmpty()+edit
+        }
+        return base.copy(revision=base.revision+1,weekOverrides=overrides.toMap())
+    }
+
     private fun reviewSource(
         source:CustomPercentageDraftSource,scope:BasicProgressionScope,tier:PercentageTier,
         budget:Int,requestedWeek:Int?,requestedBlockWeeks:Int?,

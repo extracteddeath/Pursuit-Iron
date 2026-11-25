@@ -49,7 +49,7 @@ private fun savedProgressionExplanation(method:SavedProgressionMethod?, bodyweig
         SavedProgressionMethod.WAVE ->
             "Keep an explicitly authored weekly loading sequence. No invented percentages."
         SavedProgressionMethod.E1RM ->
-            "Specialist strength coaching review; requires valid comparative effort evidence."
+            "Review an effort-adjusted strength estimate. All working sets must hit their rep ceiling at the prescribed effort to earn a verified weight increase."
         SavedProgressionMethod.MANUAL ->
             "Preserve prescribed working loads and record your actual results."
         SavedProgressionMethod.REP_TARGETS ->

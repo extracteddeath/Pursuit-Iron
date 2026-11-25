@@ -875,6 +875,31 @@ class NativeKotlinCustomWorkoutPreparedStore(
         }}.getOrElse{deny(NativeCustomPrepareRefusal.STORAGE_UNAVAILABLE)}
     }
 
+    /** Explicitly discard only a stale, never-issued tier preparation.
+     * The caller must show the exact old prepared record. The old receipt
+     * remains on disk and stale; no new consent or issuance is granted.
+     * A fresh review and receipt CAS are separate, recoverable steps.
+     */
+    internal fun cancelStaleTierPreparation(
+        shown:NativeCustomPreparedWorkout,
+        transitionConsent:NativeKotlinFirstTierTransitionConsentStore,
+        athleteConfirmed:Boolean
+    ):Boolean {
+        if(!athleteConfirmed || !id.matches(shown.workoutId) ||
+            shown.authority!=NativeCustomPreparationAuthority.TIERED_TRANSITION)return false
+        return runCatching{fence.withOwnerTransaction(shown.ownerKey){
+            val owner=current(shown.ownerKey)?:return@withOwnerTransaction false
+            val stored=(openFenced(shown.ownerKey,shown.workoutId,owner)
+                as? NativeCustomPreparedRead.Found)?.workout?:return@withOwnerTransaction false
+            if(stored!=shown || !transitionConsent.canCancelStalePreparation(stored) ||
+                current(shown.ownerKey)!=owner)return@withOwnerTransaction false
+            // Single file removal, under the same lock used by issuance.
+            // A crash before or after removal cannot make old consent current.
+            Files.delete(path(shown.ownerKey,shown.workoutId))
+            true
+        }}.getOrDefault(false)
+    }
+
     private fun prepareSpecialist(
         ownerKey:String,workoutId:String,cycleId:String,absoluteWeek:Int,weekday:Int,
         inputs:CustomCoachAuditInputs,history:NativeKotlinMixedHistoryReadCoordinator,

@@ -255,6 +255,53 @@ internal class NativeKotlinFirstTierTransitionConsentStore(
         }}.getOrElse{no(NativeTieredTransitionConsentResult.STORAGE_UNAVAILABLE)}
     }
 
+    /** Called only by the prepared store inside its owner transaction.
+     * The existing receipt authorizes re-review of this exact unissued
+     * preparation, not issuance of the freshly derived candidate.
+     * Require a strictly newer verified history revision and unchanged
+     * underlying cycle authority. Corruption, revocation, or unrelated
+     * outstanding sessions cannot be repaired by removing a preparation.
+     */
+    internal fun canCancelStalePreparation(saved:NativeCustomPreparedWorkout):Boolean {
+        val ownerKey=saved.ownerKey
+        val cycleId=saved.snapshot.stamp.cycleId
+        val week=saved.snapshot.absoluteWeek
+        if(!id.matches(ownerKey)||!id.matches(cycleId)||
+            saved.authority!=NativeCustomPreparationAuthority.TIERED_TRANSITION)return false
+        return runCatching{fence.withOwnerTransaction(ownerKey){
+            val owner=identity.signedInIdentity()?.takeIf{
+                it.ownerKey==ownerKey && it.athleteId==saved.athleteId
+            }?:return@withOwnerTransaction false
+            val first=firstWeek(ownerKey,cycleId)?:return@withOwnerTransaction false
+            if(Files.isSymbolicLink(directory)||week !in first..104)
+                return@withOwnerTransaction false
+            val old=decode(readBytes(path(ownerKey,cycleId,week,first)))
+            if(old.ownerKey!=ownerKey || old.athleteId!=owner.athleteId ||
+                old.cycleId!=cycleId || old.selection.absoluteWeek!=week ||
+                old.selection.nextWorkoutId!=saved.workoutId ||
+                old.consentRevision!=saved.consentRevision ||
+                old.fingerprint!=saved.consentFingerprint ||
+                outstanding.preparedOrigin(ownerKey,saved.workoutId)!=saved ||
+                (week+1..104).any{Files.exists(path(ownerKey,cycleId,it,first),LinkOption.NOFOLLOW_LINKS)})
+                return@withOwnerTransaction false
+            val prior=priorReceipts(ownerKey,cycleId,first,week)
+            val reviewer=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
+                signoffs,history,outstanding,machineRosters)
+            // The reviewer independently checks the complete issued/completed
+            // census, exact historical origins and corrected current ledger.
+            val fresh=reviewer.previewTieredNextForPreparation(ownerKey,cycleId,old.inputs,
+                old.selection,old.fingerprint,prior) as? NativeSavedNamedReview.Signed
+                ?:return@withOwnerTransaction false
+            val next=fresh.nextTierCandidate?:return@withOwnerTransaction false
+            identity.signedInIdentity()==owner &&
+                fresh.consent.recordRevision==old.consentRevision &&
+                fresh.consent.fingerprintSha256==old.consentFingerprint &&
+                fresh.consent.cycleRevision==old.cycleRevision &&
+                fresh.consent.sourceRevision==old.sourceRevision &&
+                next.selection==old.selection && next.historyRevision>old.historyRevision
+        }}.getOrDefault(false)
+    }
+
     private fun evaluate(ownerKey:String,cycleId:String,displayed:NativeSavedNamedReview.Signed,
         write:Boolean,confirmed:Boolean,reset:Boolean,recovery:Boolean,
         replaceFingerprint:String?=null):NativeTieredTransitionConsentResult {

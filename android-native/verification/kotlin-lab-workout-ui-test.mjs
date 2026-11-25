@@ -1916,15 +1916,17 @@ assert.ok(basicPreviewScreen.includes('controller::previewTieredInitialWorkout')
 
 
 assert.ok(basicPreviewScreen.includes('if(scheme==NamedPercentageScheme.GZCLP)') &&
-  basicPreviewScreen.includes('controller.reviewTieredInitialReference(absoluteWeek,weekday,slotId,tier,') &&
-  basicPreviewScreen.includes('controller.acceptTieredInitialReference(shown)') &&
-  basicPreviewScreen.includes('selection.maximumAuthorizedIncrease==increase') &&
-  basicPreviewController.includes('before.tieredReference!=displayed') &&
-  basicPreviewController.includes('displayed.source.cycle!=draft') &&
-  basicPreviewController.includes('host.acceptTieredInitialReference(displayed,true)') &&
-  machineChoiceHost.includes('fixedNamedDraftReview.previewTieredInitial(NativeTieredInitialSelection(') &&
-  machineChoiceHost.includes('fixedNamedDraftReview.acceptTieredInitial(displayed.selection,displayed,confirmed)'),
-  'Native GZCLP authoring must preview explicit load and increment and save only the exact reviewed unsigned revision');
+  basicPreviewScreen.includes('controller.reviewTieredInitialChoices(tierChoices)') &&
+  basicPreviewScreen.includes('controller.acceptTieredInitialChoices(shown)') &&
+  basicPreviewScreen.includes('review.selections.map{NativeTieredInitialChoice.from(it)}==tierChoices') &&
+  basicPreviewScreen.includes('val alreadyAdded=tierChoices.any') &&
+  basicPreviewController.includes('before.tieredReferenceBatch!=displayed') &&
+  basicPreviewController.includes('displayed.individual.any{it.source.cycle!=draft}') &&
+  basicPreviewController.includes('host.acceptTieredInitialChoices(displayed,true)') &&
+  machineChoiceHost.includes('choices.map{it.absoluteWeek to it.weekday}.distinct().associateWith') &&
+  machineChoiceHost.includes('fixedNamedDraftReview.previewTieredInitialBatch(selections)') &&
+  machineChoiceHost.includes('fixedNamedDraftReview.acceptTieredInitialBatch(displayed.selections,displayed,confirmed)'),
+  'Native GZCLP authoring must review all explicit references, share one journal ID per day, and save only the exact reviewed unsigned revision');
 
 assert.ok(basicPreviewController.includes('host.reviewTieredCalendar(cycleId)') &&
   basicPreviewController.includes('tieredCalendar=calendar') &&

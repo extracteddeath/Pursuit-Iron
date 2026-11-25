@@ -121,6 +121,73 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
             store().publish("owner-1",1,changed))
     }
 
+    @Test fun switchingSavedGymsColdRestoresExactIndependentStockWithoutChangingAthleteOrCatalog() {
+        val initial=source()
+        val original=checkNotNull(initial.setup.reviewed)
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),store().publish("owner-1",0,initial))
+        val first=store().readSavedGyms("owner-1") as NativeSavedGymRead.Ready
+        assertEquals(original.gym,first.active)
+        assertTrue(first.inactive.isEmpty())
+        val kgStock=VerifiedLoadStock.Stack(LoadUnit.KG,LoadBasis.CABLE_STACK,
+            n("10"),n("2.5"),n("50"))
+        val second=GymProfileDraft("gym-2",LoadUnit.KG,mapOf("cable-1" to kgStock),
+            setOf("cable-station"),setOf("rope"))
+        assertEquals(NativeAuthoringSourceWrite.Rejected(NativeAuthoringSourceRefusal.CONFIRMATION_REQUIRED),
+            store().addAndSelectGym("owner-1",1,second,false))
+        assertEquals(NativeAuthoringSourceWrite.Rejected(NativeAuthoringSourceRefusal.INVALID_SOURCE),
+            store().addAndSelectGym("owner-1",1,second.copy(confirmedStock=mapOf("cable-1" to stock)),true))
+        assertEquals(NativeAuthoringSourceWrite.Rejected(NativeAuthoringSourceRefusal.INVALID_SOURCE),
+            store().addAndSelectGym("owner-1",1,second.copy(gymId=null),true))
+        assertEquals(first,store().readSavedGyms("owner-1"))
+        assertEquals(NativeAuthoringSourceWrite.Committed(2),
+            store().addAndSelectGym("owner-1",1,second,true))
+        val saved=store().readSavedGyms("owner-1") as NativeSavedGymRead.Ready
+        assertEquals(2L,saved.sourceRevision)
+        assertEquals("gym-2",saved.active.gymId)
+        assertEquals(LoadUnit.KG,saved.active.unit)
+        assertEquals(kgStock,saved.active.confirmedStock["cable-1"])
+        assertEquals(listOf(original.gym),saved.inactive)
+        assertFalse(saved.mayIssueWorkout)
+        val current=(store().read("owner-1") as NativeAuthoringSourceRead.Found).source
+        assertEquals(original.copy(gym=saved.active),current.setup.reviewed)
+        assertEquals(initial.catalog,current.catalog)
+        val exact=CustomExerciseAuthoringDomain.picker(current.setup,current.catalog).single()
+        assertEquals(kgStock,exact.availability.stock)
+        val revisedStock=kgStock.copy(increment=n("5"))
+        val changed=NativeKotlinGymCatalogEditingDomain.upsertStock(current,2,"cable-1",revisedStock)
+            as NativeGymCatalogEdit.Proposed
+        assertEquals(NativeAuthoringSourceWrite.Committed(3),
+            store().publish("owner-1",2,changed.source))
+        assertEquals(NativeAuthoringSourceWrite.Rejected(NativeAuthoringSourceRefusal.STALE_REVISION),
+            store().selectSavedGym("owner-1",2,"gym-1",true))
+        assertEquals(NativeAuthoringSourceWrite.Rejected(NativeAuthoringSourceRefusal.INVALID_SOURCE),
+            store().addAndSelectGym("owner-1",3,second.copy(gymId="gym-1"),true))
+        assertEquals(NativeAuthoringSourceWrite.Committed(4),
+            store().selectSavedGym("owner-1",3,"gym-1",true))
+        val reopened=store().readSavedGyms("owner-1") as NativeSavedGymRead.Ready
+        assertEquals(original.gym,reopened.active)
+        assertEquals(revisedStock,reopened.inactive.single().confirmedStock["cable-1"])
+        val lb=(store().read("owner-1") as NativeAuthoringSourceRead.Found).source
+        assertEquals(initial.copy(revision=4),lb)
+        assertEquals(NativeAuthoringSourceWrite.Committed(5),
+            store().selectSavedGym("owner-1",4,"gym-2",true))
+        val roundTrip=store().readSavedGyms("owner-1") as NativeSavedGymRead.Ready
+        assertEquals(revisedStock,roundTrip.active.confirmedStock["cable-1"])
+        assertEquals(original.gym,roundTrip.inactive.single())
+        signedIn=NativeKotlinOwnerIdentity("owner-1","other-athlete")
+        assertEquals(NativeSavedGymRead.Rejected(NativeAuthoringSourceRefusal.NOT_AUTHORIZED),
+            store().readSavedGyms("owner-1"))
+        assertEquals(NativeAuthoringSourceWrite.Rejected(NativeAuthoringSourceRefusal.NOT_AUTHORIZED),
+            store().selectSavedGym("owner-1",5,"gym-1",true))
+        signedIn=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        assertEquals(roundTrip,store().readSavedGyms("owner-1"))
+        assertEquals(NativeAuthoringSourceWrite.Committed(6),store().revoke("owner-1",5))
+        assertEquals(NativeSavedGymRead.Rejected(NativeAuthoringSourceRefusal.INVALID_SOURCE),
+            store().readSavedGyms("owner-1"))
+        assertEquals(NativeAuthoringSourceWrite.Rejected(NativeAuthoringSourceRefusal.STALE_REVISION),
+            store().selectSavedGym("owner-1",5,"gym-1",true))
+    }
+
     @Test fun revokeTombstonesCatalogAndQueuedOldSaveCannotResurrectStock() {
         assertEquals(NativeAuthoringSourceWrite.Committed(1),
             store().publish("owner-1",0,source()))

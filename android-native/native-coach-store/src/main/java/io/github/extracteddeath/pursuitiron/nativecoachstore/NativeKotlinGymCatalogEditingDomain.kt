@@ -96,6 +96,20 @@ object NativeKotlinGymCatalogEditingDomain {
             source.copy(revision=expectedRevision+1,setup=reviewed),name)
     }
 
+    /** Gym switch is only a source proposal. It retains the current
+     * athlete preferences and catalog, never an archived athlete profile. */
+    internal fun switchGym(source:NativeCustomAuthoringSnapshot,expectedRevision:Long,
+        target:GymProfileDraft):NativeGymCatalogEdit =
+        gymEdit(source,expectedRevision,"switch-verified-gym"){target}
+
+    internal fun reviewedGym(source:NativeCustomAuthoringSnapshot,target:GymProfileDraft):ReviewedGymProfile? {
+        val athlete=source.setup.reviewed?:return null
+        val review=CoachAthleteSetupDomain.review(draft(athlete,target))
+        return review.reviewed?.gym?.takeIf{review.status==AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW}
+    }
+
+    internal fun asGymDraft(gym:ReviewedGymProfile):GymProfileDraft=baseGym(gym)
+
     /** Changes only exercise preferences, with the exact reviewed source as base. */
     fun setExerciseExclusions(
         source:NativeCustomAuthoringSnapshot,

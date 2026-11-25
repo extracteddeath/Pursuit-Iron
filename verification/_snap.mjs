@@ -11,7 +11,7 @@ const browser=await puppeteer.launch({executablePath:process.env.CHROME_BIN,head
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 const out={};
 const steps=(await import(process.env.NAV)).default;
-for(const theme of (process.env.THEMES||'amethyst,rosewater').split(','))for(const w of [320,393,900])for(const fz of [16,32]){
+for(const theme of (process.env.THEMES||'amethyst,rosewater').split(','))for(const w of (process.env.WIDTHS||'320,393,900').split(',').map(Number))for(const fz of [16,32]){
  const page=await browser.newPage();await page.setViewport({width:w,height:844,isMobile:w<600,hasTouch:true});await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
  const state={v:13,savedAt:1,saved:[program],pinnedId:'p',cycles:[],history,perf:{},drafts:{},tombs:{},seenIntro:999,seenWhatsNew:999,unit:'lb',unitChosen:true,experience:'intermediate',bodyweight:185,installDismissedAt:now,lastBackup:now,theme};
  await page.evaluateOnNewDocument(s=>{localStorage.clear();localStorage.setItem('wpb:v1',JSON.stringify(s));},state);

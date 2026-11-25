@@ -977,10 +977,6 @@ function StyleTag({ theme } = {}) {
       .wpb-advanced-body{border-top:1px solid ${C.borderSoft};background:color-mix(in srgb,${C.bg2} 40%,transparent);}
       .wpb-premium-tabs{display:grid!important;grid-auto-flow:column;grid-auto-columns:minmax(max-content,1fr);gap:2px!important;}
       .wpb-premium-tabs>button{border-bottom:none!important;border-radius:11px!important;min-height:40px;}
-      .wpb-tabbar{display:flex;flex-shrink:0;padding:5px 6px calc(5px + env(safe-area-inset-bottom));border-top:1px solid ${C.borderSoft};background:color-mix(in srgb,${C.bg2} 90%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 -8px 28px rgba(0,0,0,.08);}
-      .wpb-tabbar .wpb-tab{position:relative;min-height:54px;border-radius:14px!important;color:${C.muted}!important;}
-      .wpb-tabbar .wpb-tab[aria-current="page"]{color:${C.accentInk}!important;background:color-mix(in srgb,${C.accent} 10%,transparent)!important;}
-      .wpb-tabbar .wpb-tab[aria-current="page"]::before{content:'';position:absolute;top:3px;width:28px;height:3px;border-radius:99px;background:${C.accent};}
       .wpb-recovery-card{width:min(100%,460px);padding:22px!important;}
       .wpb-kicker{font-size:11px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;color:${C.accentInk};}
       .wpb-title{font-size:clamp(24px,6vw,30px);font-weight:760;letter-spacing:-.75px;line-height:1.08;}
@@ -1047,10 +1043,6 @@ function StyleTag({ theme } = {}) {
       .wpb-title{font-weight:720;letter-spacing:-.65px;}
       .wpb-metric{box-shadow:none!important;background:transparent!important;border-color:${C.borderSoft}!important;}
       .wpb-action-tile{box-shadow:none!important;border:1px solid ${C.borderSoft}!important;background:${C.card}!important;}
-      .wpb-tabbar{padding:3px 6px calc(4px + env(safe-area-inset-bottom));background:${C.bg};backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none;border-top:1px solid ${C.borderSoft};}
-      .wpb-tabbar .wpb-tab{min-height:52px;border-radius:10px!important;color:${C.muted}!important;}
-      .wpb-tabbar .wpb-tab[aria-current="page"]{color:${C.accentInk}!important;background:transparent!important;}
-      .wpb-tabbar .wpb-tab[aria-current="page"]::before{top:1px;width:20px;height:2px;}
       .wpb-premium-tabs{background:${C.bg2};border:1px solid ${C.borderSoft};border-radius:12px;padding:3px;}
       .wpb-premium-tabs>button[aria-selected="true"]{background:${C.cardHi}!important;box-shadow:none!important;color:${C.text}!important;}
       .wpb input:not(:where(.wpb-switcher-search,.wpb-history-editor-input)),.wpb select,.wpb textarea{border-radius:10px!important;}
@@ -1098,11 +1090,6 @@ function StyleTag({ theme } = {}) {
       .wpb-settings .wpb-page-scroll,.wpb-cycles .wpb-page-scroll,.wpb-cycle-detail .wpb-page-scroll{
         width:100%;max-width:720px;margin-left:auto!important;margin-right:auto!important;
       }
-      .wpb-tabbar{padding-left:8px!important;padding-right:8px!important;}
-      .wpb-tabbar .wpb-tab{min-height:50px!important;border-radius:12px!important;gap:3px!important;}
-      .wpb-tabbar .wpb-tab[aria-current="page"]{background:${C.cardHi}!important;color:${C.text}!important;}
-      .wpb-tabbar .wpb-tab[aria-current="page"]::before{display:none!important;}
-      .wpb-tabbar .wpb-tab[aria-current="page"] svg{color:${C.accentInk}!important;}
 
       .wpb-home-hero{border-color:${C.borderSoft}!important;border-radius:14px!important;}
       .wpb-home .wpb-action-grid{gap:7px!important;margin-bottom:16px!important;}
@@ -1216,9 +1203,6 @@ function StyleTag({ theme } = {}) {
       /* M97 NAVIGATION + MICRO-INTERACTION PASS — non-workout only.
          Primary tabs are roots; drill-down views retain directional motion, while tab switches use a
          lighter fade so navigation feels immediate instead of pretending every tab is a deeper page. */
-      .wpb-tabbar .wpb-tab{transition:background-color var(--m-fast) var(--e-out),color var(--m-fast) var(--e-out),transform var(--m-base) var(--e-out)!important;}
-      .wpb-tabbar .wpb-tab svg{transition:transform var(--m-base) var(--e-out),color var(--m-fast) var(--e-out);}
-      .wpb-tabbar .wpb-tab[aria-current="page"] svg{transform:translateY(-1px) scale(1.04);}
       .wpb-tabbar .wpb-tab:focus-visible{outline:2px solid ${C.accent}!important;outline-offset:-3px!important;}
       .wpb-page-shell:not(.wpb-workout) button:disabled{cursor:default!important;filter:saturate(.7);}
       .wpb-page-shell:not(.wpb-workout) [aria-busy="true"]{cursor:progress;}
@@ -1268,20 +1252,6 @@ function StyleTag({ theme } = {}) {
       .wpb-page-shell:not(.wpb-workout) h1,
       .wpb-page-shell:not(.wpb-workout) h2{
         text-wrap:balance;
-      }
-      .wpb-tabbar{
-        min-height:62px!important;
-        padding-top:6px!important;
-        background:color-mix(in srgb,${C.bg} 96%,transparent)!important;
-      }
-      .wpb-tabbar .wpb-tab{
-        min-height:46px!important;
-        border-radius:10px!important;
-        font-weight:650!important;
-      }
-      .wpb-tabbar .wpb-tab[aria-current="page"]{
-        background:${C.card}!important;
-        box-shadow:inset 0 0 0 1px ${C.borderSoft}!important;
       }
       .wpb-home .wpb-page-scroll{padding-top:10px!important;}
       .wpb-home .wpb-home-hero{
@@ -1533,9 +1503,6 @@ function StyleTag({ theme } = {}) {
                    border-color var(--m-fast) var(--e-out),box-shadow var(--m-base) var(--e-out),
                    transform var(--m-base) var(--e-spring)!important;
       }
-      .wpb-tabbar .wpb-tab{transition-duration:var(--m-fast),var(--m-fast),var(--m-base)!important;}
-      .wpb-tabbar .wpb-tab svg{transition:transform 260ms var(--e-spring),color var(--m-fast) var(--e-out)!important;}
-      .wpb-tabbar .wpb-tab[aria-current="page"] svg{transform:translate3d(0,-1px,0) scale(1.035);}
 
       /* Workout state changes should glide, but inputs must remain completely authoritative. No value,
          pointer, keyboard, or stepper logic is touched; only the row's paint properties interpolate. */
@@ -1669,26 +1636,6 @@ function StyleTag({ theme } = {}) {
       }
 
       /* Navigation chrome: clear current location without making every tab look like a pill button. */
-      .wpb-tabbar{
-        min-height:60px!important;
-        border-top-color:var(--hairline)!important;
-        background:${C.bg}!important;
-        box-shadow:none!important;
-      }
-      .wpb-tabbar .wpb-tab{
-        border-radius:9px!important;
-        color:${C.faint}!important;
-      }
-      .wpb-tabbar .wpb-tab[aria-current="page"]{
-        background:transparent!important;
-        box-shadow:none!important;
-        color:${C.text}!important;
-      }
-      .wpb-tabbar .wpb-tab[aria-current="page"] svg{color:${C.accentInk}!important;}
-      .wpb-tabbar .wpb-tab[aria-current="page"]::after{
-        content:"";position:absolute;bottom:3px;width:16px;height:2px;border-radius:99px;background:${C.accent};
-        opacity:.9;
-      }
 
       /* Horizontal rails should feel like native carousels, not embedded browser panes. */
       .wpb-hscroll,.wpb-xscroll,.wpb-ex-nav{
@@ -1751,8 +1698,6 @@ function StyleTag({ theme } = {}) {
       /* Compact phones: preserve hierarchy before shrinking typography. */
       @media(max-width:420px){
         .wpb-page-shell:not(.wpb-workout)>.wpb-page-header{min-height:52px;}
-        .wpb-tabbar{padding-left:4px!important;padding-right:4px!important;}
-        .wpb-tabbar .wpb-tab{min-height:45px!important;}
         .wpb-empty-state{padding-left:12px!important;padding-right:12px!important;}
       }
 
@@ -2271,8 +2216,6 @@ function StyleTag({ theme } = {}) {
       .wpb :is(.wpb-premium-tabs,.wpb-settings .wpb-segmented)>button{
         min-width:var(--pi-segment-min,0)!important;white-space:normal!important;overflow-wrap:break-word;line-height:1.15!important;
       }
-      .wpb-tabbar .wpb-tab{min-width:0!important;}
-      .wpb-tabbar .wpb-tab>span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
       /* Centred dialogs previously relied on their content staying shorter than the screen. At 200%
          text, landscape, or a split-screen window that assumption fails and the bottom action can

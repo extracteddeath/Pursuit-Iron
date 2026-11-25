@@ -282,9 +282,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-effort-scale{width:min(220px,100%);max-width:100%;flex-wrap:nowrap!important}
 #root[data-pi-motion="expressive"] .wpb .wpb-effort-scale>button{flex:var(--pi-choice-grow,1) 1 0;min-width:0!important;width:0!important;padding-inline:0!important}
 #root[data-pi-motion="expressive"] .wpb .wpb-toggle>[data-pi-thumb]{transform:translateX(var(--pi-switch-x,0px))!important;transition:box-shadow 140ms var(--pi-ease)!important}
-#root[data-pi-motion="expressive"] .wpb .wpb-tab{position:relative;isolation:isolate}
-#root[data-pi-motion="expressive"] .wpb .wpb-tab::before{content:"";position:absolute;z-index:-1;top:4px;width:46px;height:28px;border-radius:16px;background:color-mix(in srgb,currentColor 10%,transparent);opacity:0;transition:opacity 140ms var(--pi-ease)}
-#root[data-pi-motion="expressive"] .wpb .wpb-tab[aria-current="page"]::before{opacity:1}
 @media(prefers-reduced-motion:reduce){
   #root[data-pi-motion="expressive"] .wpb [data-pi-surface]{translate:none!important;scale:1!important}
   #root[data-pi-motion="expressive"] .wpb button[data-pi-control],#root[data-pi-motion="expressive"] .wpb .wpb-tab svg{scale:1!important;transition:none!important}
@@ -355,43 +352,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   outline-offset:3px;
 }
 /* Navigation: a quiet tonal pill sits under the icon. Labels stay visible without expanding the bar. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
-  isolation:isolate;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab{
-  overflow:visible;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab::before{
-  top:4px!important;
-  left:50%!important;
-  transform:translateX(-50%)!important;
-  width:min(70%,54px)!important;
-  height:30px!important;
-  border-radius:100px!important;
-  background:color-mix(in srgb,currentColor 14%,transparent)!important;
-  opacity:0!important;
-  pointer-events:none;
-/* Override the legacy display:none !important on the old top-marker.
-   The new icon pill must paint above the button background but below its glyph. */
-display:block!important;
-  z-index:0!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]{
-  background:transparent!important;
-}
 /* An active touch temporarily borrows ::after for its origin ripple.
    Hide only the retired underline when the ripple is NOT playing. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]:not([data-pi-ink])::after{
-  content:none!important;
-  display:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]::before{
-  opacity:1!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab svg,#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab span{
-  position:relative;
-  z-index:1;
-}
 
 #root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile,#root[data-pi-motion="expressive"] .wpb-home .wpb-carousel-card{
   border-radius:var(--pi-layout-radius)!important;
@@ -1271,31 +1233,6 @@ display:block!important;
 /* PI M3 SPATIAL NAVIGATION — measured, interruptible spring between the
    existing bottom tabs. This track replaces five static selected pills without
    adding a node, changing tab height, routing or the original hit targets. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]{
-  /* Keep offsetTop and the paint track in the same local coordinate space.
-     A height-only resize must not leave the indicator at the old shell y. */
-  position:relative;
-  isolation:isolate;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]::before{
-  --pi-m3-track-x:inherit;--pi-m3-track-y:inherit;--pi-m3-track-width:inherit;--pi-m3-track-height:inherit;
-  content:"";
-  position:absolute;
-  left:0;top:0;z-index:0;
-  width:var(--pi-m3-track-width,0px);
-  height:var(--pi-m3-track-height,30px);
-  translate:var(--pi-m3-track-x,0px) var(--pi-m3-track-y,0px);
-  pointer-events:none;
-  will-change:translate,width;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track] .wpb-tab{
-  z-index:1;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track] .wpb-tab::before{
-  display:none!important;
-  content:none!important;
-  opacity:0!important;
-}
 /* Root navigation animates at most one lead card; the selected indicator
    supplies the main continuity cue. No workout controls enter this system. */
 #root[data-pi-motion="expressive"] .wpb [data-pi-reveal="1"]{
@@ -1549,9 +1486,6 @@ display:block!important;
 /* Reframe the bottom navigation's moving selection as an expressive container:
    a slightly wider active region and a spring-scale icon, with no bar height
    increase or labels hidden when the workout dock is present. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"] svg{
-  stroke-width:2.35px;
-}
 @media(hover:hover) and (pointer:fine){
   #root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile:hover,
   #root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-option:hover{
@@ -1907,9 +1841,6 @@ display:block!important;
 }
 /* Navigation is one grounded surface; active destination is indicated by the
    already-measured spring pill, not by a background glow on the entire bar. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
-  border-top:1px solid var(--pi-m3e-outline-variant)!important;
-}
 /* A flat primary container creates an obvious task hierarchy. The action
    retains its existing filled theme color, never a translucent gradient. */
 #root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile{
@@ -3058,11 +2989,7 @@ display:block!important;
 /* M3 EXPRESSIVE R34 — ADAPTIVE NAVIGATION AND CROSS-SCREEN COMPOSITION
    Keep one canonical responsive shell. These rules only resolve crowding;
    controls retain real React layout, touch dimensions and semantic actions. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
-  padding-left:max(6px,env(safe-area-inset-left))!important;
-  padding-right:max(6px,env(safe-area-inset-right))!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab>span,
+
 #root[data-pi-motion="expressive"] .wpb .wpb-home-hero,
 #root[data-pi-motion="expressive"] .wpb .wpb-action-tile,
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile,
@@ -3219,43 +3146,9 @@ display:block!important;
    indicator is 27px high and its bottom must clear the label by >=5px.
    Tab buttons still own all tap/keyboard semantics; the animated track
    remains paint-only, measured by ui-motion.js from these real bounds. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
-  padding-top:5px!important;
-  padding-bottom:calc(5px + env(safe-area-inset-bottom))!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab{
-  box-sizing:border-box;
-  display:flex!important;
-  flex-direction:column!important;
-  justify-content:flex-start!important;
-  align-items:center!important;
-  gap:0!important;
-  border-radius:16px!important;
-  background:transparent!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab svg{
-  display:block;
-  width:22px!important;
-  height:22px!important;
-  min-width:22px!important;
-  min-height:22px!important;
-  flex:0 0 22px!important;
-  margin:0!important;
-  align-self:center;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab>span{
-  display:block;
-  flex:none;
-  padding:0!important;
-  letter-spacing:0!important;
-}
 /* The theme's saved ink color remains accessible. The active pill now has
    a real tonal fill and softly symmetric curvature, not a hollow ring that
    dominates the icons or the labels. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]::before{
-  border-radius:16px!important;
-  background-color:var(--pi-r38-nav-indicator-fill)!important;
-}
 /* Unify Home surfaces without recoloring training status, progress values,
    the user-selected accent, or the important Start Workout foreground. */
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>.wpb-primary-action{
@@ -3358,10 +3251,6 @@ display:block!important;
    Scale only non-logger presentation through rem-based minimums; let the
    resulting cards grow vertically while preserving five accessible routes.
    The protected workout set/stepper/plate/RIR layout is not modified. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab>span{
-  box-sizing:border-box;
-  text-align:center;
-}
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filter-help{
   font-size:var(--pi-type-label)!important;
   line-height:1.47!important;
@@ -3421,10 +3310,6 @@ display:block!important;
 #root[data-pi-motion="expressive"] .wpb .wpb-profile,
 #root[data-pi-motion="expressive"] .wpb .wpb-settings{
   background-color:light-dark(var(--pi-m3e-base),var(--pi-r41-page))!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
-  background-color:light-dark(var(--pi-m3e-surface-container-low),var(--pi-r41-surface-1))!important;
-  box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs{
   background-color:light-dark(var(--pi-m3e-surface-container),var(--pi-r41-surface-2))!important;
@@ -4323,23 +4208,6 @@ display:block!important;
 }
 /* The same pastel-tonal active role applies to the selected bottom nav
    icon, with accent colored label outside the indicator. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
-  background:var(--pi-color-card)!important;
-  background-image:none!important;
-  border-top-color:var(--pi-color-divider)!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]::before{
-  background:var(--pi-color-active)!important;
-  background-image:none!important;
-  box-shadow:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"] svg,
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-selected="true"] svg{
-  color:var(--pi-color-on-active)!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]>span{
-  color:var(--pi-m3e-primary)!important;
-}
 
 /* R53 — Plan is a first-class semantic component hierarchy, not a collection
    of anonymous inline plum panels. The JSX gives each role an explicit class.
@@ -4881,22 +4749,6 @@ background:var(--pi-color-card)!important;
 .wpb-plan-empty-body{display:grid;justify-items:center;gap:var(--pi-space-3);padding:var(--pi-space-8) var(--pi-page-inset);text-align:center;}
 .wpb-plan-empty-body>h2,.wpb-plan-empty-body>p{margin:0;}
 .wpb-plan-empty-body>svg,.wpb-plan-empty-body>p{color:var(--pi-color-on-muted);}
-
-#root .wpb .wpb-tabbar{
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,8ch),1fr));
-  font-size:var(--pi-type-navigation);flex-shrink:0;gap:0;
-}
-
-#root .wpb .wpb-tabbar .wpb-tab{
-  font-size:inherit;min-width:48px;min-height:56px;height:auto;
-  padding:5px 0 4px;border:0;cursor:pointer;
-}
-
-#root .wpb .wpb-tabbar .wpb-tab>span{
-  width:100%;min-width:0;margin:9px 0 0;padding:0;text-align:center;
-  font-size:inherit;font-weight:600;line-height:1.3;white-space:nowrap;
-  overflow-wrap:normal;word-break:normal;
-}
 
 #root .wpb .wpb-summary-grid{
   display:grid;font-size:var(--pi-type-body);grid-template-columns:repeat(auto-fit,minmax(min(100%,5.5em),1fr));
@@ -9321,6 +9173,8 @@ background:var(--pi-color-card)!important;
   #root .wpb .wpb-b975-offline-status{animation:none;}
 }
 
+/* B1049: navigation tabs keep their 16px shape; the shared press-morph never reshaped them. */
+#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab{border-radius:16px!important;}
 /* B976 — Program schedule, exercise swap and workout detail controls have
    explicit CSS owners. Retire static JSX geometry without changing actions,
    engine data, tab/navigation state or theme-derived dynamic values. */
@@ -10062,3 +9916,44 @@ background:var(--pi-color-card)!important;
   #root .wpb .wpb-progress .wpb-progress-glance-item:first-child{min-height:89px;padding:10px 7px;}
   #root .wpb .wpb-progress .wpb-progress-glance-item:first-child>.wpb-progress-glance-value{font-size:22px;}
 }
+/* B1049 — Navigation bar: the one owner for the phone bar (the rail at 840px+ keeps its own layout
+   rules). Replaces 62 layered rules across app.css and the StyleTag. */
+#root[data-pi-motion] .wpb .wpb-tabbar{
+  position:relative;isolation:isolate;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,8ch),1fr));gap:0;flex-shrink:0;
+  min-height:60px;padding:5px max(6px,env(safe-area-inset-right)) calc(5px + env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left));
+  font-size:var(--pi-type-navigation);border:0;border-top:1px solid var(--pi-color-divider);
+  background:light-dark(var(--pi-m3e-surface-container-low),var(--pi-r41-surface-1));box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;
+}
+#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab{
+  position:relative;isolation:isolate;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:0;
+  box-sizing:border-box;min-width:0;min-height:46px;height:auto;padding:5px 0 4px;border:0;background:transparent;
+  color:var(--wpb-theme-muted);font-size:inherit;font-weight:650;cursor:pointer;overflow:visible;
+  transition:background-color var(--m-fast) var(--e-out),color var(--m-fast) var(--e-out),transform var(--m-base) var(--e-out);
+}
+#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]{color:var(--wpb-theme-text);box-shadow:none;}
+@media(max-width:420px){#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab{min-height:45px;}}
+#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab svg{
+  position:relative;z-index:1;display:block;align-self:center;flex:0 0 22px;width:22px;height:22px;min-width:22px;min-height:22px;margin:0;
+  transition:transform 260ms var(--e-spring),color var(--m-fast) var(--e-out);
+}
+#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab[aria-current="page"] svg{color:var(--pi-color-on-active);stroke-width:2.35px;transform:translate3d(0,-1px,0) scale(1.035);}
+#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab>span{
+  position:relative;z-index:1;display:block;box-sizing:border-box;flex:none;width:100%;max-width:100%;min-width:0;margin:9px 0 0;padding:0;
+  font-size:inherit;font-weight:600;line-height:1.3;letter-spacing:0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal;word-break:normal;
+}
+#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]>span{color:var(--pi-m3e-primary);}
+/* Without the shared track (no JS measurement yet), each tab draws its own pill. */
+#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab::before{
+  content:"";display:block;position:absolute;z-index:0;top:4px;left:50%;transform:translateX(-50%);width:min(70%,54px);height:30px;border-radius:100px;
+  background:color-mix(in srgb,currentColor 14%,transparent);opacity:0;pointer-events:none;transition:opacity 140ms var(--pi-ease);
+}
+#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]::before{opacity:1;}
+#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]:not([data-pi-ink])::after{content:none;display:none;}
+#root[data-pi-motion] .wpb .wpb-tabbar[data-pi-m3-track] .wpb-tab::before{content:none;display:none;}
+#root[data-pi-motion] .wpb .wpb-tabbar[data-pi-m3-track]::before{
+  --pi-m3-track-x:inherit;--pi-m3-track-y:inherit;--pi-m3-track-width:inherit;--pi-m3-track-height:inherit;
+  content:"";position:absolute;left:0;top:0;z-index:0;width:var(--pi-m3-track-width,0px);height:var(--pi-m3-track-height,30px);
+  translate:var(--pi-m3-track-x,0px) var(--pi-m3-track-y,0px);border-radius:16px;background:var(--pi-color-active);
+  box-shadow:none;pointer-events:none;
+}
+@media(prefers-reduced-motion:no-preference){#root[data-pi-motion] .wpb .wpb-tabbar[data-pi-m3-track]::before{will-change:translate,width;}}

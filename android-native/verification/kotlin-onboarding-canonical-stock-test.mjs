@@ -108,3 +108,22 @@ for(const file of ['NativeKotlinCustomJournalScreen.kt','NativeKotlinWorkoutCand
     assert.match(journal,/set(?:\.target)?\.setKey in levelSetKeys\)/,
         'Only the reviewed rows (including eligible unloaded landmine sets) receive the prefill: '+file);
 }
+
+
+// Saved gyms are explicit source changes, not a second mutable equipment
+// model or a cross-gym weight conversion. Require coherent list revisions.
+const gymController=readFileSync(join(root,
+    'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGymSourceController.kt'),'utf8');
+const gymHost=readFileSync(join(root,
+    'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt'),'utf8');
+assert.match(gymEditor,/NativeKotlinSavedGymSelector\(controller,it,state.busy\)/);
+assert.match(gymEditor,/it.sourceRevision==source.revision && it.active==gym/);
+assert.match(gymEditor,/controller.selectSavedGym\(gyms.sourceRevision,gym.gymId,true\)/);
+assert.match(gymEditor,/controller.addSavedGym\(gyms.sourceRevision,id,chosen,true\)/);
+assert.match(gymEditor,/validId && unit!=null/);
+assert.match(gymEditor,/LaunchedEffect\(reviewed\?\.gym\?\.gymId\)[\s\S]*?clearStockFields\(\)/);
+assert.match(gymController,/gymRead.sourceRevision==shown.revision/);
+assert.match(gymController,/shown\?\.sourceRevision!=expectedRevision/);
+assert.match(gymHost,/authoringSourceStore.selectSavedGym\(owner.ownerKey,expectedRevision,gymId,athleteConfirmed\)/);
+assert.match(gymHost,/GymProfileDraft\(gymId,unit,emptyMap\(\),emptySet\(\),emptySet\(\)\),athleteConfirmed/);
+console.log('PASS source-level saved gym selection: coherent revision, explicit confirmation, independent units and no copied stock.');

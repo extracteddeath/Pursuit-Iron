@@ -3028,6 +3028,28 @@ internal class NativeKotlinCandidateHost(context:Context) {
         return authoringSourceStore.read(owner.ownerKey)
     }
 
+    fun readSavedPhysicalGyms():NativeSavedGymRead {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeSavedGymRead.Rejected(NativeAuthoringSourceRefusal.NOT_AUTHORIZED)
+        return authoringSourceStore.readSavedGyms(owner.ownerKey)
+    }
+
+    fun selectSavedPhysicalGym(expectedRevision:Long,gymId:String,
+        athleteConfirmed:Boolean):NativeAuthoringSourceWrite {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeAuthoringSourceWrite.Rejected(NativeAuthoringSourceRefusal.NOT_AUTHORIZED)
+        return authoringSourceStore.selectSavedGym(owner.ownerKey,expectedRevision,gymId,athleteConfirmed)
+    }
+
+    fun addSavedPhysicalGym(expectedRevision:Long,gymId:String,unit:LoadUnit,
+        athleteConfirmed:Boolean):NativeAuthoringSourceWrite {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeAuthoringSourceWrite.Rejected(NativeAuthoringSourceRefusal.NOT_AUTHORIZED)
+        // A new gym begins with no confirmed equipment or copied stock.
+        return authoringSourceStore.addAndSelectGym(owner.ownerKey,expectedRevision,
+            GymProfileDraft(gymId,unit,emptyMap(),emptySet(),emptySet()),athleteConfirmed)
+    }
+
     fun publishCustomAuthoringSource(
         setupDraft:AthleteSetupDraft,
         curatedCatalog:List<CatalogMovement>,

@@ -1,0 +1,10 @@
+first launch: Starting: Intent { cmp=io.github.extracteddeath.pursuitiron.bench/com.pursuitiron.app.MainActivity } / Status: ok / LaunchState: COLD / Activity: io.github.extracteddeath.pursuitiron.bench/com.pursuitiron.app.MainActivity / TotalTime: 1434 / WaitTime: 1439 / Complete
+running after launch: yes (pid 28943)
+history imported: NO (numbers below are for an empty store)
+cold start ms: 1030, 1217, 966 (median 1030)
+Today: Total frames rendered: 120 | Janky frames: 110 (91.67%) | 50th percentile: 53ms | 90th percentile: 109ms | 99th percentile: 200ms
+Plan: Total frames rendered: 126 | Janky frames: 111 (88.10%) | 50th percentile: 53ms | 90th percentile: 101ms | 99th percentile: 129ms
+Progress: Total frames rendered: 126 | Janky frames: 113 (89.68%) | 50th percentile: 53ms | 90th percentile: 105ms | 99th percentile: 129ms
+Exercises: Total frames rendered: 125 | Janky frames: 117 (93.60%) | 50th percentile: 53ms | 90th percentile: 105ms | 99th percentile: 150ms
+You: Total frames rendered: 125 | Janky frames: 107 (85.60%) | 50th percentile: 53ms | 90th percentile: 105ms | 99th percentile: 133ms
+crash / engine error lines: 0

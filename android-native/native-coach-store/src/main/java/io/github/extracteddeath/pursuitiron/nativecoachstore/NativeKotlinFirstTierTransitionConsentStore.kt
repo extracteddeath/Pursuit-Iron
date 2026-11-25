@@ -33,6 +33,15 @@ sealed interface NativeTieredTransitionRecovery {
     data class Refused(val reason:NativeTieredTransitionConsentResult):NativeTieredTransitionRecovery
 }
 
+/** A corrected-history review, never permission to issue. The exact old
+ * preparation is separately discarded before the athlete can replace consent. */
+data class NativeStaleTierTransitionReview(
+    val review:NativeSavedNamedReview.Signed,
+    val previousReceiptFingerprint:String,
+    val previousTargets:List<CustomAuthoredSet>,
+    val preparation:NativeCustomPreparedWorkout?
+)
+
 /** Decoded only from the private, bounded receipt file. The historical
  * replay must additionally authenticate every field and the issued origin.
  */
@@ -171,6 +180,74 @@ class NativeKotlinFirstTierTransitionConsentStore(
                 return@withOwnerTransaction NativeTieredTransitionRecovery.Refused(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED)
             result
         }}.getOrElse{NativeTieredTransitionRecovery.Refused(NativeTieredTransitionConsentResult.STORAGE_UNAVAILABLE)}
+
+    /** The old receipt and any unissued preparation remain unchanged.
+     * Recover the same workout ID and recovery choice, with newer verified
+     * history and proof of the original frozen recipe. */
+    fun reviewStaleScheduled(ownerKey:String,cycleId:String,week:Int,weekday:Int,
+        calendar:NativeKotlinCustomNextCycleSessionReview):NativeStaleTierTransitionReview? =
+        runCatching{fence.withOwnerTransaction(ownerKey){
+            val owner=identity.signedInIdentity()?.takeIf{it.ownerKey==ownerKey}
+                ?:return@withOwnerTransaction null
+            if(!scheduled(ownerKey,cycleId,week,weekday,null,calendar) ||
+                (recover(ownerKey,cycleId,week) as? NativeTieredTransitionRecovery.Refused)
+                    ?.reason!=NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED)
+                return@withOwnerTransaction null
+            val first=firstWeek(ownerKey,cycleId)?:return@withOwnerTransaction null
+            if(week !in first..104 ||
+                (week+1..104).any{Files.exists(path(ownerKey,cycleId,it,first),LinkOption.NOFOLLOW_LINKS)})
+                return@withOwnerTransaction null
+            val old=decode(readBytes(path(ownerKey,cycleId,week,first)))
+            if(old.ownerKey!=ownerKey || old.athleteId!=owner.athleteId ||
+                old.cycleId!=cycleId || old.selection.absoluteWeek!=week ||
+                !scheduled(ownerKey,cycleId,week,weekday,old.selection.nextWorkoutId,calendar))
+                return@withOwnerTransaction null
+            val preparation=outstanding.preparedOrigin(ownerKey,old.selection.nextWorkoutId)
+            if(preparation!=null && !canCancelStalePreparation(preparation))
+                return@withOwnerTransaction null
+            val rules=signoffs.signedTieredInputs(ownerKey,cycleId)
+                ?:return@withOwnerTransaction null
+            val reviewer=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
+                signoffs,history,outstanding,machineRosters)
+            val fresh=reviewer.previewTieredNextForPreparation(ownerKey,cycleId,rules,old.selection,
+                old.fingerprint.takeIf{preparation!=null},priorReceipts(ownerKey,cycleId,first,week),
+                staleReceipt=old) as? NativeSavedNamedReview.Signed
+                ?:return@withOwnerTransaction null
+            val initial=fresh.initialTierReceipt?:return@withOwnerTransaction null
+            val keyWeek=initial.weekInBlock+week-initial.selection.absoluteWeek
+            val previous=NativeCustomCycleDraftCodec.decode(old.proposedCycle).weekOverrides[initial.blockId]
+                ?.singleOrNull{it.weekInBlock==keyWeek && it.weekday==weekday && it.slotId==initial.selection.slotId}
+                ?.sets?:return@withOwnerTransaction null
+            if(identity.signedInIdentity()!=owner)return@withOwnerTransaction null
+            NativeStaleTierTransitionReview(fresh,old.fingerprint,previous,preparation)
+        }}.getOrNull()
+
+    fun cancelStaleScheduled(ownerKey:String,cycleId:String,shown:NativeStaleTierTransitionReview,
+        calendar:NativeKotlinCustomNextCycleSessionReview,prepared:NativeKotlinCustomWorkoutPreparedStore,
+        confirmed:Boolean):Boolean =
+        runCatching{fence.withOwnerTransaction(ownerKey){
+            if(!confirmed)return@withOwnerTransaction false
+            val saved=shown.preparation?:return@withOwnerTransaction false
+            if(reviewStaleScheduled(ownerKey,cycleId,saved.snapshot.absoluteWeek,saved.snapshot.weekday,calendar)!=shown)
+                return@withOwnerTransaction false
+            prepared.cancelStaleTierPreparation(saved,this,true)
+        }}.getOrDefault(false)
+
+    fun replaceStaleScheduled(ownerKey:String,cycleId:String,shown:NativeStaleTierTransitionReview,
+        calendar:NativeKotlinCustomNextCycleSessionReview,confirmed:Boolean,reset:Boolean,recovery:Boolean):
+        NativeTieredTransitionConsentResult =
+        runCatching{fence.withOwnerTransaction(ownerKey){
+            if(shown.preparation!=null)
+                return@withOwnerTransaction NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT
+            val week=shown.review.nextTierCandidate?.selection?.absoluteWeek
+                ?:return@withOwnerTransaction NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED
+            val day=shown.review.initialTierReceipt?.selection?.weekday
+                ?:return@withOwnerTransaction NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED
+            if(reviewStaleScheduled(ownerKey,cycleId,week,day,calendar)!=shown)
+                return@withOwnerTransaction NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED
+            replaceStaleUnprepared(ownerKey,cycleId,shown.review,shown.previousReceiptFingerprint,
+                confirmed,reset,recovery)
+        }}.getOrElse{NativeTieredTransitionConsentResult.STORAGE_UNAVAILABLE}
 
     fun confirmScheduled(ownerKey:String,cycleId:String,displayed:NativeSavedNamedReview.Signed,
         calendar:NativeKotlinCustomNextCycleSessionReview,confirmed:Boolean,
@@ -399,7 +476,7 @@ class NativeKotlinFirstTierTransitionConsentStore(
             // The reviewer independently checks the complete issued/completed
             // census, exact historical origins and corrected current ledger.
             val fresh=reviewer.previewTieredNextForPreparation(ownerKey,cycleId,old.inputs,
-                old.selection,old.fingerprint,prior) as? NativeSavedNamedReview.Signed
+                old.selection,old.fingerprint,prior,staleReceipt=old) as? NativeSavedNamedReview.Signed
                 ?:return@withOwnerTransaction false
             val next=fresh.nextTierCandidate?:return@withOwnerTransaction false
             identity.signedInIdentity()==owner &&

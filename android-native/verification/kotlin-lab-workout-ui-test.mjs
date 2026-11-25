@@ -753,7 +753,7 @@ for(const source of [journal,composer]) {
 // Existing recorded sets remain journal-owned, and the durability bootstrap
 // does not turn a partial preference write into a fake successful set.
 // Verify each canonical issuer rather than only a count of call sites.
-const customIssuerNames=['issueReviewedCustomWorkout','issueActivatedFutureWorkout','issueFixedNamedWorkout'];
+const customIssuerNames=['issueReviewedCustomWorkout','issueActivatedFutureWorkout','issueFixedNamedWorkout','issueTieredInitialWorkout'];
 assert.ok(machineChoiceHost.includes('private fun pinMachineChoiceForIssuedWorkout(') &&
   machineChoiceHost.includes('if(issued is NativeKotlinIssueResult.Committed)') &&
   machineChoiceHost.includes('pinMachineChoiceForIssuedWorkout(workoutId,custom=false)') &&
@@ -1897,7 +1897,7 @@ assert.ok(basicPreviewScreen.includes('NativeFixedNamedSelectionPanel(draft,stat
 
 // Tiered initial approval is distinct from ordinary and fixed issuance.
 assert.ok(basicPreviewScreen.includes('} else if(state.tieredDraft) {') &&
-  basicPreviewScreen.includes('NativeTieredInitialExecutionPanel(state,controller)') &&
+  basicPreviewScreen.includes('NativeTieredInitialExecutionPanel(state,controller,onOpenIssuedWorkout)') &&
   basicPreviewScreen.includes('!state.fixedNamedDraft && !state.tieredDraft') &&
   basicPreviewScreen.includes('controller.approveTieredInitialCycle(review)') &&
   basicPreviewController.includes('tieredDraft=result.tieredInitialReceipt!=null') &&
@@ -1905,3 +1905,11 @@ assert.ok(basicPreviewScreen.includes('} else if(state.tieredDraft) {') &&
   basicPreviewController.includes('host.confirmTieredInitialCycle(draft.cycleId,displayed,true)') &&
   basicPreviewController.includes('if(before.tieredDraft)return'),
   'Saved tiered initial review must be distinct from ordinary and fixed issuance');
+
+assert.ok(basicPreviewScreen.includes('controller::previewTieredInitialWorkout') &&
+  basicPreviewScreen.includes('controller::prepareTieredInitialWorkout') &&
+  basicPreviewScreen.includes('controller::issueTieredInitialWorkout') &&
+  basicPreviewController.includes('host.reviewTieredInitialSession') &&
+  machineChoiceHost.includes('nextCustomCycleSession.reviewTieredInitial') &&
+  machineChoiceHost.includes('customIssuedStore.issueTieredInitial'),
+  'Initial tier Plan handoff must use separate calendar, prepare and journal authority');

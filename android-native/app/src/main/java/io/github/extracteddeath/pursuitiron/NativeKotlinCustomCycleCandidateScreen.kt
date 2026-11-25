@@ -597,7 +597,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                 }
             }
         } else if(state.tieredDraft) {
-            NativeTieredInitialExecutionPanel(state,controller)
+            NativeTieredInitialExecutionPanel(state,controller,onOpenIssuedWorkout)
         } else if(state.fixedNamedDraft) {
             NativeFixedNamedExecutionPanel(state,controller,onOpenIssuedWorkout)
         } else {
@@ -2434,7 +2434,7 @@ private fun NativeFixedNamedSelectionPanel(draft:CustomTrainingCycle,
 /** Initial-tier approval is never an ordinary or fixed workout grant. */
 @Composable
 private fun NativeTieredInitialExecutionPanel(state:NativeKotlinCustomCycleState,
-    controller:NativeKotlinCustomCycleController) {
+    controller:NativeKotlinCustomCycleController,onOpenIssuedWorkout:(String)->Unit) {
     val review=state.tieredInitialReview
     val receipt=when(review) {
         is io.github.extracteddeath.pursuitiron.nativecoachstore.NativeSavedNamedReview.Ready ->
@@ -2464,11 +2464,40 @@ private fun NativeTieredInitialExecutionPanel(state:NativeKotlinCustomCycleState
                         Text("Approve reviewed initial tier")
                     }
             }
-            is io.github.extracteddeath.pursuitiron.nativecoachstore.NativeSavedNamedReview.Signed ->
+            is io.github.extracteddeath.pursuitiron.nativecoachstore.NativeSavedNamedReview.Signed -> {
                 Text("Initial tier approval verified.",style=MaterialTheme.typography.labelLarge)
+                val next=state.nextCycleSlot
+                when(next) {
+                    is NativeCustomNextCycleSlot.ResumeIssued ->
+                        Button(onClick={onOpenIssuedWorkout(next.workoutId)},enabled=!state.busy,
+                            modifier=Modifier.fillMaxWidth()){Text("Resume initial workout")}
+                    is NativeCustomNextCycleSlot.Next,is NativeCustomNextCycleSlot.Prepared ->
+                        OutlinedButton(onClick=controller::previewTieredInitialWorkout,enabled=!state.busy,
+                            modifier=Modifier.fillMaxWidth()){Text("Verify initial workout")}
+                    is NativeCustomNextCycleSlot.Rejected -> Text(next.reason,color=MaterialTheme.colorScheme.error)
+                    else -> {}
+                }
+                state.tieredInitialPreview?.let{shown->
+                    Text("Week ${shown.session.absoluteWeek} · ${shown.session.dayLabel}",
+                        style=MaterialTheme.typography.titleMedium)
+                    shown.session.slots.forEach{slot->
+                        Text(kotlinExerciseLabel(slot.exerciseId),style=MaterialTheme.typography.labelLarge)
+                        slot.sets.forEach{set->
+                            Text("${kotlinIssuedLoadLabel(set.prescription.load)} · ${set.prescription.repTargetLabel()}",
+                                style=MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    if(state.tieredInitialPrepared!=null)
+                        Button(onClick=controller::issueTieredInitialWorkout,enabled=!state.busy,
+                            modifier=Modifier.fillMaxWidth()){Text("Issue this exact workout")}
+                    else if(next is NativeCustomNextCycleSlot.Next)
+                        Button(onClick=controller::prepareTieredInitialWorkout,enabled=!state.busy,
+                            modifier=Modifier.fillMaxWidth()){Text("Prepare reviewed workout")}
+                }
+            }
             else -> {}
         }
-        Text("Initial approval does not start a workout. Scheduled tier and supporting-day workout review is not available here yet.",
+        Text("Initial approval does not start a workout. Later tier transitions and supporting-day workouts require their own review.",
             style=MaterialTheme.typography.bodySmall)
         OutlinedButton(onClick=controller::refreshTieredInitialCycle,enabled=!state.busy,
             modifier=Modifier.fillMaxWidth()){Text("Refresh initial tier review")}

@@ -25,6 +25,8 @@ internal data class NativeKotlinCustomCycleState(
     val fixedNamedDraft:Boolean=false,
     val tieredDraft:Boolean=false,
     val tieredInitialReview:NativeSavedNamedReview?=null,
+    val tieredInitialPreview:NativeCustomPreflightResult.ReviewedPreview?=null,
+    val tieredInitialPrepared:NativeCustomPreparedWorkout?=null,
     val fixedNamedBatch:NativeNamedBatchReview.Ready?=null,
     val fixedNamedReview:NativeSavedNamedReview?=null,
     val fixedNamedWorkoutId:String?=null,
@@ -707,7 +709,9 @@ internal class NativeKotlinCustomCycleController(
         }
         current.value=before.copy(tieredInitialReview=ready ?:signed,
             signoff=null,coachingAudit=null,reviewedCoachInputs=null,
-            nextCycleSlot=null,nextSlotCycleRevision=null,
+            nextCycleSlot=signed?.let{host.reviewTieredInitialSession(cycleId,it.inputs)},
+            nextSlotCycleRevision=signed?.draft?.revision,
+            tieredInitialPreview=null,tieredInitialPrepared=null,
             message=when {
                 ready!=null -> "Initial tier reference verified. Review this exact revision."
                 signed!=null -> "Exact initial tier approval restored and rechecked."
@@ -728,6 +732,60 @@ internal class NativeKotlinCustomCycleController(
         refreshTieredInitialReview(draft.cycleId)
         if(result !is NativeCustomSignoffWrite.Committed)
             current.value=current.value.copy(message="Initial tier approval refused. Refresh the saved review.")
+    }
+
+    fun previewTieredInitialWorkout()=run {
+        val before=current.value
+        val review=before.tieredInitialReview as? NativeSavedNamedReview.Signed ?:return@run
+        val selection=review.initialTierReceipt?.selection ?:return@run
+        if(before.draft!=review.draft)return@run
+        val next=host.reviewTieredInitialSession(review.draft.cycleId,review.inputs)
+        val shown=(host.previewTieredInitialWorkout(selection.nextWorkoutId,review.draft.cycleId,
+            selection.absoluteWeek,selection.weekday,review.inputs) as? NativeCustomPreflightResult.ReviewedPreview)
+            ?.takeIf{it.receipt==review.consent && it.session.stamp.cycleRevision==review.draft.revision}
+        val saved=if(shown!=null && next is NativeCustomNextCycleSlot.Prepared)
+            (host.openPreparedCustomWorkout(selection.nextWorkoutId) as? NativeCustomPreparedRead.Found)?.workout
+                ?.takeIf{it.authority==NativeCustomPreparationAuthority.TIERED_INITIAL &&
+                    it.snapshot==shown.session && it.consentFingerprint==shown.receipt.fingerprintSha256 &&
+                    it.consentRevision==shown.receipt.recordRevision}
+        else null
+        current.value=before.copy(nextCycleSlot=next,tieredInitialPreview=shown,tieredInitialPrepared=saved,
+            message=if(shown!=null)"Review exact initial workout before preparing."
+                else "Initial workout or saved preparation could not be verified.")
+    }
+
+    fun prepareTieredInitialWorkout()=run {
+        val before=current.value
+        val review=before.tieredInitialReview as? NativeSavedNamedReview.Signed ?:return@run
+        val shown=before.tieredInitialPreview ?:return@run
+        val selection=review.initialTierReceipt?.selection ?:return@run
+        if(before.draft!=review.draft || shown.receipt!=review.consent ||
+            before.nextCycleSlot !is NativeCustomNextCycleSlot.Next)return@run
+        val result=host.prepareTieredInitialWorkout(selection.nextWorkoutId,review.draft.cycleId,shown,review.inputs)
+        val saved=(result as? NativeCustomPrepareResult.Prepared)?.workout?.takeIf{
+            it.authority==NativeCustomPreparationAuthority.TIERED_INITIAL && it.snapshot==shown.session &&
+                it.consentFingerprint==shown.receipt.fingerprintSha256 &&
+                it.consentRevision==shown.receipt.recordRevision &&
+                (host.openPreparedCustomWorkout(selection.nextWorkoutId) as? NativeCustomPreparedRead.Found)?.workout==it
+        }
+        current.value=before.copy(tieredInitialPrepared=saved,
+            nextCycleSlot=host.reviewTieredInitialSession(review.draft.cycleId,review.inputs),
+            message=if(saved!=null)"Exact initial workout prepared. Not issued."
+                else "Preparation refused or changed. Refresh the review.")
+    }
+
+    fun issueTieredInitialWorkout()=run {
+        val before=current.value
+        val review=before.tieredInitialReview as? NativeSavedNamedReview.Signed ?:return@run
+        val saved=before.tieredInitialPrepared ?:return@run
+        val shown=before.tieredInitialPreview ?:return@run
+        if(before.draft!=review.draft || shown.receipt!=review.consent || saved.snapshot!=shown.session)return@run
+        val result=host.issueTieredInitialWorkout(saved.workoutId,review.draft.cycleId,saved,review.inputs)
+        refreshTieredInitialReview(review.draft.cycleId)
+        current.value=current.value.copy(message=if(result is NativeCustomJournalResult.Durable &&
+            result.issued.journal.originalSnapshot==saved.snapshot)
+            "Initial workout issued. Resume in Train to log actuals."
+            else "Initial issuance refused. Refresh the review.")
     }
 
     // Fixed named flow owns distinct review state. Never publish ordinary

@@ -105,7 +105,7 @@ class NativeKotlinCustomWorkoutPreflight(
     ):NativeCustomPreflightResult =
         inspectSpecialist(ownerKey,workoutId,cycleId,absoluteWeek,weekday,inputs,history,outstanding,false)
 
-    internal fun inspectTieredInitial(
+    fun inspectTieredInitial(
         ownerKey:String,workoutId:String,cycleId:String,absoluteWeek:Int,weekday:Int,
         inputs:CustomCoachAuditInputs,history:NativeKotlinMixedHistoryReadCoordinator,
         outstanding:NativeKotlinCustomOutstandingWorkoutInventory

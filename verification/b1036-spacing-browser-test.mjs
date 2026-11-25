@@ -84,7 +84,7 @@ try{
     const bar=await page.evaluate(()=>{const h=document.querySelector('.wpb-library-header');const cs=x=>getComputedStyle(x);
       return {h:h.getBoundingClientRect().height,icons:[...h.querySelectorAll('.wpb-library-back,.wpb-library-find')].map(b=>({bg:cs(b).backgroundColor,border:cs(b).borderTopWidth,w:b.getBoundingClientRect().width,ht:b.getBoundingClientRect().height})),
         compare:h.querySelector('.wpb-library-compare')?.getBoundingClientRect().height};});
-    assert.ok(bar.h<=72&&bar.icons.length===2&&bar.icons.every(b=>b.bg==='rgba(0, 0, 0, 0)'&&b.border==='0px'&&b.w===48&&b.ht===48)&&bar.compare>=40,'Library header is one flat top-app-bar row '+JSON.stringify({width,bar}));
+    assert.ok(bar.h<=72&&bar.icons.length===2&&bar.icons.every(b=>b.bg==='rgba(0, 0, 0, 0)'&&b.border==='0px'&&b.w===48&&b.ht===48)&&bar.compare>=48,'Library header is one flat top-app-bar row '+JSON.stringify({width,bar}));
     await page.evaluate(()=>document.querySelector('.wpb-library-row').click());await page.waitForSelector('.wpb-exercise-detail-header');await wait(700);
     const detail=await page.evaluate(()=>{const h=document.querySelector('.wpb-exercise-detail-header').getBoundingClientRect(),hc=getComputedStyle(document.querySelector('.wpb-exercise-detail-header'));
       const back=document.querySelector('.wpb-exercise-detail-back'),bc=getComputedStyle(back),br=back.getBoundingClientRect();

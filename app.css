@@ -923,10 +923,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* B1053: the Library header is an M3 small top app bar: flat canvas, standard (uncontained)
    48dp icon buttons, and Compare as a labelled text action rather than a stacked caption. */
 .wpb-library-headline>.wpb-library-back,.wpb-library-headline>.wpb-library-find{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;min-width:48px;min-height:48px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--pi-color-on-control);cursor:pointer}
-.wpb-library-headline>.wpb-library-compare{display:inline-flex;align-items:center;justify-content:center;gap:8px;flex:0 0 auto;min-width:48px;min-height:40px;margin-block:4px;padding:0 12px;border:0;border-radius:999px;background:transparent;color:var(--pi-m3e-primary,var(--wpb-theme-accent));cursor:pointer}
+.wpb-library-headline>.wpb-library-compare{display:inline-flex;align-items:center;justify-content:center;gap:8px;flex:0 0 auto;min-width:48px;min-height:48px;margin:0;padding:0 16px;border:0;border-radius:999px;background:transparent;color:var(--pi-m3e-primary,var(--wpb-theme-accent));cursor:pointer}
 .wpb-library-compare-label{font-size:.875rem;font-weight:600;line-height:1.43;letter-spacing:.006em;white-space:nowrap}
 .wpb-library-headline>.wpb-library-back:active,.wpb-library-headline>.wpb-library-find:active,.wpb-library-headline>.wpb-library-compare:active{background:color-mix(in srgb,currentColor 12%,transparent)}
-@media(max-width:374px){.wpb-library-headline>.wpb-library-compare{width:48px;color:var(--pi-color-on-control);min-height:48px;margin-block:0;padding:0;border-radius:50%}.wpb-library-compare-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}}
+@media(max-width:374px){.wpb-library-headline>.wpb-library-compare{width:48px;color:var(--pi-color-on-control);padding:0;border-radius:50%}.wpb-library-compare-label{display:none}}
 .wpb-library-result-count{position:absolute;width:1px;height:1px;white-space:nowrap;overflow:hidden;clip-path:inset(50%)}
 .wpb-library-controls{display:grid;gap:var(--pi-space-2);min-width:0;margin-bottom:var(--pi-space-4)}
 .wpb-library-search-icon{position:absolute;left:var(--pi-space-3);top:50%;transform:translateY(-50%);color:var(--pi-color-on-muted);pointer-events:none}

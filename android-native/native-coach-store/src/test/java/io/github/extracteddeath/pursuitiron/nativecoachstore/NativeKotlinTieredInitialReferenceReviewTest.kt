@@ -684,7 +684,28 @@ class NativeKotlinTieredInitialReferenceReviewTest {
             assertEquals(NativeTieredTransitionConsentResult.RECORDED,
                 coldStore().confirm("owner-1","cycle-1",displayed,true,
                     resetConfirmed=reset,recoveryConfirmed=recovery))
+            assertEquals(week-1,coldStore().inventoryForRecovery("owner-1"))
             if(week==2) {
+                // Before preparation there is no linked journal fingerprint.
+                // A forged reset flag with a recomputed checksum must still
+                // fail the canonical numerical recovery replay.
+                val receipt=java.nio.file.Files.list(root).use{files->
+                    files.filter{it.fileName.toString().startsWith("tier-first-transition-")}.findFirst().get()
+                }
+                val original=java.nio.file.Files.readAllBytes(receipt)
+                val payload=original.copyOf(original.size-32)
+                val input=java.io.DataInputStream(java.io.ByteArrayInputStream(payload))
+                input.readInt();input.readInt()
+                repeat(3){input.readUTF()}
+                repeat(3){input.readLong()}
+                input.readUTF();input.readLong();input.readUTF();input.readInt();input.readBoolean()
+                val resetOffset=payload.size-input.available()
+                payload[resetOffset]=if(reset)0 else 1
+                val forged=payload+java.security.MessageDigest.getInstance("SHA-256").digest(payload)
+                java.nio.file.Files.write(receipt,forged)
+                assertNull(coldStore().inventoryForRecovery("owner-1"))
+                java.nio.file.Files.write(receipt,original)
+                assertEquals(1,coldStore().inventoryForRecovery("owner-1"))
                 val old=coldStore().recover("owner-1","cycle-1",week)
                     as NativeTieredTransitionRecovery.Ready
                 val stalePreparation=prepare() as NativeCustomPrepareResult.Prepared

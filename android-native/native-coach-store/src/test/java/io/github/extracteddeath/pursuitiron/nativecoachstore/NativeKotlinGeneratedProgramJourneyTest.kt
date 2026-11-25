@@ -185,6 +185,64 @@ class NativeKotlinGeneratedProgramJourneyTest {
                 .digest(bytes))
     }
 
+    // A real generated strength cycle owns its ordinary draft and consent.
+    // Explicit specialist selection must go through the same revisioned
+    // named authority as an authored cycle; a generated seed is not consent.
+    @Test fun generatedStrengthCycleRequiresFreshNamedConsentAndIssuesReviewedRecipe() {
+        val (cycle,inputs)=saveGenerated(phase=TrainingPhase.STRENGTH)
+        val day=cycle.blocks.single().days.first{d->d.slots.any{
+            it.exerciseId=="barbell_bench" && it.role==ComposerRole.PRIMARY
+        }}
+        val slot=day.slots.first{it.exerciseId=="barbell_bench" && it.role==ComposerRole.PRIMARY}
+        val disk=Disk()
+        val inventory=NativeKotlinCustomOutstandingWorkoutInventory(disk.prepared,disk.journals)
+        val reviewer=NativeKotlinNamedPercentageDraftReview(disk.fence,identity,
+            disk.drafts,disk.sources,disk.consent,disk.preflight,disk.timeline,inventory)
+        val selection=NativeNamedPercentageSelection(owner,cycleId,1,day.weekday,
+            slot.slotId,NamedPercentageScheme.FIVE_THREE_ONE,PercentageTier.PRIMARY,
+            PercentageDayRole.STANDARD,PercentageReferenceKind.TRAINING_MAX,n("160"))
+        val selections=listOf(selection,selection.copy(absoluteWeek=2))
+        val preview=reviewer.previewBatch(selections)
+        assertTrue(preview.toString(),preview is NativeNamedBatchReview.Ready)
+        preview as NativeNamedBatchReview.Ready
+        assertFalse(preview.mayIssueWorkout)
+        assertTrue(reviewer.acceptBatch(selections,preview,false) is NativeNamedBatchAcceptance.Rejected)
+        assertTrue(reviewer.acceptBatch(selections,preview,true) is NativeNamedBatchAcceptance.Saved)
+        val cold=Disk()
+        assertTrue(cold.prepared.prepare(owner,"ordinary-named-bypass",cycleId,1,
+            day.weekday,inputs) is NativeCustomPrepareResult.Rejected)
+        val coldInventory=NativeKotlinCustomOutstandingWorkoutInventory(cold.prepared,cold.journals)
+        val signedReader=NativeKotlinSavedNamedPercentageReview(cold.fence,identity,
+            cold.drafts,cold.sources,cold.consent,cold.timeline,coldInventory)
+        assertTrue(cold.prepared.prepareNamed(owner,"generated-named",cycleId,1,
+            day.weekday,inputs,cold.timeline,coldInventory) is NativeCustomPrepareResult.Rejected)
+        val reviewed=signedReader.review(owner,cycleId,inputs)
+        assertTrue(reviewed.toString(),reviewed is NativeSavedNamedReview.Ready)
+        val signed=cold.consent.confirmNamed(owner,cycleId,reviewed as NativeSavedNamedReview.Ready,
+            true,cold.timeline,coldInventory)
+        assertTrue(signed.toString(),signed is NativeCustomSignoffWrite.Committed)
+        val prepared=cold.prepared.prepareNamed(owner,"generated-named",cycleId,1,
+            day.weekday,inputs,cold.timeline,coldInventory)
+        assertTrue(prepared.toString(),prepared is NativeCustomPrepareResult.Prepared)
+        val snapshot=(prepared as NativeCustomPrepareResult.Prepared).workout.snapshot
+        val expected=preview.draft.weekOverrides.getValue(cycle.blocks.single().blockId)
+            .single{it.weekInBlock==1 && it.weekday==day.weekday && it.slotId==slot.slotId}
+        val actual=snapshot.slots.single{it.slotId==slot.slotId}.sets
+        assertEquals(expected.sets,actual.map{it.prescription})
+        val named=actual.filter{it.prescription.type==DraftSetType.WORKING}
+        assertEquals(slot.sets.count{it.type==DraftSetType.WORKING},named.size)
+        assertTrue(named.all{it.prescription.percentageIntent?.scheme==NamedPercentageScheme.FIVE_THREE_ONE})
+        assertTrue(named.any{it.prescription.percentageIntent?.repOut==true})
+        assertTrue(named.all{it.prescription.exactRepTarget==5})
+        // Every unedited generated slot remains exactly as originally prescribed.
+        for(other in day.slots.filter{it.slotId!=slot.slotId})
+            assertEquals(other.sets,snapshot.slots.single{it.slotId==other.slotId}.sets.map{it.prescription})
+        val issued=Disk().journals.issueNamed(owner,"generated-named",cycleId,1,
+            day.weekday,inputs,Disk().timeline)
+        assertTrue(issued.toString(),issued is NativeCustomJournalResult.Durable)
+        assertEquals(snapshot,(issued as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
+    }
+
     @Test fun nativeStagedAuditPreservesAnUnfinishedGeneratedCustomWorkout() {
         val (cycle,inputs)=saveGenerated()
         writeLocalAthleteForRestoreProof()

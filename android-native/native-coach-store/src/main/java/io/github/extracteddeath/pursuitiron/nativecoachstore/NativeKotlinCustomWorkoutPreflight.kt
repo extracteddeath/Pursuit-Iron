@@ -83,6 +83,83 @@ class NativeKotlinCustomWorkoutPreflight(
                 )
         }
 
+    /** Named consent has its own authenticated projection, never a bypass
+     * of ordinary preflight. The same exact selection is checked again at
+     * first issuance; a completed day cannot be prepared under a new ID. */
+    internal fun inspectNamed(
+        ownerKey:String,workoutId:String,cycleId:String,absoluteWeek:Int,weekday:Int,
+        inputs:CustomCoachAuditInputs,history:NativeKotlinMixedHistoryReadCoordinator,
+        outstanding:NativeKotlinCustomOutstandingWorkoutInventory
+    ):NativeCustomPreflightResult {
+        fun deny(reason:NativeCustomPreflightRefusal)=NativeCustomPreflightResult.Rejected(reason)
+        if(!id.matches(ownerKey)||!id.matches(workoutId)||!id.matches(cycleId)||
+            absoluteWeek !in 1..104 || weekday !in 0..6)
+            return deny(NativeCustomPreflightRefusal.INVALID_SELECTION)
+        return runCatching{fence.withOwnerTransaction(ownerKey){
+            val owner=identity.signedInIdentity()?.takeIf{it.ownerKey==ownerKey}
+                ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.NOT_AUTHORIZED)
+            val signed=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
+                consents,history,outstanding,machineRosters).reviewSigned(ownerKey,cycleId,inputs)
+                as? NativeSavedNamedReview.Signed
+                ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
+            val timeline=(history.read(ownerKey,owner.athleteId)
+                as? NativeKotlinMixedHistoryReadResult.Review)?.timeline
+                ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
+            if(timeline.manifestRevision!=signed.historyRevision)
+                return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
+            val completed=timeline.completions.filterIsInstance<NativeKotlinMixedHistoryCompletion.Custom>()
+                .map{it.manifest.workoutId}.toSet()
+            val census=(outstanding.inspect(ownerKey,owner.athleteId,completed)
+                as? NativeCustomInventoryReview.Reviewed)
+                ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.SESSION_UNAVAILABLE)
+            if(census.sessions.any{session->
+                if(session.workoutId==workoutId)
+                    session.issued || session.completed || session.cycleId!=cycleId ||
+                        session.absoluteWeek!=absoluteWeek || session.weekday!=weekday
+                else !session.completed || (session.cycleId==cycleId &&
+                    session.absoluteWeek==absoluteWeek && session.weekday==weekday)
+            })return@withOwnerTransaction deny(NativeCustomPreflightRefusal.SESSION_UNAVAILABLE)
+            val source=(sources.read(ownerKey) as? NativeAuthoringSourceRead.Found)?.source
+                ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.NO_REVIEWED_GYM)
+            if(source.ownerKey!=ownerKey || source.athleteId!=owner.athleteId ||
+                source.revision!=signed.stamp.gymCatalogSourceRevision)
+                return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
+            val preview=CustomWorkoutSnapshotDomain.reviewNamedForConsent(signed.draft,
+                source.setup,source.catalog,source.revision,inputs,signed.evidence,absoluteWeek,weekday)
+                as? CustomWorkoutSnapshotResult.Preview
+                ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.COACH_AUDIT_FAILED)
+            if(preview.snapshot.stamp!=signed.stamp)
+                return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
+            val roster=if(machineRosters==null)null else
+                (machineRosters.read(ownerKey) as? NativeMachineRosterResult.Saved)?.snapshot
+                    ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.MACHINE_BINDING_NOT_VERIFIED)
+            if(NativeKotlinCustomMachineBindingPolicy.review(ownerKey,preview.snapshot,source.catalog,roster)
+                !is NativeCustomMachineBindingReview.Verified)
+                return@withOwnerTransaction deny(NativeCustomPreflightRefusal.MACHINE_BINDING_NOT_VERIFIED)
+            // All selected slots, even nonnamed ones, must use exact physical
+            // stock. Never borrow a roster default without explicit binding.
+            for(slot in preview.snapshot.slots) {
+                val physical=NativeKotlinCustomSelectedStockDomain.resolve(source,slot,roster)
+                    ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.MACHINE_BINDING_NOT_VERIFIED)
+                if(physical.machineInstanceId!=slot.machineInstanceId)
+                    return@withOwnerTransaction deny(NativeCustomPreflightRefusal.MACHINE_BINDING_NOT_VERIFIED)
+                val loads=slot.sets.flatMap{set->listOfNotNull(
+                    set.prescription.load as? DraftSetLoad.Verified,
+                    set.prescription.amplifier?.followUpLoad as? DraftSetLoad.Verified,
+                    set.prescription.amplifier?.secondDropLoad as? DraftSetLoad.Verified)}
+                if(loads.any{load->
+                    physical.stock?.let{stock->
+                        (EquipmentLoadDomain.inspect(stock,load.value,load.unit) as? LoadInspection.Confirmed)
+                            ?.let{it.exact && it.basis==load.basis}
+                    }!=true
+                })return@withOwnerTransaction deny(NativeCustomPreflightRefusal.MACHINE_BINDING_NOT_VERIFIED)
+            }
+            if(identity.signedInIdentity()!=owner)
+                return@withOwnerTransaction deny(NativeCustomPreflightRefusal.NOT_AUTHORIZED)
+            NativeCustomPreflightResult.ReviewedPreview(signed.consent,preview.snapshot)
+        }}.getOrElse{deny(NativeCustomPreflightRefusal.STORAGE_UNAVAILABLE)}
+    }
+
     fun inspect(
         ownerKey:String,
         cycleId:String,

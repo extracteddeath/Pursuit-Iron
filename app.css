@@ -1988,12 +1988,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* PROFILE. Strength summary leads through measured size and its distinctive
    corner; supporting strength records and the profile identity are quiet. */
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-section{
-  background-image:none!important;
-  background-color:var(--pi-r11-quiet)!important;
-  border-color:var(--pi-r11-edge)!important;
-  box-shadow:none!important;
-}
 /* LIBRARY. Search is the primary tool, filters are one connected set, and
    exercise rows are low-emphasis contiguous list items until focus/selection.
    Existing spring press/shape and accessible per-row targets remain active. */
@@ -3067,6 +3061,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:20px!important;
   background-image:none!important;
   background-color:var(--pi-r11-quiet)!important;
+  box-shadow:none!important;
   overflow-wrap:anywhere;
 }
 /* Progress: compact, readable data first, controls next. Keep every actual
@@ -4841,17 +4836,17 @@ background:var(--pi-color-card)!important;
   border:0!important;
   flex-shrink:0;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-ui-choice.wpb-ui-choice:not([data-choice-kind="tab"]){
+#root[data-pi-motion="expressive"] .wpb .wpb-ui-choice.wpb-ui-choice:not([data-choice-kind="tab"],[data-choice-kind="filter"]){
   background:var(--pi-color-card,var(--wpb-theme-bg))!important;
   color:var(--pi-color-on-control,var(--wpb-theme-text))!important;
   border:1px solid var(--pi-color-divider)!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-ui-choice.wpb-ui-choice:not([data-choice-kind="tab"])[aria-pressed="true"]{
+#root[data-pi-motion="expressive"] .wpb .wpb-ui-choice.wpb-ui-choice:not([data-choice-kind="tab"],[data-choice-kind="filter"])[aria-pressed="true"]{
   background:var(--pi-color-feature)!important;
   color:var(--pi-color-on-feature)!important;
   border-color:var(--wpb-focus)!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-ui-choice.wpb-ui-choice:not([data-choice-kind="tab"])[aria-pressed="true"]>div{
+#root[data-pi-motion="expressive"] .wpb .wpb-ui-choice.wpb-ui-choice:not([data-choice-kind="tab"],[data-choice-kind="filter"])[aria-pressed="true"]>div{
   color:inherit!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-ui-action:focus-visible,#root[data-pi-motion="expressive"] .wpb .wpb-ui-choice:focus-visible{
@@ -9582,11 +9577,10 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-ui-modal-sheet-footer>.wpb-ui-action[data-action=primary]{flex-grow:2}
 #root .wpb .wpb-ui-chip-group-label,#root .wpb .wpb-ui-list-subheader{margin:0 0 var(--pi-space-2);font-size:var(--pi-type-support);font-weight:600;color:var(--pi-color-on-muted)}
 #root .wpb .wpb-ui-chip-set{display:flex;flex-wrap:wrap;gap:var(--pi-space-2)}
-#root .wpb .wpb-ui-choice[data-choice-kind=filter]{--pi-control-min:32px;position:relative;display:inline-flex;align-items:center;gap:8px;min-height:32px;margin-block:4px;padding:6px 16px;border:1px solid var(--wpb-theme-border);border-radius:8px;background:none;color:var(--wpb-theme-text);font-size:var(--pi-type-support);font-weight:600;line-height:1.2;transition:background-color .15s,border-radius .2s}
-#root .wpb .wpb-ui-choice[data-choice-kind=filter]::after{content:"";position:absolute;inset:-8px -4px}
+#root .wpb .wpb-ui-choice[data-choice-kind=filter]{--pi-radius-control:8px;display:inline-flex;align-items:center;gap:8px;min-width:48px;min-height:48px;padding:6px 16px;border:1px solid var(--wpb-theme-border);border-radius:var(--pi-radius-control);background:none;color:var(--wpb-theme-text);font-size:var(--pi-type-support);font-weight:600;line-height:1.2;transition:background-color .15s,border-radius .2s}
 #root .wpb .wpb-ui-choice[data-choice-kind=filter]:has(.wpb-ui-chip-icon){padding-left:8px}
 #root .wpb .wpb-ui-choice[data-choice-kind=filter][aria-pressed=true]{border-color:transparent;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink)}
-#root .wpb .wpb-ui-choice[data-choice-kind=filter]:active{border-radius:16px}
+#root .wpb .wpb-ui-choice[data-choice-kind=filter]:active{--pi-radius-control:16px}
 #root .wpb .wpb-ui-list{display:grid;gap:2px;overflow:hidden;border-radius:var(--pi-shape-card)}
 #root .wpb .wpb-ui-list-row{display:flex;align-items:center;gap:4px;background:var(--wpb-theme-card)}
 #root .wpb .wpb-ui-list-row>.wpb-ui-list-item{flex:1;background:none}
@@ -9635,10 +9629,10 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-variant-facets{display:grid;gap:0}
 #root .wpb button.wpb-ui-list-item:disabled{opacity:.5}
 #root .wpb .wpb-split-choices.wpb-segmented{gap:2px;padding:0;background:none}
-#root .wpb .wpb-split-choices.wpb-segmented>.wpb-ui-choice{flex:1;min-width:0;min-height:40px;padding:8px 6px;font-size:var(--pi-type-support);border:0;border-radius:6px;background:var(--pi-color-control);color:var(--wpb-theme-text);font-weight:600;transition:border-radius .2s,background-color .15s}
-#root .wpb .wpb-split-choices.wpb-segmented>.wpb-ui-choice:first-child{border-radius:20px 6px 6px 20px}
-#root .wpb .wpb-split-choices.wpb-segmented>.wpb-ui-choice:last-child{border-radius:6px 20px 20px 6px}
-#root .wpb .wpb-split-choices.wpb-segmented>.wpb-ui-choice[aria-pressed=true]{border-radius:20px;background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent)}
+#root .wpb .wpb-split-choices.wpb-segmented>.wpb-ui-choice{--pi-radius-control:6px;flex:1;min-width:0;min-height:48px;padding:8px 6px;font-size:var(--pi-type-support);border:0;border-radius:var(--pi-radius-control);background:var(--pi-color-control);color:var(--wpb-theme-text);font-weight:600;transition:border-radius .2s,background-color .15s}
+#root .wpb .wpb-split-choices.wpb-segmented>.wpb-ui-choice:first-child{--pi-radius-control:20px 6px 6px 20px}
+#root .wpb .wpb-split-choices.wpb-segmented>.wpb-ui-choice:last-child{--pi-radius-control:6px 20px 20px 6px}
+#root .wpb .wpb-split-choices.wpb-segmented>.wpb-ui-choice[aria-pressed=true]{--pi-radius-control:20px;background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent)}
 #root .wpb .wpb-plan-programs{margin-top:var(--pi-space-6)}
 @media (min-width:1060px) and (min-height:700px){#root[data-pi-motion="expressive"] .wpb .wpb-plan-view>.wpb-plan-programs{grid-column:1 / -1}}
 #root .wpb .wpb-home-embedded{display:block;isolation:isolate}

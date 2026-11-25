@@ -25,6 +25,7 @@ internal data class NativeKotlinCustomCycleState(
     val fixedNamedDraft:Boolean=false,
     val tieredDraft:Boolean=false,
     val tieredInitialReview:NativeSavedNamedReview?=null,
+    val tieredCalendar:NativeCustomNextCycleSlot?=null,
     val tieredInitialPreview:NativeCustomPreflightResult.ReviewedPreview?=null,
     val tieredInitialPrepared:NativeCustomPreparedWorkout?=null,
     val tieredReference:NativeTieredInitialReview.Ready?=null,
@@ -708,14 +709,20 @@ internal class NativeKotlinCustomCycleController(
         val signed=(review as? NativeSavedNamedReview.Signed)?.takeIf{
             it.draft==draft && it.initialTierReceipt!=null && it.nextTierCandidate==null
         }
+        val initialNext=signed?.let{host.reviewTieredInitialSession(cycleId,it.inputs)}
+        val calendar=if(ready==null && (initialNext==null || initialNext is NativeCustomNextCycleSlot.Rejected))
+            host.reviewTieredCalendar(cycleId) else null
         current.value=before.copy(tieredInitialReview=ready ?:signed,
+            tieredCalendar=calendar,
             signoff=null,coachingAudit=null,reviewedCoachInputs=null,
-            nextCycleSlot=signed?.let{host.reviewTieredInitialSession(cycleId,it.inputs)},
+            nextCycleSlot=initialNext,
             nextSlotCycleRevision=signed?.draft?.revision,
             tieredInitialPreview=null,tieredInitialPrepared=null,
             message=when {
                 ready!=null -> "Initial tier reference verified. Review this exact revision."
                 signed!=null -> "Exact initial tier approval restored and rechecked."
+                calendar!=null && calendar !is NativeCustomNextCycleSlot.Rejected ->
+                    "Initial tier review closed. The saved calendar is available for reference."
                 else -> "Initial tier review is unavailable or already completed. No ordinary workout can start."
             })
     }

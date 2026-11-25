@@ -861,9 +861,11 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 NativeCustomPreparationAuthority.TIERED_TRANSITION)
             when(val existing=openFenced(ownerKey,workoutId,owner)){
                 is NativeCustomPreparedRead.Rejected->return@withOwnerTransaction deny(existing.reason)
-                is NativeCustomPreparedRead.Found->return@withOwnerTransaction
-                    if(existing.workout==planned)NativeCustomPrepareResult.Prepared(existing.workout,true)
+                is NativeCustomPreparedRead.Found -> {
+                    return@withOwnerTransaction if(existing.workout==planned)
+                        NativeCustomPrepareResult.Prepared(existing.workout,true)
                     else deny(NativeCustomPrepareRefusal.DIFFERENT_WORKOUT_ALREADY_PREPARED)
+                }
                 NativeCustomPreparedRead.Missing->Unit
             }
             if(current(ownerKey)!=owner)

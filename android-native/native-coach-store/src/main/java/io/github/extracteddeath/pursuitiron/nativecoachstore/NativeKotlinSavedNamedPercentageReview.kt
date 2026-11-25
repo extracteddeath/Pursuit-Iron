@@ -125,16 +125,18 @@ class NativeKotlinSavedNamedPercentageReview(
      */
     internal fun previewTieredNextForPreparation(ownerKey:String,cycleId:String,
         inputs:CustomCoachAuditInputs,selection:NativeTieredNextSelection,
-        receiptFingerprint:String?,priorTransitions:List<NativeFrozenTierTransition> = emptyList()):
+        receiptFingerprint:String?,priorTransitions:List<NativeFrozenTierTransition> = emptyList(),
+        staleReceipt:NativeFrozenTierTransition?=null):
         NativeSavedNamedReview =
         evaluate(ownerKey,cycleId,inputs,signed=true,tiered=true,next=selection,
-            preparedReceiptFingerprint=receiptFingerprint,priorTransitions=priorTransitions)
+            preparedReceiptFingerprint=receiptFingerprint,priorTransitions=priorTransitions,
+            staleReceipt=staleReceipt)
 
     private fun evaluate(ownerKey:String,cycleId:String,inputs:CustomCoachAuditInputs,
         signed:Boolean,tiered:Boolean=false,next:NativeTieredNextSelection?=null,
         preparedReceiptFingerprint:String?=null,
         priorTransitions:List<NativeFrozenTierTransition> = emptyList(),
-        supportingDay:Boolean=false):NativeSavedNamedReview {
+        supportingDay:Boolean=false,staleReceipt:NativeFrozenTierTransition?=null):NativeSavedNamedReview {
         fun deny(reason:NativeSavedNamedReviewRefusal,audit:CustomCoachAudit?=null)=
             NativeSavedNamedReview.Rejected(reason,audit)
         if(!id.matches(ownerKey)||!id.matches(cycleId))
@@ -457,7 +459,50 @@ class NativeKotlinSavedNamedPercentageReview(
                     transitionAudit.coachingPolicyRevisions!=prior.policyReferences)
                     return@withOwnerTransaction deny(
                         NativeSavedNamedReviewRefusal.FULL_CYCLE_AUDIT_FAILED,transitionAudit)
-                if(ownPreparation!=null) {
+                // Cancellation only: authenticate the OLD frozen target against
+                // its original observations, not the new corrected target.
+                // This cannot authorize a new preparation or first issuance.
+                if(staleReceipt!=null) {
+                    val old=staleReceipt
+                    if(old.ownerKey!=ownerKey || old.athleteId!=owner.athleteId ||
+                        old.cycleId!=cycleId || old.selection!=next ||
+                        old.consentRevision!=prior.recordRevision ||
+                        old.consentFingerprint!=prior.fingerprintSha256 ||
+                        old.cycleRevision!=candidate.revision || old.sourceRevision!=prior.sourceRevision ||
+                        old.historyRevision<=previousRevision || old.historyRevision>=ledger.manifestRevision ||
+                        old.inputs!=inputs || old.initialState!=initialRequest.initialState ||
+                        old.maximumIncrease!=initialRequest.maximumAuthorizedIncrease ||
+                        old.setBudget!=initialRequest.approvedSetBudget ||
+                        (ownPreparation!=null && ownPreparation.consentFingerprint!=old.fingerprint))
+                        return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
+                    val frozen=runCatching{NativeTieredHistoryPrefixCodec.decode(old.prefix,
+                        initialRequest.scope,selection.tier,selection.slotId)}.getOrNull()
+                        ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
+                    if(frozen.size!=ledger.exposures.size || frozen.zip(ledger.exposures).any{(saved,live)->
+                        saved.copy(observations=live.observations)!=live})
+                        return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
+                    val oldRequest=request.copy(completed=frozen)
+                    val oldNumeric=TieredLinearProgressionDomain.review(oldRequest) as? TieredLinearResult.Candidate
+                        ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
+                    if(needsNewTierResetConsent(oldRequest,oldNumeric)!=old.resetRequired)
+                        return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
+                    val key=nextEvidence.key
+                    val oldDraft=CustomPercentageDraftDomain.reviewTiered(
+                        CustomPercentageDraftSource(historicalCycle,stamp.copy(cycleRevision=historicalCycle.revision),
+                            key.blockId,key.weekInBlock,key.weekday,key.slotId),oldRequest)
+                        as? CustomPercentageDraftResult.Proposed
+                        ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.FULL_CYCLE_AUDIT_FAILED)
+                    val oldCycle=oldDraft.proposal.draft
+                    if(!NativeCustomCycleDraftCodec.encode(oldCycle).contentEquals(old.proposedCycle))
+                        return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
+                    val oldSnapshot=(CustomWorkoutSnapshotDomain.reviewSpecialistForConsent(
+                        oldCycle,source.setup,source.catalog,source.revision,inputs,evidence,
+                        listOf(checkNotNull(tierEvidence)),next.absoluteWeek,selection.weekday,
+                        historicalEvidence+CustomTieredTransitionWeekEvidence(key,oldRequest))
+                        as? CustomWorkoutSnapshotResult.Preview)?.snapshot
+                    if(oldSnapshot==null || (ownPreparation!=null && ownPreparation.snapshot!=oldSnapshot))
+                        return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
+                } else if(ownPreparation!=null) {
                     val exactNext=(CustomWorkoutSnapshotDomain.reviewSpecialistForConsent(
                         proposedCycle,source.setup,source.catalog,source.revision,inputs,evidence,
                         listOf(checkNotNull(tierEvidence)),next.absoluteWeek,selection.weekday,

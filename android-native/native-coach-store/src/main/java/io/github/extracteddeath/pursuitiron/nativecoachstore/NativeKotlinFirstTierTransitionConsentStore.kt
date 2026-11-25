@@ -278,8 +278,8 @@ class NativeKotlinFirstTierTransitionConsentStore(
                 return@withOwnerTransaction no(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT)
             val reviewer=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
                 signoffs,history,outstanding,machineRosters)
-            val fresh=reviewer.previewMultiTieredNext(ownerKey,cycleId,old.inputs,old.selection)
-                as? NativeSavedNamedReview.Signed
+            val fresh=reviewer.previewMultiTieredNextForPreparation(ownerKey,cycleId,old.inputs,old.selection,
+                fingerprint(bytes)) as? NativeSavedNamedReview.Signed
                 ?:return@withOwnerTransaction no(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED)
             if(identity.signedInIdentity()!=owner)
                 return@withOwnerTransaction no(NativeTieredTransitionConsentResult.NOT_AUTHORIZED)
@@ -287,6 +287,16 @@ class NativeKotlinFirstTierTransitionConsentStore(
                 return@withOwnerTransaction no(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED)
             NativeTieredTransitionRecovery.Ready(fresh,fingerprint(bytes))
         }}.getOrElse{no(NativeTieredTransitionConsentResult.STORAGE_UNAVAILABLE)}
+    }
+
+    /** Dispatch from the existing preflight according to signed root shape.
+     * Single-thread receipts retain their established path; multi-root
+     * receipts are addressed by the exact calendar day. */
+    internal fun recoverForSession(ownerKey:String,cycleId:String,week:Int,weekday:Int):NativeTieredTransitionRecovery {
+        val stored=drafts.read(ownerKey,cycleId) as? NativeCustomDraftReadResult.Found
+            ?:return NativeTieredTransitionRecovery.Refused(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED)
+        return if(stored.tieredInitialReceipts.size>1)recoverMulti(ownerKey,cycleId,week,weekday)
+            else recover(ownerKey,cycleId,week)
     }
 
     /** Shared atomic persistence for both receipt shapes. Owner fence is

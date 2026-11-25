@@ -12,13 +12,15 @@ const importMap=fs.readFileSync(path.join(root,'index.html'),'utf8')
 const fixture=[
  "import React from '/vendor/react.js';",
  "import {createRoot} from '/vendor/react-dom-client.js';",
- "import {UiCard,UiAction,UiIconAction,UiChoice} from '/modules/ui-primitives.js';",
+ "import {UiCard,UiAction,UiIconAction,UiChoice,UiSegmented} from '/modules/ui-primitives.js';",
  "function Demo(){const [on,setOn]=React.useState(false);return React.createElement('main',{className:'wpb',id:'expressive-harness'},",
  "React.createElement(UiCard,{as:'section',id:'standard-card'},'Standard surface'),",
  "React.createElement(UiCard,{as:'section',tone:'featured',id:'feature-card','aria-label':'Featured training summary'},'Featured training summary'),",
  "React.createElement(UiAction,{variant:'primary',id:'primary-action',onClick:()=>{}},'Save changes'),",
  "React.createElement(UiIconAction,{id:'icon-action','aria-label':'Close preview',onClick:()=>{}},React.createElement('span',{'aria-hidden':true},'×')),",
- "React.createElement(UiChoice,{kind:'chip',id:'select-chip',selected:on,onClick:()=>setOn(v=>!v)},'Focus chest'))}",
+ "React.createElement(UiChoice,{kind:'chip',id:'select-chip',selected:on,onClick:()=>setOn(v=>!v)},'Focus chest'),",
+ "React.createElement(UiChoice,{kind:'filter',id:'filter-chip',selected:on,onClick:()=>setOn(v=>!v)},'Chest'),",
+ "React.createElement(UiSegmented,{label:'Exercise type',className:'wpb-split-choices',options:[['compound','Compound'],['isolation','Isolation']],value:on?'isolation':'compound',onChange:v=>setOn(v==='isolation')}))}",
  "createRoot(document.getElementById('root')).render(React.createElement(Demo));"
 ].join('\n');
 const html='<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1">'
@@ -80,9 +82,27 @@ try {
    assert.equal(e['primary-action'].after.transition,'0s',
     'Reduced-motion system preference must remove state-layer transition');
    assert.ok(state.scroll<=width+2,'No horizontal screen overflow at '+width);
+   const shapes=()=>page.evaluate(()=>{
+     const chip=document.getElementById('filter-chip'),style=getComputedStyle(chip),layer=getComputedStyle(chip,'::after');
+     const segment=[...document.querySelectorAll('.wpb-split-choices>button')].map(el=>{
+       const s=getComputedStyle(el);
+       return {corners:[s.borderTopLeftRadius,s.borderTopRightRadius],height:el.getBoundingClientRect().height};
+     });
+     return {height:chip.getBoundingClientRect().height,width:chip.getBoundingClientRect().width,radius:style.borderTopLeftRadius,paint:style.backgroundColor,layer:layer.inset,pointer:layer.pointerEvents,segment};
+   });
+   const before=await shapes();
+   assert.ok(before.height>=48&&before.width>=48,'Filter has a real 48px target');
+   assert.equal(before.radius,'8px','Filter variant owns its normal shape');
+   assert.equal(before.layer,'0px','Decorative state layer stays inside the chip');
+   assert.equal(before.pointer,'none','State layer cannot intercept input');
+   assert.deepEqual(before.segment.map(x=>x.corners),[['20px','20px'],['6px','20px']],'Connected segments retain their distinct corners');
    await page.click('#select-chip');
    assert.equal(await page.$eval('#select-chip',el=>el.getAttribute('aria-pressed')),'true',
      'Selection change must remain semantic and immediate');
+   const after=await shapes();
+   assert.notEqual(after.paint,before.paint,'Filter selection uses variant paint');
+   assert.deepEqual(after.segment.map(x=>x.corners),[['20px','6px'],['20px','20px']],'Selection changes only the appropriate segment shape');
+   assert.ok(after.segment.every(x=>x.height>=48),'Connected segments retain accessible sizing');
    assert.deepEqual(errors,[],'No browser runtime exception at '+width);
    if(width===393||width===834)
     await page.screenshot({path:path.join(root,'verification/m3e-owners-'+width+'.png')});

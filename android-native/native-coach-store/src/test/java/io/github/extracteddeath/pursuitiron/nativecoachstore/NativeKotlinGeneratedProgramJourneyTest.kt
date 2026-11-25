@@ -312,6 +312,115 @@ class NativeKotlinGeneratedProgramJourneyTest {
             as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
     }
 
+    @Test fun generatedE1rmMethodUsesCorrectedEffortAndExplicitNextWeekConsent() {
+        val (base,inputs)=saveGenerated(phase=TrainingPhase.STRENGTH)
+        val block=base.blocks.single()
+        val day=block.days.first{d->d.slots.any{
+            it.exerciseId=="barbell_bench" && it.role==ComposerRole.PRIMARY}}
+        val slot=day.slots.first{it.exerciseId=="barbell_bench" && it.role==ComposerRole.PRIMARY}
+        val working=slot.sets.filter{it.type==DraftSetType.WORKING}
+        assertTrue(working.isNotEmpty())
+        assertTrue(working.all{it.amplifier==null && it.targetRir!=null &&
+            (it.load as? DraftSetLoad.Verified)?.value?.compareTo(n("135"))==0})
+        val cycle=base.copy(revision=base.revision+1,blocks=listOf(block.copy(
+            days=block.days.map{d->if(d.weekday!=day.weekday)d else d.copy(
+                slots=d.slots.map{s->if(s.slotId==slot.slotId)s.copy(
+                    progressionMethod=SavedProgressionMethod.E1RM) else s})})))
+        assertTrue(Disk().drafts.save(owner,cycleId,base.revision,cycle)
+            is NativeCustomDraftWriteResult.Committed)
+        assertTrue(Disk().consent.confirm(owner,cycleId,cycle.revision,1,1,inputs,true)
+            is NativeCustomSignoffWrite.Committed)
+        // The explicitly saved method is available without optional fatigue
+        // coaching; it does not silently enable coach assistance.
+        assertTrue(Disk().settings.save(owner,0,CoachAssistancePolicy.MANUAL)
+            is NativeCoachSettingsWrite.Saved)
+        val id="generated-e1rm-first"
+        assertTrue(Disk().prepared.prepare(owner,id,cycleId,1,day.weekday,inputs)
+            is NativeCustomPrepareResult.Prepared)
+        var journal=(Disk().journals.issue(owner,id,cycleId,1,day.weekday,inputs)
+            as NativeCustomJournalResult.Durable).issued.journal
+        val original=journal.originalSnapshot
+        for((index,set) in original.slots.flatMap{it.sets}.withIndex()){
+            val p=set.prescription
+            val reps=if(set.slotId==slot.slotId && p.type==DraftSetType.WORKING)
+                p.reps.maximum else p.exactRepTarget ?: p.reps.minimum
+            val actual=when(val load=p.load){
+                is DraftSetLoad.Verified -> KotlinPerformedSet(load.value,load.unit,reps,null)
+                DraftSetLoad.ExplicitBodyweight -> KotlinPerformedSet(null,null,reps,null)
+            }
+            journal=(Disk().journals.record(owner,id,
+                CustomWorkoutJournalOperation.Record("e1rm-log-$index",journal.revision,
+                    CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN),
+                    KotlinJournalSetOutcome.COMPLETED,actual)) as NativeCustomJournalResult.Durable).issued.journal
+        }
+        assertEquals(0,journal.unresolvedVisitCount)
+        val d=Disk()
+        assertTrue(NativeKotlinCustomHistoryTransaction(d.history,d.journals,d.fence,identity)
+            .complete(owner,athlete,id,CustomWorkoutJournalOperation.Finish("e1rm-finish",journal.revision))
+            is NativeCustomFinishResult.Committed)
+        fun review():NativeCustomBasicNextReadResult.Reviewed {
+            val cold=Disk()
+            return NativeKotlinCustomBasicNextReview(cold.fence,identity,cold.drafts,cold.sources,
+                cold.preflight,cold.timeline,cold.journals,cold.machines)
+                .reviewAuthored(owner,cycleId,inputs,2,day.weekday,slot.slotId,"e1rm-future",n("10"))
+                as NativeCustomBasicNextReadResult.Reviewed
+        }
+        val earned=review()
+        val projection=earned.projection as CustomBasicHistoryResult.Reviewed
+        assertEquals(working.size,checkNotNull(projection.candidate.e1rmEvidence).assumedGoalRirSetCount)
+        assertTrue(projection.candidate.e1rmEvidence!!.everySetMeetsGoal)
+        // 45 lb bar, two 45 lb plates and then a real pair of 5s.
+        assertEquals(List(working.size){n("145")},projection.candidate.proposedWorkingLoads)
+        val target=original.slots.single{it.slotId==slot.slotId}.sets.first{
+            it.prescription.type==DraftSetType.WORKING}
+        val visit=CustomWorkoutVisitKey(target.setKey,CustomWorkoutVisitPart.MAIN)
+        val logged=journal.effectiveVisits.getValue(visit).operation as CustomWorkoutJournalOperation.Record
+        val actual=checkNotNull(logged.performed)
+        fun correct(event:String,revision:Long,predecessor:String,rir:Int?):Unit {
+            val disk=Disk()
+            assertTrue(NativeKotlinCustomHistoryCorrectionTransaction(disk.history,disk.journals,
+                disk.corrections,disk.fence,identity).correct(owner,athlete,id,
+                CustomSavedVisitCorrection(event,revision,visit,predecessor,
+                    KotlinJournalSetOutcome.COMPLETED,actual.copy(actualRir=rir)))
+                is NativeCustomCorrectionTransactionResult.Committed)
+        }
+        correct("e1rm-effort-correction",0,logged.eventId,0)
+        val held=review()
+        assertTrue(held.historyRevision>earned.historyRevision)
+        val heldCandidate=(held.projection as CustomBasicHistoryResult.Reviewed).candidate
+        assertEquals(List(working.size){n("135")},heldCandidate.proposedWorkingLoads)
+        assertFalse(checkNotNull(heldCandidate.e1rmEvidence).everySetMeetsGoal)
+        assertTrue(heldCandidate.increasedOrdinals.isEmpty())
+        assertEquals(earned.next,held.next)
+        assertEquals(cycle,(Disk().drafts.read(owner,cycleId) as NativeCustomDraftReadResult.Found).draft)
+        // Explicitly correct the incorrect RIR entry back to unreported.
+        correct("e1rm-effort-restored",1,"e1rm-effort-correction",null)
+        val fresh=review()
+        val freshProjection=fresh.projection as CustomBasicHistoryResult.Reviewed
+        assertEquals(projection.candidate,freshProjection.candidate)
+        val before=fresh.next.slots.single{it.slotId==slot.slotId}.sets.map{it.prescription}
+        val edits=checkNotNull(CustomBasicProgressionDraftDomain.forWeekEdit(slot.slotId,before,freshProjection))
+        val proposal=CustomCoachWeekEditDomain.review(cycle,cycle.revision,2,day.weekday,slot.slotId,
+            edits,setup(phase=TrainingPhase.STRENGTH),catalog,inputs)
+        assertTrue(proposal.toString(),proposal is CustomCoachWeekEditResult.Reviewed)
+        val changed=(proposal as CustomCoachWeekEditResult.Reviewed).review.proposal.draft
+        assertTrue(Disk().drafts.save(owner,cycleId,cycle.revision,changed)
+            is NativeCustomDraftWriteResult.Committed)
+        assertTrue(Disk().prepared.prepare(owner,"unapproved-e1rm-next",cycleId,2,day.weekday,inputs)
+            is NativeCustomPrepareResult.Rejected)
+        assertTrue(Disk().consent.confirm(owner,cycleId,changed.revision,1,2,inputs,true)
+            is NativeCustomSignoffWrite.Committed)
+        assertTrue(Disk().prepared.prepare(owner,"e1rm-next",cycleId,2,day.weekday,inputs)
+            is NativeCustomPrepareResult.Prepared)
+        val issued=(Disk().journals.issue(owner,"e1rm-next",cycleId,2,day.weekday,inputs)
+            as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals(edits,issued.originalSnapshot.slots.single{it.slotId==slot.slotId}.sets.map{it.prescription})
+        assertEquals(original,(Disk().journals.open(owner,id) as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
+        val facts=(Disk().timeline.read(owner,athlete) as NativeKotlinMixedHistoryReadResult.Review)
+            .timeline.completions.single() as NativeKotlinMixedHistoryCompletion.Custom
+        assertNull(facts.evidence.visits.single{it.setKey==target.setKey}.actual?.actualRir)
+    }
+
     @Test fun nativeStagedAuditPreservesAnUnfinishedGeneratedCustomWorkout() {
         val (cycle,inputs)=saveGenerated()
         writeLocalAthleteForRestoreProof()

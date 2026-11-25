@@ -2353,6 +2353,7 @@ private fun NativeFixedNamedSelectionPanel(draft:CustomTrainingCycle,
     var from by remember(blockId){mutableStateOf("1")}
     var through by remember(blockId){mutableStateOf(block?.weeks?.toString().orEmpty())}
     var reference by remember(blockId,weekday,slotId,scheme){mutableStateOf("")}
+    var maximumIncrease by remember(blockId,weekday,slotId){mutableStateOf("")}
     var choices by remember(draft.cycleId,draft.revision){mutableStateOf(emptyList<NativeFixedNamedChoice>())}
     val busy=state.busy
     PursuitCard {
@@ -2368,7 +2369,7 @@ private fun NativeFixedNamedSelectionPanel(draft:CustomTrainingCycle,
                 {d->block.days.first{it.weekday==d}.label}){weekday=it}
             CycleChoiceRow("Exercise",day.slots.map{it.slotId},slotId,
                 {id->kotlinExerciseLabel(day.slots.first{it.slotId==id}.exerciseId)}){slotId=it}
-            CycleChoiceRow("Protocol",NamedPercentageScheme.entries.filter{it!=NamedPercentageScheme.GZCLP},
+            CycleChoiceRow("Protocol",NamedPercentageScheme.entries,
                 scheme,::pretty){scheme=it}
             CycleChoiceRow("Tier",PercentageTier.entries,tier,::pretty){tier=it}
             if(scheme==NamedPercentageScheme.TEXAS)
@@ -2376,9 +2377,46 @@ private fun NativeFixedNamedSelectionPanel(draft:CustomTrainingCycle,
                     role,::pretty){role=it}
             val unit=(slot.sets.firstOrNull{it.type==DraftSetType.WORKING}?.load as? DraftSetLoad.Verified)?.unit
             OutlinedTextField(reference,{reference=it},singleLine=true,
-                label={Text(pretty(NamedPercentageProtocolDomain.referenceKind(scheme))+" · "+(unit?.name?.lowercase()?:"unit unavailable"))},
+                label={Text((if(scheme==NamedPercentageScheme.GZCLP)"Initial working load" else pretty(NamedPercentageProtocolDomain.referenceKind(scheme)))+" · "+(unit?.name?.lowercase()?:"unit unavailable"))},
                 keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
                 modifier=Modifier.fillMaxWidth())
+            if(scheme==NamedPercentageScheme.GZCLP) {
+                Text("Start one tier progression thread. Supporting-day and later transition scheduling are not yet available.",
+                    style=MaterialTheme.typography.bodySmall)
+                OutlinedTextField(from,{from=it},singleLine=true,label={Text("Initial block week")},
+                    keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),modifier=Modifier.fillMaxWidth())
+                OutlinedTextField(maximumIncrease,{maximumIncrease=it},singleLine=true,
+                    label={Text("Maximum authorized increase · "+(unit?.name?.lowercase()?:"unit unavailable"))},
+                    keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),modifier=Modifier.fillMaxWidth())
+                val week=from.toIntOrNull()
+                val load=reference.toBigDecimalOrNull()
+                val increase=maximumIncrease.toBigDecimalOrNull()
+                val absoluteWeek=draft.blocks.takeWhile{it.blockId!=blockId}.sumOf{it.weeks}+(week?:0)
+                val valid=week!=null && week in 1..block.weeks && load!=null && load.signum()>0 &&
+                    increase!=null && increase.signum()>0 && unit!=null
+                Button(onClick={
+                    if(valid)controller.reviewTieredInitialReference(absoluteWeek,weekday,slotId,tier,
+                        checkNotNull(load),checkNotNull(increase))
+                },enabled=!busy && valid,modifier=Modifier.fillMaxWidth()){Text("Review initial tier targets")}
+                state.message?.let{Text(it,style=MaterialTheme.typography.bodySmall)}
+                val shown=state.tieredReference?.takeIf{review->
+                    val selection=review.selection
+                    valid && selection.absoluteWeek==absoluteWeek && selection.weekday==weekday &&
+                        selection.slotId==slotId && selection.tier==tier &&
+                        selection.initialLoad==load && selection.maximumAuthorizedIncrease==increase
+                }
+                if(shown!=null) {
+                    val src=shown.source
+                    val edit=shown.proposal.proposal.draft.weekOverrides[src.blockId].orEmpty()
+                        .singleOrNull{it.weekInBlock==src.weekInBlock && it.weekday==weekday && it.slotId==slotId}
+                    edit?.sets?.forEach{set->
+                        Text("${kotlinIssuedLoadLabel(set.load)} · ${set.repTargetLabel()}",
+                            style=MaterialTheme.typography.bodySmall)
+                    }
+                    Button(onClick={controller.acceptTieredInitialReference(shown)},enabled=!busy,
+                        modifier=Modifier.fillMaxWidth()){Text("Confirm reference and save unsigned revision")}
+                }
+            } else {
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
                 OutlinedTextField(from,{from=it},singleLine=true,label={Text("Block week from")},
                     keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),modifier=Modifier.weight(1f))
@@ -2426,6 +2464,7 @@ private fun NativeFixedNamedSelectionPanel(draft:CustomTrainingCycle,
                 }
                 Button(onClick={controller.acceptFixedNamedChoices(shown)},enabled=!busy,
                     modifier=Modifier.fillMaxWidth()){Text("Confirm references and save unsigned revision")}
+            }
             }
         }
     }

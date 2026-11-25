@@ -968,6 +968,51 @@ internal class NativeKotlinCandidateHost(context:Context) {
         return issued
     }
 
+    /** Supporting-day targets come from the signed authored program, not
+     * the tier thread's current working load. Preflight owns calendar gating. */
+    fun previewTieredSupportWorkout(workoutId:String,cycleId:String,week:Int,weekday:Int):NativeCustomPreflightResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomPreflightResult.Rejected(NativeCustomPreflightRefusal.NOT_AUTHORIZED)
+        return customWorkoutPreflight.inspectTieredSupport(owner.ownerKey,workoutId,cycleId,
+            week,weekday,mixedHistoryReader,outstandingCustomInventory)
+    }
+
+    fun prepareTieredSupportWorkout(workoutId:String,cycleId:String,
+        shown:NativeCustomPreflightResult.ReviewedPreview):NativeCustomPrepareResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomPrepareResult.Rejected(NativeCustomPrepareRefusal.NOT_AUTHORIZED)
+        return revisionFence.withOwnerTransaction(owner.ownerKey) {
+            val week=shown.session.absoluteWeek
+            val day=shown.session.weekday
+            if(previewTieredSupportWorkout(workoutId,cycleId,week,day)!=shown)
+                return@withOwnerTransaction NativeCustomPrepareResult.Rejected(NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
+            customPreparedStore.prepareTieredSupport(owner.ownerKey,workoutId,cycleId,
+                week,day,mixedHistoryReader,outstandingCustomInventory)
+        }
+    }
+
+    fun issueTieredSupportWorkout(cycleId:String,shown:NativeCustomPreparedWorkout):NativeCustomJournalResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.NOT_AUTHORIZED)
+        val issued=revisionFence.withOwnerTransaction(owner.ownerKey) {
+            val workoutId=shown.workoutId
+            val week=shown.snapshot.absoluteWeek
+            val day=shown.snapshot.weekday
+            val preview=previewTieredSupportWorkout(workoutId,cycleId,week,day)
+                as? NativeCustomPreflightResult.ReviewedPreview
+            if(shown.authority!=NativeCustomPreparationAuthority.TIERED_SUPPORT ||
+                preview==null || preview.session!=shown.snapshot ||
+                preview.receipt.fingerprintSha256!=shown.consentFingerprint ||
+                preview.receipt.recordRevision!=shown.consentRevision ||
+                (customPreparedStore.open(owner.ownerKey,workoutId) as? NativeCustomPreparedRead.Found)?.workout!=shown)
+                return@withOwnerTransaction NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.NOT_PREPARED)
+            customIssuedStore.issueTieredSupport(owner.ownerKey,workoutId,cycleId,week,day,mixedHistoryReader)
+        }
+        if(issued is NativeCustomJournalResult.Durable)
+            pinMachineChoiceForIssuedWorkout(shown.workoutId,custom=true)
+        return issued
+    }
+
     fun confirmFixedNamedCycle(cycleId:String,displayed:NativeSavedNamedReview.Ready,
         confirmed:Boolean):NativeCustomSignoffWrite {
         val owner=localAthlete.signedInIdentity()

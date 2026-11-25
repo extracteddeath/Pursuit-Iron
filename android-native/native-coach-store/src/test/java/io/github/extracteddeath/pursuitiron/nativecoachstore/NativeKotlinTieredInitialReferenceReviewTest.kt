@@ -369,6 +369,23 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         assertEquals(proposal.request.initialState,transition.request.initialState)
         assertEquals(proposal.request.maximumAuthorizedIncrease,transition.request.maximumAuthorizedIncrease)
         assertEquals(verified.manifestRevision,transition.historyRevision)
+        // The exact verified ledger behind a real native transition must
+        // survive the frozen receipt representation without changing any target.
+        val frozen=NativeTieredHistoryPrefixCodec.encode(transition.request.scope,
+            s.tier,s.slotId,transition.request.completed)
+        val restored=NativeTieredHistoryPrefixCodec.decode(frozen,transition.request.scope,
+            s.tier,s.slotId)
+        assertEquals(verified.exposures,restored)
+        assertEquals(transition.result,TieredLinearProgressionDomain.review(
+            transition.request.copy(completed=restored)))
+        assertArrayEquals(frozen,NativeTieredHistoryPrefixCodec.encode(
+            transition.request.scope,s.tier,s.slotId,restored))
+        val changedPrefix=restored.map{exposure->exposure.copy(
+            observations=exposure.observations.map{it.copy(actualReps=1)})}
+        assertFalse(frozen.contentEquals(NativeTieredHistoryPrefixCodec.encode(
+            transition.request.scope,s.tier,s.slotId,changedPrefix)))
+        assertNotEquals(transition.result,TieredLinearProgressionDomain.review(
+            transition.request.copy(completed=changedPrefix)))
         assertEquals(saved.snapshot.slots.single().sets.single().prescription,
             transition.draft.proposal.draft.weekOverrides.getValue("base").single{it.weekInBlock==1}.sets.single())
         assertEquals(n("30"),(transition.draft.proposal.draft.weekOverrides.getValue("base")
@@ -383,6 +400,11 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         assertTrue(light.result.recovery)
         assertEquals(n("15"),light.result.targets.single().load)
         assertFalse(light.result.targets.single().repOut)
+        // Identical history is necessary but insufficient for consent:
+        // normal and recovery proposals must remain distinct prescriptions.
+        assertArrayEquals(frozen,NativeTieredHistoryPrefixCodec.encode(
+            light.request.scope,s.tier,s.slotId,light.request.completed))
+        assertNotEquals(transition.result.targets,light.result.targets)
         assertTrue(reviewer.previewTieredNext("owner-1","cycle-1",inputs(),nextSelection.copy(absoluteWeek=3))
             is NativeSavedNamedReview.Rejected)
         assertTrue(reviewer.previewTieredNext("owner-1","cycle-1",inputs(),nextSelection.copy(nextWorkoutId=s.nextWorkoutId))

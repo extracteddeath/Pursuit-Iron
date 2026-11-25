@@ -1894,3 +1894,14 @@ assert.ok(basicPreviewScreen.includes('NativeFixedNamedSelectionPanel(draft,stat
   basicPreviewController.includes('saved.consentFingerprint!=shown.receipt.fingerprintSha256') &&
   basicPreviewController.includes('it.originalSnapshot==saved.snapshot'),
   'Fixed named Plan must expose explicit reference review, revised consent, exact preview/preparation and independent issuance; route actual logging to the existing Train journal');
+
+// Tiered initial approval is distinct from ordinary and fixed issuance.
+assert.ok(basicPreviewScreen.includes('} else if(state.tieredDraft) {') &&
+  basicPreviewScreen.includes('NativeTieredInitialExecutionPanel(state,controller)') &&
+  basicPreviewScreen.includes('!state.fixedNamedDraft && !state.tieredDraft') &&
+  basicPreviewScreen.includes('controller.approveTieredInitialCycle(review)') &&
+  basicPreviewController.includes('tieredDraft=result.tieredInitialReceipt!=null') &&
+  basicPreviewController.includes('host.recoverTieredInitialCycle(cycleId)') &&
+  basicPreviewController.includes('host.confirmTieredInitialCycle(draft.cycleId,displayed,true)') &&
+  basicPreviewController.includes('if(before.tieredDraft)return'),
+  'Saved tiered initial review must be distinct from ordinary and fixed issuance');

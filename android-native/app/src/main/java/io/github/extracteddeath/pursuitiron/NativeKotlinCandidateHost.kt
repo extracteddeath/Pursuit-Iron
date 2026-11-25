@@ -864,6 +864,21 @@ internal class NativeKotlinCandidateHost(context:Context) {
             mixedHistoryReader,outstandingCustomInventory,machineRosters)
     }
 
+    fun recoverTieredInitialCycle(cycleId:String):NativeSavedNamedReview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeSavedNamedReview.Rejected(NativeSavedNamedReviewRefusal.NOT_AUTHORIZED)
+        return customCycleSignoffs.recoverTieredInitialReview(owner.ownerKey,cycleId,
+            mixedHistoryReader,outstandingCustomInventory,machineRosters)
+    }
+
+    fun confirmTieredInitialCycle(cycleId:String,displayed:NativeSavedNamedReview.Ready,
+        confirmed:Boolean):NativeCustomSignoffWrite {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomSignoffWrite.Rejected(NativeCustomSignoffRefusal.NOT_AUTHORIZED)
+        return customCycleSignoffs.confirmTieredInitial(owner.ownerKey,cycleId,displayed,confirmed,
+            mixedHistoryReader,outstandingCustomInventory,machineRosters)
+    }
+
     fun confirmFixedNamedCycle(cycleId:String,displayed:NativeSavedNamedReview.Ready,
         confirmed:Boolean):NativeCustomSignoffWrite {
         val owner=localAthlete.signedInIdentity()

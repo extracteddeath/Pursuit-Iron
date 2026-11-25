@@ -289,16 +289,25 @@ object CustomWorkoutSnapshotDomain {
         evidence:List<CustomNamedPercentageWeekEvidence>,
         absoluteWeek:Int,
         weekday:Int
+    ):CustomWorkoutSnapshotResult = reviewSpecialistForConsent(cycle,setup,catalog,
+        sourceRevision,inputs,evidence,emptyList(),absoluteWeek,weekday)
+
+    fun reviewSpecialistForConsent(
+        cycle:CustomTrainingCycle,setup:AthleteSetupReview,catalog:List<CatalogMovement>,
+        sourceRevision:Long,inputs:CustomCoachAuditInputs,
+        evidence:List<CustomNamedPercentageWeekEvidence>,
+        initialTiers:List<CustomTieredInitialWeekEvidence>,
+        absoluteWeek:Int,weekday:Int
     ):CustomWorkoutSnapshotResult {
         val athlete=setup.reviewed
             ?:return CustomWorkoutSnapshotResult.Rejected(
                 CustomWorkoutSnapshotRefusal.UNREVIEWED_ATHLETE)
-        if(evidence.isEmpty())return CustomWorkoutSnapshotResult.Rejected(
+        if(evidence.isEmpty() && initialTiers.isEmpty())return CustomWorkoutSnapshotResult.Rejected(
             CustomWorkoutSnapshotRefusal.COACHING_REVIEW_REQUIRED)
         val stamp=CustomWorkoutSourceStamp(athlete.athleteProfileId,athlete.profileRevision,
             cycle.cycleId,cycle.revision,athlete.gym.gymId,sourceRevision)
-        val audit=CustomCycleCoachAuditDomain.reviewNamedForReview(
-            cycle,setup,catalog,inputs,stamp,evidence)
+        val audit=CustomCycleCoachAuditDomain.reviewSpecialistForReview(
+            cycle,setup,catalog,inputs,stamp,evidence,initialTiers)
         val structural=audit.structuralReview
         if(audit.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW ||
             audit.issues.isNotEmpty() || audit.auditedCycleRevision!=cycle.revision ||

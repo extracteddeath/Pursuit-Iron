@@ -281,6 +281,94 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         assertTrue(cold.reviewSignedTieredInitial("owner-1","cycle-1",inputs()) is NativeSavedNamedReview.Rejected)
     }
 
+    @Test fun initialTierIssuesOnlyExactApprovedIdAndBuildsNextCandidateFromDurableLedger() {
+        initialize()
+        approved()
+        enroll()
+        val s=selection()
+        val proposal=review().previewTieredInitial(s) as NativeTieredInitialReview.Ready
+        assertTrue(review().acceptTieredInitial(s,proposal,true) is NativeTieredInitialAcceptance.Saved)
+        val inventory=NativeKotlinCustomOutstandingWorkoutInventory(prepared,issuer)
+        val reviewer=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
+            store(),reader,inventory)
+        val pending=reviewer.reviewTieredInitial("owner-1","cycle-1",inputs()) as NativeSavedNamedReview.Ready
+        fun prep(w:String=s.nextWorkoutId,week:Int=1,day:Int=0)=
+            prepared.prepareTieredInitial("owner-1",w,"cycle-1",week,day,inputs(),reader,inventory)
+        fun coldIssuer()=NativeKotlinCustomWorkoutJournalFileStore(root,fence,identity,
+            NativeKotlinCustomWorkoutPreparedStore(root,fence,identity,preflight),
+            preflight,history,composer)
+        fun issue(w:String=s.nextWorkoutId,week:Int=1,day:Int=0)=
+            coldIssuer().issueTieredInitial("owner-1",w,"cycle-1",week,day,inputs(),reader)
+        assertTrue(prep() is NativeCustomPrepareResult.Rejected)
+        val consent=store().confirmTieredInitial("owner-1","cycle-1",pending,true,reader,inventory)
+            as NativeCustomSignoffWrite.Committed
+        assertTrue(prep("other-id") is NativeCustomPrepareResult.Rejected)
+        assertTrue(prep(week=2) is NativeCustomPrepareResult.Rejected)
+        assertTrue(prep(day=2) is NativeCustomPrepareResult.Rejected)
+        assertEquals(NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.NOT_PREPARED),issue())
+        val result=prep()
+        assertTrue(result.toString(),result is NativeCustomPrepareResult.Prepared)
+        val saved=(result as NativeCustomPrepareResult.Prepared).workout
+        assertEquals(NativeCustomPreparationAuthority.TIERED_INITIAL,saved.authority)
+        assertEquals(consent.receipt.fingerprintSha256,saved.consentFingerprint)
+        assertEquals(NativeCustomPrepareResult.Prepared(saved,true),prep())
+        assertEquals(NativeCustomPreparedRead.Found(saved),
+            NativeKotlinCustomWorkoutPreparedStore(root,NativeKotlinApprovalRevisionFence(root),
+                identity,preflight).open("owner-1",s.nextWorkoutId))
+        assertTrue(issuer.issueNamed("owner-1",s.nextWorkoutId,"cycle-1",1,0,inputs(),reader)
+            is NativeCustomJournalResult.Rejected)
+        assertTrue(issuer.issue("owner-1",s.nextWorkoutId,"cycle-1",1,0,inputs())
+            is NativeCustomJournalResult.Rejected)
+        val first=issue()
+        assertTrue(first.toString(),first is NativeCustomJournalResult.Durable)
+        val issued=(first as NativeCustomJournalResult.Durable).issued
+        assertEquals(saved.snapshot,issued.journal.originalSnapshot)
+        assertEquals(NativeCustomJournalResult.Durable(issued,true),issue())
+        val target=saved.snapshot.slots.single().sets.single()
+        assertEquals(3,target.prescription.exactRepTarget)
+        val intent=checkNotNull(target.prescription.percentageIntent)
+        assertEquals(0,intent.tierStage)
+        assertTrue(intent.repOut)
+        val record=coldIssuer().record("owner-1",s.nextWorkoutId,
+            CustomWorkoutJournalOperation.Record("tier-actual",0,
+                CustomWorkoutVisitKey(target.setKey,CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(n("25"),LoadUnit.LB,5,0)))
+        assertTrue(record.toString(),record is NativeCustomJournalResult.Durable)
+        val finish=CustomWorkoutJournalOperation.Finish("tier-finish",1)
+        val completed=NativeKotlinCustomHistoryTransaction(history,coldIssuer(),fence,identity)
+            .complete("owner-1","athlete-1",s.nextWorkoutId,finish)
+        assertTrue(completed.toString(),completed is NativeCustomFinishResult.Committed)
+        val fact=(completed as NativeCustomFinishResult.Committed).evidence.visits.single()
+        assertEquals(intent,fact.percentageIntent)
+        assertEquals(5,fact.actual?.reps)
+        assertEquals(target.prescription.load,fact.prescribedLoad)
+        assertEquals(completed.copy(replayed=true),
+            NativeKotlinCustomHistoryTransaction(history,coldIssuer(),fence,identity)
+                .complete("owner-1","athlete-1",s.nextWorkoutId,finish))
+        val ledger=reader.readTieredLedger("owner-1","athlete-1",proposal.request.scope,
+            s.slotId,s.tier,2)
+        assertTrue(ledger.toString(),ledger is NativeOwnerTieredLedgerResult.Review)
+        val verified=ledger as NativeOwnerTieredLedgerResult.Review
+        assertEquals(1,verified.exposures.size)
+        val next=TieredLinearProgressionDomain.review(proposal.request.copy(
+            nextWorkoutId="tier-next",completed=verified.exposures))
+        assertTrue(next.toString(),next is TieredLinearResult.Candidate)
+        val candidate=next as TieredLinearResult.Candidate
+        assertEquals(TieredLinearState(0,n("30")),candidate.state)
+        assertEquals(TieredLinearDecision.EARNED_INCREMENT,candidate.transitions.single().decision)
+        assertFalse(candidate.mayIssueWorkout)
+        assertTrue(prep("tier-next",2,0) is NativeCustomPrepareResult.Rejected)
+        assertTrue(reviewer.reviewSignedTieredInitial("owner-1","cycle-1",inputs())
+            is NativeSavedNamedReview.Rejected)
+        assertTrue(store().revoke("owner-1","cycle-1",consent.receipt.recordRevision)
+            is NativeCustomSignoffWrite.Committed)
+        assertTrue(issue() is NativeCustomJournalResult.Durable)
+        assertTrue(issuer.issueNamed("owner-1",s.nextWorkoutId,"cycle-1",1,0,inputs(),reader)
+            is NativeCustomJournalResult.Rejected)
+        active=NativeKotlinOwnerIdentity("other-owner","other-athlete")
+        assertEquals(NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.NOT_AUTHORIZED),issue())
+    }
+
     @Test fun initialTierCannotBorrowOlderOrdinarySameDayReceiptsOrRestartAUsedSlot() {
         initialize()
         approved()

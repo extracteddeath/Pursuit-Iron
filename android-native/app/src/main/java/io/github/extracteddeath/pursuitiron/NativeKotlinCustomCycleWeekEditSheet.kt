@@ -10,6 +10,8 @@ import java.math.BigDecimal
 private fun BigDecimal.creditText() = stripTrailingZeros().toPlainString()
 private fun Enum<*>.editLabel() = name.lowercase().replace('_',' ')
 internal fun CustomAuthoredSet.repTargetLabel(): String {
+    if(percentageIntent?.repOut==true && exactRepTarget!=null)
+        return nativeTargetRepMetric(reps,exactRepTarget,true)+" reps (minimum)"
     if (reps.minimum == reps.maximum) return "${reps.minimum} reps"
     val range = "${reps.minimum}–${reps.maximum}"
     return exactRepTarget?.let { "$it reps ($range range)" } ?: "$range reps"

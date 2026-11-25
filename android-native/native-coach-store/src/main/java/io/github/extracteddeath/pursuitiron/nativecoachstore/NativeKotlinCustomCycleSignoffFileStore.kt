@@ -386,6 +386,45 @@ class NativeKotlinCustomCycleSignoffFileStore(
         }}.getOrElse{deny(NativeCustomSignoffRefusal.STORAGE_UNAVAILABLE)}
     }
 
+    /** Recover the stored rules for a fixed specialist draft, not a
+     * generic consent flag. The saved receipt determines whether the draft
+     * is unsigned or signed; never fall back from a failed signed review
+     * to a pending one. No consent, preparation or history is written. */
+    fun recoverFixedNamedReview(ownerKey:String,cycleId:String,
+        history:NativeKotlinMixedHistoryReadCoordinator,
+        outstanding:NativeKotlinCustomOutstandingWorkoutInventory,
+        machineRosters:NativeKotlinMachineRosterFileStore?=null
+    ):NativeSavedNamedReview {
+        fun deny(reason:NativeSavedNamedReviewRefusal)=NativeSavedNamedReview.Rejected(reason)
+        if(current(ownerKey)==null || !id.matches(cycleId))
+            return deny(NativeSavedNamedReviewRefusal.NOT_AUTHORIZED)
+        return runCatching {fence.withOwnerTransaction(ownerKey) {
+            val owner=current(ownerKey)
+                ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.NOT_AUTHORIZED)
+            val record=decode(path(ownerKey,cycleId))
+                ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
+            if(record.ownerKey!=ownerKey || record.athleteId!=owner.athleteId ||
+                record.cycleId!=cycleId)
+                return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.NOT_AUTHORIZED)
+            val receipt=record.consent
+                ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
+            val inputs=record.reviewedInputs
+                ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
+            val stored=(drafts.read(ownerKey,cycleId) as? NativeCustomDraftReadResult.Found)
+                ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.NO_CONFIRMED_DRAFT)
+            if(stored.namedReceipts.isEmpty() || stored.tieredInitialReceipt!=null)
+                return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.NO_CONFIRMED_DRAFT)
+            val reviewer=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
+                this,history,outstanding,machineRosters)
+            val result=if(receipt.cycleRevision==stored.draft.revision)
+                reviewer.reviewSigned(ownerKey,cycleId,inputs)
+            else reviewer.review(ownerKey,cycleId,inputs)
+            if(current(ownerKey)!=owner)
+                return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.NOT_AUTHORIZED)
+            result
+        }}.getOrElse{deny(NativeSavedNamedReviewRefusal.STORAGE_UNAVAILABLE)}
+    }
+
     /** Cold recovery requires the original unrevoked consent, exact current
      * cycle/source, fresh full-cycle audit AND unchanged fingerprint. A valid
      * checksum alone cannot turn altered review inputs into approved rules. */

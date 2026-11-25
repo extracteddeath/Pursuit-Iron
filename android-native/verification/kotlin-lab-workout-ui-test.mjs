@@ -752,11 +752,19 @@ for(const source of [journal,composer]) {
 // Issuance should normally freeze defaults BEFORE the athlete opens the UI.
 // Existing recorded sets remain journal-owned, and the durability bootstrap
 // does not turn a partial preference write into a fake successful set.
+// Verify each canonical issuer rather than only a count of call sites.
+const customIssuerNames=['issueReviewedCustomWorkout','issueActivatedFutureWorkout','issueFixedNamedWorkout'];
 assert.ok(machineChoiceHost.includes('private fun pinMachineChoiceForIssuedWorkout(') &&
   machineChoiceHost.includes('if(issued is NativeKotlinIssueResult.Committed)') &&
-  machineChoiceHost.match(/if\(issued is NativeCustomJournalResult\.Durable\)/g)?.length>=2 &&
   machineChoiceHost.includes('pinMachineChoiceForIssuedWorkout(workoutId,custom=false)') &&
-  machineChoiceHost.match(/pinMachineChoiceForIssuedWorkout\(workoutId,custom=true\)/g)?.length===2,
+  machineChoiceHost.match(/pinMachineChoiceForIssuedWorkout\(workoutId,custom=true\)/g)?.length===customIssuerNames.length &&
+  customIssuerNames.every(name=>{
+    const start=machineChoiceHost.indexOf('fun '+name+'(');
+    if(start<0)return false;
+    const end=machineChoiceHost.indexOf('\n    fun ',start+1);
+    const body=machineChoiceHost.slice(start,end<0?undefined:end);
+    return /if\(issued is NativeCustomJournalResult\.Durable\)\s+pinMachineChoiceForIssuedWorkout\(workoutId,custom=true\)/.test(body);
+  }),
   'All native issuer paths must pin verified A/B defaults on successful issuance');
 assert.ok(journal.includes('val requiresNewMachineChoice=') &&
   journal.includes('val previouslyAttempted=recordedMain?.performed') &&
@@ -1868,3 +1876,21 @@ assert.ok(customRepEditor.includes('val mainRepOut=part==CustomWorkoutVisitPart.
   weekRepLabel.includes('percentageIntent?.repOut==true && exactRepTarget!=null') &&
   weekRepLabel.includes('nativeTargetRepMetric(reps,exactRepTarget,true)'),
   'Named rep-out must show the issued minimum in Plan and Target, including saved-set correction, without changing Last or follow-ups');
+
+// Fixed specialist review is a separate explicit path; no ordinary consent
+// or issuer is substituted for the named receipt chain.
+assert.ok(basicPreviewScreen.includes('NativeFixedNamedSelectionPanel(draft,state,controller)') &&
+  basicPreviewScreen.includes('} else if(state.fixedNamedDraft) {') &&
+  basicPreviewScreen.includes('NativeFixedNamedExecutionPanel(state,controller,onOpenIssuedWorkout)') &&
+  basicPreviewScreen.includes('controller.acceptFixedNamedChoices(shown)') &&
+  basicPreviewScreen.includes('controller.approveFixedNamedCycle(review)') &&
+  basicPreviewScreen.includes('controller::prepareNextFixedNamedWorkout') &&
+  basicPreviewScreen.includes('controller::issueNextFixedNamedWorkout') &&
+  basicPreviewController.includes('fixedNamedDraft=result.namedReceipts.isNotEmpty()') &&
+  basicPreviewController.includes('host.recoverFixedNamedCycle(cycleId)') &&
+  basicPreviewController.includes('host.previewFixedNamedWorkout(id,draft.cycleId,week,day,review.inputs)') &&
+  basicPreviewController.includes('host.prepareFixedNamedWorkout(id,review.draft.cycleId,') &&
+  basicPreviewController.includes('host.issueFixedNamedWorkout(saved.workoutId,review.draft.cycleId,') &&
+  basicPreviewController.includes('saved.consentFingerprint!=shown.receipt.fingerprintSha256') &&
+  basicPreviewController.includes('it.originalSnapshot==saved.snapshot'),
+  'Fixed named Plan must expose explicit reference review, revised consent, exact preview/preparation and independent issuance; route actual logging to the existing Train journal');

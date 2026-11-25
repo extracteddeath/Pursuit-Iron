@@ -78,6 +78,12 @@ internal sealed interface NativeWorkoutMachineCreationResult {
     data class Rejected(val reason:String):NativeWorkoutMachineCreationResult
 }
 
+internal data class NativeFixedNamedChoice(
+    val absoluteWeek:Int,val weekday:Int,val slotId:String,
+    val scheme:NamedPercentageScheme,val tier:PercentageTier,
+    val dayRole:PercentageDayRole,val reference:BigDecimal
+)
+
 internal class NativeKotlinCandidateHost(context:Context) {
     private val root=context.applicationContext.noBackupFilesDir
         .resolve("kotlin-coach-v1").toPath()
@@ -154,6 +160,10 @@ internal class NativeKotlinCandidateHost(context:Context) {
         measuredParentHistoryStore)
     private val outstandingCustomInventory=NativeKotlinCustomOutstandingWorkoutInventory(
         customPreparedStore,customIssuedStore)
+    private val fixedNamedDraftReview=NativeKotlinNamedPercentageDraftReview(
+        revisionFence,localAthlete,customDraftStore,authoringSourceStore,
+        customCycleSignoffs,customWorkoutPreflight,mixedHistoryReader,
+        outstandingCustomInventory,machineRosters)
     private val resumableCustomWorkouts=NativeKotlinCustomResumeReview(
         revisionFence,localAthlete,mixedHistoryReader,
         outstandingCustomInventory,customIssuedStore)
@@ -821,6 +831,72 @@ internal class NativeKotlinCandidateHost(context:Context) {
             is NativeAuthoringSourceRead.Rejected ->
                 NativeAuthoringSourceWrite.Rejected(existing.reason)
         }
+    }
+
+    /** Fixed specialist handoff: Compose supplies only the selected cycle,
+     * slot, weeks and explicit reference, never owner, stock or history. */
+    fun previewFixedNamedCycle(cycleId:String,choices:List<NativeFixedNamedChoice>):NativeNamedBatchReview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeNamedBatchReview.Rejected(NativeNamedPercentageRefusal.NOT_AUTHORIZED)
+        if(choices.isEmpty() || choices.size>104 ||
+            choices.any{it.scheme==NamedPercentageScheme.GZCLP})
+            return NativeNamedBatchReview.Rejected(NativeNamedPercentageRefusal.INVALID_SELECTION)
+        val selections=choices.map{choice->NativeNamedPercentageSelection(
+            owner.ownerKey,cycleId,choice.absoluteWeek,choice.weekday,choice.slotId,
+            choice.scheme,choice.tier,choice.dayRole,
+            NamedPercentageProtocolDomain.referenceKind(choice.scheme),choice.reference)}
+        return fixedNamedDraftReview.previewBatch(selections)
+    }
+
+    fun acceptFixedNamedCycle(displayed:NativeNamedBatchReview.Ready,
+        confirmed:Boolean):NativeNamedBatchAcceptance {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeNamedBatchAcceptance.Rejected(NativeNamedPercentageRefusal.NOT_AUTHORIZED)
+        if(displayed.selections.any{it.ownerKey!=owner.ownerKey})
+            return NativeNamedBatchAcceptance.Rejected(NativeNamedPercentageRefusal.NOT_AUTHORIZED)
+        return fixedNamedDraftReview.acceptBatch(displayed.selections,displayed,confirmed)
+    }
+
+    fun recoverFixedNamedCycle(cycleId:String):NativeSavedNamedReview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeSavedNamedReview.Rejected(NativeSavedNamedReviewRefusal.NOT_AUTHORIZED)
+        return customCycleSignoffs.recoverFixedNamedReview(owner.ownerKey,cycleId,
+            mixedHistoryReader,outstandingCustomInventory,machineRosters)
+    }
+
+    fun confirmFixedNamedCycle(cycleId:String,displayed:NativeSavedNamedReview.Ready,
+        confirmed:Boolean):NativeCustomSignoffWrite {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomSignoffWrite.Rejected(NativeCustomSignoffRefusal.NOT_AUTHORIZED)
+        return customCycleSignoffs.confirmNamed(owner.ownerKey,cycleId,displayed,confirmed,
+            mixedHistoryReader,outstandingCustomInventory,machineRosters)
+    }
+
+    fun previewFixedNamedWorkout(workoutId:String,cycleId:String,week:Int,weekday:Int,
+        inputs:CustomCoachAuditInputs):NativeCustomPreflightResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomPreflightResult.Rejected(NativeCustomPreflightRefusal.NOT_AUTHORIZED)
+        return customWorkoutPreflight.inspectNamed(owner.ownerKey,workoutId,cycleId,week,weekday,
+            inputs,mixedHistoryReader,outstandingCustomInventory)
+    }
+
+    fun prepareFixedNamedWorkout(workoutId:String,cycleId:String,week:Int,weekday:Int,
+        inputs:CustomCoachAuditInputs):NativeCustomPrepareResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomPrepareResult.Rejected(NativeCustomPrepareRefusal.NOT_AUTHORIZED)
+        return customPreparedStore.prepareNamed(owner.ownerKey,workoutId,cycleId,week,weekday,
+            inputs,mixedHistoryReader,outstandingCustomInventory)
+    }
+
+    fun issueFixedNamedWorkout(workoutId:String,cycleId:String,week:Int,weekday:Int,
+        inputs:CustomCoachAuditInputs):NativeCustomJournalResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.NOT_AUTHORIZED)
+        val issued=customIssuedStore.issueNamed(owner.ownerKey,workoutId,cycleId,week,weekday,
+            inputs,mixedHistoryReader)
+        if(issued is NativeCustomJournalResult.Durable)
+            pinMachineChoiceForIssuedWorkout(workoutId,custom=true)
+        return issued
     }
 
     /**

@@ -72,6 +72,24 @@ internal object NativeCustomNextCycleSlotDomain {
             if(transition)cycle.revision else revision,item.issued,item.completed)
     }
 
+    /** Map an initial day from a multi-root signed draft. Multiple slots
+     * share a journal; later transitions are deliberately not inferred. */
+    fun multiInitialFact(cycle:CustomTrainingCycle,roots:List<NativeTieredInitialDraftReceipt>,
+        item:NativeCustomInventoryFact,origin:NativeCustomPreparedWorkout,
+        consent:NativeKotlinCustomCycleSignoff):NativeCustomCycleSessionFact? {
+        val revision=origin.snapshot.stamp.cycleRevision
+        val matches=roots.any{r->r.selection.nextWorkoutId==item.workoutId &&
+            r.selection.absoluteWeek==item.absoluteWeek && r.selection.weekday==item.weekday}
+        val valid=if(origin.authority==NativeCustomPreparationAuthority.TIERED_INITIAL)
+            matches && revision==cycle.revision && origin.consentRevision==consent.recordRevision &&
+                origin.consentFingerprint==consent.fingerprintSha256
+        else origin.authority==NativeCustomPreparationAuthority.CUSTOM_CYCLE &&
+            item.completed && revision<cycle.revision
+        if(!valid)return null
+        return NativeCustomCycleSessionFact(item.workoutId,item.absoluteWeek,item.weekday,
+            revision,item.issued,item.completed)
+    }
+
     /** Called only with already owner-verified full manifest/census evidence. */
     fun select(cycle:CustomTrainingCycle,
         facts:List<NativeCustomCycleSessionFact>):NativeCustomNextCycleSlot {
@@ -160,6 +178,33 @@ class NativeKotlinCustomNextCycleSessionReview(
     fun reviewTieredInitial(ownerKey:String,cycleId:String,
         inputs:CustomCoachAuditInputs):NativeCustomNextCycleSlot =
         reviewInternal(ownerKey,cycleId,inputs,true)
+
+    /** Multi-root schedule uses the same authenticated initial review and
+     * complete census. It does not enable a later tier transition. */
+    fun reviewMultiTieredInitial(ownerKey:String,cycleId:String):NativeCustomNextCycleSlot {
+        fun no()=NativeCustomNextCycleSlot.Rejected("Current multi-thread approval or calendar is unavailable.")
+        return runCatching{fence.withOwnerTransaction(ownerKey){
+            val owner=identity.signedInIdentity()?.takeIf{it.ownerKey==ownerKey}
+                ?:return@withOwnerTransaction no()
+            val signed=signoffs.recoverTieredInitialReview(ownerKey,cycleId,history,inventory,machineRosters)
+                as? NativeSavedNamedReview.Signed ?:return@withOwnerTransaction no()
+            if(signed.initialTierReceipts.size<2)return@withOwnerTransaction no()
+            val timeline=(history.read(ownerKey,owner.athleteId)
+                as? NativeKotlinMixedHistoryReadResult.Review)?.timeline ?:return@withOwnerTransaction no()
+            if(timeline.manifestRevision!=signed.historyRevision)return@withOwnerTransaction no()
+            val completed=timeline.completions.filterIsInstance<NativeKotlinMixedHistoryCompletion.Custom>()
+                .map{it.manifest.workoutId}.toSet()
+            val census=(inventory.inspect(ownerKey,owner.athleteId,completed) as? NativeCustomInventoryReview.Reviewed)
+                ?:return@withOwnerTransaction no()
+            val facts=census.sessions.filter{it.cycleId==cycleId}.map{item->
+                val origin=inventory.preparedOrigin(ownerKey,item.workoutId)?:return@withOwnerTransaction no()
+                NativeCustomNextCycleSlotDomain.multiInitialFact(signed.draft,signed.initialTierReceipts,item,origin,signed.consent)
+                    ?:return@withOwnerTransaction no()
+            }
+            if(identity.signedInIdentity()!=owner)return@withOwnerTransaction no()
+            NativeCustomNextCycleSlotDomain.select(signed.draft,facts)
+        }}.getOrElse{no()}
+    }
 
     /** Read-only schedule discovery after initial approval, including after
      * Finish. This is not a specialist preview, preparation or issue grant.

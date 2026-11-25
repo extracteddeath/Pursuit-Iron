@@ -3092,6 +3092,110 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertTrue(f.issuer.open("owner-1","named-one") is NativeCustomJournalResult.Rejected)
     }
 
+    @Test fun namedIssueUsesCanonicalJournalAndFinishWithExactRepOutAcrossColdReplay() {
+        val f=authoredCoachFixture(initializeHistory=false,phaseTransition=true)
+        initialize()
+        approved()
+        assertTrue(f.history.enroll("owner-1","athlete-1"){owner,athlete->
+            active==NativeKotlinOwnerIdentity(owner,athlete)
+        } is NativeHistoryLedgerResult.Durable)
+        val preflight=NativeKotlinCustomWorkoutPreflight(fence,identity,drafts,sources,store())
+        val inventory=NativeKotlinCustomOutstandingWorkoutInventory(f.prepared,f.issuer)
+        val reviewer=NativeKotlinNamedPercentageDraftReview(fence,identity,drafts,sources,
+            store(),preflight,f.reader,inventory)
+        val a=NativeNamedPercentageSelection("owner-1","cycle-1",1,0,"slot-0",
+            NamedPercentageScheme.FIVE_THREE_ONE,PercentageTier.PRIMARY,
+            PercentageDayRole.STANDARD,PercentageReferenceKind.TRAINING_MAX,n("30"))
+        val selection=listOf(a,a.copy(absoluteWeek=2,weekday=2,slotId="slot-2"))
+        val proposed=reviewer.previewBatch(selection) as NativeNamedBatchReview.Ready
+        assertTrue(reviewer.acceptBatch(selection,proposed,true) is NativeNamedBatchAcceptance.Saved)
+        val reader=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
+            store(),f.reader,inventory)
+        val displayed=reader.review("owner-1","cycle-1",inputs()) as NativeSavedNamedReview.Ready
+        val signed=store().confirmNamed("owner-1","cycle-1",displayed,true,f.reader,inventory)
+            as NativeCustomSignoffWrite.Committed
+        val workoutId="named-issued-w1"
+        fun prepare(w:String,week:Int,day:Int)=
+            f.prepared.prepareNamed("owner-1",w,"cycle-1",week,day,inputs(),f.reader,inventory)
+        fun coldIssuer()=NativeKotlinCustomWorkoutJournalFileStore(temp.root.toPath(),
+            fence,identity,NativeKotlinCustomWorkoutPreparedStore(temp.root.toPath(),
+                fence,identity,preflight),preflight,f.history,
+            KotlinNativeJournalFileStore(temp.root.toPath()))
+        fun issue(w:String=workoutId,week:Int=1,day:Int=0,
+            coaching:CustomCoachAuditInputs=inputs())=
+            coldIssuer().issueNamed("owner-1",w,"cycle-1",week,day,coaching,f.reader)
+        assertEquals(NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.NOT_PREPARED),issue())
+        val prep=prepare(workoutId,1,0)
+        assertTrue(prep.toString(),prep is NativeCustomPrepareResult.Prepared)
+        val prepared=(prep as NativeCustomPrepareResult.Prepared).workout
+        assertEquals(NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.WORKOUT_ID_CONFLICT),
+            issue(day=2))
+        assertEquals(NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.CONSENT_CHANGED),
+            issue(coaching=inputs().copy(nonSetSecondsByWeekday=mapOf(0 to 300,2 to 200,4 to 200))))
+        assertTrue(f.issuer.issue("owner-1",workoutId,"cycle-1",1,0,inputs())
+            is NativeCustomJournalResult.Rejected)
+        val first=issue()
+        assertTrue(first.toString(),first is NativeCustomJournalResult.Durable)
+        first as NativeCustomJournalResult.Durable
+        assertFalse(first.replayed)
+        assertEquals(prepared.snapshot,first.issued.journal.originalSnapshot)
+        assertEquals(NativeCustomJournalResult.Durable(first.issued,true),issue())
+        val target=prepared.snapshot.slots.single().sets.single()
+        val intent=checkNotNull(target.prescription.percentageIntent)
+        assertTrue(intent.repOut)
+        assertEquals(5,target.prescription.exactRepTarget)
+        val visit=CustomWorkoutVisitKey(target.setKey,CustomWorkoutVisitPart.MAIN)
+        val actual=CustomWorkoutJournalOperation.Record("named-actual",0,visit,
+            KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(n("25"),LoadUnit.LB,7,0))
+        val record=coldIssuer().record("owner-1",workoutId,actual)
+        assertTrue(record.toString(),record is NativeCustomJournalResult.Durable)
+        val corrected=CustomWorkoutJournalOperation.Record("named-correction",1,visit,
+            KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(n("20"),LoadUnit.LB,8,null),"named-actual")
+        val correction=coldIssuer().record("owner-1",workoutId,corrected)
+        assertTrue(correction.toString(),correction is NativeCustomJournalResult.Durable)
+        val finish=CustomWorkoutJournalOperation.Finish("named-finish",2)
+        val completed=NativeKotlinCustomHistoryTransaction(f.history,coldIssuer(),fence,identity)
+            .complete("owner-1","athlete-1",workoutId,finish)
+        assertTrue(completed.toString(),completed is NativeCustomFinishResult.Committed)
+        completed as NativeCustomFinishResult.Committed
+        val fact=completed.evidence.visits.single()
+        assertEquals(intent,fact.percentageIntent)
+        assertEquals(RepBand(5,5),fact.prescribedReps)
+        assertEquals(n("20"),fact.actual?.load)
+        assertEquals(8,fact.actual?.reps)
+        assertNull(fact.actual?.actualRir)
+        assertEquals("named-correction",fact.effectiveEventId)
+        assertTrue(fact.matchesIssuedMain(prepared.snapshot.slots.single(),target))
+        assertEquals(completed.copy(replayed=true),
+            NativeKotlinCustomHistoryTransaction(f.history,coldIssuer(),fence,identity)
+                .complete("owner-1","athlete-1",workoutId,finish))
+        val timeline=(f.reader.read("owner-1","athlete-1") as NativeKotlinMixedHistoryReadResult.Review).timeline
+        assertEquals(1,timeline.completions.size)
+        assertEquals(fact,(timeline.completions.single() as NativeKotlinMixedHistoryCompletion.Custom)
+            .evidence.visits.single())
+        assertEquals(prepared.snapshot,
+            (coldIssuer().open("owner-1",workoutId) as NativeCustomJournalResult.Durable)
+                .issued.journal.originalSnapshot)
+        assertTrue(prepare("duplicate-named-day",1,0) is NativeCustomPrepareResult.Rejected)
+        val next=prepare("named-issued-w2",2,2)
+        assertTrue(next.toString(),next is NativeCustomPrepareResult.Prepared)
+        val nextPrepared=(next as NativeCustomPrepareResult.Prepared).workout
+        assertEquals(proposed.draft.weekOverrides.getValue("base").single{
+            it.weekInBlock==2 && it.weekday==2
+        }.sets,nextPrepared.snapshot.slots.single().sets.map{it.prescription})
+        assertTrue(store().revoke("owner-1","cycle-1",signed.receipt.recordRevision)
+            is NativeCustomSignoffWrite.Committed)
+        assertEquals(NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.CONSENT_CHANGED),
+            issue("named-issued-w2",2,2))
+        assertEquals(NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.NOT_ISSUED),
+            coldIssuer().open("owner-1","named-issued-w2"))
+        assertTrue(issue() is NativeCustomJournalResult.Durable)
+        assertEquals(NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.WORKOUT_ID_CONFLICT),
+            coldIssuer().issue("owner-1",workoutId,"cycle-1",1,0,inputs()))
+        active=NativeKotlinOwnerIdentity("another-owner","another-athlete")
+        assertEquals(NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.NOT_AUTHORIZED),issue())
+    }
+
     private fun calibrationStore(f:AuthoredCoachFixture)=NativeKotlinBlockCalibrationConsentStore(
         temp.root.toPath(),fence,identity,f.coach,drafts,sources,permissionStore,f.reader,
         NativeKotlinCustomOutstandingWorkoutInventory(f.prepared,f.issuer),

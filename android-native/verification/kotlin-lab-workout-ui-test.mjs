@@ -753,7 +753,7 @@ for(const source of [journal,composer]) {
 // Existing recorded sets remain journal-owned, and the durability bootstrap
 // does not turn a partial preference write into a fake successful set.
 // Verify each canonical issuer rather than only a count of call sites.
-const customIssuerNames=['issueReviewedCustomWorkout','issueActivatedFutureWorkout','issueFixedNamedWorkout','issueTieredInitialWorkout','issueTieredSupportWorkout'];
+const customIssuerNames=['issueReviewedCustomWorkout','issueActivatedFutureWorkout','issueFixedNamedWorkout','issueTieredInitialWorkout','issueTieredSupportWorkout','issueTieredTransitionWorkout'];
 assert.ok(machineChoiceHost.includes('private fun pinMachineChoiceForIssuedWorkout(') &&
   machineChoiceHost.includes('if(issued is NativeKotlinIssueResult.Committed)') &&
   machineChoiceHost.includes('pinMachineChoiceForIssuedWorkout(workoutId,custom=false)') &&
@@ -1942,3 +1942,15 @@ assert.ok(basicPreviewScreen.includes('controller::previewTieredSupportWorkout')
   machineChoiceHost.includes('customPreparedStore.prepareTieredSupport') &&
   machineChoiceHost.includes('customIssuedStore.issueTieredSupport'),
   'Tiered supporting days must use exact native review, preparation, and issuance');
+
+assert.ok(basicPreviewScreen.includes('NativeTieredTransitionControls(state,controller)') &&
+  basicPreviewScreen.includes('controller.previewTieredTransition(recovery)') &&
+  basicPreviewScreen.includes('controller.approveTieredTransition(resetConfirmed,recoveryConfirmed)') &&
+  basicPreviewScreen.includes('controller::prepareTieredTransitionWorkout') &&
+  basicPreviewScreen.includes('controller::issueTieredTransitionWorkout') &&
+  basicPreviewController.includes('host.recoverTieredTransition') &&
+  basicPreviewController.includes('host.confirmTieredTransition') &&
+  machineChoiceHost.includes('tieredTransitions.previewScheduled') &&
+  machineChoiceHost.includes('tieredTransitions.prepareScheduled') &&
+  machineChoiceHost.includes('tieredTransitions.issueScheduled'),
+  'Successive tier workouts must use ordered review, explicit consent, and the exact existing native journal');

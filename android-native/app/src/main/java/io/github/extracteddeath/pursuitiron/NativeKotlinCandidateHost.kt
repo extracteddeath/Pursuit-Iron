@@ -1012,7 +1012,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeCustomPreflightResult.Rejected(NativeCustomPreflightRefusal.NOT_AUTHORIZED)
         return customWorkoutPreflight.inspectTieredSupport(owner.ownerKey,workoutId,cycleId,
-            week,weekday,mixedHistoryReader,outstandingCustomInventory)
+            week,weekday,mixedHistoryReader,outstandingCustomInventory,tieredTransitions)
     }
 
     fun prepareTieredSupportWorkout(workoutId:String,cycleId:String,
@@ -1025,7 +1025,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
             if(previewTieredSupportWorkout(workoutId,cycleId,week,day)!=shown)
                 return@withOwnerTransaction NativeCustomPrepareResult.Rejected(NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
             customPreparedStore.prepareTieredSupport(owner.ownerKey,workoutId,cycleId,
-                week,day,mixedHistoryReader,outstandingCustomInventory)
+                week,day,mixedHistoryReader,outstandingCustomInventory,tieredTransitions)
         }
     }
 
@@ -1044,7 +1044,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 preview.receipt.recordRevision!=shown.consentRevision ||
                 (customPreparedStore.open(owner.ownerKey,workoutId) as? NativeCustomPreparedRead.Found)?.workout!=shown)
                 return@withOwnerTransaction NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.NOT_PREPARED)
-            customIssuedStore.issueTieredSupport(owner.ownerKey,workoutId,cycleId,week,day,mixedHistoryReader)
+            customIssuedStore.issueTieredSupport(owner.ownerKey,workoutId,cycleId,week,day,mixedHistoryReader,tieredTransitions)
         }
         if(issued is NativeCustomJournalResult.Durable)
             pinMachineChoiceForIssuedWorkout(workoutId,custom=true)

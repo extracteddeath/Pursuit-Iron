@@ -249,10 +249,11 @@ class NativeKotlinCustomWorkoutJournalFileStore(
             NativeCustomPreparationAuthority.TIERED_INITIAL,null,historyReader)
 
     fun issueTieredSupport(ownerKey:String,workoutId:String,cycleId:String,
-        absoluteWeek:Int,weekday:Int,historyReader:NativeKotlinMixedHistoryReadCoordinator
+        absoluteWeek:Int,weekday:Int,historyReader:NativeKotlinMixedHistoryReadCoordinator,
+        transitionConsent:NativeKotlinFirstTierTransitionConsentStore?=null
     ):NativeCustomJournalResult =
         issueReviewed(ownerKey,workoutId,cycleId,absoluteWeek,weekday,CustomCoachAuditInputs(),
-            NativeCustomPreparationAuthority.TIERED_SUPPORT,null,historyReader)
+            NativeCustomPreparationAuthority.TIERED_SUPPORT,null,historyReader,transitionConsent)
 
     internal fun issueFirstTierTransition(ownerKey:String,workoutId:String,cycleId:String,
         absoluteWeek:Int,weekday:Int,transitionConsent:NativeKotlinFirstTierTransitionConsentStore
@@ -363,7 +364,7 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                     val inventory=NativeKotlinCustomOutstandingWorkoutInventory(prepared,this)
                     val reviewed=(if(authority==NativeCustomPreparationAuthority.TIERED_SUPPORT)
                         preflight.inspectTieredSupport(ownerKey,workoutId,cycleId,
-                            absoluteWeek,weekday,namedHistory,inventory)
+                            absoluteWeek,weekday,namedHistory,inventory,transitionConsent)
                     else if(authority==NativeCustomPreparationAuthority.TIERED_INITIAL)
                         preflight.inspectTieredInitial(ownerKey,workoutId,cycleId,
                             absoluteWeek,weekday,inputs,namedHistory,inventory)

@@ -117,13 +117,14 @@ class NativeKotlinCustomWorkoutPreflight(
      * This is not preparation or issuance authority. */
     fun inspectTieredSupport(ownerKey:String,workoutId:String,cycleId:String,
         absoluteWeek:Int,weekday:Int,history:NativeKotlinMixedHistoryReadCoordinator,
-        outstanding:NativeKotlinCustomOutstandingWorkoutInventory):NativeCustomPreflightResult {
+        outstanding:NativeKotlinCustomOutstandingWorkoutInventory,
+        transitionConsent:NativeKotlinFirstTierTransitionConsentStore?=null):NativeCustomPreflightResult {
         val inputs=consents.signedTieredInputs(ownerKey,cycleId)
             ?: (consents.recoverTieredInitialReview(ownerKey,cycleId,history,outstanding,machineRosters)
                 as? NativeSavedNamedReview.Signed)?.takeIf{it.initialTierReceipts.size>1}?.inputs
             ?:return NativeCustomPreflightResult.Rejected(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
         return inspectSpecialist(ownerKey,workoutId,cycleId,absoluteWeek,weekday,
-            inputs,history,outstanding,true,supportingDay=true)
+            inputs,history,outstanding,true,supportingDay=true,transitionConsent=transitionConsent)
     }
 
     /** Exact next-session preview from persisted first-transition consent.
@@ -201,7 +202,8 @@ class NativeKotlinCustomWorkoutPreflight(
         ownerKey:String,workoutId:String,cycleId:String,absoluteWeek:Int,weekday:Int,
         inputs:CustomCoachAuditInputs,history:NativeKotlinMixedHistoryReadCoordinator,
         outstanding:NativeKotlinCustomOutstandingWorkoutInventory,tiered:Boolean,
-        supportingDay:Boolean=false
+        supportingDay:Boolean=false,
+        transitionConsent:NativeKotlinFirstTierTransitionConsentStore?=null
     ):NativeCustomPreflightResult {
         fun deny(reason:NativeCustomPreflightRefusal)=NativeCustomPreflightResult.Rejected(reason)
         if(!id.matches(ownerKey)||!id.matches(workoutId)||!id.matches(cycleId)||
@@ -266,9 +268,11 @@ class NativeKotlinCustomWorkoutPreflight(
                 val facts=census.sessions.filter{it.cycleId==cycleId}.map{item->
                     val origin=outstanding.preparedOrigin(ownerKey,item.workoutId)
                         ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.SESSION_UNAVAILABLE)
-                    NativeCustomNextCycleSlotDomain.multiInitialFact(signed.draft,signed.initialTierReceipts,
+                    val fact=if(origin.authority==NativeCustomPreparationAuthority.TIERED_TRANSITION)
+                        transitionConsent?.multiTransitionCalendarFact(signed,item,origin)
+                    else NativeCustomNextCycleSlotDomain.multiInitialFact(signed.draft,signed.initialTierReceipts,
                         item,origin,signed.consent)
-                        ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.SESSION_UNAVAILABLE)
+                    fact ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.SESSION_UNAVAILABLE)
                 }
                 val next=NativeCustomNextCycleSlotDomain.select(signed.draft,facts)
                 val allowed=when(next) {

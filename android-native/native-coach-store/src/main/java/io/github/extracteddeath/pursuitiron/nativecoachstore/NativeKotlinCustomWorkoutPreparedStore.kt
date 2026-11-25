@@ -844,10 +844,11 @@ class NativeKotlinCustomWorkoutPreparedStore(
     fun prepareTieredSupport(
         ownerKey:String,workoutId:String,cycleId:String,absoluteWeek:Int,weekday:Int,
         history:NativeKotlinMixedHistoryReadCoordinator,
-        outstanding:NativeKotlinCustomOutstandingWorkoutInventory
+        outstanding:NativeKotlinCustomOutstandingWorkoutInventory,
+        transitionConsent:NativeKotlinFirstTierTransitionConsentStore?=null
     ):NativeCustomPrepareResult =
         prepareSpecialist(ownerKey,workoutId,cycleId,absoluteWeek,weekday,
-            CustomCoachAuditInputs(),history,outstanding,true,supportingDay=true)
+            CustomCoachAuditInputs(),history,outstanding,true,supportingDay=true,transitionConsent=transitionConsent)
 
     /** Persist only the exact receipt-backed specialist preview. The
      * transition hash is not the original cycle's ordinary signoff hash.
@@ -917,7 +918,8 @@ class NativeKotlinCustomWorkoutPreparedStore(
         ownerKey:String,workoutId:String,cycleId:String,absoluteWeek:Int,weekday:Int,
         inputs:CustomCoachAuditInputs,history:NativeKotlinMixedHistoryReadCoordinator,
         outstanding:NativeKotlinCustomOutstandingWorkoutInventory,tiered:Boolean,
-        supportingDay:Boolean=false
+        supportingDay:Boolean=false,
+        transitionConsent:NativeKotlinFirstTierTransitionConsentStore?=null
     ):NativeCustomPrepareResult {
         fun deny(reason:NativeCustomPrepareRefusal)=NativeCustomPrepareResult.Rejected(reason)
         if(!id.matches(workoutId)||!id.matches(cycleId)||
@@ -930,7 +932,7 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 NativeKotlinBlockCalibrationConsentStore.hasRecord(directory,ownerKey,workoutId))
                 return@withOwnerTransaction deny(NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
             val pre=(if(supportingDay)preflight.inspectTieredSupport(ownerKey,workoutId,cycleId,
-                absoluteWeek,weekday,history,outstanding)
+                absoluteWeek,weekday,history,outstanding,transitionConsent)
                 else if(tiered)preflight.inspectTieredInitial(ownerKey,workoutId,cycleId,absoluteWeek,weekday,
                 inputs,history,outstanding) else preflight.inspectNamed(ownerKey,workoutId,cycleId,absoluteWeek,weekday,
                 inputs,history,outstanding)) as? NativeCustomPreflightResult.ReviewedPreview

@@ -258,7 +258,10 @@ class NativeKotlinCustomAuthoringSourceFileStore(
      * unrelated facts. No unit conversion, stock copying or workout mutation. */
     fun addAndSelectGym(ownerKey:String,expectedRevision:Long,gym:GymProfileDraft,
         athleteConfirmed:Boolean):NativeAuthoringSourceWrite =
-        changeGym(ownerKey,expectedRevision,gym.gymId,gym,athleteConfirmed)
+        if(!athleteConfirmed)NativeAuthoringSourceWrite.Rejected(
+            NativeAuthoringSourceRefusal.CONFIRMATION_REQUIRED)
+        else gym.gymId?.let{changeGym(ownerKey,expectedRevision,it,gym,true)}
+            ?:NativeAuthoringSourceWrite.Rejected(NativeAuthoringSourceRefusal.INVALID_SOURCE)
 
     fun selectSavedGym(ownerKey:String,expectedRevision:Long,gymId:String,
         athleteConfirmed:Boolean):NativeAuthoringSourceWrite =

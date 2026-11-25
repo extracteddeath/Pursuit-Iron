@@ -1968,6 +1968,11 @@ assert.ok(basicPreviewScreen.includes('Previous approved targets') &&
 
 assert.ok(basicPreviewController.includes('tieredReceipts=result.tieredInitialReceipts') &&
   basicPreviewController.includes('val singleThread=before.tieredReceipts.size==1') &&
-  basicPreviewScreen.includes('if(state.tieredReceipts.size>1)') &&
+  basicPreviewScreen.includes('state.tieredReceipts.forEach') &&
   basicPreviewScreen.includes('Approve all reviewed references'),
   'A persisted multi-thread tier cycle must never fall back to ordinary or single-thread issuance');
+
+assert.ok(basicPreviewController.includes('selectedInitialTier(review,next)') &&
+  machineChoiceHost.includes('nextCustomCycleSession.reviewMultiTieredInitial') &&
+  basicPreviewScreen.includes('Verify initial workout'),
+  'Multi-root initial execution uses the existing exact initial review and issuer');

@@ -115,7 +115,16 @@ class NativeKotlinCustomNextCycleSessionReview(
     private val machineRosters:NativeKotlinMachineRosterFileStore?=null
 ) {
     fun review(ownerKey:String,cycleId:String,
-        inputs:CustomCoachAuditInputs):NativeCustomNextCycleSlot {
+        inputs:CustomCoachAuditInputs):NativeCustomNextCycleSlot =
+        reviewInternal(ownerKey,cycleId,inputs,false)
+
+    /** Initial tier only. No transition or supporting-day authority. */
+    fun reviewTieredInitial(ownerKey:String,cycleId:String,
+        inputs:CustomCoachAuditInputs):NativeCustomNextCycleSlot =
+        reviewInternal(ownerKey,cycleId,inputs,true)
+
+    private fun reviewInternal(ownerKey:String,cycleId:String,
+        inputs:CustomCoachAuditInputs,tiered:Boolean):NativeCustomNextCycleSlot {
         fun no(message:String)=NativeCustomNextCycleSlot.Rejected(message)
         return runCatching {
             fence.withOwnerTransaction(ownerKey) {
@@ -140,10 +149,19 @@ class NativeKotlinCustomNextCycleSessionReview(
                 // Never pretend its typed receipts are ordinary consent or
                 // let a stale named record fall back to ordinary review.
                 val fixedNamed=stored.namedReceipts.isNotEmpty()
-                if(stored.tieredInitialReceipt!=null)
+                val initial=stored.tieredInitialReceipt
+                if((initial!=null)!=tiered || (tiered && fixedNamed))
                     return@withOwnerTransaction no(
                         "Tiered progression requires its dedicated reference or transition review.")
-                if(fixedNamed) {
+                if(tiered) {
+                    val reviewed=signoffs.recoverTieredInitialReview(ownerKey,cycleId,
+                        history,inventory,machineRosters) as? NativeSavedNamedReview.Signed
+                        ?:return@withOwnerTransaction no("Current initial tier approval is unavailable or completed.")
+                    if(reviewed.draft!=cycle || reviewed.inputs!=inputs ||
+                        reviewed.initialTierReceipt!=initial ||
+                        reviewed.stamp.gymCatalogSourceRevision!=gym.revision)
+                        return@withOwnerTransaction no("Initial tier source changed.")
+                } else if(fixedNamed) {
                     val reviewed=NativeKotlinSavedNamedPercentageReview(
                         fence,identity,drafts,source,signoffs,history,inventory,machineRosters)
                         .reviewSigned(ownerKey,cycleId,inputs) as? NativeSavedNamedReview.Signed
@@ -189,7 +207,14 @@ class NativeKotlinCustomNextCycleSessionReview(
                     val original=byId[item.workoutId]
                         ?:return@withOwnerTransaction no(
                             "Original issued targets are unavailable.")
-                    val permitted=if(fixedNamed)
+                    val permitted=if(tiered)
+                        (original.authority==NativeCustomPreparationAuthority.TIERED_INITIAL &&
+                            initial!=null && item.workoutId==initial.selection.nextWorkoutId &&
+                            item.absoluteWeek==initial.selection.absoluteWeek &&
+                            item.weekday==initial.selection.weekday) ||
+                        (original.authority==NativeCustomPreparationAuthority.CUSTOM_CYCLE &&
+                            item.completed && original.snapshot.stamp.cycleRevision<cycle.revision)
+                    else if(fixedNamed)
                         original.authority==NativeCustomPreparationAuthority.NAMED_CYCLE ||
                         (original.authority==NativeCustomPreparationAuthority.CUSTOM_CYCLE &&
                             item.completed && original.snapshot.stamp.cycleRevision<cycle.revision)
@@ -204,7 +229,21 @@ class NativeKotlinCustomNextCycleSessionReview(
                 }
                 if(identity.signedInIdentity()!=owner)
                     return@withOwnerTransaction no("Active athlete changed.")
-                NativeCustomNextCycleSlotDomain.select(cycle,facts)
+                val next=NativeCustomNextCycleSlotDomain.select(cycle,facts)
+                if(!tiered)return@withOwnerTransaction next
+                val exact=checkNotNull(initial).selection
+                val matches=when(next) {
+                    is NativeCustomNextCycleSlot.Next ->
+                        next.absoluteWeek==exact.absoluteWeek && next.weekday==exact.weekday
+                    is NativeCustomNextCycleSlot.Prepared ->
+                        next.workoutId==exact.nextWorkoutId && next.absoluteWeek==exact.absoluteWeek &&
+                            next.weekday==exact.weekday
+                    is NativeCustomNextCycleSlot.ResumeIssued ->
+                        next.workoutId==exact.nextWorkoutId && next.absoluteWeek==exact.absoluteWeek &&
+                            next.weekday==exact.weekday
+                    else -> false
+                }
+                if(matches)next else no("The next scheduled day is not the approved initial tier session. Supporting-day or transition review is required.")
             }
         }.getOrElse {
             no("Native next-workout history review was unavailable.")

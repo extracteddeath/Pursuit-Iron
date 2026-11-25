@@ -45,7 +45,9 @@ sealed interface NativeSavedNamedReview {
         val inputs:CustomCoachAuditInputs,
         val audit:CustomCoachAudit,
         val initialTierReceipt:NativeTieredInitialDraftReceipt?=null,
-        val initialTierEvidence:CustomTieredInitialWeekEvidence?=null
+        val initialTierEvidence:CustomTieredInitialWeekEvidence?=null,
+        val initialTierReceipts:List<NativeTieredInitialDraftReceipt> = listOfNotNull(initialTierReceipt),
+        val initialTierEvidences:List<CustomTieredInitialWeekEvidence> = listOfNotNull(initialTierEvidence)
     ):NativeSavedNamedReview {
         val maySignoff:Boolean get()=false
         val mayIssueWorkout:Boolean get()=false
@@ -63,7 +65,9 @@ sealed interface NativeSavedNamedReview {
         val historyRevision:Long,
         val initialTierReceipt:NativeTieredInitialDraftReceipt?=null,
         val initialTierEvidence:CustomTieredInitialWeekEvidence?=null,
-        val nextTierCandidate:NativeTieredNextCandidate?=null
+        val nextTierCandidate:NativeTieredNextCandidate?=null,
+        val initialTierReceipts:List<NativeTieredInitialDraftReceipt> = listOfNotNull(initialTierReceipt),
+        val initialTierEvidences:List<CustomTieredInitialWeekEvidence> = listOfNotNull(initialTierEvidence)
     ):NativeSavedNamedReview {
         val mayIssueWorkout:Boolean get()=false
         val mayModifyHistory:Boolean get()=false
@@ -148,17 +152,19 @@ class NativeKotlinSavedNamedPercentageReview(
                 ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.NO_CONFIRMED_DRAFT)
             val candidate=stored.draft
             val receipts=stored.namedReceipts
-            val initial=stored.tieredInitialReceipt
+            val roots=stored.tieredInitialReceipts
+            val initial=roots.singleOrNull()
             if(tiered) {
-                if(initial==null || receipts.isNotEmpty() ||
-                    !NativeTieredInitialDraftReceiptCodec.valid(initial,ownerKey,candidate))
+                if(receipts.isNotEmpty() || !NativeTieredInitialDraftReceiptCodec.validBatch(roots,ownerKey,candidate) ||
+                    ((next!=null || supportingDay) && initial==null))
                     return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.NO_CONFIRMED_DRAFT)
-            } else if(initial!=null || !NativeNamedPercentageDraftReceiptCodec.validBatch(receipts,ownerKey,candidate))
+            } else if(roots.isNotEmpty() || !NativeNamedPercentageDraftReceiptCodec.validBatch(receipts,ownerKey,candidate))
                 return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.NO_CONFIRMED_DRAFT)
-            val oldStamp=initial?.stamp ?:receipts.first().stamp
-            val consentRevision=initial?.consentRevision ?:receipts.first().consentRevision
-            val historyRevision=initial?.historyRevision ?:receipts.first().historyRevision
-            val rosterRevision=initial?.machineRosterRevision ?:receipts.first().machineRosterRevision
+            val firstRoot=roots.firstOrNull()
+            val oldStamp=firstRoot?.stamp ?:receipts.first().stamp
+            val consentRevision=firstRoot?.consentRevision ?:receipts.first().consentRevision
+            val historyRevision=firstRoot?.historyRevision ?:receipts.first().historyRevision
+            val rosterRevision=firstRoot?.machineRosterRevision ?:receipts.first().machineRosterRevision
             val stamp=oldStamp.copy(cycleRevision=candidate.revision)
             val prior=(signoffs.read(ownerKey,cycleId) as? NativeCustomSignoffRead.Found)?.receipt
                 ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
@@ -180,7 +186,7 @@ class NativeKotlinSavedNamedPercentageReview(
             // Recover the signed base by removing ONLY the confirmed named
             // amendments. An unchanged prior fingerprint is required, rather
             // than trusting any nonnamed content carried by the new draft.
-            val affected=(receipts.map{it.blockId}+listOfNotNull(initial?.blockId)).toSet()
+            val affected=(receipts.map{it.blockId}+roots.map{it.blockId}).toSet()
             val stripped=candidate.weekOverrides.mapValues{(_,edits)->
                 edits.filterNot{edit->edit.sets.any{it.percentageIntent!=null}}}
             val clean=stripped.filterNot{(blockId,edits)->blockId in affected && edits.isEmpty()}
@@ -188,8 +194,8 @@ class NativeKotlinSavedNamedPercentageReview(
                 candidate.copy(revision=oldStamp.cycleRevision,weekOverrides=it)
             }
             val base=if(signed) {
-                val hash=if(initial!=null)NativeCustomCycleSignoffFingerprint.calculateTieredInitial(
-                    candidate,source,inputs,initial)
+                val hash=if(roots.isNotEmpty())NativeCustomCycleSignoffFingerprint.calculateTieredInitialBatch(
+                    candidate,source,inputs,roots)
                 else NativeCustomCycleSignoffFingerprint.calculateNamed(candidate,source,inputs,receipts)
                 if(hash!=prior.fingerprintSha256)
                     return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
@@ -209,7 +215,7 @@ class NativeKotlinSavedNamedPercentageReview(
             val timeline=(history.read(ownerKey,owner.athleteId)
                 as? NativeKotlinMixedHistoryReadResult.Review)?.timeline
                 ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
-            if(if(signed && (initial==null || next!=null || supportingDay))timeline.manifestRevision<historyRevision
+            if(if(signed && (roots.isEmpty() || next!=null || supportingDay))timeline.manifestRevision<historyRevision
                 else timeline.manifestRevision!=historyRevision)
                 return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
             val completed=timeline.completions.filterIsInstance<NativeKotlinMixedHistoryCompletion.Custom>()
@@ -252,7 +258,7 @@ class NativeKotlinSavedNamedPercentageReview(
                 evidence+=CustomNamedPercentageWeekEvidence(CustomNamedPercentageWeekKey(
                     block.blockId,receipt.weekInBlock,selection.weekday,selection.slotId),request)
             }
-            val tierEvidence=if(initial!=null) {
+            val tierEvidences=roots.map{initial->
                 val selection=initial.selection
                 if((!signed && (NativeFutureWeekProposalInventoryPolicy.blocks(census.sessions,cycleId,selection.absoluteWeek) ||
                     census.sessions.any{it.cycleId==cycleId && it.absoluteWeek>=selection.absoluteWeek})) ||
@@ -300,9 +306,10 @@ class NativeKotlinSavedNamedPercentageReview(
                     selected.sets.count{it.prescription.type==DraftSetType.WORKING},sourceSlotId=selection.slotId)
                 CustomTieredInitialWeekEvidence(CustomNamedPercentageWeekKey(initial.blockId,
                     initial.weekInBlock,selection.weekday,selection.slotId),request)
-            } else null
+            }
+            val tierEvidence=tierEvidences.singleOrNull()
             val audit=CustomCycleCoachAuditDomain.reviewSpecialistForReview(candidate,source.setup,
-                source.catalog,inputs,stamp,evidence,listOfNotNull(tierEvidence))
+                source.catalog,inputs,stamp,evidence,tierEvidences)
             if(audit.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW ||
                 audit.issues.isNotEmpty() || audit.auditedCycleRevision!=candidate.revision ||
                 audit.structuralReview?.verifiedDraft!=candidate)
@@ -519,8 +526,8 @@ class NativeKotlinSavedNamedPercentageReview(
                 if(audit.coachingPolicyRevisions!=prior.policyReferences)
                     return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
                 NativeSavedNamedReview.Signed(candidate,stamp,receipts.toList(),prior,
-                    evidence.toList(),inputs,audit,timeline.manifestRevision,initial,tierEvidence,nextCandidate)
-            } else NativeSavedNamedReview.Ready(candidate,stamp,receipts.toList(),prior,evidence.toList(),inputs,audit,initial,tierEvidence)
+                    evidence.toList(),inputs,audit,timeline.manifestRevision,initial,tierEvidence,nextCandidate,roots,tierEvidences)
+            } else NativeSavedNamedReview.Ready(candidate,stamp,receipts.toList(),prior,evidence.toList(),inputs,audit,initial,tierEvidence,roots,tierEvidences)
         }}.getOrElse{deny(NativeSavedNamedReviewRefusal.STORAGE_UNAVAILABLE)}
     }
 }

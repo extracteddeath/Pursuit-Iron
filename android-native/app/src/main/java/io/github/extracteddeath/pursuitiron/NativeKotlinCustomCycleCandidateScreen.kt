@@ -2536,6 +2536,22 @@ private fun NativeTieredInitialExecutionPanel(state:NativeKotlinCustomCycleState
             }
             else -> {}
         }
+        // Calendar discovery is separate from specialist workout approval.
+        // In particular a recovered Prepared slot here is not an issue grant.
+        when(val calendar=state.tieredCalendar) {
+            is NativeCustomNextCycleSlot.Next ->
+                Text("Next scheduled: Week ${calendar.absoluteWeek} · ${calendar.dayLabel}. Dedicated review required.",
+                    style=MaterialTheme.typography.bodyMedium)
+            is NativeCustomNextCycleSlot.Prepared ->
+                Text("Saved preparation: Week ${calendar.absoluteWeek} · ${calendar.dayLabel}. Dedicated review required.",
+                    style=MaterialTheme.typography.bodyMedium)
+            is NativeCustomNextCycleSlot.ResumeIssued ->
+                Text("Unfinished workout: Week ${calendar.absoluteWeek} · ${calendar.dayLabel}. Open Train to resume.",
+                    style=MaterialTheme.typography.bodyMedium)
+            NativeCustomNextCycleSlot.CycleComplete ->
+                Text("All scheduled days have verified completion.",style=MaterialTheme.typography.bodyMedium)
+            else -> {}
+        }
         Text("Initial approval does not start a workout. Later tier transitions and supporting-day workouts require their own review.",
             style=MaterialTheme.typography.bodySmall)
         OutlinedButton(onClick=controller::refreshTieredInitialCycle,enabled=!state.busy,

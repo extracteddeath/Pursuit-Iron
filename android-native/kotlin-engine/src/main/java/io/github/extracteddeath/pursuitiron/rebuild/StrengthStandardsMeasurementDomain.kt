@@ -35,9 +35,22 @@ object StrengthStandardsMeasurementDomain {
         if(reps !in estimateRepRange || load<=BigDecimal.ZERO ||
             load>BigDecimal("100000"))return null
         if(reps==1)return load
-        return load.multiply(BigDecimal.valueOf((30+reps).toLong()))
-            .divide(BigDecimal("30"),4,RoundingMode.HALF_UP)
+        return epleyAtRepCount(load,reps,4)
     }
+
+    /** Effort-adjusted training estimate, not a tested max. Matches the
+     * current web's bounded Epley arithmetic (up to 15 reps to failure).
+     * The caller must resolve reported/assumed goal effort before calling. */
+    fun effortAdjustedEpley(load:BigDecimal,performedReps:Int,reserve:Int):BigDecimal? {
+        if(performedReps !in 1..15 || reserve !in 0..10 ||
+            performedReps+reserve>15 || load<=BigDecimal.ZERO ||
+            !KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(load))return null
+        return epleyAtRepCount(load,performedReps+reserve,1)
+    }
+
+    private fun epleyAtRepCount(load:BigDecimal,reps:Int,scale:Int):BigDecimal =
+        load.multiply(BigDecimal.valueOf((30+reps).toLong()))
+            .divide(BigDecimal("30"),scale,RoundingMode.HALF_UP)
 
     fun relativeStrength(
         oneRepEstimate:BigDecimal,bodyweight:BigDecimal

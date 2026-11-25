@@ -197,7 +197,8 @@ class NativeKotlinCustomNextCycleSessionReview(
                 // let a stale named record fall back to ordinary review.
                 val fixedNamed=stored.namedReceipts.isNotEmpty()
                 val initial=stored.tieredInitialReceipt
-                if((initial!=null)!=tiered || (tiered && fixedNamed))
+                if((stored.tieredInitialReceipts.isNotEmpty())!=tiered ||
+                    (tiered && (fixedNamed || initial==null)))
                     return@withOwnerTransaction no(
                         "Tiered progression requires its dedicated reference or transition review.")
                 if(calendarOnly) {

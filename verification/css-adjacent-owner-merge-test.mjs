@@ -6,7 +6,6 @@ const css=fs.readFileSync('app.css','utf8');
 assert.equal(css.length,uiStyleBudget.cssCharacters,'CSS cap tracks the actual retired source');
 assert.ok((css.match(/!important/g)||[]).length <= uiStyleBudget.cssPriorityDeclarations,'No loss or addition of priority declarations');
 const checks=[
- ['.wpb-tabbar .wpb-tab::before','top:4px!important','display:block!important'],
  ['.wpb-day-card[data-next="true"]','background-image:none!important','background:var(--pi-color-card)!important'],
  ['.wpb-home>.wpb-home-compose-bar','box-sizing:border-box','position:relative!important']
 ];
@@ -50,10 +49,10 @@ assert.ok(css.split(sharedTransition)[1]?.split('}')[0].includes('transition:col
 // widening any selector's specificity, media condition or state predicate.
 assert.ok(css.includes('#root [role="tab"][aria-selected="true"],#root [aria-current="page"]{font-weight:700}'),
     'Active tabs and page links retain their original bold state with one paint owner');
-const nowrap='#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab>span,' + String.fromCharCode(10)
-    +'#root[data-pi-motion="expressive"] .wpb .wpb-home-hero,' + String.fromCharCode(10)
+// B1049 moved the nav label out of this shared owner into the single navigation-bar owner.
+const nowrap='#root[data-pi-motion="expressive"] .wpb .wpb-home-hero,' + String.fromCharCode(10)
     +'#root[data-pi-motion="expressive"] .wpb .wpb-action-tile,';
-assert.ok(css.includes(nowrap),'Nav labels and responsive cards share one min-width owner');
+assert.ok(css.includes(nowrap),'Responsive cards share one min-width owner');
 assert.equal((css.match(/!important/g)||[]).length, uiStyleBudget.cssPriorityDeclarations,
     'The adjacent-rule consolidation must not introduce priority overrides');
 

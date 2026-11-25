@@ -282,9 +282,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-effort-scale{width:min(220px,100%);max-width:100%;flex-wrap:nowrap!important}
 #root[data-pi-motion="expressive"] .wpb .wpb-effort-scale>button{flex:var(--pi-choice-grow,1) 1 0;min-width:0!important;width:0!important;padding-inline:0!important}
 #root[data-pi-motion="expressive"] .wpb .wpb-toggle>[data-pi-thumb]{transform:translateX(var(--pi-switch-x,0px))!important;transition:box-shadow 140ms var(--pi-ease)!important}
-#root[data-pi-motion="expressive"] .wpb .wpb-tab{position:relative;isolation:isolate}
-#root[data-pi-motion="expressive"] .wpb .wpb-tab::before{content:"";position:absolute;z-index:-1;top:4px;width:46px;height:28px;border-radius:16px;background:color-mix(in srgb,currentColor 10%,transparent);opacity:0;transition:opacity 140ms var(--pi-ease)}
-#root[data-pi-motion="expressive"] .wpb .wpb-tab[aria-current="page"]::before{opacity:1}
 @media(prefers-reduced-motion:reduce){
   #root[data-pi-motion="expressive"] .wpb [data-pi-surface]{translate:none!important;scale:1!important}
   #root[data-pi-motion="expressive"] .wpb button[data-pi-control],#root[data-pi-motion="expressive"] .wpb .wpb-tab svg{scale:1!important;transition:none!important}
@@ -355,43 +352,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   outline-offset:3px;
 }
 /* Navigation: a quiet tonal pill sits under the icon. Labels stay visible without expanding the bar. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
-  isolation:isolate;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab{
-  overflow:visible;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab::before{
-  top:4px!important;
-  left:50%!important;
-  transform:translateX(-50%)!important;
-  width:min(70%,54px)!important;
-  height:30px!important;
-  border-radius:100px!important;
-  background:color-mix(in srgb,currentColor 14%,transparent)!important;
-  opacity:0!important;
-  pointer-events:none;
-/* Override the legacy display:none !important on the old top-marker.
-   The new icon pill must paint above the button background but below its glyph. */
-display:block!important;
-  z-index:0!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]{
-  background:transparent!important;
-}
 /* An active touch temporarily borrows ::after for its origin ripple.
    Hide only the retired underline when the ripple is NOT playing. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]:not([data-pi-ink])::after{
-  content:none!important;
-  display:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]::before{
-  opacity:1!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab svg,#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab span{
-  position:relative;
-  z-index:1;
-}
 
 #root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile,#root[data-pi-motion="expressive"] .wpb-home .wpb-carousel-card{
   border-radius:var(--pi-layout-radius)!important;
@@ -423,13 +385,6 @@ display:block!important;
   border-bottom:0!important;
 }
 
-#root[data-pi-motion="expressive"] .wpb-progress [data-progress-glance]{
-  margin-bottom:11px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
-  text-transform:none!important;
-}
-
 /* Settings: section groups look like one intentional list, without adding row height. */
 #root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented{
   gap:2px;
@@ -447,7 +402,6 @@ display:block!important;
   #root[data-pi-motion="expressive"] .wpb :is(.wpb-settings,.wpb-progress)>.wpb-page-scroll{
     padding-inline:var(--pi-page-inset)!important;
   }
-  #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{font-size:11px!important}
 }
 @media(min-width:760px){
   #root[data-pi-motion="expressive"] .wpb :is(.wpb-home,.wpb-settings,.wpb-progress)>.wpb-page-scroll{
@@ -493,9 +447,6 @@ display:block!important;
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs>button[aria-selected="true"]{
   font-weight:760!important;
 }
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
-  font-weight:700!important;
-}
 
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session-detail{
   transform-origin:top center;
@@ -507,11 +458,6 @@ display:block!important;
 @keyframes piDisclosureReveal{
   from{opacity:.58;translate:0 -4px}
   to{opacity:1;translate:0 0}
-}
-@media(max-width:350px){
-  #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
-    font-size:11px!important;
-  }
 }
 @media(prefers-reduced-motion:reduce){
   #root[data-pi-motion="expressive"] .wpb .wpb-history-session-detail,#root[data-pi-motion="expressive"] .wpb .wpb-advanced-body{
@@ -1287,31 +1233,6 @@ display:block!important;
 /* PI M3 SPATIAL NAVIGATION — measured, interruptible spring between the
    existing bottom tabs. This track replaces five static selected pills without
    adding a node, changing tab height, routing or the original hit targets. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]{
-  /* Keep offsetTop and the paint track in the same local coordinate space.
-     A height-only resize must not leave the indicator at the old shell y. */
-  position:relative;
-  isolation:isolate;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]::before{
-  --pi-m3-track-x:inherit;--pi-m3-track-y:inherit;--pi-m3-track-width:inherit;--pi-m3-track-height:inherit;
-  content:"";
-  position:absolute;
-  left:0;top:0;z-index:0;
-  width:var(--pi-m3-track-width,0px);
-  height:var(--pi-m3-track-height,30px);
-  translate:var(--pi-m3-track-x,0px) var(--pi-m3-track-y,0px);
-  pointer-events:none;
-  will-change:translate,width;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track] .wpb-tab{
-  z-index:1;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track] .wpb-tab::before{
-  display:none!important;
-  content:none!important;
-  opacity:0!important;
-}
 /* Root navigation animates at most one lead card; the selected indicator
    supplies the main continuity cue. No workout controls enter this system. */
 #root[data-pi-motion="expressive"] .wpb [data-pi-reveal="1"]{
@@ -1565,9 +1486,6 @@ display:block!important;
 /* Reframe the bottom navigation's moving selection as an expressive container:
    a slightly wider active region and a spring-scale icon, with no bar height
    increase or labels hidden when the workout dock is present. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"] svg{
-  stroke-width:2.35px;
-}
 @media(hover:hover) and (pointer:fine){
   #root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile:hover,
   #root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-option:hover{
@@ -1577,9 +1495,6 @@ display:block!important;
 @media(max-width:350px){
   #root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile{
     padding-inline:9px!important;
-  }
-  #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
-    padding-inline:6px!important;
   }
 }
 @media(prefers-reduced-motion:reduce),(forced-colors:active){
@@ -1883,14 +1798,6 @@ display:block!important;
 /* Sessions, Sets and recent PRs now read as one substantial statistic and two
    supporting facts, not three interchangeable badges. */
 
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child{
-  background-image:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:not(:first-child)>.mono{
-  font-size:22px!important;
-  font-weight:790!important;
-}
-
 @media(max-width:350px){
   #root[data-pi-motion="expressive"] .wpb .wpb-plan-glance{gap:5px!important}
   #root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile{
@@ -1934,9 +1841,6 @@ display:block!important;
 }
 /* Navigation is one grounded surface; active destination is indicated by the
    already-measured spring pill, not by a background glow on the entire bar. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
-  border-top:1px solid var(--pi-m3e-outline-variant)!important;
-}
 /* A flat primary container creates an obvious task hierarchy. The action
    retains its existing filled theme color, never a translucent gradient. */
 #root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile{
@@ -1988,7 +1892,6 @@ display:block!important;
 @media (forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb .wpb-home-hero,
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile,
-#root[data-pi-motion="expressive"] .wpb .wpb-progress-glance-item,
 #root[data-pi-motion="expressive"] .wpb .wpb-wizard-option,
 #root[data-pi-motion="expressive"] .wpb .wpb-library-row{
     background-color:Canvas!important;
@@ -2147,9 +2050,6 @@ display:block!important;
 /* PROGRESS. The dominant real measurement uses one contained tint; the
    two secondary facts, charts and history have neutral ground. No numeric
    colors, chart scales, tracking periods or recorded lifts are modified. */
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
-  background-image:none!important;
-}
 
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session{
   border-color:var(--pi-r11-edge)!important;
@@ -2187,7 +2087,6 @@ display:block!important;
 }
 @media(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile,
-#root[data-pi-motion="expressive"] .wpb .wpb-progress-glance-item,
 #root[data-pi-motion="expressive"] .wpb .wpb-history-session,
 #root[data-pi-motion="expressive"] .wpb .wpb-library-search,
 #root[data-pi-motion="expressive"] .wpb .wpb-library-row,
@@ -2347,62 +2246,15 @@ display:block!important;
    relationship to Progress, quiet Settings chrome, and let real Plan labels
    read without truncation. All changes are layout/paint; existing tracks,
    control callbacks, data and scrolling remain authoritative. */
-#root[data-pi-motion="expressive"] .wpb-progress [data-progress-glance]{
-  grid-template-rows:auto!important;
-  align-items:stretch!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item,
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child,
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:nth-child(2),
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:nth-child(3){
-  grid-column:auto!important;
-  grid-row:auto!important;
-  min-width:0!important;
-  min-height:87px!important;
-  height:auto!important;
-  padding:12px 9px!important;
-  display:flex!important;
-  flex-direction:column!important;
-  align-items:flex-start!important;
-  justify-content:center!important;
-  border:1px solid var(--pi-r11-edge)!important;
-  border-radius:20px!important;
-  background-color:var(--pi-r11-quiet)!important;
-  box-shadow:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item>.mono,
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child>.mono{
-  font-size:var(--pi-type-heading)!important;
-  line-height:1.12!important;
-  font-weight:790!important;
-  letter-spacing:-.035em!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label,
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item>div:last-child{
-  white-space:normal!important;
-  overflow-wrap:anywhere;
-}
 #root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump-control{
   padding:0 12px!important;
 }
 /* Plan's next workout may be a long user-authored name. Do not erase it
    under an ellipsis; allow two lines naturally while keeping Open accessible. */
-@media(max-width:350px){
-  #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item,
-  #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child{
-    padding:10px 7px!important;
-    min-height:89px!important;
-  }
-  #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item>.mono,
-  #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child>.mono{
-    font-size:22px!important;
-  }
-}
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item,
+  
   #root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump-control{
     background:Canvas!important;
-    color:CanvasText!important;
     border:1px solid CanvasText!important;
   }
 }
@@ -3136,24 +2988,19 @@ display:block!important;
 /* M3 EXPRESSIVE R34 — ADAPTIVE NAVIGATION AND CROSS-SCREEN COMPOSITION
    Keep one canonical responsive shell. These rules only resolve crowding;
    controls retain real React layout, touch dimensions and semantic actions. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
-  padding-left:max(6px,env(safe-area-inset-left))!important;
-  padding-right:max(6px,env(safe-area-inset-right))!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab>span,
+
 #root[data-pi-motion="expressive"] .wpb .wpb-home-hero,
 #root[data-pi-motion="expressive"] .wpb .wpb-action-tile,
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile,
-#root[data-pi-motion="expressive"] .wpb .wpb-progress-glance-item,
 #root[data-pi-motion="expressive"] .wpb .wpb-profile-hero,
 #root[data-pi-motion="expressive"] .wpb .wpb-settings-card,
 #root[data-pi-motion="expressive"] .wpb .wpb-settings-row{
   min-width:0;
 }
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-home-hero,.wpb-progress-glance-item) :where(h1):not(.pi-pad),
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-home-hero,.wpb-progress-glance-item) :where(h2):not(.pi-pad),
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-home-hero,.wpb-progress-glance-item) :where(h3):not(.pi-pad),
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-home-hero,.wpb-progress-glance-item) .mono{
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-home-hero) :where(h1):not(.pi-pad),
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-home-hero) :where(h2):not(.pi-pad),
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-home-hero) :where(h3):not(.pi-pad),
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-home-hero) .mono{
   overflow-wrap:anywhere;
 }
 @media(max-width:359px){
@@ -3206,12 +3053,11 @@ display:block!important;
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>button:first-child>div:first-child{
   color:var(--pi-r36-accent-label)!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile>div:first-child,
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile>div:first-child{
   color:var(--pi-r36-secondary-label)!important;
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-home-hero>button:first-child>div:first-child),#root[data-pi-motion="expressive"] .wpb :where(.wpb-plan-glance-tile>div:first-child):not(pi-pad):not(pi-pad.pi-pad.pi-pad.pi-pad),#root[data-pi-motion="expressive"] .wpb :where(.wpb-progress-glance-label):not(pi-pad):not(pi-pad.pi-pad.pi-pad.pi-pad){
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-home-hero>button:first-child>div:first-child),#root[data-pi-motion="expressive"] .wpb :where(.wpb-plan-glance-tile>div:first-child):not(pi-pad):not(pi-pad.pi-pad.pi-pad.pi-pad){
     color:CanvasText!important;
   }
 }
@@ -3299,43 +3145,9 @@ display:block!important;
    indicator is 27px high and its bottom must clear the label by >=5px.
    Tab buttons still own all tap/keyboard semantics; the animated track
    remains paint-only, measured by ui-motion.js from these real bounds. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
-  padding-top:5px!important;
-  padding-bottom:calc(5px + env(safe-area-inset-bottom))!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab{
-  box-sizing:border-box;
-  display:flex!important;
-  flex-direction:column!important;
-  justify-content:flex-start!important;
-  align-items:center!important;
-  gap:0!important;
-  border-radius:16px!important;
-  background:transparent!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab svg{
-  display:block;
-  width:22px!important;
-  height:22px!important;
-  min-width:22px!important;
-  min-height:22px!important;
-  flex:0 0 22px!important;
-  margin:0!important;
-  align-self:center;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab>span{
-  display:block;
-  flex:none;
-  padding:0!important;
-  letter-spacing:0!important;
-}
 /* The theme's saved ink color remains accessible. The active pill now has
    a real tonal fill and softly symmetric curvature, not a hollow ring that
    dominates the icons or the labels. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]::before{
-  border-radius:16px!important;
-  background-color:var(--pi-r38-nav-indicator-fill)!important;
-}
 /* Unify Home surfaces without recoloring training status, progress values,
    the user-selected accent, or the important Start Workout foreground. */
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>.wpb-primary-action{
@@ -3388,19 +3200,6 @@ display:block!important;
   line-height:1.15!important;
   text-align:center;
 }
-#root[data-pi-motion="expressive"] .wpb-progress [data-progress-glance]{
-  margin:0 0 var(--pi-space-3)!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
-  min-width:0!important;
-  padding:11px 9px!important;
-  border-radius:16px!important;
-  box-shadow:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
-  letter-spacing:0!important;
-  margin-top:4px!important;
-}
 /* Related history tools share one clear rhythm without amplifying empty
    periods with giant, decorative cards. Semantic search/filters untouched. */
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filters{
@@ -3428,14 +3227,6 @@ display:block!important;
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-grouping>button{
   padding-inline:12px!important;
 }
-@media(max-width:359px){
-  #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
-    padding-inline:7px!important;
-  }
-  #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
-    font-size:11px!important;
-  }
-}
 @media(prefers-reduced-motion:reduce){
   #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-grouping>button{
     transition:none!important;
@@ -3443,7 +3234,6 @@ display:block!important;
 }
 @media(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile :is(.wpb-profile-section),
-#root[data-pi-motion="expressive"] .wpb-progress :where(.wpb-progress-glance-item):not(pi-pad.pi-pad),
 #root[data-pi-motion="expressive"] .wpb-progress :where(.wpb-premium-tabs):not(pi-pad.pi-pad),
 #root[data-pi-motion="expressive"] .wpb-progress :is(.wpb-history-filters input),
 #root[data-pi-motion="expressive"] .wpb-progress :is(.wpb-history-filters select),
@@ -3460,22 +3250,6 @@ display:block!important;
    Scale only non-logger presentation through rem-based minimums; let the
    resulting cards grow vertically while preserving five accessible routes.
    The protected workout set/stepper/plate/RIR layout is not modified. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab>span{
-  box-sizing:border-box;
-  text-align:center;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
-  height:auto!important;
-  min-height:max(80px,5rem)!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
-  font-size:var(--pi-type-label)!important;
-  line-height:1.34!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item>div:last-child{
-  font-size:var(--pi-type-caption)!important;
-  line-height:1.32!important;
-}
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filter-help{
   font-size:var(--pi-type-label)!important;
   line-height:1.47!important;
@@ -3535,10 +3309,6 @@ display:block!important;
 #root[data-pi-motion="expressive"] .wpb .wpb-profile,
 #root[data-pi-motion="expressive"] .wpb .wpb-settings{
   background-color:light-dark(var(--pi-m3e-base),var(--pi-r41-page))!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
-  background-color:light-dark(var(--pi-m3e-surface-container-low),var(--pi-r41-surface-1))!important;
-  box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs{
   background-color:light-dark(var(--pi-m3e-surface-container),var(--pi-r41-surface-2))!important;
@@ -3630,19 +3400,6 @@ display:block!important;
 }
 /* Rein in the page-level card radius/spacing without touching the logger.
    Shared low cards are 20–22px; selection controls are smaller. */
-#root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile,#root[data-pi-motion="expressive"] .wpb .wpb-progress-glance-item{
-  border-radius:var(--pi-shape-card)!important;
-  box-shadow:none!important;
-  background-image:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
-  background-color:var(--pi-r11-quiet)!important;
-  border-color:var(--pi-r11-edge)!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child{
-  background-color:var(--pi-r11-hero)!important;
-  border-color:var(--pi-r11-accent-stroke)!important;
-}
 /* Reserve strong accent for selected state and primary action, not the
    supporting outlines of every nested card. R36 text roles stay unchanged. */
 @media(max-width:359px){
@@ -4040,7 +3797,7 @@ display:block!important;
 }
 /* Use numeric rhythm for dashboard measures so digit changes don't visually
    shift adjoining units, labels or real values; no font size coercion. */
-#root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile,#root[data-pi-motion="expressive"] .wpb .wpb-progress-glance-item,#root[data-pi-motion="expressive"] .wpb .wpb-exercise-records{
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile,#root[data-pi-motion="expressive"] .wpb .wpb-exercise-records{
   font-variant-numeric:tabular-nums;
 }
 @media(forced-colors:active){
@@ -4445,23 +4202,6 @@ display:block!important;
 }
 /* The same pastel-tonal active role applies to the selected bottom nav
    icon, with accent colored label outside the indicator. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
-  background:var(--pi-color-card)!important;
-  background-image:none!important;
-  border-top-color:var(--pi-color-divider)!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]::before{
-  background:var(--pi-color-active)!important;
-  background-image:none!important;
-  box-shadow:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"] svg,
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-selected="true"] svg{
-  color:var(--pi-color-on-active)!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]>span{
-  color:var(--pi-m3e-primary)!important;
-}
 
 /* R53 — Plan is a first-class semantic component hierarchy, not a collection
    of anonymous inline plum panels. The JSX gives each role an explicit class.
@@ -5003,22 +4743,6 @@ background:var(--pi-color-card)!important;
 .wpb-plan-empty-body{display:grid;justify-items:center;gap:var(--pi-space-3);padding:var(--pi-space-8) var(--pi-page-inset);text-align:center;}
 .wpb-plan-empty-body>h2,.wpb-plan-empty-body>p{margin:0;}
 .wpb-plan-empty-body>svg,.wpb-plan-empty-body>p{color:var(--pi-color-on-muted);}
-
-#root .wpb .wpb-tabbar{
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,8ch),1fr));
-  font-size:var(--pi-type-navigation);flex-shrink:0;gap:0;
-}
-
-#root .wpb .wpb-tabbar .wpb-tab{
-  font-size:inherit;min-width:48px;min-height:56px;height:auto;
-  padding:5px 0 4px;border:0;cursor:pointer;
-}
-
-#root .wpb .wpb-tabbar .wpb-tab>span{
-  width:100%;min-width:0;margin:9px 0 0;padding:0;text-align:center;
-  font-size:inherit;font-weight:600;line-height:1.3;white-space:nowrap;
-  overflow-wrap:normal;word-break:normal;
-}
 
 #root .wpb .wpb-summary-grid{
   display:grid;font-size:var(--pi-type-body);grid-template-columns:repeat(auto-fit,minmax(min(100%,5.5em),1fr));
@@ -5723,10 +5447,6 @@ background:var(--pi-color-card)!important;
     grid-auto-rows:min-content;
     max-width:1080px!important;
   }
-  #root[data-pi-motion="expressive"] .wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]>[data-progress-glance]{
-    grid-column:1/-1;
-    margin-bottom:4px!important;
-  }
   #root[data-pi-motion="expressive"] .wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]>.wpb-consistency-card{
     grid-column:1;
     grid-row:2;
@@ -5768,9 +5488,6 @@ background:var(--pi-color-card)!important;
 @media (max-width:599px){
   /* Long units, dates, large text and dynamic chart labels must wrap within
      the original phone surfaces rather than widening the PWA viewport. */
-  #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
-    overflow-wrap:anywhere;
-  }
   #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-panel{
     overflow:hidden;
   }
@@ -7361,17 +7078,6 @@ background:var(--pi-color-card)!important;
 /* B914 / Cohesion 04 — Progress and History presentation ownership.
    Persistent records, date grouping and live theme colors remain untouched.
    Responsive/Expressive variants refine these common base roles. */
-#root .wpb .wpb-progress .wpb-progress-glance-item{
-  min-width:0;
-  padding:11px 10px;
-  border-radius:var(--pi-shape-action,14px);background:var(--wpb-theme-card);border:1px solid var(--wpb-theme-border-soft);
-}
-#root .wpb .wpb-progress .wpb-progress-glance-label{
-  font-size:11px;
-  font-weight:800;
-  letter-spacing:.7px;
-  margin-top:6px;color:var(--wpb-theme-muted);
-}
 #root .wpb .wpb-progress .wpb-progress-panel{
   padding:16px;background:var(--wpb-theme-card);
 }
@@ -7395,8 +7101,6 @@ background:var(--pi-color-card)!important;
    selection paint. Only calculated chart dimensions and data-derived ink stay inline. */
 #root .wpb .wpb-progress .wpb-progress-tab{padding:10px var(--pi-space-1);flex:1;background:none;border:none;font-size:16px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:var(--wpb-theme-muted);}
 #root .wpb .wpb-progress .wpb-progress-scroll{flex:1;overflow-y:auto;padding:14px var(--pi-space-4) var(--pi-space-10);}
-#root .wpb .wpb-progress .wpb-progress-glance-value{font-size:21px;font-weight:800;line-height:1;color:var(--wpb-theme-muted);}
-#root .wpb .wpb-progress .wpb-progress-glance-context{font-size:11px;color:var(--wpb-theme-faint);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 #root .wpb .wpb-progress .wpb-progress-body-summary{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:0;}
 #root .wpb .wpb-progress .wpb-progress-support{font-size:14px;color:var(--wpb-theme-muted);}
 #root .wpb .wpb-progress .wpb-progress-body-current{font-size:28px;font-weight:700;line-height:1.1;}
@@ -7620,7 +7324,6 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-progress .wpb-progress-lift-top-set{font-size:16px;font-weight:600;color:var(--wpb-theme-text);}
 #root .wpb .wpb-progress .wpb-progress-lift-last{font-size:11px;color:var(--wpb-theme-muted);margin-top:1px;}
 #root .wpb .wpb-progress .wpb-progress-tab[aria-selected="true"]{border-bottom-color:var(--wpb-theme-accent);color:var(--wpb-theme-text);}
-#root .wpb .wpb-progress .wpb-progress-glance-value[data-has-value="true"]{color:var(--wpb-theme-text);}
 #root .wpb .wpb-progress .wpb-progress-body-summary[data-has-series="true"]{margin-bottom:var(--pi-space-3);}
 #root .wpb .wpb-progress .wpb-progress-body-change,
 #root .wpb .wpb-progress .wpb-progress-trend-value,
@@ -8314,6 +8017,8 @@ background:var(--pi-color-card)!important;
 @media(forced-colors:active){
 .wpb-game-plan-highlight-icon,
 #root .wpb .wpb-home-game-plan{border:1px solid CanvasText}}
+/* B1049: navigation tabs keep their 16px shape; the shared press-morph never reshaped them. */
+#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab{border-radius:16px!important;}
 /* B910 / UI polish pass 04 — Settings and creation motion consistency.
    The creation header formerly put a 44px Back target in a 34px-high row.
    Keep header and progress geometry steady across all wizard questions;
@@ -8885,7 +8590,6 @@ background:var(--pi-color-card)!important;
 /* M297: primary Progress sections and Profile's integrated identity card. */
 #root .wpb .wpb-progress .wpb-premium-tabs{overflow-x:auto;scrollbar-width:none;gap:var(--pi-space-1)}
 #root .wpb .wpb-progress .wpb-premium-tabs>.wpb-progress-tab{flex:1 0 auto;min-width:0;padding-inline:var(--pi-space-2);font-size:.875rem}
-#root .wpb .wpb-progress [data-progress-glance]{gap:var(--pi-space-2);border:0;background:transparent;overflow:visible}
 #root .wpb .wpb-profile-card-details{margin-top:var(--pi-space-2);color:var(--wpb-theme-muted);font-size:.75rem;line-height:1.5}
 #root .wpb .wpb-profile-card-details>summary{cursor:pointer;min-height:48px;display:list-item;align-content:center}
 #root .wpb .wpb-profile-card-details p{margin:var(--pi-space-2) 0}
@@ -10185,3 +9889,72 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-week-dots{display:inline-flex;gap:3px;margin-inline-start:6px;vertical-align:middle;}
 #root .wpb .wpb-week-dots>i{width:6px;height:6px;border-radius:50%;background:var(--pi-color-divider);}
 #root .wpb .wpb-week-dots>i[data-done]{background:var(--wpb-theme-accent);}
+/* B1048 — Progress glance: the one owner for the lifetime tiles (Workouts, Hours, Recent PRs).
+   Replaces 30 layered rules (85 priority declarations) across app.css and the StyleTag. The first
+   tile is the featured one: hero fill, accent edge. */
+#root .wpb .wpb-progress [data-progress-glance]{gap:var(--pi-space-2);align-items:stretch;grid-template-rows:auto;margin:0 0 var(--pi-space-3);border:0;background:transparent;overflow:visible;}
+#root .wpb .wpb-progress .wpb-progress-glance-item{
+  display:flex;flex-direction:column;align-items:flex-start;justify-content:center;grid-column:auto;grid-row:auto;
+  min-width:0;height:auto;min-height:87px;padding:12px 9px;
+  border:1px solid var(--pi-r11-edge);border-radius:20px;background:var(--pi-r11-quiet);box-shadow:none;
+  font-variant-numeric:tabular-nums;
+}
+#root .wpb .wpb-progress .wpb-progress-glance-item:first-child{background:var(--pi-r11-hero);border-color:var(--pi-r11-accent-stroke);}
+#root .wpb .wpb-progress .wpb-progress-glance-value{font-size:22px;font-weight:790;line-height:1.12;letter-spacing:-.035em;color:var(--wpb-theme-muted);overflow-wrap:anywhere;}
+#root .wpb .wpb-progress .wpb-progress-glance-item:first-child>.wpb-progress-glance-value{font-size:var(--pi-type-heading);}
+#root .wpb .wpb-progress .wpb-progress-glance-value[data-has-value="true"]{color:var(--wpb-theme-text);}
+#root .wpb .wpb-progress .wpb-progress-glance-label{margin-top:4px;font-size:var(--pi-type-label);font-weight:700;line-height:1.34;letter-spacing:0;text-transform:none;white-space:normal;overflow-wrap:anywhere;color:var(--pi-r36-secondary-label);}
+#root .wpb .wpb-progress .wpb-progress-glance-context{margin-top:2px;font-size:var(--pi-type-caption);line-height:1.32;white-space:normal;overflow-wrap:anywhere;overflow:hidden;text-overflow:ellipsis;color:var(--wpb-theme-faint);}
+@media(max-width:599px){#root .wpb .wpb-progress .wpb-progress-glance-item{overflow-wrap:anywhere;}}
+@media(max-width:350px){
+  #root .wpb .wpb-progress .wpb-progress-glance-item:first-child{min-height:89px;padding:10px 7px;}
+  #root .wpb .wpb-progress .wpb-progress-glance-item:first-child>.wpb-progress-glance-value{font-size:22px;}
+}
+@media(min-width:1120px) and (min-height:720px){
+  #root .wpb .wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]>[data-progress-glance]{grid-column:1/-1;margin-bottom:4px;}
+}
+@media(forced-colors:active){
+  #root .wpb .wpb-progress .wpb-progress-glance-item{background:Canvas;color:CanvasText;border:1px solid CanvasText;box-shadow:none;}
+  #root .wpb .wpb-progress .wpb-progress-glance-label{color:CanvasText;}
+}
+/* B1049 — Navigation bar: the one owner for the phone bar (the rail at 840px+ keeps its own layout
+   rules). Replaces 62 layered rules across app.css and the StyleTag. */
+#root[data-pi-motion] .wpb .wpb-tabbar{
+  position:relative;isolation:isolate;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,8ch),1fr));gap:0;flex-shrink:0;
+  min-height:60px;padding:5px max(6px,env(safe-area-inset-right)) calc(5px + env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left));
+  font-size:var(--pi-type-navigation);border:0;border-top:1px solid var(--pi-color-divider);
+  background:light-dark(var(--pi-m3e-surface-container-low),var(--pi-r41-surface-1));box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;
+}
+#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab{
+  position:relative;isolation:isolate;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:0;
+  box-sizing:border-box;min-width:0;min-height:46px;height:auto;padding:5px 0 4px;border:0;background:transparent;
+  color:var(--wpb-theme-muted);font-size:inherit;font-weight:650;cursor:pointer;overflow:visible;
+  transition:background-color var(--m-fast) var(--e-out),color var(--m-fast) var(--e-out),transform var(--m-base) var(--e-out);
+}
+#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]{color:var(--wpb-theme-text);box-shadow:none;}
+@media(max-width:420px){#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab{min-height:45px;}}
+#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab svg{
+  position:relative;z-index:1;display:block;align-self:center;flex:0 0 22px;width:22px;height:22px;min-width:22px;min-height:22px;margin:0;
+  transition:transform 260ms var(--e-spring),color var(--m-fast) var(--e-out);
+}
+#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab[aria-current="page"] svg{color:var(--pi-color-on-active);stroke-width:2.35px;transform:translate3d(0,-1px,0) scale(1.035);}
+#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab>span{
+  position:relative;z-index:1;display:block;box-sizing:border-box;flex:none;width:100%;max-width:100%;min-width:0;margin:9px 0 0;padding:0;
+  font-size:inherit;font-weight:600;line-height:1.3;letter-spacing:0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal;word-break:normal;
+}
+#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]>span{color:var(--pi-m3e-primary);}
+/* Without the shared track (no JS measurement yet), each tab draws its own pill. */
+#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab::before{
+  content:"";display:block;position:absolute;z-index:0;top:4px;left:50%;transform:translateX(-50%);width:min(70%,54px);height:30px;border-radius:100px;
+  background:color-mix(in srgb,currentColor 14%,transparent);opacity:0;pointer-events:none;transition:opacity 140ms var(--pi-ease);
+}
+#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]::before{opacity:1;}
+#root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]:not([data-pi-ink])::after{content:none;display:none;}
+#root[data-pi-motion] .wpb .wpb-tabbar[data-pi-m3-track] .wpb-tab::before{content:none;display:none;}
+#root[data-pi-motion] .wpb .wpb-tabbar[data-pi-m3-track]::before{
+  --pi-m3-track-x:inherit;--pi-m3-track-y:inherit;--pi-m3-track-width:inherit;--pi-m3-track-height:inherit;
+  content:"";position:absolute;left:0;top:0;z-index:0;width:var(--pi-m3-track-width,0px);height:var(--pi-m3-track-height,30px);
+  translate:var(--pi-m3-track-x,0px) var(--pi-m3-track-y,0px);border-radius:16px;background:var(--pi-color-active);
+  box-shadow:none;pointer-events:none;
+}
+@media(prefers-reduced-motion:no-preference){#root[data-pi-motion] .wpb .wpb-tabbar[data-pi-m3-track]::before{will-change:translate,width;}}

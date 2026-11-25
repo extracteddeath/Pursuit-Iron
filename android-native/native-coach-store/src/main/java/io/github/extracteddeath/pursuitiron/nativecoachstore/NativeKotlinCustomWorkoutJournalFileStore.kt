@@ -248,6 +248,12 @@ class NativeKotlinCustomWorkoutJournalFileStore(
         issueReviewed(ownerKey,workoutId,cycleId,absoluteWeek,weekday,inputs,
             NativeCustomPreparationAuthority.TIERED_INITIAL,null,historyReader)
 
+    fun issueTieredSupport(ownerKey:String,workoutId:String,cycleId:String,
+        absoluteWeek:Int,weekday:Int,historyReader:NativeKotlinMixedHistoryReadCoordinator
+    ):NativeCustomJournalResult =
+        issueReviewed(ownerKey,workoutId,cycleId,absoluteWeek,weekday,CustomCoachAuditInputs(),
+            NativeCustomPreparationAuthority.TIERED_SUPPORT,null,historyReader)
+
     internal fun issueFirstTierTransition(ownerKey:String,workoutId:String,cycleId:String,
         absoluteWeek:Int,weekday:Int,transitionConsent:NativeKotlinFirstTierTransitionConsentStore
     ):NativeCustomJournalResult =
@@ -348,13 +354,17 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                     return@withOwnerTransaction commitFirstIssue(current,selected)
                 }
                 if(authority in setOf(NativeCustomPreparationAuthority.NAMED_CYCLE,
-                    NativeCustomPreparationAuthority.TIERED_INITIAL)) {
+                    NativeCustomPreparationAuthority.TIERED_INITIAL,
+                    NativeCustomPreparationAuthority.TIERED_SUPPORT)) {
                     if(namedHistory==null ||
                         NativeKotlinBlockCalibrationConsentStore.hasRecord(root,ownerKey,workoutId))
                         return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                             NativeCustomJournalRefusal.CONSENT_CHANGED)
                     val inventory=NativeKotlinCustomOutstandingWorkoutInventory(prepared,this)
-                    val reviewed=(if(authority==NativeCustomPreparationAuthority.TIERED_INITIAL)
+                    val reviewed=(if(authority==NativeCustomPreparationAuthority.TIERED_SUPPORT)
+                        preflight.inspectTieredSupport(ownerKey,workoutId,cycleId,
+                            absoluteWeek,weekday,namedHistory,inventory)
+                    else if(authority==NativeCustomPreparationAuthority.TIERED_INITIAL)
                         preflight.inspectTieredInitial(ownerKey,workoutId,cycleId,
                             absoluteWeek,weekday,inputs,namedHistory,inventory)
                     else preflight.inspectNamed(ownerKey,workoutId,cycleId,

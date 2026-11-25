@@ -21,7 +21,7 @@ import java.security.MessageDigest
  * The log/finish authority may never accept this as a journal or as proof
  * of historical enrollment. A separate native issuer must enforce both.
  */
-enum class NativeCustomPreparationAuthority { CUSTOM_CYCLE, ACTIVATED_BLOCK, NAMED_CYCLE, TIERED_INITIAL, TIERED_TRANSITION }
+enum class NativeCustomPreparationAuthority { CUSTOM_CYCLE, ACTIVATED_BLOCK, NAMED_CYCLE, TIERED_INITIAL, TIERED_TRANSITION, TIERED_SUPPORT }
 
 data class NativeCustomPreparedWorkout(
     val ownerKey:String,
@@ -210,7 +210,8 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 workout.authoredReturnFingerprint==null))
         require(workout.authority !in setOf(NativeCustomPreparationAuthority.NAMED_CYCLE,
             NativeCustomPreparationAuthority.TIERED_INITIAL,
-            NativeCustomPreparationAuthority.TIERED_TRANSITION) ||
+            NativeCustomPreparationAuthority.TIERED_TRANSITION,
+            NativeCustomPreparationAuthority.TIERED_SUPPORT) ||
             (!workout.resetToAuthored && workout.snapshot.shortSessionLimitMinutes==null &&
                 workout.repApprovalFingerprint==null && workout.loadApprovalFingerprint==null &&
                 workout.futureWeekApprovalFingerprint==null &&
@@ -230,7 +231,8 @@ class NativeKotlinCustomWorkoutPreparedStore(
         val payload=ByteArrayOutputStream()
         DataOutputStream(payload).use{out->
             out.writeInt(magic)
-            out.writeInt(if(workout.authority==NativeCustomPreparationAuthority.TIERED_TRANSITION)13 else
+            out.writeInt(if(workout.authority==NativeCustomPreparationAuthority.TIERED_SUPPORT)14 else
+                if(workout.authority==NativeCustomPreparationAuthority.TIERED_TRANSITION)13 else
                 if(workout.authority==NativeCustomPreparationAuthority.TIERED_INITIAL)12 else
                 if(workout.authority==NativeCustomPreparationAuthority.NAMED_CYCLE)11 else
                 if(workout.snapshot.shortSessionLimitMinutes!=null)10 else
@@ -299,7 +301,7 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 if(data.readInt()!=magic)
                     throw IOException("unsupported prepared custom snapshot magic")
                 val schema=data.readInt()
-                if(schema !in 1..13)
+                if(schema !in 1..14)
                     throw IOException("unsupported prepared custom snapshot version")
                 val owner=data.readUTF()
                 val athlete=data.readUTF()
@@ -320,7 +322,8 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 }
                 if((schema==11)!=(authority==NativeCustomPreparationAuthority.NAMED_CYCLE) ||
                     (schema==12)!=(authority==NativeCustomPreparationAuthority.TIERED_INITIAL) ||
-                    (schema==13)!=(authority==NativeCustomPreparationAuthority.TIERED_TRANSITION))
+                    (schema==13)!=(authority==NativeCustomPreparationAuthority.TIERED_TRANSITION) ||
+                    (schema==14)!=(authority==NativeCustomPreparationAuthority.TIERED_SUPPORT))
                     throw IOException("invalid specialist preparation authority")
                 if(schema in 2..6 &&
                     authority!=NativeCustomPreparationAuthority.ACTIVATED_BLOCK)
@@ -836,6 +839,16 @@ class NativeKotlinCustomWorkoutPreparedStore(
     ):NativeCustomPrepareResult =
         prepareSpecialist(ownerKey,workoutId,cycleId,absoluteWeek,weekday,inputs,history,outstanding,true)
 
+    /** Authored supporting session, distinct from initial and transition
+     * prescriptions. No caller-supplied training policy is used. */
+    fun prepareTieredSupport(
+        ownerKey:String,workoutId:String,cycleId:String,absoluteWeek:Int,weekday:Int,
+        history:NativeKotlinMixedHistoryReadCoordinator,
+        outstanding:NativeKotlinCustomOutstandingWorkoutInventory
+    ):NativeCustomPrepareResult =
+        prepareSpecialist(ownerKey,workoutId,cycleId,absoluteWeek,weekday,
+            CustomCoachAuditInputs(),history,outstanding,true,supportingDay=true)
+
     /** Persist only the exact receipt-backed specialist preview. The
      * transition hash is not the original cycle's ordinary signoff hash.
      */
@@ -903,7 +916,8 @@ class NativeKotlinCustomWorkoutPreparedStore(
     private fun prepareSpecialist(
         ownerKey:String,workoutId:String,cycleId:String,absoluteWeek:Int,weekday:Int,
         inputs:CustomCoachAuditInputs,history:NativeKotlinMixedHistoryReadCoordinator,
-        outstanding:NativeKotlinCustomOutstandingWorkoutInventory,tiered:Boolean
+        outstanding:NativeKotlinCustomOutstandingWorkoutInventory,tiered:Boolean,
+        supportingDay:Boolean=false
     ):NativeCustomPrepareResult {
         fun deny(reason:NativeCustomPrepareRefusal)=NativeCustomPrepareResult.Rejected(reason)
         if(!id.matches(workoutId)||!id.matches(cycleId)||
@@ -915,13 +929,16 @@ class NativeKotlinCustomWorkoutPreparedStore(
             if(activationHandoff?.blocksNewIssuance(ownerKey)==true ||
                 NativeKotlinBlockCalibrationConsentStore.hasRecord(directory,ownerKey,workoutId))
                 return@withOwnerTransaction deny(NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
-            val pre=(if(tiered)preflight.inspectTieredInitial(ownerKey,workoutId,cycleId,absoluteWeek,weekday,
+            val pre=(if(supportingDay)preflight.inspectTieredSupport(ownerKey,workoutId,cycleId,
+                absoluteWeek,weekday,history,outstanding)
+                else if(tiered)preflight.inspectTieredInitial(ownerKey,workoutId,cycleId,absoluteWeek,weekday,
                 inputs,history,outstanding) else preflight.inspectNamed(ownerKey,workoutId,cycleId,absoluteWeek,weekday,
                 inputs,history,outstanding)) as? NativeCustomPreflightResult.ReviewedPreview
                 ?:return@withOwnerTransaction deny(NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
             val planned=NativeCustomPreparedWorkout(ownerKey,owner.athleteId,workoutId,
                 pre.receipt.recordRevision,pre.receipt.fingerprintSha256,pre.session,
-                if(tiered)NativeCustomPreparationAuthority.TIERED_INITIAL
+                if(supportingDay)NativeCustomPreparationAuthority.TIERED_SUPPORT
+                else if(tiered)NativeCustomPreparationAuthority.TIERED_INITIAL
                 else NativeCustomPreparationAuthority.NAMED_CYCLE)
             when(val existing=openFenced(ownerKey,workoutId,owner)) {
                 is NativeCustomPreparedRead.Rejected ->

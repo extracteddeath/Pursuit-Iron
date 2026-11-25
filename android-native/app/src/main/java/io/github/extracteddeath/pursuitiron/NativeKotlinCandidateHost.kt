@@ -171,6 +171,9 @@ internal class NativeKotlinCandidateHost(context:Context) {
         revisionFence,localAthlete,customDraftStore,authoringSourceStore,
         customCycleSignoffs,mixedHistoryReader,outstandingCustomInventory,
         customPreparedStore,machineRosters)
+    private val tieredTransitions=NativeKotlinFirstTierTransitionConsentStore(
+        root,revisionFence,localAthlete,customDraftStore,authoringSourceStore,
+        customCycleSignoffs,mixedHistoryReader,outstandingCustomInventory,machineRosters)
     private val composerActivationInventory=NativeKotlinComposerActivationInventory(
         journalStore,approvalStore)
     private val futureActivationPreflight=NativeKotlinFutureBlockActivationPreflight(
@@ -899,6 +902,12 @@ internal class NativeKotlinCandidateHost(context:Context) {
             mixedHistoryReader,outstandingCustomInventory,machineRosters)
     }
 
+    fun reviewTieredCalendar(cycleId:String):NativeCustomNextCycleSlot {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomNextCycleSlot.Rejected("No verified active athlete.")
+        return nextCustomCycleSession.reviewTieredCalendar(owner.ownerKey,cycleId)
+    }
+
     fun reviewTieredInitialSession(cycleId:String,inputs:CustomCoachAuditInputs):NativeCustomNextCycleSlot {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeCustomNextCycleSlot.Rejected("No verified active athlete.")
@@ -957,6 +966,96 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 return@withOwnerTransaction NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.NOT_PREPARED)
             customIssuedStore.issueTieredInitial(owner.ownerKey,workoutId,cycleId,week,day,inputs,mixedHistoryReader)
         }
+        if(issued is NativeCustomJournalResult.Durable)
+            pinMachineChoiceForIssuedWorkout(workoutId,custom=true)
+        return issued
+    }
+
+    /** Supporting-day targets come from the signed authored program, not
+     * the tier thread's current working load. Preflight owns calendar gating. */
+    fun previewTieredSupportWorkout(workoutId:String,cycleId:String,week:Int,weekday:Int):NativeCustomPreflightResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomPreflightResult.Rejected(NativeCustomPreflightRefusal.NOT_AUTHORIZED)
+        return customWorkoutPreflight.inspectTieredSupport(owner.ownerKey,workoutId,cycleId,
+            week,weekday,mixedHistoryReader,outstandingCustomInventory)
+    }
+
+    fun prepareTieredSupportWorkout(workoutId:String,cycleId:String,
+        shown:NativeCustomPreflightResult.ReviewedPreview):NativeCustomPrepareResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomPrepareResult.Rejected(NativeCustomPrepareRefusal.NOT_AUTHORIZED)
+        return revisionFence.withOwnerTransaction(owner.ownerKey) {
+            val week=shown.session.absoluteWeek
+            val day=shown.session.weekday
+            if(previewTieredSupportWorkout(workoutId,cycleId,week,day)!=shown)
+                return@withOwnerTransaction NativeCustomPrepareResult.Rejected(NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
+            customPreparedStore.prepareTieredSupport(owner.ownerKey,workoutId,cycleId,
+                week,day,mixedHistoryReader,outstandingCustomInventory)
+        }
+    }
+
+    fun issueTieredSupportWorkout(cycleId:String,shown:NativeCustomPreparedWorkout):NativeCustomJournalResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.NOT_AUTHORIZED)
+        val workoutId=shown.workoutId
+        val issued=revisionFence.withOwnerTransaction(owner.ownerKey) {
+            val week=shown.snapshot.absoluteWeek
+            val day=shown.snapshot.weekday
+            val preview=previewTieredSupportWorkout(workoutId,cycleId,week,day)
+                as? NativeCustomPreflightResult.ReviewedPreview
+            if(shown.authority!=NativeCustomPreparationAuthority.TIERED_SUPPORT ||
+                preview==null || preview.session!=shown.snapshot ||
+                preview.receipt.fingerprintSha256!=shown.consentFingerprint ||
+                preview.receipt.recordRevision!=shown.consentRevision ||
+                (customPreparedStore.open(owner.ownerKey,workoutId) as? NativeCustomPreparedRead.Found)?.workout!=shown)
+                return@withOwnerTransaction NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.NOT_PREPARED)
+            customIssuedStore.issueTieredSupport(owner.ownerKey,workoutId,cycleId,week,day,mixedHistoryReader)
+        }
+        if(issued is NativeCustomJournalResult.Durable)
+            pinMachineChoiceForIssuedWorkout(workoutId,custom=true)
+        return issued
+    }
+
+    fun recoverTieredTransition(cycleId:String,week:Int,weekday:Int):NativeTieredTransitionRecovery {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeTieredTransitionRecovery.Refused(NativeTieredTransitionConsentResult.NOT_AUTHORIZED)
+        return tieredTransitions.recoverScheduled(owner.ownerKey,cycleId,week,weekday,nextCustomCycleSession)
+    }
+
+    fun previewTieredTransition(cycleId:String,weekday:Int,selection:NativeTieredNextSelection):NativeSavedNamedReview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeSavedNamedReview.Rejected(NativeSavedNamedReviewRefusal.NOT_AUTHORIZED)
+        return tieredTransitions.previewScheduled(owner.ownerKey,cycleId,weekday,selection,nextCustomCycleSession)
+    }
+
+    fun confirmTieredTransition(cycleId:String,shown:NativeSavedNamedReview.Signed,
+        reset:Boolean,recovery:Boolean):NativeTieredTransitionConsentResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeTieredTransitionConsentResult.NOT_AUTHORIZED
+        return tieredTransitions.confirmScheduled(owner.ownerKey,cycleId,shown,nextCustomCycleSession,
+            true,reset,recovery)
+    }
+
+    fun previewTieredTransitionWorkout(cycleId:String,id:String,week:Int,weekday:Int):NativeFirstTierTransitionPreflight {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFirstTierTransitionPreflight.Rejected(NativeCustomPreflightRefusal.NOT_AUTHORIZED)
+        return tieredTransitions.inspectScheduled(owner.ownerKey,cycleId,id,week,weekday,
+            nextCustomCycleSession,customWorkoutPreflight)
+    }
+
+    fun prepareTieredTransitionWorkout(cycleId:String,shown:NativeFirstTierTransitionPreflight.Reviewed):NativeCustomPrepareResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomPrepareResult.Rejected(NativeCustomPrepareRefusal.NOT_AUTHORIZED)
+        return tieredTransitions.prepareScheduled(owner.ownerKey,cycleId,shown,nextCustomCycleSession,
+            customWorkoutPreflight,customPreparedStore)
+    }
+
+    fun issueTieredTransitionWorkout(cycleId:String,shown:NativeCustomPreparedWorkout):NativeCustomJournalResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.NOT_AUTHORIZED)
+        val workoutId=shown.workoutId
+        val issued=tieredTransitions.issueScheduled(owner.ownerKey,cycleId,shown,nextCustomCycleSession,
+            customWorkoutPreflight,customPreparedStore,customIssuedStore)
         if(issued is NativeCustomJournalResult.Durable)
             pinMachineChoiceForIssuedWorkout(workoutId,custom=true)
         return issued

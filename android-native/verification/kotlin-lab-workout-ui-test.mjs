@@ -753,7 +753,7 @@ for(const source of [journal,composer]) {
 // Existing recorded sets remain journal-owned, and the durability bootstrap
 // does not turn a partial preference write into a fake successful set.
 // Verify each canonical issuer rather than only a count of call sites.
-const customIssuerNames=['issueReviewedCustomWorkout','issueActivatedFutureWorkout','issueFixedNamedWorkout','issueTieredInitialWorkout'];
+const customIssuerNames=['issueReviewedCustomWorkout','issueActivatedFutureWorkout','issueFixedNamedWorkout','issueTieredInitialWorkout','issueTieredSupportWorkout','issueTieredTransitionWorkout'];
 assert.ok(machineChoiceHost.includes('private fun pinMachineChoiceForIssuedWorkout(') &&
   machineChoiceHost.includes('if(issued is NativeKotlinIssueResult.Committed)') &&
   machineChoiceHost.includes('pinMachineChoiceForIssuedWorkout(workoutId,custom=false)') &&
@@ -1925,3 +1925,32 @@ assert.ok(basicPreviewScreen.includes('if(scheme==NamedPercentageScheme.GZCLP)')
   machineChoiceHost.includes('fixedNamedDraftReview.previewTieredInitial(NativeTieredInitialSelection(') &&
   machineChoiceHost.includes('fixedNamedDraftReview.acceptTieredInitial(displayed.selection,displayed,confirmed)'),
   'Native GZCLP authoring must preview explicit load and increment and save only the exact reviewed unsigned revision');
+
+assert.ok(basicPreviewController.includes('host.reviewTieredCalendar(cycleId)') &&
+  basicPreviewController.includes('tieredCalendar=calendar') &&
+  basicPreviewController.includes('nextCycleSlot=initialNext') &&
+  basicPreviewScreen.includes('when(val calendar=state.tieredCalendar)') &&
+  machineChoiceHost.includes('nextCustomCycleSession.reviewTieredCalendar(owner.ownerKey,cycleId)'),
+  'Tiered calendar discovery must remain separate from the initial workout issue grant');
+
+assert.ok(basicPreviewScreen.includes('controller::previewTieredSupportWorkout') &&
+  basicPreviewScreen.includes('controller::prepareTieredSupportWorkout') &&
+  basicPreviewScreen.includes('controller::issueTieredSupportWorkout') &&
+  basicPreviewController.includes('before.tieredSupportAvailable') &&
+  basicPreviewController.includes('host.previewTieredSupportWorkout') &&
+  machineChoiceHost.includes('customWorkoutPreflight.inspectTieredSupport') &&
+  machineChoiceHost.includes('customPreparedStore.prepareTieredSupport') &&
+  machineChoiceHost.includes('customIssuedStore.issueTieredSupport'),
+  'Tiered supporting days must use exact native review, preparation, and issuance');
+
+assert.ok(basicPreviewScreen.includes('NativeTieredTransitionControls(state,controller)') &&
+  basicPreviewScreen.includes('controller.previewTieredTransition(recovery)') &&
+  basicPreviewScreen.includes('controller.approveTieredTransition(resetConfirmed,recoveryConfirmed)') &&
+  basicPreviewScreen.includes('controller::prepareTieredTransitionWorkout') &&
+  basicPreviewScreen.includes('controller::issueTieredTransitionWorkout') &&
+  basicPreviewController.includes('host.recoverTieredTransition') &&
+  basicPreviewController.includes('host.confirmTieredTransition') &&
+  machineChoiceHost.includes('tieredTransitions.previewScheduled') &&
+  machineChoiceHost.includes('tieredTransitions.prepareScheduled') &&
+  machineChoiceHost.includes('tieredTransitions.issueScheduled'),
+  'Successive tier workouts must use ordered review, explicit consent, and the exact existing native journal');

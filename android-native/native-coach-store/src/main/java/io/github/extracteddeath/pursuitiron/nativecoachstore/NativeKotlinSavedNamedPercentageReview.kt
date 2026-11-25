@@ -433,14 +433,15 @@ class NativeKotlinSavedNamedPercentageReview(
                         return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
                     val request=initialRequest.copy(nextWorkoutId=multiNext.nextWorkoutId,
                         completed=ledger.exposures,recovery=s.slotId in multiNext.recoverySlotIds)
-                    val numeric=TieredLinearProgressionDomain.review(request) as? TieredLinearResult.Candidate
-                        ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
                     val key=CustomNamedPercentageWeekKey(block.blockId,localWeek,s.weekday,s.slotId)
                     val projected=CustomPercentageDraftDomain.reviewTiered(
                         CustomPercentageDraftSource(candidate,stamp,key.blockId,key.weekInBlock,key.weekday,key.slotId),request)
-                        as? CustomPercentageDraftResult.Proposed
-                        ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.FULL_CYCLE_AUDIT_FAILED)
-                    proposals+=projected
+                    val derived=projected as? CustomPercentageDraftResult.Proposed
+                        ?:return@withOwnerTransaction deny(
+                            if((projected as? CustomPercentageDraftResult.Refused)?.reason==CustomPercentageDraftRefusal.PROTOCOL_REFUSED)
+                                NativeSavedNamedReviewRefusal.HISTORY_CHANGED else NativeSavedNamedReviewRefusal.FULL_CYCLE_AUDIT_FAILED)
+                    val numeric=checkNotNull(derived.tieredResult)
+                    proposals+=derived
                     slots+=NativeMultiTierNextSlot(CustomTieredTransitionWeekEvidence(key,request),numeric)
                 }
                 val combined=CustomPercentageDraftDomain.combineReviewedWeekEdits(candidate,proposals)
@@ -568,14 +569,15 @@ class NativeKotlinSavedNamedPercentageReview(
                 // rewrite or bypass that historical inconsistency.
                 val request=initialRequest.copy(nextWorkoutId=next.nextWorkoutId,
                     completed=ledger.exposures,recovery=next.recovery)
-                val numeric=TieredLinearProgressionDomain.review(request) as? TieredLinearResult.Candidate
-                    ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
-                val proposed=CustomPercentageDraftDomain.reviewTiered(
+                val projected=CustomPercentageDraftDomain.reviewTiered(
                     CustomPercentageDraftSource(historicalCycle,stamp.copy(cycleRevision=historicalCycle.revision),
                         receipt.blockId,receipt.weekInBlock+priorTransitions.size+1,
                         selection.weekday,selection.slotId),request)
-                    as? CustomPercentageDraftResult.Proposed
-                    ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.FULL_CYCLE_AUDIT_FAILED)
+                val proposed=projected as? CustomPercentageDraftResult.Proposed
+                    ?:return@withOwnerTransaction deny(
+                        if((projected as? CustomPercentageDraftResult.Refused)?.reason==CustomPercentageDraftRefusal.PROTOCOL_REFUSED)
+                            NativeSavedNamedReviewRefusal.HISTORY_CHANGED else NativeSavedNamedReviewRefusal.FULL_CYCLE_AUDIT_FAILED)
+                val numeric=checkNotNull(proposed.tieredResult)
                 // Audit the newly proposed full cycle, not only the signed
                 // initial recipe. Bind the authenticated next-week proof and
                 // the existing initial evidence to the proposed revision.

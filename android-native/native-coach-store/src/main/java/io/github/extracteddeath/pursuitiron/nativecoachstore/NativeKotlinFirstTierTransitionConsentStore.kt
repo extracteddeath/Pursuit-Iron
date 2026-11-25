@@ -407,7 +407,7 @@ internal class NativeKotlinFirstTierTransitionConsentStore(
                     val prefix=NativeTieredHistoryPrefixCodec.decode(old.prefix,scope,selection.tier,selection.slotId)
                     require(prefix.map{it.workoutId}==prefixIds && prefixIds.all{it in completed})
                     require(old.inputs==inputs && old.setBudget==initialRequest.approvedSetBudget)
-                    val ledger=history.readTieredLedger(ownerKey,owner.athleteId,scope,
+                    val ledger=history.readTieredHistoryPrefixForRecovery(ownerKey,owner.athleteId,scope,
                         selection.slotId,selection.tier,week) as? NativeOwnerTieredLedgerResult.Review
                         ?:return@withOwnerTransaction null
                     require(ledger.manifestRevision==timeline.manifestRevision &&

@@ -26,6 +26,11 @@ internal data class NativeKotlinCustomCycleState(
     val tieredDraft:Boolean=false,
     val tieredInitialReview:NativeSavedNamedReview?=null,
     val tieredCalendar:NativeCustomNextCycleSlot?=null,
+    val tieredReceipt:NativeTieredInitialDraftReceipt?=null,
+    val tieredSupportAvailable:Boolean=false,
+    val tieredSupportWorkoutId:String?=null,
+    val tieredSupportPreview:NativeCustomPreflightResult.ReviewedPreview?=null,
+    val tieredSupportPrepared:NativeCustomPreparedWorkout?=null,
     val tieredInitialPreview:NativeCustomPreflightResult.ReviewedPreview?=null,
     val tieredInitialPrepared:NativeCustomPreparedWorkout?=null,
     val tieredReference:NativeTieredInitialReview.Ready?=null,
@@ -192,6 +197,7 @@ internal class NativeKotlinCustomCycleController(
                     draft = result.draft,
                     fixedNamedDraft=result.namedReceipts.isNotEmpty(),
                     tieredDraft=result.tieredInitialReceipt!=null,
+                    tieredReceipt=result.tieredInitialReceipt,
                     cycleId = result.draft.cycleId,
                     availableChoices = choices,
                     sourceRevision = source?.revision,
@@ -712,8 +718,20 @@ internal class NativeKotlinCustomCycleController(
         val initialNext=signed?.let{host.reviewTieredInitialSession(cycleId,it.inputs)}
         val calendar=if(ready==null && (initialNext==null || initialNext is NativeCustomNextCycleSlot.Rejected))
             host.reviewTieredCalendar(cycleId) else null
+        val position=when(calendar) {
+            is NativeCustomNextCycleSlot.Next -> calendar.absoluteWeek to calendar.weekday
+            is NativeCustomNextCycleSlot.Prepared -> calendar.absoluteWeek to calendar.weekday
+            else -> null
+        }
+        val supporting=before.tieredReceipt?.let{r->
+            val block=draft.blocks.singleOrNull{it.blockId==r.blockId}
+            position!=null && block!=null && position.second!=r.selection.weekday &&
+                position.first in r.selection.absoluteWeek..(r.selection.absoluteWeek+block.weeks-r.weekInBlock) &&
+                (position.first!=r.selection.absoluteWeek || position.second>r.selection.weekday)
+        }==true
         current.value=before.copy(tieredInitialReview=ready ?:signed,
-            tieredCalendar=calendar,
+            tieredCalendar=calendar,tieredSupportAvailable=supporting,
+            tieredSupportWorkoutId=null,tieredSupportPreview=null,tieredSupportPrepared=null,
             signoff=null,coachingAudit=null,reviewedCoachInputs=null,
             nextCycleSlot=initialNext,
             nextSlotCycleRevision=signed?.draft?.revision,
@@ -722,7 +740,7 @@ internal class NativeKotlinCustomCycleController(
                 ready!=null -> "Initial tier reference verified. Review this exact revision."
                 signed!=null -> "Exact initial tier approval restored and rechecked."
                 calendar!=null && calendar !is NativeCustomNextCycleSlot.Rejected ->
-                    "Initial tier review closed. The saved calendar is available for reference."
+                    "Initial tier review closed. Review the next scheduled workout."
                 else -> "Initial tier review is unavailable or already completed. No ordinary workout can start."
             })
     }
@@ -794,6 +812,74 @@ internal class NativeKotlinCustomCycleController(
             result.issued.journal.originalSnapshot==saved.snapshot)
             "Initial workout issued. Resume in Train to log actuals."
             else "Initial issuance refused. Refresh the review.")
+    }
+
+    fun previewTieredSupportWorkout()=run {
+        val before=current.value
+        val draft=before.draft ?:return@run
+        if(!before.tieredDraft || !before.tieredSupportAvailable)return@run
+        val next=host.reviewTieredCalendar(draft.cycleId)
+        if(next!=before.tieredCalendar) {
+            refreshTieredInitialReview(draft.cycleId)
+            return@run
+        }
+        val (id,week,day)=when(next) {
+            is NativeCustomNextCycleSlot.Next -> Triple("support-"+UUID.randomUUID().toString(),next.absoluteWeek,next.weekday)
+            is NativeCustomNextCycleSlot.Prepared -> Triple(next.workoutId,next.absoluteWeek,next.weekday)
+            else -> return@run
+        }
+        val shown=(host.previewTieredSupportWorkout(id,draft.cycleId,week,day)
+            as? NativeCustomPreflightResult.ReviewedPreview)
+            ?.takeIf{it.session.stamp.cycleRevision==draft.revision && it.session.stamp.cycleId==draft.cycleId}
+        val saved=if(shown!=null && next is NativeCustomNextCycleSlot.Prepared)
+            (host.openPreparedCustomWorkout(id) as? NativeCustomPreparedRead.Found)?.workout
+                ?.takeIf{it.authority==NativeCustomPreparationAuthority.TIERED_SUPPORT &&
+                    it.snapshot==shown.session && it.consentFingerprint==shown.receipt.fingerprintSha256 &&
+                    it.consentRevision==shown.receipt.recordRevision}
+        else null
+        current.value=before.copy(tieredSupportWorkoutId=id.takeIf{shown!=null},
+            tieredSupportPreview=shown,tieredSupportPrepared=saved,
+            message=if(shown!=null)"Review the exact supporting workout."
+                else "Supporting workout or saved preparation could not be verified.")
+    }
+
+    fun prepareTieredSupportWorkout()=run {
+        val before=current.value
+        val draft=before.draft ?:return@run
+        val shown=before.tieredSupportPreview ?:return@run
+        val id=before.tieredSupportWorkoutId ?:return@run
+        if(!before.tieredSupportAvailable || before.tieredCalendar !is NativeCustomNextCycleSlot.Next)return@run
+        val result=host.prepareTieredSupportWorkout(id,draft.cycleId,shown)
+        val saved=(result as? NativeCustomPrepareResult.Prepared)?.workout?.takeIf{
+            it.authority==NativeCustomPreparationAuthority.TIERED_SUPPORT &&
+                it.snapshot==shown.session && it.consentFingerprint==shown.receipt.fingerprintSha256 &&
+                it.consentRevision==shown.receipt.recordRevision &&
+                (host.openPreparedCustomWorkout(id) as? NativeCustomPreparedRead.Found)?.workout==it
+        }
+        if(saved==null) {
+            refreshTieredInitialReview(draft.cycleId)
+            current.value=current.value.copy(message="Supporting preparation refused or changed. Review again.")
+            return@run
+        }
+        current.value=before.copy(tieredSupportPrepared=saved,
+            tieredCalendar=host.reviewTieredCalendar(draft.cycleId),
+            message="Exact supporting workout prepared. Not issued.")
+    }
+
+    fun issueTieredSupportWorkout()=run {
+        val before=current.value
+        val draft=before.draft ?:return@run
+        val shown=before.tieredSupportPreview ?:return@run
+        val saved=before.tieredSupportPrepared ?:return@run
+        if(!before.tieredSupportAvailable || saved.workoutId!=before.tieredSupportWorkoutId ||
+            saved.snapshot!=shown.session || saved.consentFingerprint!=shown.receipt.fingerprintSha256 ||
+            saved.consentRevision!=shown.receipt.recordRevision)return@run
+        val result=host.issueTieredSupportWorkout(draft.cycleId,saved)
+        refreshTieredInitialReview(draft.cycleId)
+        current.value=current.value.copy(message=if(result is NativeCustomJournalResult.Durable &&
+            result.issued.journal.originalSnapshot==saved.snapshot)
+            "Supporting workout issued. Resume in Train to log actuals."
+            else "Supporting issuance refused. Refresh the review.")
     }
 
     // Fixed named flow owns distinct review state. Never publish ordinary

@@ -770,6 +770,7 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         assertTrue(reset.requiresReviewedReset)
         assertTrue(reset.state.load<n("25"))
         transition(5,"tier-reset",false,0,reset.state.load.toString(),reset.state.load.toString(),true,3)
+        assertEquals(4,coldStore().inventoryForRecovery("owner-1"))
         val afterResetLedger=reader.readTieredLedger("owner-1","athlete-1",initialProposal.request.scope,
             initial.slotId,initial.tier,6) as NativeOwnerTieredLedgerResult.Review
         val afterReset=TieredLinearProgressionDomain.review(initialProposal.request.copy(
@@ -779,6 +780,22 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         // appears in the complete ledger. Its frozen receipt proves consent.
         transition(6,"tier-after-reset",false,0,afterReset.state.load.toString(),
             afterReset.state.load.toString(),false,3)
+        assertEquals(5,coldStore().inventoryForRecovery("owner-1"))
+        val receipt=java.nio.file.Files.list(root).use{files->
+            files.filter{it.fileName.toString().startsWith("tier-first-transition-") &&
+                it.fileName.toString().endsWith("-w6.bin")}.findFirst().get()
+        }
+        val original=java.nio.file.Files.readAllBytes(receipt)
+        java.nio.file.Files.delete(receipt)
+        assertNull(coldStore().inventoryForRecovery("owner-1"))
+        java.nio.file.Files.write(receipt,original.copyOf(original.size-1))
+        assertNull(coldStore().inventoryForRecovery("owner-1"))
+        java.nio.file.Files.write(receipt,original)
+        val renamed=receipt.resolveSibling(receipt.fileName.toString()+".renamed")
+        java.nio.file.Files.move(receipt,renamed)
+        assertNull(coldStore().inventoryForRecovery("owner-1"))
+        java.nio.file.Files.move(renamed,receipt)
+        assertEquals(5,coldStore().inventoryForRecovery("owner-1"))
         val all=reader.readTieredLedger("owner-1","athlete-1",initialProposal.request.scope,
             initial.slotId,initial.tier,7)
         assertTrue(all.toString(),all is NativeOwnerTieredLedgerResult.Review)

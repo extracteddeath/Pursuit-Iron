@@ -135,4 +135,19 @@ internal object NativeCustomCycleSignoffFingerprint {
             .joinToString(""){"%02x".format(it.toInt() and 255)}
     }
 
+    /** Initial tier consent binds the immutable workout ID, exact initial
+     * reference, increment limit, scope and source/history revision. */
+    fun calculateTieredInitial(cycle:CustomTrainingCycle,source:NativeCustomAuthoringSnapshot,
+        inputs:CustomCoachAuditInputs,receipt:NativeTieredInitialDraftReceipt):String {
+        require(NativeTieredInitialDraftReceiptCodec.valid(receipt,source.ownerKey,cycle))
+        val bytes=ByteArrayOutputStream()
+        DataOutputStream(bytes).use{out->
+            out.writeUTF("PursuitIron/initial-tier-cycle-consent/v1")
+            out.writeUTF(calculate(cycle,source,inputs))
+            NativeTieredInitialDraftReceiptCodec.write(out,receipt)
+        }
+        return MessageDigest.getInstance("SHA-256").digest(bytes.toByteArray())
+            .joinToString(""){"%02x".format(it.toInt() and 255)}
+    }
+
 }

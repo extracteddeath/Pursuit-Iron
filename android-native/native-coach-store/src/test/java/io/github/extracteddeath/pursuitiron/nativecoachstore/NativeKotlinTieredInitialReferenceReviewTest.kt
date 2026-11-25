@@ -387,7 +387,7 @@ class NativeKotlinTieredInitialReferenceReviewTest {
             assertEquals(TieredLinearState(0,n("35")),numeric.state)
             // Reopen from durable receipts and train the other independent
             // threads on the same week. A different day has its own receipt.
-            fun nextReview(s:NativeMultiTierNextSelection)=transitionStore().previewMultiUsingSavedRules("owner-1","cycle-1",s)
+            fun nextReview(s:NativeMultiTierNextSelection)=transitionStore().previewMultiScheduled("owner-1","cycle-1",s,calendar())
             val middle=NativeMultiTierNextSelection("week-two-day-two",2,2)
             val last=NativeMultiTierNextSelection("week-two-day-four",2,4)
             assertEquals(NativeCustomNextCycleSlot.Next(2,2,"Day 2"),next())
@@ -404,15 +404,22 @@ class NativeKotlinTieredInitialReferenceReviewTest {
                 val day=checkNotNull(shownDay.nextMultiTierCandidate)
                 assertEquals(expected,day.slots.single().result.state)
                 assertEquals(expectedLoad,(day.snapshot.slots.single().sets.single().prescription.load as DraftSetLoad.Verified).value)
-                assertEquals(NativeTieredTransitionConsentResult.RECORDED,confirmDay(shownDay))
-                val recovered=recoverDay(s.absoluteWeek,s.weekday) as NativeTieredTransitionRecovery.Ready
+                val store=transitionStore()
+                assertEquals(NativeTieredTransitionConsentResult.CONFIRMATION_REQUIRED,
+                    store.confirmMultiScheduled("owner-1","cycle-1",shownDay,calendar(),false,emptySet(),emptySet()))
+                assertEquals(NativeTieredTransitionConsentResult.RECORDED,
+                    store.confirmMultiScheduled("owner-1","cycle-1",shownDay,calendar(),true,emptySet(),emptySet()))
+                val recovered=store.recoverScheduled("owner-1","cycle-1",s.absoluteWeek,s.weekday,calendar())
+                    as NativeTieredTransitionRecovery.Ready
                 assertEquals(shownDay,recovered.review)
-                val p=(coldPrepared().prepareFirstTierTransition("owner-1",s.nextWorkoutId,"cycle-1",
-                    s.absoluteWeek,s.weekday,transitionStore()) as NativeCustomPrepareResult.Prepared).workout
+                val verified=store.inspectScheduled("owner-1","cycle-1",s.nextWorkoutId,
+                    s.absoluteWeek,s.weekday,calendar(),preflight) as NativeFirstTierTransitionPreflight.Reviewed
+                val p=(store.prepareScheduled("owner-1","cycle-1",verified,calendar(),preflight,coldPrepared())
+                    as NativeCustomPrepareResult.Prepared).workout
                 assertEquals(day.snapshot,p.snapshot)
                 assertEquals(recovered.receiptFingerprint,p.consentFingerprint)
-                assertTrue(coldJournal().issueFirstTierTransition("owner-1",s.nextWorkoutId,"cycle-1",
-                    s.absoluteWeek,s.weekday,transitionStore()) is NativeCustomJournalResult.Durable)
+                assertTrue(store.issueScheduled("owner-1","cycle-1",p,calendar(),preflight,
+                    coldPrepared(),coldJournal()) is NativeCustomJournalResult.Durable)
                 val setKey=p.snapshot.slots.single().sets.single().setKey
                 assertTrue(coldJournal().record("owner-1",s.nextWorkoutId,
                     CustomWorkoutJournalOperation.Record("${s.nextWorkoutId}-actual",0,

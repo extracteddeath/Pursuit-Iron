@@ -324,6 +324,22 @@ class NativeKotlinCustomCycleSignoffFileStore(
         history:NativeKotlinMixedHistoryReadCoordinator,
         outstanding:NativeKotlinCustomOutstandingWorkoutInventory,
         machineRosters:NativeKotlinMachineRosterFileStore?=null
+    ):NativeCustomSignoffWrite =
+        confirmSpecialist(ownerKey,cycleId,displayed,athleteConfirmed,history,outstanding,machineRosters,false)
+
+    fun confirmTieredInitial(
+        ownerKey:String,cycleId:String,displayed:NativeSavedNamedReview.Ready,
+        athleteConfirmed:Boolean,history:NativeKotlinMixedHistoryReadCoordinator,
+        outstanding:NativeKotlinCustomOutstandingWorkoutInventory,
+        machineRosters:NativeKotlinMachineRosterFileStore?=null
+    ):NativeCustomSignoffWrite =
+        confirmSpecialist(ownerKey,cycleId,displayed,athleteConfirmed,history,outstanding,machineRosters,true)
+
+    private fun confirmSpecialist(
+        ownerKey:String,cycleId:String,displayed:NativeSavedNamedReview.Ready,
+        athleteConfirmed:Boolean,history:NativeKotlinMixedHistoryReadCoordinator,
+        outstanding:NativeKotlinCustomOutstandingWorkoutInventory,
+        machineRosters:NativeKotlinMachineRosterFileStore?,tiered:Boolean
     ):NativeCustomSignoffWrite {
         fun deny(reason:NativeCustomSignoffRefusal)=NativeCustomSignoffWrite.Rejected(reason)
         if(!athleteConfirmed)return deny(NativeCustomSignoffRefusal.CONFIRMATION_REQUIRED)
@@ -346,9 +362,10 @@ class NativeKotlinCustomCycleSignoffFileStore(
             catch(_:Exception){
                 return@withOwnerTransaction deny(NativeCustomSignoffRefusal.COACH_REVIEW_UNRESOLVED)
             }
-            val fresh=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
-                this,history,outstanding,machineRosters).review(ownerKey,cycleId,savedInputs)
-                as? NativeSavedNamedReview.Ready
+            val reviewer=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
+                this,history,outstanding,machineRosters)
+            val fresh=(if(tiered)reviewer.reviewTieredInitial(ownerKey,cycleId,savedInputs)
+                else reviewer.review(ownerKey,cycleId,savedInputs)) as? NativeSavedNamedReview.Ready
                 ?:return@withOwnerTransaction deny(NativeCustomSignoffRefusal.COACH_REVIEW_UNRESOLVED)
             if(fresh!=displayed || fresh.priorConsent!=previous.consent)
                 return@withOwnerTransaction deny(NativeCustomSignoffRefusal.STALE_CONSENT)
@@ -357,9 +374,11 @@ class NativeKotlinCustomCycleSignoffFileStore(
             if(source.revision!=fresh.stamp.gymCatalogSourceRevision ||
                 source.athleteId!=owner.athleteId || current(ownerKey)!=owner)
                 return@withOwnerTransaction deny(NativeCustomSignoffRefusal.STALE_SOURCE)
+            val hash=if(tiered)NativeCustomCycleSignoffFingerprint.calculateTieredInitial(
+                fresh.draft,source,savedInputs,checkNotNull(fresh.initialTierReceipt))
+            else NativeCustomCycleSignoffFingerprint.calculateNamed(fresh.draft,source,savedInputs,fresh.receipts)
             val approved=NativeKotlinCustomCycleSignoff(ownerKey,owner.athleteId,cycleId,
-                fresh.draft.revision,source.revision,previous.revision+1,
-                NativeCustomCycleSignoffFingerprint.calculateNamed(fresh.draft,source,savedInputs,fresh.receipts),
+                fresh.draft.revision,source.revision,previous.revision+1,hash,
                 fresh.audit.coachingPolicyRevisions)
             atomicWrite(file,encode(SignoffFileRecord(ownerKey,owner.athleteId,cycleId,
                 approved.recordRevision,approved,savedInputs)))

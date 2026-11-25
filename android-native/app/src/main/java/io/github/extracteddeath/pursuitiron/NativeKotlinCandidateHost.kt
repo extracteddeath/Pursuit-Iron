@@ -905,7 +905,16 @@ internal class NativeKotlinCandidateHost(context:Context) {
     fun reviewTieredCalendar(cycleId:String):NativeCustomNextCycleSlot {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeCustomNextCycleSlot.Rejected("No verified active athlete.")
-        return nextCustomCycleSession.reviewTieredCalendar(owner.ownerKey,cycleId)
+        val saved=customDraftStore.read(owner.ownerKey,cycleId) as? NativeCustomDraftReadResult.Found
+            ?:return NativeCustomNextCycleSlot.Rejected("Current tier references are unavailable.")
+        return if(saved.tieredInitialReceipts.size>1)
+            nextCustomCycleSession.reviewMultiTieredInitial(owner.ownerKey,cycleId)
+        else nextCustomCycleSession.reviewTieredCalendar(owner.ownerKey,cycleId)
+    }
+
+    fun isMultiTieredSupportDay(cycleId:String,week:Int,weekday:Int):Boolean {
+        val owner=localAthlete.signedInIdentity() ?:return false
+        return nextCustomCycleSession.isMultiTieredSupportDay(owner.ownerKey,cycleId,week,weekday)
     }
 
     fun reviewTieredInitialSession(cycleId:String,inputs:CustomCoachAuditInputs):NativeCustomNextCycleSlot {

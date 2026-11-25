@@ -10,6 +10,8 @@ import java.util.Collections
  * set, an issued prescription, or a future program. Coaching is a separate
  * consumer, not another writer of these weights. No readiness, estimated RIR,
  * fatigue or predicted reps participate in these baseline decisions.
+ * Explicit e1RM review uses the same strict all-set increment gate, with
+ * an additional original-goal effort requirement and an informational estimate.
  *
  * The native owner MUST construct both scopes from authenticated history and
  * the approved future day, not from editable screen labels. Warmups, backoffs,
@@ -60,7 +62,9 @@ data class BasicProgressionRequest(
     val verifiedStock: VerifiedLoadStock?,
     val maximumAuthorizedIncrement: BigDecimal,
     /** Approved exact set targets, required for REP_TARGET_PROGRESSION only. */
-    val issuedRepTargets: List<Int>? = null
+    val issuedRepTargets: List<Int>? = null,
+    /** Explicit saved e1RM intent, never an inferred coaching overlay. */
+    val effortAdjustedE1rm:Boolean=false
 )
 
 enum class BasicProgressionRefusal {
@@ -84,6 +88,13 @@ enum class BasicProgressionDecision {
     REP_CEILING_REACHED
 }
 
+/** Review-only capacity estimate; never a measured max or a load grant. */
+data class BasicE1rmEvidence(
+    val estimatedOneRepMax:BigDecimal,
+    val assumedGoalRirSetCount:Int,
+    val everySetMeetsGoal:Boolean
+)
+
 sealed interface BasicProgressionResult {
     data class Refused(val reason: BasicProgressionRefusal): BasicProgressionResult
     data class Candidate(
@@ -103,7 +114,8 @@ sealed interface BasicProgressionResult {
         /** EXACT accepted set-specific numeric facts from the shared future
          * number authority. A hold, refusal, rep-only mode, or atomic
          * rollback must not retain a speculative approval. */
-        val approvedFutureLoadFacts: Map<Int,KotlinFutureLoadFact> = emptyMap()
+        val approvedFutureLoadFacts: Map<Int,KotlinFutureLoadFact> = emptyMap(),
+        val e1rmEvidence:BasicE1rmEvidence?=null
     ): BasicProgressionResult {
         val mayModifyLoggedSets: Boolean get() = false
         val mayModifyIssuedWorkout: Boolean get() = false
@@ -128,6 +140,10 @@ object BasicProgressionPolicyDomain {
             })
             return reject(BasicProgressionRefusal.INVALID_SOURCE_OR_LOAD)
 
+        if(request.effortAdjustedE1rm &&
+            request.strategy!=BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION)
+            return reject(BasicProgressionRefusal.INVALID_SOURCE_OR_LOAD)
+        var e1rmEvidence:BasicE1rmEvidence?=null
         fun candidate(values: List<BigDecimal>, changed: Set<Int>,
             decision: BasicProgressionDecision, workoutId: String? = null,
             repTargets: List<Int>? = null, changedReps: Set<Int> = emptySet(),
@@ -141,7 +157,7 @@ object BasicProgressionPolicyDomain {
                 Collections.unmodifiableSet(changedReps.toSet()),
                 Collections.unmodifiableList(dynamicDecisions.toList()),
                 request.nextScope,
-                Collections.unmodifiableMap(approved.toSortedMap()))
+                Collections.unmodifiableMap(approved.toSortedMap()),e1rmEvidence)
 
         // Basic logging deliberately neither requires a history or a gym
         // inventory, nor invokes progression or adaptive coaching.
@@ -201,6 +217,24 @@ object BasicProgressionPolicyDomain {
         if (uniformStrategy && loads.any { it.compareTo(loads.first()) != 0 })
             return reject(BasicProgressionRefusal.UNSUPPORTED_STRAIGHT_SET_SCHEME)
 
+        if(request.effortAdjustedE1rm) {
+            // This is the current same-prescription web e1RM gate: an
+            // effort-adjusted estimate is informative, not permission to
+            // skip the complete top-range exposure or invent a load.
+            if(facts.any{it.issuedRir !in 0..10})
+                return reject(BasicProgressionRefusal.HISTORY_NOT_COMPARABLE)
+            val effort=facts.map(ProgressionEffortDomain::resolve)
+            val estimates=facts.zip(effort).map{(fact,reserve)->
+                StrengthStandardsMeasurementDomain.effortAdjustedEpley(
+                    checkNotNull(fact.actualLoad),checkNotNull(fact.actualReps),
+                    reserve.rir?:return reject(BasicProgressionRefusal.HISTORY_NOT_COMPARABLE))
+                    ?:return reject(BasicProgressionRefusal.HISTORY_NOT_COMPARABLE)
+            }
+            e1rmEvidence=BasicE1rmEvidence(estimates.maxOrNull()!!,
+                effort.count{it.assumed},facts.zip(effort).all{(fact,reserve)->
+                    checkNotNull(reserve.rir)>=checkNotNull(fact.issuedRir)})
+        }
+
         val assistance = !request.nextScope.basis.higherSettingIncreasesDifficulty
         if (request.strategy != BasicProgressionStrategy.REP_TARGET_PROGRESSION &&
             assistance !=
@@ -246,7 +280,8 @@ object BasicProgressionPolicyDomain {
             return reject(BasicProgressionRefusal.STOCK_NOT_VERIFIED)
 
         val ceilingOrdinals = facts.indices.filter {
-            facts[it].actualReps!! >= request.repBand.maximum
+            facts[it].actualReps!! >= request.repBand.maximum &&
+                e1rmEvidence?.everySetMeetsGoal!=false
         }
         val floorOrdinals = facts.indices.filter {
             facts[it].actualReps!! >= request.repBand.minimum

@@ -58,6 +58,50 @@ class EquipmentLoadDomainTest {
         assertTrue(verified(dumbbells, "35").exact)
     }
 
+    @Test fun kettlebellEachAndLandmineAddedMassNeverBorrowBarbellOrDumbbellConventions() {
+        val bells=VerifiedLoadStock.Totals(LoadUnit.KG,LoadBasis.KETTLEBELL_EACH,
+            listOf(n("8"),n("12"),n("16")))
+        val bell=verified(bells,"12")
+        assertEquals(LoadBasis.KETTLEBELL_EACH,bell.basis)
+        assertTrue(bell.exact)
+        assertEquals(n("8"),bell.nextBelow)
+        assertEquals(n("16"),bell.nextAbove)
+        assertFalse(verified(bells,"24").exact)
+        assertEquals(LoadInspection.Unavailable(LoadUnavailableReason.INVALID_STOCK),
+            EquipmentLoadDomain.inspect(bells.copy(loads=listOf(n("0"),n("8"))),n("8"),LoadUnit.KG))
+        val landmine=VerifiedLoadStock.Totals(LoadUnit.KG,LoadBasis.LANDMINE_ADDED_PLATES,
+            listOf(n("0"),n("2.5"),n("5"),n("10")))
+        val empty=verified(landmine,"0")
+        assertEquals(LoadBasis.LANDMINE_ADDED_PLATES,empty.basis)
+        assertTrue(empty.exact)
+        assertEquals(n("2.5"),empty.nextAbove)
+        assertNull(empty.nextBelow)
+        assertFalse(verified(landmine,"7.5").exact)
+        assertEquals(n("5"),verified(landmine,"7.5").atOrBelow)
+        assertEquals(n("10"),verified(landmine,"7.5").nextAbove)
+        assertEquals(LoadInspection.Unavailable(LoadUnavailableReason.UNIT_MISMATCH),
+            EquipmentLoadDomain.inspect(landmine,n("5"),LoadUnit.LB))
+    }
+
+    @Test fun counterbalancedSmithAndAssistanceUseDistinctPhysicalSettings() {
+        val smith=VerifiedLoadStock.Smith(LoadUnit.KG,n("0"),mapOf(n("2.5") to 1,n("10") to 1))
+        val empty=verified(smith,"0")
+        assertEquals(LoadBasis.SMITH_TOTAL,empty.basis)
+        assertTrue(empty.exact)
+        assertEquals(n("5"),empty.nextAbove)
+        assertTrue(verified(smith,"25").exact)
+        assertFalse(verified(smith,"15").exact)
+        assertEquals(n("5"),verified(smith,"15").atOrBelow)
+        assertEquals(n("20"),verified(smith,"15").nextAbove)
+        val assistance=VerifiedLoadStock.Stack(LoadUnit.KG,LoadBasis.ASSISTANCE_COUNTERWEIGHT,
+            n("0"),n("5"),n("30"))
+        val setting=verified(assistance,"15")
+        assertEquals(n("10"),setting.nextHarder)
+        assertEquals(n("20"),setting.nextEasier)
+        assertNull(verified(assistance,"0").nextHarder)
+        assertNull(verified(assistance,"30").nextEasier)
+    }
+
     @Test fun stackUsesExactDecimalsWithoutPhantomIntermediateWeights() {
         val cable = VerifiedLoadStock.Stack(LoadUnit.KG,LoadBasis.CABLE_STACK,
             minimum=n("2.5"),increment=n("2.5"),maximum=n("40"))

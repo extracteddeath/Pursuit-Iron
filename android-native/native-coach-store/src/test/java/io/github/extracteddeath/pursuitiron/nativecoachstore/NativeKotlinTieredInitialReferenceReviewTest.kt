@@ -432,8 +432,22 @@ class NativeKotlinTieredInitialReferenceReviewTest {
             transitionStore().confirm("owner-1","cycle-1",reviewed,false))
         assertEquals(NativeTieredTransitionConsentResult.CONFIRMATION_REQUIRED,
             transitionStore().confirm("owner-1","cycle-1",recovery,true))
+        fun nextPreflight(w:String="tier-next",week:Int=2,day:Int=0)=
+            preflight.inspectFirstTierTransition("owner-1",w,"cycle-1",week,day,transitionStore())
+        assertTrue(nextPreflight() is NativeFirstTierTransitionPreflight.Rejected)
         assertEquals(NativeTieredTransitionConsentResult.RECORDED,
             transitionStore().confirm("owner-1","cycle-1",reviewed,true))
+        val projected=nextPreflight()
+        assertTrue(projected.toString(),projected is NativeFirstTierTransitionPreflight.Reviewed)
+        val snapshot=(projected as NativeFirstTierTransitionPreflight.Reviewed).session
+        assertEquals(2,snapshot.absoluteWeek)
+        assertEquals(transition.draft.proposal.draft.revision,snapshot.stamp.cycleRevision)
+        assertEquals(transition.draft.proposal.draft.weekOverrides.getValue("base")
+            .single{it.weekInBlock==2}.sets.single(),snapshot.slots.single().sets.single().prescription)
+        assertFalse(projected.mayIssueWorkout)
+        assertTrue(nextPreflight(w="another-id") is NativeFirstTierTransitionPreflight.Rejected)
+        assertTrue(nextPreflight(week=3) is NativeFirstTierTransitionPreflight.Rejected)
+        assertTrue(nextPreflight(day=2) is NativeFirstTierTransitionPreflight.Rejected)
         assertEquals(NativeTieredTransitionConsentResult.VERIFIED,
             transitionStore().verify("owner-1","cycle-1",reviewed))
         val cold=transitionStore().recover("owner-1","cycle-1")
@@ -471,6 +485,7 @@ class NativeKotlinTieredInitialReferenceReviewTest {
             transitionStore().verify("owner-1","cycle-1",reviewed))
         assertEquals(NativeTieredTransitionRecovery.Refused(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED),
             transitionStore().recover("owner-1","cycle-1"))
+        assertTrue(nextPreflight() is NativeFirstTierTransitionPreflight.Rejected)
         assertTrue(reviewer.previewTieredNext("owner-1","cycle-1",inputs(),nextSelection)
             is NativeSavedNamedReview.Rejected)
         assertTrue(issue() is NativeCustomJournalResult.Durable)

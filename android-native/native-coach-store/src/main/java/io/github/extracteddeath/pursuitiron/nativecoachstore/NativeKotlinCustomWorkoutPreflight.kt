@@ -127,7 +127,7 @@ class NativeKotlinCustomWorkoutPreflight(
         return runCatching{fence.withOwnerTransaction(ownerKey){
             val owner=identity.signedInIdentity()?.takeIf{it.ownerKey==ownerKey}
                 ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.NOT_AUTHORIZED)
-            val recovered=transitionConsent.recover(ownerKey,cycleId)
+            val recovered=transitionConsent.recover(ownerKey,cycleId,absoluteWeek)
                 as? NativeTieredTransitionRecovery.Ready
                 ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
             val signed=recovered.review
@@ -135,7 +135,7 @@ class NativeKotlinCustomWorkoutPreflight(
                 ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
             val initial=signed.initialTierEvidence
                 ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
-            val key=initial.key.copy(weekInBlock=initial.key.weekInBlock+1)
+            val key=initial.key.copy(weekInBlock=initial.key.weekInBlock+next.priorTierTransitions.size+1)
             if(next.selection.nextWorkoutId!=workoutId || next.selection.absoluteWeek!=absoluteWeek ||
                 key.weekday!=weekday || signed.consent.cycleId!=cycleId ||
                 signed.consent.ownerKey!=ownerKey || signed.consent.athleteId!=owner.athleteId)
@@ -149,7 +149,7 @@ class NativeKotlinCustomWorkoutPreflight(
             val preview=CustomWorkoutSnapshotDomain.reviewSpecialistForConsent(cycle,
                 source.setup,source.catalog,source.revision,signed.inputs,signed.evidence,
                 listOf(initial),absoluteWeek,weekday,
-                listOf(CustomTieredTransitionWeekEvidence(key,next.request)))
+                next.priorTierTransitions+CustomTieredTransitionWeekEvidence(key,next.request))
                 as? CustomWorkoutSnapshotResult.Preview
                 ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.COACH_AUDIT_FAILED)
             val snapshot=preview.snapshot

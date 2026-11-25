@@ -1,5 +1,7 @@
 package io.github.extracteddeath.pursuitiron.nativecoachstore
 
+import java.io.ByteArrayInputStream
+import java.io.DataInputStream
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 import java.nio.ByteBuffer
@@ -18,6 +20,13 @@ import java.security.MessageDigest
 internal enum class NativeTieredTransitionConsentResult {
     RECORDED, REPLAYED, VERIFIED, MISSING, CONFIRMATION_REQUIRED,
     NOT_AUTHORIZED, STALE_OR_UNVERIFIED, CONFLICT_OR_CORRUPT, STORAGE_UNAVAILABLE
+}
+
+internal sealed interface NativeTieredTransitionRecovery {
+    data class Ready(val review:NativeSavedNamedReview.Signed):NativeTieredTransitionRecovery {
+        val mayIssueWorkout:Boolean get()=false
+    }
+    data class Refused(val reason:NativeTieredTransitionConsentResult):NativeTieredTransitionRecovery
 }
 
 internal class NativeKotlinFirstTierTransitionConsentStore(
@@ -89,6 +98,76 @@ internal class NativeKotlinFirstTierTransitionConsentStore(
     fun verify(ownerKey:String,cycleId:String,displayed:NativeSavedNamedReview.Signed):
         NativeTieredTransitionConsentResult =
         evaluate(ownerKey,cycleId,displayed,false,false,false,false)
+
+    /** Cold discovery needs no previously displayed review or caller-supplied
+     * inputs. Read only bounded metadata, then rebuild all authority from the
+     * current native stores and compare the complete canonical receipt bytes.
+     * Neither a valid checksum nor a decoded draft can grant issuance.
+     */
+    fun recover(ownerKey:String,cycleId:String):NativeTieredTransitionRecovery {
+        fun no(reason:NativeTieredTransitionConsentResult)=NativeTieredTransitionRecovery.Refused(reason)
+        if(!id.matches(ownerKey)||!id.matches(cycleId))
+            return no(NativeTieredTransitionConsentResult.NOT_AUTHORIZED)
+        return runCatching{fence.withOwnerTransaction(ownerKey){
+            val owner=identity.signedInIdentity()?.takeIf{it.ownerKey==ownerKey}
+                ?:return@withOwnerTransaction no(NativeTieredTransitionConsentResult.NOT_AUTHORIZED)
+            if(Files.isSymbolicLink(directory))
+                return@withOwnerTransaction no(NativeTieredTransitionConsentResult.STORAGE_UNAVAILABLE)
+            val file=path(ownerKey,cycleId)
+            if(!Files.exists(file,LinkOption.NOFOLLOW_LINKS))
+                return@withOwnerTransaction no(NativeTieredTransitionConsentResult.MISSING)
+            val stored=try {
+                require(!Files.isSymbolicLink(file) && Files.isRegularFile(file,LinkOption.NOFOLLOW_LINKS))
+                require(Files.size(file) in 40L..maxBytes.toLong())
+                Files.readAllBytes(file).also{require(it.size in 40..maxBytes)}
+            }catch(_:Exception){
+                return@withOwnerTransaction no(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT)
+            }
+            val metadata=try {
+                val payload=stored.copyOfRange(0,stored.size-32)
+                require(MessageDigest.isEqual(digest(payload),stored.copyOfRange(stored.size-32,stored.size)))
+                DataInputStream(ByteArrayInputStream(payload)).use{input->
+                    require(input.readInt()==0x50495443 && input.readInt()==1)
+                    require(input.readUTF()==ownerKey && input.readUTF()==owner.athleteId &&
+                        input.readUTF()==cycleId)
+                    repeat(3){require(input.readLong() in 1..9_007_199_254_740_991L)}
+                    require(sha.matches(input.readUTF()))
+                    require(input.readLong() in 1..9_007_199_254_740_991L)
+                    val workout=input.readUTF();val week=input.readInt()
+                    require(id.matches(workout) && week in 2..104)
+                    val recovery=input.readBoolean()
+                    input.readBoolean() // reset requirement is rederived
+                    require(input.readUTF().length in 1..64)
+                    require(input.readInt() in 0..2)
+                    require(input.readUTF().length in 1..64)
+                    require(input.readInt() in 1..20)
+                    fun segment(max:Int):ByteArray {
+                        val length=input.readInt()
+                        require(length in 1..max && length<=input.available())
+                        return ByteArray(length).also{input.readFully(it)}
+                    }
+                    segment(NativeTieredHistoryPrefixCodec.MAX_BYTES)
+                    segment(NativeCustomCycleDraftCodec.MAX_BYTES)
+                    val inputs=NativeCustomCoachAuditInputsCodec.decode(
+                        segment(NativeCustomCoachAuditInputsCodec.MAX_BYTES))
+                    require(input.available()==0)
+                    NativeTieredNextSelection(workout,week,recovery) to inputs
+                }
+            }catch(_:Exception){
+                return@withOwnerTransaction no(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT)
+            }
+            val reviewer=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
+                signoffs,history,outstanding,machineRosters)
+            val fresh=reviewer.previewTieredNext(ownerKey,cycleId,metadata.second,metadata.first)
+                as? NativeSavedNamedReview.Signed
+                ?:return@withOwnerTransaction no(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED)
+            if(identity.signedInIdentity()!=owner)
+                return@withOwnerTransaction no(NativeTieredTransitionConsentResult.NOT_AUTHORIZED)
+            if(!MessageDigest.isEqual(stored,encode(fresh)))
+                return@withOwnerTransaction no(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED)
+            NativeTieredTransitionRecovery.Ready(fresh)
+        }}.getOrElse{no(NativeTieredTransitionConsentResult.STORAGE_UNAVAILABLE)}
+    }
 
     private fun evaluate(ownerKey:String,cycleId:String,displayed:NativeSavedNamedReview.Signed,
         write:Boolean,confirmed:Boolean,reset:Boolean,recovery:Boolean):NativeTieredTransitionConsentResult {

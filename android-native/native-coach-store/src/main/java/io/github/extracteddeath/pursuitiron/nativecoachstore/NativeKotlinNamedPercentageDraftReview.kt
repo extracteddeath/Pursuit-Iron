@@ -38,6 +38,14 @@ sealed interface NativeTieredInitialReview {
     data class Rejected(val reason:NativeNamedPercentageRefusal):NativeTieredInitialReview
 }
 
+sealed interface NativeTieredInitialAcceptance {
+    data class Saved(val revision:Long,val receipt:NativeTieredInitialDraftReceipt):NativeTieredInitialAcceptance {
+        val mayIssueWorkout:Boolean get()=false
+        val isSignedOff:Boolean get()=false
+    }
+    data class Rejected(val reason:NativeNamedPercentageRefusal):NativeTieredInitialAcceptance
+}
+
 enum class NativeNamedPercentageRefusal {
     INVALID_SELECTION, NOT_AUTHORIZED, CURRENT_CONSENT_REQUIRED,
     SOURCE_OR_STOCK_UNAVAILABLE, HISTORY_UNVERIFIED, PROTECTED_WEEK,
@@ -269,6 +277,37 @@ class NativeKotlinNamedPercentageDraftReview(
                     else NativeTieredInitialReview.Rejected(NativeNamedPercentageRefusal.REVIEW_CHANGED)
             }
         }}.getOrElse{NativeTieredInitialReview.Rejected(NativeNamedPercentageRefusal.STORAGE_UNAVAILABLE)}
+    }
+
+    /** Explicitly accept the EXACT displayed initial reference after a
+     * fresh full source+history review. A single atomic draft transaction
+     * persists the reference alongside its derived prescription, unsigned. */
+    fun acceptTieredInitial(selection:NativeTieredInitialSelection,
+        displayed:NativeTieredInitialReview.Ready,
+        athleteConfirmed:Boolean):NativeTieredInitialAcceptance {
+        fun deny(reason:NativeNamedPercentageRefusal)=NativeTieredInitialAcceptance.Rejected(reason)
+        if(!athleteConfirmed)return deny(NativeNamedPercentageRefusal.CONFIRMATION_REQUIRED)
+        return runCatching{fence.withOwnerTransaction(selection.ownerKey){
+            val fresh=when(val reviewed=evaluateTieredInitial(selection)) {
+                is NativeTieredInitialReview.Rejected -> return@withOwnerTransaction deny(reviewed.reason)
+                is NativeTieredInitialReview.Ready -> reviewed
+            }
+            if(fresh!=displayed)return@withOwnerTransaction deny(NativeNamedPercentageRefusal.REVIEW_CHANGED)
+            val scope=fresh.request.scope
+            if(identity.signedInIdentity()!=NativeKotlinOwnerIdentity(selection.ownerKey,scope.athleteId))
+                return@withOwnerTransaction deny(NativeNamedPercentageRefusal.NOT_AUTHORIZED)
+            val receipt=NativeTieredInitialDraftReceipt(fresh.selection,fresh.source.stamp,
+                fresh.source.blockId,fresh.source.weekInBlock,scope.exerciseId,scope.machineInstanceId,
+                scope.unit,scope.basis,fresh.consentRevision,fresh.historyRevision,fresh.machineRosterRevision)
+            val draft=fresh.proposal.proposal.draft
+            if(!NativeTieredInitialDraftReceiptCodec.valid(receipt,selection.ownerKey,draft))
+                return@withOwnerTransaction deny(NativeNamedPercentageRefusal.DRAFT_SAVE_REJECTED)
+            when(val write=drafts.saveReviewedTieredInitial(selection.ownerKey,selection.cycleId,
+                fresh.source.stamp.cycleRevision,draft,receipt)) {
+                is NativeCustomDraftWriteResult.Committed -> NativeTieredInitialAcceptance.Saved(write.revision,receipt)
+                is NativeCustomDraftWriteResult.Rejected -> deny(NativeNamedPercentageRefusal.DRAFT_SAVE_REJECTED)
+            }
+        }}.getOrElse{deny(NativeNamedPercentageRefusal.STORAGE_UNAVAILABLE)}
     }
 
     fun preview(selection:NativeNamedPercentageSelection):NativeNamedPercentageReview =

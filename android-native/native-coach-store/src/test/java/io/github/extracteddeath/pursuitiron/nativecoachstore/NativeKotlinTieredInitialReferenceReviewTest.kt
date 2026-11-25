@@ -171,6 +171,49 @@ class NativeKotlinTieredInitialReferenceReviewTest {
             review().previewTieredInitial(s))
     }
 
+    @Test fun initialTierAcceptanceIsAtomicColdReadableAndNotWorkoutConsent() {
+        initialize()
+        val prior=approved()
+        enroll()
+        val s=selection()
+        val displayed=review().previewTieredInitial(s) as NativeTieredInitialReview.Ready
+        assertEquals(NativeTieredInitialAcceptance.Rejected(NativeNamedPercentageRefusal.CONFIRMATION_REQUIRED),
+            review().acceptTieredInitial(s,displayed,false))
+        assertEquals(NativeTieredInitialAcceptance.Rejected(NativeNamedPercentageRefusal.REVIEW_CHANGED),
+            review().acceptTieredInitial(s.copy(maximumAuthorizedIncrease=n("10")),displayed,true))
+        val forged=displayed.copy(historyRevision=displayed.historyRevision+1)
+        assertEquals(NativeTieredInitialAcceptance.Rejected(NativeNamedPercentageRefusal.REVIEW_CHANGED),
+            review().acceptTieredInitial(s,forged,true))
+        assertEquals(NativeCustomDraftReadResult.Found(cycle()),drafts.read("owner-1","cycle-1"))
+        val result=review().acceptTieredInitial(s,displayed,true)
+        assertTrue(result.toString(),result is NativeTieredInitialAcceptance.Saved)
+        val saved=result as NativeTieredInitialAcceptance.Saved
+        assertEquals(2L,saved.revision)
+        assertEquals(s,saved.receipt.selection)
+        assertEquals(prior.recordRevision,saved.receipt.consentRevision)
+        assertFalse(saved.receipt.mayIssueWorkout)
+        assertFalse(saved.receipt.maySignoff)
+        assertFalse(saved.isSignedOff)
+        val cold=NativeCustomCycleDraftFileStore(root,NativeKotlinApprovalRevisionFence(root),identity)
+        val exact=displayed.proposal.proposal.draft
+        assertEquals(NativeCustomDraftReadResult.Found(exact,tieredInitialReceipt=saved.receipt),
+            cold.read("owner-1","cycle-1"))
+        assertFalse((store().read("owner-1","cycle-1",inputs()) as NativeCustomSignoffRead.Found).isCurrent)
+        assertTrue(prepared.prepare("owner-1","tier-first","cycle-1",1,0,inputs())
+            is NativeCustomPrepareResult.Rejected)
+        assertTrue(review().acceptTieredInitial(s,displayed,true) is NativeTieredInitialAcceptance.Rejected)
+        active=NativeKotlinOwnerIdentity("other-owner","other-athlete")
+        assertEquals(NativeCustomDraftReadResult.Rejected(NativeCustomDraftRefusal.NOT_AUTHORIZED),
+            cold.read("owner-1","cycle-1"))
+        active=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        assertEquals(NativeCustomDraftWriteResult.Committed(3),
+            cold.save("owner-1","cycle-1",2,exact.copy(revision=3,title="Edited")))
+        val changed=cold.read("owner-1","cycle-1") as NativeCustomDraftReadResult.Found
+        assertNull(changed.tieredInitialReceipt)
+        assertTrue(changed.namedReceipts.isEmpty())
+        assertTrue(review().acceptTieredInitial(s,displayed,true) is NativeTieredInitialAcceptance.Rejected)
+    }
+
     @Test fun initialTierCannotBorrowOlderOrdinarySameDayReceiptsOrRestartAUsedSlot() {
         initialize()
         approved()

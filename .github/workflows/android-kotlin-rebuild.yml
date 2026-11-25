@@ -203,6 +203,19 @@ jobs:
             android-native/kotlin-engine/build/reports/stage2-current-tiered.json
             android-native/kotlin-engine/build/reports/stage2-current-tiered-native.txt
           if-no-files-found: warn
+      - name: Compare ordinary same-prescription progression with pinned web source
+        run: >-
+          node android-native/kotlin-engine/verification/run-stage2-basic-comparison.mjs
+          --web-root comparison-current-web
+      - name: Retain ordinary progression comparison evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage2-current-basic-comparison
+          path: |
+            android-native/kotlin-engine/build/reports/stage2-current-basic.json
+            android-native/kotlin-engine/build/reports/stage2-current-basic-native.txt
+          if-no-files-found: warn
       - name: Test isolated native journal persistence and offline crash recovery
         working-directory: android-native
         run: gradle :native-coach-store:testDebugUnitTest --no-daemon --stacktrace

@@ -2,7 +2,15 @@
 
 Integrated base 9929a965f2d051215699462893f931d6fefc5efc (#1105). Both exact-head #1105 workflows passed: engine 45636975038 and Compose 45636974888. Candidate #1106 head 6470db106eb737459390bfa18ed6f4faa6efccc8 passed engine 45647012318 and Compose 45647012003; merge not confirmed. These are scoped test and source observations, not whole-row certification or device acceptance. Frozen v2 scope is 36 primary IDs and 13 required checks.
 
-## Outstanding work by acceptance IDs
+## Updated verification checkpoint
+
+Verified merged rebuild base 1f599ec4eec07ce0d05a3e9862f34bee87170a20 includes #1129 (engine 45714912539, Compose 45714912544) and #1130 (engine 45715288236, Compose 45715288383). Multi-root tiered calendar, interleaved supporting days, corrected approval replacement and recovery inventory are implemented and source-tested. Do not treat remaining rows as requiring a fresh parallel tier engine.
+
+Independent #1131 strict double correction (engine 45715601340, Compose 45715601190) and #1132 station correction (engine 45715889541, Compose 45715889483) both passed; their changes are included in combined candidate #1133, not yet certified at the time of this checkpoint. An ordinary progression comparison runs real Kotlin and pinned web source on identical same-prescription, exact stock fixtures. Web modules performance.js, loading.js, history.js, history-contract.js and exercise-db.js are byte-identical between Stage 1 pin 29faa204212a4d54088b4870341350e605939185 and current main 32e3f2bd7cb12107814123d677d5d43d70df97f4 as checked on 2026-11-25. Basic no-coach effort behavior and linear floor-vs-ceiling thresholds are deliberate method distinctions, not evidence of superiority. Missing actual RIR is assumed from issued goal for explicit native e1RM review, unlike the web display estimate. Retain independent expected values and observed outputs; do not score these differences as improved science.
+
+Remaining: final combined evidence and outstanding typed/Leveling/rep-target paths, e1RM changed-phase calibration, full protocol/generation recommendations and final numerical exit certification. S9 device acceptance remains separate.
+
+## Outstanding work by acceptance IDs (historical checkpoint; updated by the notes above)
 | IDs | Existing evidence | Required exit |
 |---|---|---|
 | GYM-ROSTER, GYM-UNITS, GYM-IMPLEMENT, GYM-MACHINE, GYM-PLATES, SET-AUTHORITY; CHECK-NUM-LOAD, CHECK-WORK-PLATES, CHECK-GYM-EDIT, CHECK-GYM-MACHINE, CHECK-GYM-UNIT | S2A_PHYSICAL_LOAD_EVIDENCE.md; #1101 verified physical boundary tests; NativeKotlinGlobalHistoryReadCoordinatorTest.savedMachineSwitchCannotReuseAnotherStationsCompletedCapacity proves correction fences A from B. | Full typed source routes and independent station PR/earned-load proof. Correct evidence provenance: #1067 merged b7cf01a860a5d47700af4119d636e5cc2c8a3810 (not the mistyped SHA in the earlier S2A ledger), head 04f37638f59dd24fe4e5f0b4bf0b6f17e6df1d1c, engine 45514810242 and Compose 45514810241. |

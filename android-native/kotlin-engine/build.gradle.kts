@@ -22,6 +22,15 @@ tasks.register<JavaExec>("runPairedProgressionProbe") {
         providers.gradleProperty("comparisonOutput").get())
 }
 
+tasks.register<JavaExec>("runStage2BasicProbe") {
+    val tests = tasks.named<Test>("testDebugUnitTest")
+    dependsOn("compileDebugUnitTestKotlin", "processDebugUnitTestJavaRes")
+    classpath = files(tests.map { it.classpath })
+    mainClass.set("io.github.extracteddeath.pursuitiron.rebuild.Stage2BasicProbe")
+    args(providers.gradleProperty("comparisonInput").get(),
+        providers.gradleProperty("comparisonOutput").get())
+}
+
 tasks.register<JavaExec>("runStage2TieredProbe") {
     val tests = tasks.named<Test>("testDebugUnitTest")
     dependsOn("compileDebugUnitTestKotlin", "processDebugUnitTestJavaRes")

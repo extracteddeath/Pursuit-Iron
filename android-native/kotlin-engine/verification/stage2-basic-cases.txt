@@ -1,0 +1,14 @@
+# Shared machine-stack stock and 5–8 rep / 2 RIR prescription. All rows are complete.
+# id|style|loads|reps|actualRir|availableLoads|expectedWebLoads|expectedKotlinLoads|webEstimate,kotlinEstimate (e1rm only)|classification
+double-all-ceiling|double|100,100,100|8,8,8|2,2,2|95,100,105,110|105,105,105|105,105,105|-|matched
+double-one-miss|double|100,100,100|8,7,8|2,2,2|95,100,105,110|100,100,100|100,100,100|-|matched
+double-low-effort-basic|double|100,100,100|8,8,8|0,2,2|95,100,105,110|100,100,100|105,105,105|-|basic-effort-policy
+dynamic-per-ordinal|dynamic|100,105,100|8,6,8|2,2,2|95,100,105,110|105,105,105|105,105,105|-|matched
+dynamic-no-step|dynamic|110,105,110|8,6,8|2,2,2|95,100,105,110|110,105,110|110,105,110|-|matched
+linear-floor|linear|100,100,100|5,5,5|2,2,2|95,100,105,110|100,100,100|105,105,105|-|basic-linear-floor
+linear-ceiling|linear|100,100,100|8,8,8|2,2,2|95,100,105,110|105,105,105|105,105,105|-|matched
+e1rm-earned|e1rm|100,100,100|8,8,8|2,2,2|95,100,105,110|105,105,105|105,105,105|133.3,133.3|matched
+e1rm-effort-hold|e1rm|100,100,100|8,8,8|0,2,2|95,100,105,110|100,100,100|100,100,100|133.3,133.3|matched
+e1rm-rep-hold|e1rm|100,100,100|8,7,8|2,2,2|95,100,105,110|100,100,100|100,100,100|133.3,133.3|matched
+e1rm-unreported-effort|e1rm|100,100,100|8,8,8|null,null,null|95,100,105,110|105,105,105|105,105,105|126.7,133.3|original-goal-assumption
+e1rm-stock-ceiling|e1rm|110,110,110|8,8,8|2,2,2|95,100,105,110|110,110,110|110,110,110|146.7,146.7|matched

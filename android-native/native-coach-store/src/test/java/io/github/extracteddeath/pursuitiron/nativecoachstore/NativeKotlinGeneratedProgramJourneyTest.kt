@@ -981,6 +981,117 @@ class NativeKotlinGeneratedProgramJourneyTest {
             .slots.map { it.exerciseId }, nextWeek.slots.map { it.exerciseId })
     }
 
+    @Test fun levelingUsesActualPyramidAndNeverRewritesSignedProgramOrOtherCompletedSets() {
+        val (cycle,inputs)=saveGenerated()
+        val days=cycle.blocks.single().days.sortedBy{it.weekday}
+        val first=days.first()
+        val selected=first.slots.first{slot->
+            val working=slot.sets.filter{it.type==DraftSetType.WORKING}
+            working.size in 2..12 && working.all{
+                val load=it.load as? DraftSetLoad.Verified
+                load?.basis==LoadBasis.DUMBBELL_PER_HAND && it.amplifier==null &&
+                    it.targetRir!=null && it.reps==working.first().reps &&
+                    it.targetRir==working.first().targetRir}}
+        val stock=VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
+            (5..50 step 5).map{BigDecimal(it)})
+        val originals=linkedMapOf<String,CustomWorkoutDaySnapshot>()
+        val pyramidId="leveling-w1-0"
+        for((dayIndex,day) in days.withIndex()){
+            val id="leveling-w1-$dayIndex"
+            assertTrue(Disk().prepared.prepare(owner,id,cycleId,1,day.weekday,inputs)
+                is NativeCustomPrepareResult.Prepared)
+            var journal=(Disk().journals.issue(owner,id,cycleId,1,day.weekday,inputs)
+                as NativeCustomJournalResult.Durable).issued.journal
+            val original=journal.originalSnapshot
+            val pyramid=original.slots.singleOrNull{it.slotId==selected.slotId}
+                ?.sets?.filter{it.prescription.type==DraftSetType.WORKING}.orEmpty()
+            for((i,set) in original.slots.flatMap{it.sets}.withIndex()){
+                val p=set.prescription
+                val ordinal=if(dayIndex==0)pyramid.indexOf(set) else -1
+                val actual=when(val load=p.load){
+                    is DraftSetLoad.Verified -> KotlinPerformedSet(
+                        if(ordinal<0)load.value else n(if(ordinal==0)"20" else "25"),
+                        load.unit,p.reps.minimum,if(ordinal<0)null else p.targetRir)
+                    DraftSetLoad.ExplicitBodyweight -> KotlinPerformedSet(null,null,p.reps.minimum,null)
+                }
+                journal=(Disk().journals.record(owner,id,
+                    CustomWorkoutJournalOperation.Record("leveling-log-$i",journal.revision,
+                        CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN),
+                        KotlinJournalSetOutcome.COMPLETED,actual)
+                    ) as NativeCustomJournalResult.Durable).issued.journal
+            }
+            assertEquals(0,journal.unresolvedVisitCount)
+            val finish=Disk()
+            assertTrue(NativeKotlinCustomHistoryTransaction(finish.history,finish.journals,
+                finish.fence,identity).complete(owner,athlete,id,
+                CustomWorkoutJournalOperation.Finish("leveling-finish",journal.revision))
+                is NativeCustomFinishResult.Committed)
+            originals[id]=original
+        }
+        assertEquals(NativeCustomNextCycleSlot.Next(2,first.weekday,first.label),Disk().next(inputs))
+        val id="leveling-w2"
+        assertTrue(Disk().prepared.prepare(owner,id,cycleId,2,first.weekday,inputs)
+            is NativeCustomPrepareResult.Prepared)
+        val issued=(Disk().journals.issue(owner,id,cycleId,2,first.weekday,inputs)
+            as NativeCustomJournalResult.Durable).issued.journal
+        val next=issued.originalSnapshot
+        val sets=next.slots.single{it.slotId==selected.slotId}.sets
+            .filter{it.prescription.type==DraftSetType.WORKING}
+        val keys=sets.map{WorkoutReferenceKey(it.setKey) to it.prescription.load}
+        fun history():List<CustomCoachingHistoricalSession> {
+            val cold=Disk()
+            val timeline=(cold.timeline.read(owner,athlete) as NativeKotlinMixedHistoryReadResult.Review).timeline
+            return timeline.completions.filterIsInstance<NativeKotlinMixedHistoryCompletion.Custom>().map{
+                CustomCoachingHistoricalSession(it.manifest.completionOrder,
+                    (cold.journals.open(owner,it.manifest.workoutId) as NativeCustomJournalResult.Durable)
+                        .issued.journal.originalSnapshot,it.evidence)}
+        }
+        val completed=history()
+        val references=WorkoutLastReferenceDomain.custom(id,next,completed)
+        val prior=DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout(keys,references,null,
+            sets.first().prescription.reps,checkNotNull(sets.first().prescription.targetRir),stock)
+            as LevelingReviewResult.Candidate
+        assertEquals(n("25"),prior.proposedStraightSetLoad)
+        assertEquals(sets.first().prescription.reps.minimum,prior.repsPerSet)
+        assertFalse(prior.mayModifyIssuedWorkout)
+        // TODAY editor review includes a completed first row but cannot edit it.
+        val rows=sets.mapIndexed{i,set->CurrentWorkoutLevelingRow(set.setKey,
+            n(if(i==0)"20" else "25"),set.prescription.reps.minimum,i==0,
+            LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,null)}
+        val today=DoubleProgressionLevelingDomain.reviewCurrentWorkout(rows,stock)
+            as CurrentWorkoutLevelingReview.Ready
+        assertEquals(n("25"),today.roundedLoad)
+        assertEquals(prior.averageObservedLoad,today.rawMean)
+        assertEquals(sets.drop(1).map{it.setKey},today.eligibleSetKeys)
+        // Reviews are not journal operations. No pending row or completed
+        // historical receipt has changed before normal explicit logging.
+        assertEquals(issued,(Disk().journals.open(owner,id) as NativeCustomJournalResult.Durable).issued.journal)
+        assertEquals(completed,history())
+        val old=originals.getValue(pyramidId).slots.single{it.slotId==selected.slotId}
+            .sets.first{it.prescription.type==DraftSetType.WORKING}
+        val oldJournal=(Disk().journals.open(owner,pyramidId) as NativeCustomJournalResult.Durable).issued.journal
+        val visit=CustomWorkoutVisitKey(old.setKey,CustomWorkoutVisitPart.MAIN)
+        val record=oldJournal.effectiveVisits.getValue(visit).operation as CustomWorkoutJournalOperation.Record
+        val correction=CustomSavedVisitCorrection("leveling-correction",0,visit,record.eventId,
+            KotlinJournalSetOutcome.COMPLETED,checkNotNull(record.performed).copy(load=n("25")))
+        val d=Disk()
+        assertTrue(NativeKotlinCustomHistoryCorrectionTransaction(d.history,d.journals,d.corrections,
+            d.fence,identity).correct(owner,athlete,pyramidId,correction)
+            is NativeCustomCorrectionTransactionResult.Committed)
+        val revised=WorkoutLastReferenceDomain.custom(id,next,history())
+        assertEquals(LevelingReviewResult.Rejected(LevelingRefusal.ALREADY_LEVEL),
+            DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout(keys,revised,null,
+                sets.first().prescription.reps,checkNotNull(sets.first().prescription.targetRir),stock))
+        assertEquals(issued,(Disk().journals.open(owner,id) as NativeCustomJournalResult.Durable).issued.journal)
+        assertEquals(cycle,(Disk().drafts.read(owner,cycleId) as NativeCustomDraftReadResult.Found).draft)
+        for((oldId,snapshot) in originals)
+            assertEquals(snapshot,(Disk().journals.open(owner,oldId) as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
+        val later=(Disk().preflight.inspect(owner,cycleId,3,first.weekday,inputs)
+            as NativeCustomPreflightResult.ReviewedPreview).session
+        assertEquals(sets.map{it.prescription},later.slots.single{it.slotId==selected.slotId}
+            .sets.filter{it.prescription.type==DraftSetType.WORKING}.map{it.prescription})
+    }
+
     @Test fun completedBasicProgramEarnsReviewedWeekTwoLoadsOnlyAfterExplicitConsent() =
         completeBasicOrManualWeek(false)
 

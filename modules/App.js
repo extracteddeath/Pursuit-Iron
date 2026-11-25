@@ -92,7 +92,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='1053';
+const __APP_VERSION__='4.0.0'; const __BUILD__='1054';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -1139,7 +1139,7 @@ function StyleTag({ theme } = {}) {
       }
       .wpb-workout-header{padding-left:12px!important;padding-right:12px!important;padding-top:10px!important;}
       .wpb-workout .wpb-workout-scroll{padding-left:14px!important;padding-right:14px!important;}
-      .wpb-workout-card,.wpb-coach-card{border:1px solid ${C.borderSoft}!important;border-radius:12px!important;background:${C.card}!important;box-shadow:none!important;}
+      .wpb-workout-card{border:1px solid ${C.borderSoft}!important;border-radius:12px!important;background:${C.card}!important;box-shadow:none!important;}
       .wpb-exercise-heading{padding:2px 2px 0;}
       /* M92: pre-redesign set inputs restored; no app-wide workout numeric override. */
       /* M92: focused set inputs use their original inline sizing. */
@@ -1348,10 +1348,6 @@ function StyleTag({ theme } = {}) {
       }
       .wpb-workout .wpb-workout-scroll{
         padding-top:10px!important;
-      }
-      .wpb-coach-card{
-        margin-bottom:10px!important;padding:10px 12px!important;border-radius:10px!important;
-        border-color:color-mix(in srgb,${C.accent} 20%,${C.borderSoft})!important;
       }
       .wpb-exercise-heading{padding-top:1px!important;}
       .wpb-workout-tools{
@@ -1575,8 +1571,7 @@ function StyleTag({ theme } = {}) {
 .wpb-day-card,
 .wpb-carousel-card,
 .wpb-action-tile,
-.wpb-workout-card,
-.wpb-coach-card{
+.wpb-workout-card{
         border-color:var(--hairline)!important;
         box-shadow:none!important;
       }
@@ -11644,13 +11639,38 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
     const totalSets = data.reduce((s, e) => s + workOnly(e).length, 0);
     const doneSets = data.reduce((s, e) => s + workOnly(e).filter(x => x.done).length, 0);
     const volume = data.reduce((sum, e) => sum + e.sets.reduce((s, x) => s + (x.done && !x.warm ? (parseFloat(x.weight) || 0) * (parseInt(x.reps) || 0) : 0), 0), 0);
+    // Best estimated 1RM per lift, from the same records as Progress, so the Coach can call a PR in reach.
+    const coachBests = useMemo(() => liftBests(history, unit), [history, unit]);
+    const coachDeload = !!(program?.config?.deload && weekIndex > weeksOf(program));
     const coach = useMemo(() => {
         const row = data[exIdx];
-        return liveCoachForContext(coachSource, row, EX_BY_ID[row?.id], doneSets);
-    }, [coachSource, data, exIdx, doneSets]);
+        return liveCoachForContext(coachSource, row, EX_BY_ID[row?.id], doneSets,
+            { best: coachBests[row?.id]?.e1rm, unit, deload: coachDeload });
+    }, [coachSource, data, exIdx, doneSets, coachBests, unit, coachDeload]);
     const coachContextKey = coach[0]?.key || "";
-    const coachContextLabel = coach[0]?.context === "next-set" ? "For your next set" : "Before this lift";
-    const coachContextCompact = coach[0]?.context === "next-set" ? "Next set" : "Before lift";
+    const coachContextCompact = coach[0]?.context === "next-set" ? "Next set" : coach[0]?.context === "pr" ? "PR in reach" : "Before this lift";
+    // B1056: Coach sits directly above the set list it advises: one tonal row (icon, "Coach · context"
+    // overline, the action), expanding in place to the why and the evidence.
+    const renderCoach = () => {
+        const f = coach[0];
+        if (!f) return null;
+        const Icon = f.context === "pr" ? Trophy : Brain;
+        const head = (title, open) => [
+            _jsx(Icon, { size: 18, "aria-hidden": true, className: "wpb-b973-coach-icon" }),
+            _jsxs("span", { className: "wpb-b973-coach-copy", children: [
+                _jsxs("span", { className: "wpb-b973-coach-overline", children: [_jsx("span", { className: "wpb-b973-coach-label", children: "Coach" }), _jsx("span", { className: "wpb-b973-coach-context", children: coachContextCompact })] }),
+                _jsx("span", { className: "wpb-b973-coach-summary", children: title })] }),
+            _jsx(ChevronDown, { size: 18, "aria-hidden": true, className: open ? "wpb-b973-coach-chevron wpb-b976-coach-chevron" : "wpb-b973-coach-chevron" })];
+        if (!coachExpand)
+            return _jsx("button", { type: "button", "data-noswipe": true, onClick: () => setCoachExpand(true), className: "pressable wpb-b973-coach-collapsed", "data-coach-context": f.context,
+                "aria-expanded": "false", "aria-label": "Expand Coach guidance", children: head(f.short || f.title || f.text, false) });
+        return _jsxs("div", { "data-noswipe": true, className: "wpb-b973-coach-open", "data-coach-context": f.context, children: [
+            _jsx("button", { type: "button", onClick: () => setCoachExpand(false), className: "pressable wpb-b973-coach-toggle", "aria-expanded": "true", "aria-label": "Collapse Coach guidance",
+                children: head(f.title || f.short, true) }),
+            _jsxs("div", { className: "wpb-b973-coach-body", children: [
+                _jsx("p", { className: "wpb-b973-coach-item-copy", children: f.text }),
+                f.evidence && _jsxs("p", { className: "wpb-b973-coach-item-evidence", children: ["Based on ", f.evidence] })] })] });
+    };
     useEffect(() => { setCoachExpand(false); }, [exIdx, coachContextKey]);
     // sanitize numeric entry: keep digits (+ one decimal for weight), strip pasted junk, clamp absurd values
     const cleanWeight = sanitizeWeightInput;
@@ -12622,7 +12642,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                             const col = sug.dir === "up" ? C.accent : sug.dir === "down" ? C.warn : C.muted;
                             const Arrow = sug.dir === "up" ? TrendingUp : sug.dir === "down" ? TrendingDown : Minus;
                             return (_jsxs("div", { className: "wpb-load-reference", children: [_jsx(Arrow, { size: 15, color: col, className: "wpb-icon-no-shrink" }), _jsxs("details", { key: `${ei}:${e.id}`, className: "wpb-load-explanation wpb-s956-minwidth-0 wpb-layout-flex-one", children: [_jsxs("summary", { className: "wpb-layout-support-600", children: [_jsx("span", { className: "wpb-load-caption", children: "Target · " }), _jsxs("span", { className: "mono", style: { color: col }, children: [suggestionLoadLabel(sug), " ", unit] }), Array.isArray(sug.last?.sets) && _jsxs("span", { style: { color: C.faint, fontWeight: 400 }, children: [" · ", sug.last.sets.filter(x => x && !x.warm && !x.sub && x.done !== false).length, " prior sets"] })] }), _jsxs("div", { style: { fontSize: 11, color: C.muted, marginTop: 1 }, children: [sug.autoNote ? _jsxs("span", { style: { color: C.accentInk }, children: [sug.autoNote, " \u00B7 "] }) : null, sug.reason] })] }), program?.engineSource === "pursuit-next" && (_jsxs("button", { type: "button", onClick: () => setWhy({ ex, slot: e.slot }), "aria-label": `Why ${ex.name} has today's target`, "data-why-target": true, className: "pressable hit", style: { flexShrink: 0, minHeight: 36, display: "flex", alignItems: "center", gap: 2, padding: "6px 4px 6px 8px", borderRadius: 8, border: "none", background: "none", color: C.accentInk, fontSize: 12, fontWeight: 700, cursor: "pointer" }, children: ["Why", _jsx(ChevronRight, { size: 14 })] })), sug.swapTo && EX_BY_ID[sug.swapTo] && (_jsxs("button", { onClick: () => doSwap(sug.swapTo, "session"), className: "pressable", title: `Switch to ${EX_BY_ID[sug.swapTo].name}`, style: { flexShrink: 0, display: "flex", alignItems: "center", gap: 4, padding: "6px 9px", borderRadius: 8, border: `1px solid ${C.accent}`, background: C.accentDim, color: C.accentInk, fontSize: 11, fontWeight: 700, cursor: "pointer" }, children: [_jsx(ArrowUpRight, { size: 13 }), " Level up"] }))] }));
-                        })(), !focus && (_jsxs("div", { className: "wpb-set-head", children: [_jsx("span", { className: "wpb-s956-width-30 wpb-s956-flex-0-0-30px", children: "SET" }), _jsxs("button", { onClick: () => setTargetMode(m => m === "target" ? "last" : "target"), className: "pressable wpb-target-toggle", "aria-label": targetMode === "target" ? "Show previous workout values" : "Show prescribed targets", style: { width: narrowSet ? 60 : 80, flex: narrowSet ? "0 0 60px" : "0 0 80px", textAlign: "left", background: "none", border: "none", padding: 0, margin: 0, cursor: "pointer", color: C.accentInk, fontSize: 11, fontWeight: 700, letterSpacing: .4, display: "flex", alignItems: "center", gap: 2, whiteSpace: "nowrap", overflow: "hidden" }, children: [targetMode === "target" ? "TARGET" : "LAST", _jsx(RefreshCw, { size: 9, strokeWidth: 3 })] }), _jsx("span", { className: "wpb-s956-flex-1 wpb-s956-textalign-center", children: unit.toUpperCase() }), _jsx("span", { className: "wpb-s956-flex-1 wpb-s956-textalign-center", children: "REPS" }), _jsx("span", { className: "wpb-s956-width-30 wpb-s956-flex-0-0-30px" })] })), (() => {
+                        })(), !focus && renderCoach(), !focus && (_jsxs("div", { className: "wpb-set-head", children: [_jsx("span", { className: "wpb-s956-width-30 wpb-s956-flex-0-0-30px", children: "SET" }), _jsxs("button", { onClick: () => setTargetMode(m => m === "target" ? "last" : "target"), className: "pressable wpb-target-toggle", "aria-label": targetMode === "target" ? "Show previous workout values" : "Show prescribed targets", style: { width: narrowSet ? 60 : 80, flex: narrowSet ? "0 0 60px" : "0 0 80px", textAlign: "left", background: "none", border: "none", padding: 0, margin: 0, cursor: "pointer", color: C.accentInk, fontSize: 11, fontWeight: 700, letterSpacing: .4, display: "flex", alignItems: "center", gap: 2, whiteSpace: "nowrap", overflow: "hidden" }, children: [targetMode === "target" ? "TARGET" : "LAST", _jsx(RefreshCw, { size: 9, strokeWidth: 3 })] }), _jsx("span", { className: "wpb-s956-flex-1 wpb-s956-textalign-center", children: unit.toUpperCase() }), _jsx("span", { className: "wpb-s956-flex-1 wpb-s956-textalign-center", children: "REPS" }), _jsx("span", { className: "wpb-s956-width-30 wpb-s956-flex-0-0-30px" })] })), (() => {
                             const warms = e.sets.filter(x => x.warm);
                             if (!warms.length || !warms.every(x => x.done))
                                 return null;
@@ -13068,7 +13088,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                             const avgW = roundTo(ws.reduce((a, b) => a + b, 0) / ws.length, stepW);
                             const avgR = Math.round(work.reduce((a, s) => a + (parseInt(s.reps) || 0), 0) / work.length) || null;
                             return (_jsxs("button", { type: "button", onClick: () => levelSetsToAvg(ei), className: "pressable wpb-workout-average-action", children: [_jsx(Layers, { size: 13 }), " Use average load · ", avgW, " ", unit, avgR != null ? ` × ${avgR}` : ""] }));
-                        })(), !focus && coach.length > 0 && !coachExpand && (_jsxs("button", { "data-noswipe": true, onClick: () => setCoachExpand(true), className: "pressable wpb-b973-coach-collapsed", "aria-expanded": "false", "aria-label": "Expand Coach guidance", children: [_jsx(Brain, { size: 13, color: C.accentInk, className: "wpb-icon-no-shrink" }), _jsx("span", { className: "wpb-b973-coach-label", children: "Coach" }), _jsx("span", { className: "wpb-b973-coach-summary", children: coach[0].short || coach[0].title || coach[0].text }), _jsx("span", { className: "wpb-b973-coach-context", children: coachContextCompact }), _jsx(ChevronDown, { size: 12, color: C.faint, className: "wpb-icon-no-shrink" })] })), !focus && coach.length > 0 && coachExpand && (_jsxs("div", { "data-noswipe": true, className: "wpb-coach-card wpb-b973-coach-open", children: [_jsxs("button", { type: "button", onClick: () => setCoachExpand(false), className: "pressable wpb-b973-coach-toggle", "aria-expanded": "true", "aria-label": "Collapse Coach guidance", children: [_jsx(Brain, { size: 14, color: C.accentInk, className: "wpb-icon-no-shrink" }), _jsx("span", { className: "wpb-b973-coach-label", children: "Coach" }), _jsx("span", { className: "wpb-b973-coach-open-context", children: coachContextLabel }), _jsx("span", { className: "wpb-b973-coach-hide", children: "Hide" }), _jsx(ChevronDown, { size: 13, color: C.faint, className: "wpb-b976-coach-chevron" })] }), _jsx("div", { className: "wpb-s956-margintop-8 wpb-s956-display-grid wpb-s956-gap-8", children: coach.map((f, i) => (_jsxs("div", { className: "wpb-b973-coach-item", "data-lead": i === 0 ? "true" : undefined, children: [_jsx("div", { className: "wpb-b973-coach-item-title", children: f.title || f.short || "Coach note" }), _jsx("div", { className: "wpb-b973-coach-item-copy", children: f.text }), f.evidence && _jsxs("div", { className: "wpb-b973-coach-item-evidence", children: ["Based on ", f.evidence] })] }, i))) })] })), (() => {
+                        })(), (() => {
                             const allDone = workOnly(e).length > 0 && workOnly(e).every(s => s.done);
                             if (!allDone)
                                 return null;

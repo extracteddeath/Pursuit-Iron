@@ -817,7 +817,8 @@ const b956Program=app.split("function ProgramView(")[1].split(String.fromCharCod
 const b956Workout=app.split("function WorkoutSession(")[1].split(String.fromCharCode(10)+"function ")[0];
 // B1037: Day focus moved from a utility-styled row to the shared UiSegmented.
 assert.equal((b956Program.match(/className: "wpb-s956-/g)||[]).length,40,"Program CSS ownership regression");
-assert.equal((b956Workout.match(/className: "wpb-s956-/g)||[]).length,57,"Workout CSS ownership regression");
+// B1056: the Coach body owns its own grid instead of three utility classes.
+assert.equal((b956Workout.match(/className: "wpb-s956-/g)||[]).length,56,"Workout CSS ownership regression");
 // B957/B960: keep these shared classes and all migrated destinations; B960 adds reuse without removing B957 ownership.
 const b957NewOwners=["wpb-s957-letterspacing-0-3","wpb-s957-padding-0-2px","wpb-s957-gap-2","wpb-s957-gap-16","wpb-s957-padding-3-5px-0","wpb-s957-height-100","wpb-s957-padding-14px-16px-6px","wpb-s957-margintop-4","wpb-s957-lineheight-1-5","wpb-s957-texttransform-capitalize"];
 assert.equal(b957NewOwners.length,10);

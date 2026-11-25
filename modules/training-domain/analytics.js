@@ -3019,7 +3019,7 @@ function coachFacts(lm, day, history) {
                 key: `plateau-fatigue:${ex.id}`,
                 exId: ex.id,
                 priority: 100,
-                short: `${ex.name}: back off today`,
+                short: "Fatigue is building: ease off if warm-ups feel heavy",
                 title: `Back off on ${ex.name} today`,
                 text: "Recent sessions suggest fatigue is building. Keep the reps clean and take a small load reduction if the warm-up feels unusually heavy.",
                 evidence: "Recent performance trend"
@@ -3031,7 +3031,7 @@ function coachFacts(lm, day, history) {
                 key: `plateau:${ex.id}`,
                 exId: ex.id,
                 priority: 85,
-                short: `${ex.name}: use today's recalculated load`,
+                short: `Stalled ${pl.since} sessions: today's load is reset to your current strength`,
                 title: `Use today's load on ${ex.name}`,
                 text: "Progress has stalled, so today's target is based on your current strength instead of simply repeating the last session.",
                 evidence: `${pl.since} sessions without a new best`
@@ -3055,7 +3055,7 @@ function coachFacts(lm, day, history) {
             /* Muscle recovery does not lower a generated target by itself — only the session check-in's
                "A little off" / "Run down" does. This used to say "Today's target is already reduced" over a
                load identical to last session's. Say what is true and what the lifter can do about it. */
-            short: `${label}: still recovering`,
+            short: `${label} still recovering: ease off if warm-ups feel heavy`,
             title: `Recovery is still low for ${label.toLowerCase()}`,
             text: "Recovery alone does not change the listed load. Keep the reps clean, and take a small reduction if the warm-up feels heavier than usual.",
             evidence: `${label} recovery ${t.r}%`
@@ -3086,6 +3086,8 @@ function coachFacts(lm, day, history) {
                 icon: "curve",
                 key: `rep-curve:${primary.id}`,
                 exId: primary.id,
+                // B1056: true, but it changes nothing the lifter does on this set, so it stays out of the live Coach.
+                live: false,
                 priority: 70,
                 short: `${primary.name}: use the listed reps`,
                 title: holdsWell ? "You hold reps well as weight climbs" : "Your reps drop sooner as weight climbs",
@@ -3119,6 +3121,8 @@ function coachFacts(lm, day, history) {
     return facts;
 }
 
+// B1056: only plan facts that change what the lifter does today (recover, peak) reach the live Coach;
+// the phase slogans stay available to other surfaces.
 function workoutPlanCoachFact(program, day, weekIndex) {
     if (!program || program.quick)
         return null;
@@ -3131,20 +3135,51 @@ function workoutPlanCoachFact(program, day, weekIndex) {
         return { icon: "plan", short: "Today: crisp heavy reps", title: "Today: prioritize crisp heavy reps", text: "Take the full rest, keep technique tight, and stop before reps turn into grinders." };
     }
     if (phaseRaw.includes("strength") || cfg.goal === "strength") {
-        return { icon: "plan", short: "Today: quality strength work", title: "Today: build strength", text: "Use the listed load and rest. Keep every rep controlled and save your hardest effort for the sets that call for it." };
+        return { icon: "plan", live: false, short: "Today: quality strength work", title: "Today: build strength", text: "Use the listed load and rest. Keep every rep controlled and save your hardest effort for the sets that call for it." };
     }
     if (phaseRaw.includes("hypertrophy") || phaseRaw.includes("accumulation") || cfg.goal === "muscle") {
-        return { icon: "plan", short: "Today: build quality volume", title: "Today: build quality volume", text: "Use the listed reps, rest, and effort. Keep the early sets controlled so you can finish the exercise strong." };
+        return { icon: "plan", live: false, short: "Today: build quality volume", title: "Today: build quality volume", text: "Use the listed reps, rest, and effort. Keep the early sets controlled so you can finish the exercise strong." };
     }
     const ph = phaseFor(program, weekIndex);
     if (ph === PHASES.peak || ph.phase === 'peak')
         return { icon: "plan", short: "Today: crisp heavy reps", title: "Today: prioritize crisp heavy reps", text: "Take the full rest, keep technique tight, and stop before reps turn into grinders." };
     if (ph === PHASES.intensification || ['strength_accumulation', 'intensification'].includes(ph.phase))
-        return { icon: "plan", short: "Today: heavier, controlled work", title: "Today: push the working sets", text: "Loads are heavier now. Keep form clean and avoid spending extra effort on the early sets." };
-    return { icon: "plan", short: "Today: build quality volume", title: "Today: build quality volume", text: "Keep the prescribed reps controlled and leave enough in reserve to maintain quality across the whole session." };
+        return { icon: "plan", live: false, short: "Today: heavier, controlled work", title: "Today: push the working sets", text: "Loads are heavier now. Keep form clean and avoid spending extra effort on the early sets." };
+    return { icon: "plan", live: false, short: "Today: build quality volume", title: "Today: build quality volume", text: "Keep the prescribed reps controlled and leave enough in reserve to maintain quality across the whole session." };
 }
 
-function liveCoachForContext(facts, row, ex, sessionDone) {
+// B1056: a planned set that would beat the lifter's best estimated 1RM, read from the sets as entered
+// now (so an edited load or rep count is what the Coach talks about). Same e1RM as Progress records.
+function livePrChance(row, ex, best, unit) {
+    if (!(best > 0) || isAssistedEx(ex))
+        return null;
+    const work = (row.sets || []).filter(s => !s.warm && !s.sub);
+    let pick = null;
+    work.forEach((set, i) => {
+        if (set.done)
+            return;
+        const weight = parseFloat(set.weight), reps = parseInt(set.reps, 10);
+        if (!(weight > 0 && reps > 0) || reps > E1RM_REP_CAP)
+            return;
+        const estimated = e1rm(weight, reps);
+        if (estimated > best && (!pick || estimated > pick.estimated))
+            pick = { index: i + 1, weight, reps, estimated };
+    });
+    if (!pick)
+        return null;
+    const u = unit || "lb";
+    return {
+        icon: "pr",
+        key: `pr:${ex.id}:${pick.index}:${pick.weight}x${pick.reps}`,
+        context: "pr",
+        short: `Set ${pick.index}: ${pick.weight} \u00D7 ${pick.reps} is a new best`,
+        title: `Set ${pick.index} can set a personal best`,
+        text: `${pick.weight} ${u} for ${pick.reps} clean reps puts your estimated 1RM at ${Math.round(pick.estimated)} ${u}. Take the full rest before it and stop at the planned effort; a grinder is not worth the record.`,
+        evidence: `your best estimated 1RM of ${Math.round(best)} ${u}`
+    };
+}
+
+function liveCoachForContext(facts, row, ex, sessionDone, opts = {}) {
     if (!row || !ex)
         return [];
     const work = (row.sets || []).filter(s => !s.warm && !s.sub);
@@ -3180,9 +3215,8 @@ function liveCoachForContext(facts, row, ex, sessionDone) {
                 }
             }
         }
-        return [];
     }
-    if (done.length || !next)
+    if (!next)
         return [];
     const relevant = (facts || []).filter(f => {
         if (!f || f.live === false)
@@ -3193,6 +3227,15 @@ function liveCoachForContext(facts, row, ex, sessionDone) {
             return f.part === ex.part;
         return f.scope === "session" && sessionDone === 0;
     }).sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    // Fatigue and low recovery (priority 90+) outrank a record attempt and silence it.
+    const caution = relevant.find(f => (f.priority || 0) >= 90 && (f.exId || f.part));
+    const pr = caution || opts.deload ? null : livePrChance(row, ex, opts.best, opts.unit);
+    if (done.length)
+        return pr ? [pr] : [];
+    if (caution)
+        return [{ ...caution, context: "exercise-start" }];
+    if (pr)
+        return [pr];
     return relevant.length ? [{ ...relevant[0], context: "exercise-start" }] : [];
 }
 

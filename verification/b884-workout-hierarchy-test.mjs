@@ -11,9 +11,12 @@ const exercise = workout.indexOf('className: "wpb-exercise-heading ');
 const toolbar = workout.indexOf('className: "wpb-hscroll wpb-workout-tools'); // Additional shared CSS owner classes must not hide or reorder the toolbar.
 const list = workout.indexOf('data-testid": `set-${ei}-${si}`');
 const add = workout.indexOf('className: "pressable wpb-add-set"');
+// B1056: optional coaching sits with the sets it advises — after the exercise identity and tools,
+// directly above the editable set list (not below Add set and the load tools).
 const coaching = workout.indexOf('"aria-label": "Expand Coach guidance"');
-assert.ok(exercise > -1 && toolbar > exercise && list > toolbar && add > list && coaching > add,
-  'Exercise identity, tools, editable set list and add-set must precede optional coaching');
+const coachPlace = workout.indexOf('!focus && renderCoach(), !focus && (_jsxs("div", { className: "wpb-set-head"');
+assert.ok(exercise > -1 && toolbar > exercise && list > toolbar && add > list && coaching > -1 && coachPlace > toolbar && coachPlace < list,
+  'Exercise identity and tools come first; Coach sits directly above the editable set list');
 assert.ok(!workout.includes('First time logging this'),
   'No first-time assertion when the previous set may be available');
 assert.ok(workout.includes('previousWorkoutSet(lastPerf[e.id], 0)'),

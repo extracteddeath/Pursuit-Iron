@@ -17,8 +17,8 @@ for(const [selector,min] of [
     'Workout set/edit control retains a real 48px CSS owner: '+selector);
 }
 for(const [selector,visual] of [
- ['.wpb-b973-coach-collapsed','gap:7px'],
- ['.wpb-b973-coach-toggle','gap:8px']
+ ['.wpb-b973-coach-collapsed','gap:12px;margin:0 0 12px;padding:8px 12px'],
+ ['.wpb-b973-coach-toggle','gap:12px;padding:8px 12px']
 ]){
  const start=css.indexOf('\n#root .wpb-workout '+selector+'{'),end=css.indexOf('}',start);
  assert.ok(start>=0&&css.slice(start,end).includes(visual),
@@ -28,8 +28,9 @@ assert.ok(w.includes('className: "wpb-b973-coach-label", children: "Coach"') &&
     !w.includes('style: { ...eyebrowAccent() }, children: "Coach"'),
   'Expanded and collapsed Coach labels reuse one semantic CSS typography role');
 const sharedCoach=css.split('#root .wpb-workout .wpb-b973-coach-collapsed,#root .wpb-workout .wpb-b973-coach-open{')[1]?.split('}')[0]||'';
-for(const token of ['border:1px solid var(--wpb-theme-border-soft)','background:var(--wpb-theme-card)','text-align:left'])
-    assert.ok(sharedCoach.includes(token),'Coach card styling must share '+token);
+// B1056: one tonal row (no outlined card), shared by the collapsed and open states.
+for(const token of ['border:0','background:var(--wpb-theme-accent-dim)','text-align:left'])
+    assert.ok(sharedCoach.includes(token),'Coach row styling must share '+token);
 assert.ok(w.includes('children: ["Based on ", f.evidence]'),'Coach evidence copy must remain syntactically complete');
 assert.ok(w.includes('className: "pressable wpb-b973-coach-collapsed"')&&w.includes('className: "pressable wpb-b973-coach-toggle"'),'Coach disclosure keeps existing pressable control semantics');
 console.log('PASS B973: Program exercise and workout set-panel ownership');

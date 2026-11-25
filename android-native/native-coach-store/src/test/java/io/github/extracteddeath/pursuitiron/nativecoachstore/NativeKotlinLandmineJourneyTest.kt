@@ -154,7 +154,9 @@ class NativeKotlinLandmineJourneyTest {
 
     @Test fun newBlockCalibrationCanExplicitlyRetainZeroAddedLandminePlates() {
         val source=source()
-        val (base,inputs)=program(source)
+        val (base,initialInputs)=program(source)
+        val inputs=initialInputs.copy(continuityPolicy=CustomCoachVolumeContinuityPolicy(
+            n("0.50"),n("0.50"),n("0.50"),n("0.50")))
         val original=base.blocks.single()
         val first=original.copy(days=original.days.map{day->
             day.copy(slots=day.slots.map{slot->

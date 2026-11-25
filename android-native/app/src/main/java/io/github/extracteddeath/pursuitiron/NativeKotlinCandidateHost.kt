@@ -1063,6 +1063,20 @@ internal class NativeKotlinCandidateHost(context:Context) {
         return tieredTransitions.previewScheduled(owner.ownerKey,cycleId,weekday,selection,nextCustomCycleSession)
     }
 
+    fun previewMultiTieredTransition(cycleId:String,selection:NativeMultiTierNextSelection):NativeSavedNamedReview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeSavedNamedReview.Rejected(NativeSavedNamedReviewRefusal.NOT_AUTHORIZED)
+        return tieredTransitions.previewMultiScheduled(owner.ownerKey,cycleId,selection,nextCustomCycleSession)
+    }
+
+    fun confirmMultiTieredTransition(cycleId:String,shown:NativeSavedNamedReview.Signed,
+        resets:Set<String>,recoveries:Set<String>):NativeTieredTransitionConsentResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeTieredTransitionConsentResult.NOT_AUTHORIZED
+        return tieredTransitions.confirmMultiScheduled(owner.ownerKey,cycleId,shown,nextCustomCycleSession,
+            true,resets,recoveries)
+    }
+
     fun reviewStaleTieredTransition(cycleId:String,week:Int,weekday:Int):NativeStaleTierTransitionReview? {
         val owner=localAthlete.signedInIdentity() ?:return null
         return tieredTransitions.reviewStaleScheduled(owner.ownerKey,cycleId,week,weekday,nextCustomCycleSession)

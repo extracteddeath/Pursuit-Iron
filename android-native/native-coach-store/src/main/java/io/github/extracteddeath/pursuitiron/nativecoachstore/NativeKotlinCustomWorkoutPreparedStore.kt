@@ -21,7 +21,7 @@ import java.security.MessageDigest
  * The log/finish authority may never accept this as a journal or as proof
  * of historical enrollment. A separate native issuer must enforce both.
  */
-enum class NativeCustomPreparationAuthority { CUSTOM_CYCLE, ACTIVATED_BLOCK }
+enum class NativeCustomPreparationAuthority { CUSTOM_CYCLE, ACTIVATED_BLOCK, NAMED_CYCLE }
 
 data class NativeCustomPreparedWorkout(
     val ownerKey:String,
@@ -208,12 +208,20 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 workout.futureWeekApprovalFingerprint==null &&
                 workout.calibrationApprovalFingerprint==null &&
                 workout.authoredReturnFingerprint==null))
+        require(workout.authority!=NativeCustomPreparationAuthority.NAMED_CYCLE ||
+            (!workout.resetToAuthored && workout.snapshot.shortSessionLimitMinutes==null &&
+                workout.repApprovalFingerprint==null && workout.loadApprovalFingerprint==null &&
+                workout.futureWeekApprovalFingerprint==null &&
+                workout.calibrationApprovalFingerprint==null && workout.authoredReturnFingerprint==null))
+        require(workout.authority==NativeCustomPreparationAuthority.NAMED_CYCLE ||
+            workout.snapshot.slots.none{slot->slot.sets.any{it.prescription.percentageIntent!=null}})
         val session=NativeKotlinCustomWorkoutSnapshotCodec.encode(
             workout.snapshot)
         val payload=ByteArrayOutputStream()
         DataOutputStream(payload).use{out->
             out.writeInt(magic)
-            out.writeInt(if(workout.snapshot.shortSessionLimitMinutes!=null)10 else
+            out.writeInt(if(workout.authority==NativeCustomPreparationAuthority.NAMED_CYCLE)11 else
+                if(workout.snapshot.shortSessionLimitMinutes!=null)10 else
                 if(workout.authoredReturnFingerprint!=null)9 else
                 if(workout.resetToAuthored &&
                     workout.authority==NativeCustomPreparationAuthority.CUSTOM_CYCLE)8 else
@@ -229,7 +237,7 @@ class NativeKotlinCustomWorkoutPreparedStore(
             out.writeUTF(workout.workoutId)
             out.writeLong(workout.consentRevision)
             out.writeUTF(workout.consentFingerprint)
-            if(workout.authority==NativeCustomPreparationAuthority.ACTIVATED_BLOCK ||
+            if(workout.authority!=NativeCustomPreparationAuthority.CUSTOM_CYCLE ||
                 workout.calibrationApprovalFingerprint!=null || workout.resetToAuthored ||
                 workout.authoredReturnFingerprint!=null ||
                 workout.snapshot.shortSessionLimitMinutes!=null)
@@ -279,7 +287,7 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 if(data.readInt()!=magic)
                     throw IOException("unsupported prepared custom snapshot magic")
                 val schema=data.readInt()
-                if(schema !in 1..10)
+                if(schema !in 1..11)
                     throw IOException("unsupported prepared custom snapshot version")
                 val owner=data.readUTF()
                 val athlete=data.readUTF()
@@ -298,6 +306,8 @@ class NativeKotlinCustomWorkoutPreparedStore(
                         it.name==authorityName
                     } ?:throw IOException("unrecognized preparation authority")
                 }
+                if((schema==11)!=(authority==NativeCustomPreparationAuthority.NAMED_CYCLE))
+                    throw IOException("invalid specialist preparation authority")
                 if(schema==5 &&
                     authority!=NativeCustomPreparationAuthority.ACTIVATED_BLOCK)
                     throw IOException("invalid manual-reset preparation authority")
@@ -796,6 +806,45 @@ class NativeKotlinCustomWorkoutPreparedStore(
         }.getOrElse {NativeCustomPreparedRead.Rejected(
             NativeCustomPrepareRefusal.STORAGE_UNAVAILABLE)}
     }
+    /** Persist the exact reviewed specialist snapshot in the canonical
+     * prepared workout store. This still cannot log or finish a workout. */
+    fun prepareNamed(
+        ownerKey:String,workoutId:String,cycleId:String,absoluteWeek:Int,weekday:Int,
+        inputs:CustomCoachAuditInputs,history:NativeKotlinMixedHistoryReadCoordinator,
+        outstanding:NativeKotlinCustomOutstandingWorkoutInventory
+    ):NativeCustomPrepareResult {
+        fun deny(reason:NativeCustomPrepareRefusal)=NativeCustomPrepareResult.Rejected(reason)
+        if(!id.matches(workoutId)||!id.matches(cycleId)||
+            absoluteWeek !in 1..104 || weekday !in 0..6)
+            return deny(NativeCustomPrepareRefusal.INVALID_SELECTION)
+        return runCatching{fence.withOwnerTransaction(ownerKey){
+            val owner=current(ownerKey)
+                ?:return@withOwnerTransaction deny(NativeCustomPrepareRefusal.NOT_AUTHORIZED)
+            if(activationHandoff?.blocksNewIssuance(ownerKey)==true ||
+                NativeKotlinBlockCalibrationConsentStore.hasRecord(directory,ownerKey,workoutId))
+                return@withOwnerTransaction deny(NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
+            val pre=preflight.inspectNamed(ownerKey,workoutId,cycleId,absoluteWeek,weekday,
+                inputs,history,outstanding) as? NativeCustomPreflightResult.ReviewedPreview
+                ?:return@withOwnerTransaction deny(NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
+            val planned=NativeCustomPreparedWorkout(ownerKey,owner.athleteId,workoutId,
+                pre.receipt.recordRevision,pre.receipt.fingerprintSha256,pre.session,
+                NativeCustomPreparationAuthority.NAMED_CYCLE)
+            when(val existing=openFenced(ownerKey,workoutId,owner)) {
+                is NativeCustomPreparedRead.Rejected ->
+                    return@withOwnerTransaction deny(existing.reason)
+                is NativeCustomPreparedRead.Found ->
+                    return@withOwnerTransaction if(existing.workout==planned)
+                        NativeCustomPrepareResult.Prepared(existing.workout,true)
+                    else deny(NativeCustomPrepareRefusal.DIFFERENT_WORKOUT_ALREADY_PREPARED)
+                NativeCustomPreparedRead.Missing -> Unit
+            }
+            if(current(ownerKey)!=owner)
+                return@withOwnerTransaction deny(NativeCustomPrepareRefusal.NOT_AUTHORIZED)
+            atomicWrite(path(ownerKey,workoutId),encode(planned))
+            NativeCustomPrepareResult.Prepared(planned,false)
+        }}.getOrElse{deny(NativeCustomPrepareRefusal.STORAGE_UNAVAILABLE)}
+    }
+
     fun prepare(
         ownerKey:String,
         workoutId:String,

@@ -31,7 +31,38 @@ internal object NativeTieredInitialDraftReceiptCodec {
 
     /** Structural integrity only. Exact recipe, stock, source, history and
      * consent are rederived by the authenticated reviewer before acceptance. */
-    fun valid(r:NativeTieredInitialDraftReceipt,owner:String,cycle:CustomTrainingCycle):Boolean {
+    const val MAX_RECEIPTS=128
+
+    fun valid(r:NativeTieredInitialDraftReceipt,owner:String,cycle:CustomTrainingCycle):Boolean =
+        validBatch(listOf(r),owner,cycle)
+
+    /** All roots must bind one source revision, a stable slot and one
+     * workout identity per scheduled day. The full candidate must contain
+     * exactly these overrides: no unsigned recipe can hide in the batch. */
+    fun validBatch(receipts:List<NativeTieredInitialDraftReceipt>,owner:String,cycle:CustomTrainingCycle):Boolean {
+        if(receipts.size !in 1..MAX_RECEIPTS)return false
+        val first=receipts.first()
+        if(receipts.any{it.stamp!=first.stamp || it.consentRevision!=first.consentRevision ||
+            it.historyRevision!=first.historyRevision || it.machineRosterRevision!=first.machineRosterRevision})
+            return false
+        val keys=receipts.map{CustomNamedPercentageWeekKey(it.blockId,it.weekInBlock,it.selection.weekday,it.selection.slotId)}
+        val threads=receipts.map{Triple(it.blockId,it.selection.weekday,it.selection.slotId)}
+        if(keys.distinct().size!=keys.size || threads.distinct().size!=threads.size)return false
+        val positions=receipts.groupBy{it.selection.absoluteWeek to it.selection.weekday}
+        if(positions.values.any{day->day.map{it.selection.nextWorkoutId}.distinct().size!=1} ||
+            positions.values.map{it.first().selection.nextWorkoutId}.distinct().size!=positions.size)
+            return false
+        if(cycle.blocks.any{b->b.days.any{d->d.slots.any{slot->
+            slot.sets.any{it.percentageIntent!=null}}}})return false
+        val named=cycle.weekOverrides.flatMap{(blockId,edits)->
+            edits.filter{e->e.sets.any{it.percentageIntent!=null}}.map{
+                CustomNamedPercentageWeekKey(blockId,it.weekInBlock,it.weekday,it.slotId)
+            }}
+        return named.size==keys.size && named.toSet()==keys.toSet() &&
+            receipts.all{validRoot(it,owner,cycle)}
+    }
+
+    private fun validRoot(r:NativeTieredInitialDraftReceipt,owner:String,cycle:CustomTrainingCycle):Boolean {
         val s=r.selection
         val p=r.stamp
         if(s.ownerKey!=owner || s.cycleId!=cycle.cycleId || p.cycleId!=cycle.cycleId ||
@@ -48,8 +79,6 @@ internal object NativeTieredInitialDraftReceiptCodec {
             r.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT ||
             KotlinSetNumberAuthorityDomain.machineTagContradictsFreeBarbell(r.basis,r.machineInstanceId))
             return false
-        if(cycle.blocks.any{b->b.days.any{d->d.slots.any{slot->
-                slot.sets.any{it.percentageIntent!=null}}}})return false
         val block=cycle.blocks.singleOrNull{it.blockId==r.blockId}?:return false
         val preceding=cycle.blocks.takeWhile{it.blockId!=r.blockId}.sumOf{it.weeks}
         if(r.weekInBlock !in 1..block.weeks || preceding+r.weekInBlock!=s.absoluteWeek ||
@@ -57,13 +86,9 @@ internal object NativeTieredInitialDraftReceiptCodec {
         val slot=block.days.singleOrNull{it.weekday==s.weekday}?.slots
             ?.singleOrNull{it.slotId==s.slotId}?:return false
         if(slot.exerciseId!=r.exerciseId || slot.machineInstanceId!=r.machineInstanceId)return false
-        // Initial-entry envelope deliberately supports one tier slot only.
-        // A later multi-slot or mixed-protocol envelope must bind every receipt.
-        val named=cycle.weekOverrides.flatMap{(blockId,edits)->
-            edits.filter{e->e.sets.any{it.percentageIntent!=null}}.map{blockId to it}}
-        val (blockId,edit)=named.singleOrNull()?:return false
-        if(blockId!=r.blockId || edit.weekInBlock!=r.weekInBlock ||
-            edit.weekday!=s.weekday || edit.slotId!=s.slotId)return false
+        val edit=cycle.weekOverrides[r.blockId].orEmpty().singleOrNull{
+            it.weekInBlock==r.weekInBlock && it.weekday==s.weekday && it.slotId==s.slotId
+        }?:return false
         val work=edit.sets.filter{it.type==DraftSetType.WORKING}
         if(work.isEmpty() || work.size!=slot.sets.count{it.type==DraftSetType.WORKING})return false
         return work.withIndex().all{(index,set)->

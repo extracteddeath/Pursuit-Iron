@@ -23,7 +23,8 @@ internal enum class NativeTieredTransitionConsentResult {
 }
 
 internal sealed interface NativeTieredTransitionRecovery {
-    data class Ready(val review:NativeSavedNamedReview.Signed):NativeTieredTransitionRecovery {
+    data class Ready(val review:NativeSavedNamedReview.Signed,
+        val receiptFingerprint:String):NativeTieredTransitionRecovery {
         val mayIssueWorkout:Boolean get()=false
     }
     data class Refused(val reason:NativeTieredTransitionConsentResult):NativeTieredTransitionRecovery
@@ -45,6 +46,7 @@ internal class NativeKotlinFirstTierTransitionConsentStore(
     private val maxBytes=NativeCustomCycleDraftCodec.MAX_BYTES+
         NativeTieredHistoryPrefixCodec.MAX_BYTES+NativeCustomCoachAuditInputsCodec.MAX_BYTES+8192
     private fun digest(bytes:ByteArray)=MessageDigest.getInstance("SHA-256").digest(bytes)
+    private fun fingerprint(bytes:ByteArray)=digest(bytes).joinToString(""){"%02x".format(it.toInt() and 255)}
     private fun path(owner:String,cycle:String):Path {
         val key=digest("$owner/$cycle".toByteArray(Charsets.UTF_8))
             .joinToString(""){"%02x".format(it.toInt() and 255)}
@@ -158,14 +160,16 @@ internal class NativeKotlinFirstTierTransitionConsentStore(
             }
             val reviewer=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
                 signoffs,history,outstanding,machineRosters)
-            val fresh=reviewer.previewTieredNext(ownerKey,cycleId,metadata.second,metadata.first)
+            val receiptFingerprint=fingerprint(stored)
+            val fresh=reviewer.previewTieredNextForPreparation(ownerKey,cycleId,metadata.second,
+                metadata.first,receiptFingerprint)
                 as? NativeSavedNamedReview.Signed
                 ?:return@withOwnerTransaction no(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED)
             if(identity.signedInIdentity()!=owner)
                 return@withOwnerTransaction no(NativeTieredTransitionConsentResult.NOT_AUTHORIZED)
             if(!MessageDigest.isEqual(stored,encode(fresh)))
                 return@withOwnerTransaction no(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED)
-            NativeTieredTransitionRecovery.Ready(fresh)
+            NativeTieredTransitionRecovery.Ready(fresh,receiptFingerprint)
         }}.getOrElse{no(NativeTieredTransitionConsentResult.STORAGE_UNAVAILABLE)}
     }
 
@@ -181,7 +185,16 @@ internal class NativeKotlinFirstTierTransitionConsentStore(
                 ?:return@withOwnerTransaction NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED
             val reviewer=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
                 signoffs,history,outstanding,machineRosters)
-            val fresh=reviewer.previewTieredNext(ownerKey,cycleId,displayed.inputs,shown.selection)
+            // Receipt-backed re-review is only possible for the exact
+            // already-persisted bytes, never for an arbitrary display.
+            val existingFile=path(ownerKey,cycleId)
+            val displayBytes=encode(displayed)
+            val sameReceipt=Files.isRegularFile(existingFile,LinkOption.NOFOLLOW_LINKS) &&
+                !Files.isSymbolicLink(directory) && Files.size(existingFile)==displayBytes.size.toLong() &&
+                MessageDigest.isEqual(Files.readAllBytes(existingFile),displayBytes)
+            val fresh=(if(sameReceipt)reviewer.previewTieredNextForPreparation(
+                ownerKey,cycleId,displayed.inputs,shown.selection,fingerprint(displayBytes))
+                else reviewer.previewTieredNext(ownerKey,cycleId,displayed.inputs,shown.selection))
                 as? NativeSavedNamedReview.Signed
                 ?:return@withOwnerTransaction NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED
             if(fresh!=displayed || fresh.consent.athleteId!=owner.athleteId ||

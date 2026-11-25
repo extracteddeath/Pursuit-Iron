@@ -39,8 +39,11 @@ class NativeKotlinHistoryTransactionCoordinatorTest {
         assertEquals(1L, accepted(coordinator().enroll(
             "owner-1", "athlete-1", { _, _ -> allowed })).manifest.revision)
     }
-    private fun issueResolved(id: Int, machineId:String?=null): KotlinWorkoutJournalState {
+    private fun issueResolved(id: Int, machineId:String?=null,
+        gymId:String=source.gymId,actualLoad:BigDecimal=BigDecimal("200"),
+        lastActualLoad:BigDecimal=actualLoad): KotlinWorkoutJournalState {
         val workout = "workout-$id"
+        val issuedSource=source.copy(gymId=gymId)
         val targets = (0..1).map { i ->
             KotlinWorkoutTarget("bench", ComposerRole.PRIMARY,
                 ComposerSessionPurpose.HYPERTROPHY, "slot-$id-$i",
@@ -50,10 +53,10 @@ class NativeKotlinHistoryTransactionCoordinatorTest {
                 RepBand(5, 8), 2, 60, 90)
         }
         val snapshot = KotlinStagedWorkout(
-            source, "grant-$id", workout, 0, 0,
+            issuedSource, "grant-$id", workout, 0, 0,
             ComposerSessionPurpose.HYPERTROPHY, 40, targets)
         val identity = KotlinStoredWorkoutIdentity(
-            "storage-$id", workout, source, 1)
+            "storage-$id", workout, issuedSource, 1)
         val writer = journal()
         assertTrue(writer.issue("owner-1", snapshot, identity)
             is NativeJournalFileResult.Durable)
@@ -63,7 +66,7 @@ class NativeKotlinHistoryTransactionCoordinatorTest {
                 KotlinJournalOperation.RecordSet(
                     "event-$id-$i", i.toLong(), "slot-$id-$i",
                     KotlinJournalSetOutcome.COMPLETED,
-                    KotlinPerformedSet(BigDecimal("200"), LoadUnit.LB, 8, 2,machineId)
+                    KotlinPerformedSet(if(i==0)actualLoad else lastActualLoad, LoadUnit.LB, 8, 2,machineId)
                 ), { owner, revision -> auth.canAccessIssuedWorkout(owner, revision) })
             result = (accepted as NativeJournalFileResult.Durable).journal
         }
@@ -469,6 +472,56 @@ class NativeKotlinHistoryTransactionCoordinatorTest {
         assertEquals("machine-B",evidence.sets.last().actual?.machineInstanceId)
         assertEquals(4,evidence.sets.last().actual?.reps)
         assertTrue(manifest().ledger.readyForHistoryReads)
+    }
+
+    @Test fun correctedStationRecordMovesOnlyWithinItsOriginalIssuedGymAfterColdRecovery() {
+        enroll()
+        issueResolved(1,"machine-A")
+        finished(1)
+        issueResolved(2,"machine-B",actualLoad=BigDecimal("180"))
+        finished(2)
+        issueResolved(3,"machine-A",gymId="gym-2",actualLoad=BigDecimal("190"))
+        finished(3)
+        val issued=issueResolved(4,"machine-A",lastActualLoad=BigDecimal("220"))
+        finished(4)
+        fun read():KotlinGlobalHistoryIndex {
+            val sourceAuthority=NativeKotlinHistoryManifestFileAuthority(ledger()){owner,athlete->
+                allowed && owner=="owner-1" && athlete=="athlete-1"
+            }
+            return (NativeKotlinGlobalHistoryReadCoordinator(journal(),corrections(),auth,sourceAuthority,fence())
+                .read("owner-1","athlete-1") as NativeKotlinHistoryReadResult.Review).index
+        }
+        fun key(gym:String,station:String)=KotlinHistoryMachineLoadKey(
+            gym,"bench",station,LoadUnit.LB,LoadBasis.SMITH_TOTAL)
+        val before=read()
+        val a=key("gym-1","machine-A")
+        val b=key("gym-1","machine-B")
+        val other=key("gym-2","machine-A")
+        assertEquals(setOf(a,b,other),before.highestCompletedLoadByMachine.keys)
+        assertEquals(BigDecimal("220"),before.highestCompletedLoadByMachine.getValue(a).actualLoad)
+        assertEquals(BigDecimal("180"),before.highestCompletedLoadByMachine.getValue(b).actualLoad)
+        assertEquals(BigDecimal("190"),before.highestCompletedLoadByMachine.getValue(other).actualLoad)
+        val correction=edit(4).copy(actual=KotlinPerformedSet(
+            BigDecimal("210"),LoadUnit.LB,5,1,"machine-B"))
+        val result=accepted(coordinator().correct("owner-1","athlete-1","workout-4",correction))
+        val after=read()
+        assertEquals(result.manifest.revision,after.manifestRevision)
+        assertNotEquals(before.contentFingerprint,after.contentFingerprint)
+        assertEquals(setOf(a,b,other),after.highestCompletedLoadByMachine.keys)
+        assertEquals(BigDecimal("200"),after.highestCompletedLoadByMachine.getValue(a).actualLoad)
+        assertEquals(BigDecimal("210"),after.highestCompletedLoadByMachine.getValue(b).actualLoad)
+        assertEquals(before.highestCompletedLoadByMachine.getValue(other),
+            after.highestCompletedLoadByMachine.getValue(other))
+        val saved=corrections().openStored("owner-1","workout-4",::ownedJournal)
+            as NativeSavedCorrectionFileResult.Opened
+        val evidence=(KotlinWorkoutHistoryEvidenceDomain.projectSaved(saved.state)
+            as KotlinHistoryProjectionResult.Candidate).evidence
+        assertEquals(issued.snapshot.source,evidence.source)
+        assertEquals("machine-B",evidence.sets.last().actual?.machineInstanceId)
+        assertEquals(BigDecimal("200"),(evidence.sets.last().issuedLoad as DraftSetLoad.Verified).value)
+        assertFalse(after.canPublishPr)
+        assertFalse(after.canIssueProgression)
+        assertEquals(after,read())
     }
 
     @Test fun pendingIntentBlocksHistoryAndFailedAuthCannotSilentlyEraseIt() {

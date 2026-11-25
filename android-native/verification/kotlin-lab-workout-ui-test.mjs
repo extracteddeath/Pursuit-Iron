@@ -1976,3 +1976,10 @@ assert.ok(basicPreviewController.includes('selectedInitialTier(review,next)') &&
   machineChoiceHost.includes('nextCustomCycleSession.reviewMultiTieredInitial') &&
   basicPreviewScreen.includes('Verify initial workout'),
   'Multi-root initial execution uses the existing exact initial review and issuer');
+
+assert.ok(basicPreviewController.includes('host.isMultiTieredSupportDay') &&
+  basicPreviewController.includes('val calendar=if(multiSupport)reviewedNext') &&
+  machineChoiceHost.includes('nextCustomCycleSession.isMultiTieredSupportDay') &&
+  basicPreviewScreen.includes('controller::previewTieredSupportWorkout') &&
+  basicPreviewScreen.includes('controller::issueTieredSupportWorkout'),
+  'Multi-root authored support days must reuse the existing supporting-day controls and authoritative calendar policy');

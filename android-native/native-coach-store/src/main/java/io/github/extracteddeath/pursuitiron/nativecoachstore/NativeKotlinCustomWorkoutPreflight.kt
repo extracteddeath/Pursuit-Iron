@@ -29,7 +29,7 @@ sealed interface NativeCustomPreflightResult {
  * Keep its preflight type separate so existing preparation/issue entry
  * points cannot accept it as a standard signed workout.
  */
-internal sealed interface NativeFirstTierTransitionPreflight {
+sealed interface NativeFirstTierTransitionPreflight {
     data class Reviewed(val review:NativeSavedNamedReview.Signed,
         val session:CustomWorkoutDaySnapshot,val receiptFingerprint:String):NativeFirstTierTransitionPreflight {
         val mayIssueWorkout:Boolean get()=false

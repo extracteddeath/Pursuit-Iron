@@ -51,6 +51,14 @@ sealed interface NativeTieredInitialBatchReview {
     data class Rejected(val reason:NativeNamedPercentageRefusal):NativeTieredInitialBatchReview
 }
 
+sealed interface NativeTieredInitialBatchAcceptance {
+    data class Saved(val revision:Long,val receipts:List<NativeTieredInitialDraftReceipt>):NativeTieredInitialBatchAcceptance {
+        val mayIssueWorkout:Boolean get()=false
+        val isSignedOff:Boolean get()=false
+    }
+    data class Rejected(val reason:NativeNamedPercentageRefusal):NativeTieredInitialBatchAcceptance
+}
+
 sealed interface NativeTieredInitialAcceptance {
     data class Saved(val revision:Long,val receipt:NativeTieredInitialDraftReceipt):NativeTieredInitialAcceptance {
         val mayIssueWorkout:Boolean get()=false
@@ -341,8 +349,7 @@ class NativeKotlinNamedPercentageDraftReview(
             .getOrElse{NativeTieredInitialBatchReview.Rejected(NativeNamedPercentageRefusal.STORAGE_UNAVAILABLE)}
     }
 
-    /** Pure reconfirmation: no multi-thread draft or issuance is saved by
-     * this review. A later atomic persistence path must reuse this proof. */
+    /** Pure reconfirmation: no draft or issuance is saved by this review. */
     fun reconfirmTieredInitialBatch(selections:List<NativeTieredInitialSelection>,
         displayed:NativeTieredInitialBatchReview.Ready,athleteConfirmed:Boolean):NativeTieredInitialBatchReview {
         fun deny(reason:NativeNamedPercentageRefusal)=NativeTieredInitialBatchReview.Rejected(reason)
@@ -354,6 +361,26 @@ class NativeKotlinNamedPercentageDraftReview(
                 is NativeTieredInitialBatchReview.Rejected -> fresh
                 is NativeTieredInitialBatchReview.Ready -> if(fresh==displayed)fresh
                     else deny(NativeNamedPercentageRefusal.REVIEW_CHANGED)
+            }
+        }}.getOrElse{deny(NativeNamedPercentageRefusal.STORAGE_UNAVAILABLE)}
+    }
+
+    fun acceptTieredInitialBatch(selections:List<NativeTieredInitialSelection>,
+        displayed:NativeTieredInitialBatchReview.Ready,athleteConfirmed:Boolean):NativeTieredInitialBatchAcceptance {
+        fun deny(reason:NativeNamedPercentageRefusal)=NativeTieredInitialBatchAcceptance.Rejected(reason)
+        if(!athleteConfirmed)return deny(NativeNamedPercentageRefusal.CONFIRMATION_REQUIRED)
+        val input=selections.toList()
+        val first=input.firstOrNull()?:return deny(NativeNamedPercentageRefusal.INVALID_SELECTION)
+        return runCatching{fence.withOwnerTransaction(first.ownerKey){
+            val fresh=when(val reviewed=evaluateTieredBatch(input)) {
+                is NativeTieredInitialBatchReview.Rejected -> return@withOwnerTransaction deny(reviewed.reason)
+                is NativeTieredInitialBatchReview.Ready -> reviewed
+            }
+            if(fresh!=displayed)return@withOwnerTransaction deny(NativeNamedPercentageRefusal.REVIEW_CHANGED)
+            val prior=fresh.individual.first().source.cycle.revision
+            when(drafts.saveReviewedTieredInitialBatch(first.ownerKey,first.cycleId,prior,fresh.draft,fresh.receipts)) {
+                is NativeCustomDraftWriteResult.Committed -> NativeTieredInitialBatchAcceptance.Saved(fresh.draft.revision,fresh.receipts)
+                else -> deny(NativeNamedPercentageRefusal.DRAFT_SAVE_REJECTED)
             }
         }}.getOrElse{deny(NativeNamedPercentageRefusal.STORAGE_UNAVAILABLE)}
     }

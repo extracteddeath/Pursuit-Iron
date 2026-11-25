@@ -2,9 +2,6 @@ package io.github.extracteddeath.pursuitiron.nativecoachstore
 
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import java.math.BigDecimal
-import java.time.LocalDate
-import java.time.ZoneId
-import java.nio.file.Files
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -14,11 +11,6 @@ class NativeKotlinTieredInitialReferenceReviewTest {
     @get:Rule val temp=TemporaryFolder()
     private var active:NativeKotlinOwnerIdentity?=
         NativeKotlinOwnerIdentity("owner-1","athlete-1")
-    /** Isolated weighted variant for the real progression integration test. */
-    private var weightedFixture=true
-    private var phaseTransitionFixture=true
-    private var machineBindingFixture=false
-    private var phaseAuthoredWeight=25
     private val identity=NativeKotlinCurrentIdentity{active}
     private val fence by lazy{NativeKotlinApprovalRevisionFence(temp.root.toPath())}
     private val drafts by lazy{NativeCustomCycleDraftFileStore(
@@ -39,18 +31,11 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         sessionTimeBucket=SessionTimeBucket.FORTY_TO_SIXTY,
         hardSessionLimit=HardSessionLimit.Minutes(60),
         gym=GymProfileDraft("gym-1",LoadUnit.LB,
-            if(machineBindingFixture)mapOf(
-                "leg-extension-machine" to VerifiedLoadStock.Stack(
-                    LoadUnit.LB,LoadBasis.EXERCISE_OVERRIDE,
-                    n("20"),n("5"),n("160")))
-            else if(phaseTransitionFixture)mapOf("straight-bar" to VerifiedLoadStock.Barbell(
-                LoadUnit.LB,n("10"),mapOf(n("5") to (if(phaseAuthoredWeight>=30)4 else 2),n("2.5") to 2)))
-            else if(weightedFixture)mapOf("dumbbell-rack" to VerifiedLoadStock.Totals(
-                LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
-                listOf(n("20"),n("25"),n("30")))) else emptyMap(),
-            if(phaseTransitionFixture)setOf("flat-bench","rack") else emptySet(),emptySet()),
+            mapOf("straight-bar" to VerifiedLoadStock.Barbell(LoadUnit.LB,n("10"),
+                mapOf(n("5") to 2,n("2.5") to 2))),
+            setOf("flat-bench","rack"),emptySet()),
         allowBodyweight=true,allowSupersets=false,
-        allowTricepsOnLower=false,maxBarbellExercisesPerDay=if(phaseTransitionFixture)1 else 0,
+        allowTricepsOnLower=false,maxBarbellExercisesPerDay=1,
         focusedMuscles=emptySet(),reducedMuscles=emptySet(),
         excludedExerciseIds=emptySet(),lockedTrainingDays=emptySet(),
         hardTrainingDays=emptySet(),longTrainingDays=emptySet(),
@@ -59,37 +44,23 @@ class NativeKotlinTieredInitialReferenceReviewTest {
     private fun source(rev:Long=1)=NativeCustomAuthoringSnapshot(
         "owner-1","athlete-1",rev,setup(),StarterExerciseTranche.movements())
     private fun set()=CustomAuthoredSet(DraftSetType.WORKING,
-        if(machineBindingFixture)DraftSetLoad.Verified(
-            LoadUnit.LB,LoadBasis.EXERCISE_OVERRIDE,n("55"))
-        else if(weightedFixture)DraftSetLoad.Verified(LoadUnit.LB,
-            if(phaseTransitionFixture)LoadBasis.BARBELL_TOTAL else LoadBasis.DUMBBELL_PER_HAND,n("20"))
-        else DraftSetLoad.ExplicitBodyweight,RepBand(10,15),2,55,75)
-    private fun cycle(rev:Long=1)=CustomTrainingCycle(
-        "cycle-1",rev,"athlete-1",AthleteTrainingGoal.HYPERTROPHY,
+        DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.BARBELL_TOTAL,n("20")),
+        RepBand(10,15),2,55,75)
+    private fun cycle()=CustomTrainingCycle(
+        "cycle-1",1,"athlete-1",AthleteTrainingGoal.HYPERTROPHY,
         "My custom cycle",listOf(CustomTrainingBlock(
             "base","Foundation",TrainingPhase.HYPERTROPHY,
             CustomBlockPurpose.TRAINING,3,
-            CustomSplitIdentity.Freeform("Custom core"),listOf(0,2,4).map {
-                day->CustomTrainingDay(day,"Day $day",
-                    ComposerSessionPurpose.HYPERTROPHY,
-                    listOf(CustomExerciseSlot("slot-$day",
-                        if(machineBindingFixture)"leg_extension" else
-                            if(phaseTransitionFixture)"barbell_bench" else
-                                if(weightedFixture)"db_curl" else "bodyweight_crunch",
-                        if(phaseTransitionFixture)ComposerRole.PRIMARY else
-                            ComposerRole.ACCESSORY,listOf(set()),
-                        machineInstanceId=if(machineBindingFixture)"A" else null)))
+            CustomSplitIdentity.Freeform("Custom core"),listOf(0,2,4).map { day->
+                CustomTrainingDay(day,"Day $day",ComposerSessionPurpose.HYPERTROPHY,
+                    listOf(CustomExerciseSlot("slot-$day","barbell_bench",
+                        ComposerRole.PRIMARY,listOf(set()))))
             }
         )))
-    private fun bounds()=TrainingMuscle.entries.map{muscle ->
-        val focus=if(machineBindingFixture)TrainingMuscle.QUADS else
-            if(phaseTransitionFixture)TrainingMuscle.CHEST else
-            if(weightedFixture)TrainingMuscle.BICEPS else TrainingMuscle.ABS
-        DeclaredMuscleDoseBounds(muscle,
-            if(muscle==focus)n("3") else BigDecimal.ZERO,
-            if(muscle==focus)n("4") else BigDecimal.ZERO,
-            if(muscle==focus || phaseTransitionFixture)n("5") else BigDecimal.ZERO,
-            if(muscle==focus)3 else 0)
+    private fun bounds()=TrainingMuscle.entries.map{muscle->
+        val main=muscle==TrainingMuscle.CHEST
+        DeclaredMuscleDoseBounds(muscle,n(if(main)"3" else "0"),
+            n(if(main)"4" else "0"),n("5"),if(main)3 else 0)
     }
     private fun policy()=AuthoredGoalProgramPolicy(
         policyId="coach-1",revision="policy-1",

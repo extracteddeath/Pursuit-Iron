@@ -327,7 +327,9 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         assertEquals(NativeTieredTransitionConsentResult.CONFIRMATION_REQUIRED,confirmDay(recoveryReview))
         assertEquals(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED,
             confirmDay(proposed.copy(nextMultiTierCandidate=transition.copy(historyRevision=transition.historyRevision+1))))
+        assertEquals(0,transitionStore().inventoryForRecovery("owner-1"))
         assertEquals(NativeTieredTransitionConsentResult.RECORDED,confirmDay())
+        assertEquals(1,transitionStore().inventoryForRecovery("owner-1"))
         val restoredDay=recoverDay() as NativeTieredTransitionRecovery.Ready
         assertEquals(proposed,restoredDay.review)
         assertFalse(restoredDay.mayIssueWorkout)
@@ -345,6 +347,7 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         java.nio.file.Files.write(file,frozen.copyOf().also{it[10]=(it[10].toInt() xor 1).toByte()})
         assertEquals(NativeTieredTransitionRecovery.Refused(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT),recoverDay())
         assertEquals(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT,confirmDay())
+        assertNull(transitionStore().inventoryForRecovery("owner-1"))
         java.nio.file.Files.write(file,frozen)
         assertEquals(restoredDay,recoverDay())
         val reviewed=inspectDay() as NativeFirstTierTransitionPreflight.Reviewed
@@ -361,6 +364,7 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         assertEquals(NativeCustomPrepareResult.Prepared(staged,true),prepareDay())
         assertEquals(restoredDay,recoverDay())
         assertEquals(NativeCustomNextCycleSlot.Prepared(nextSelection.nextWorkoutId,2,0,"Day 0"),next())
+        assertEquals(1,transitionStore().inventoryForRecovery("owner-1"))
         assertEquals(reviewed,inspectDay())
         assertTrue(preview(nextSelection) is NativeSavedNamedReview.Rejected)
         if(!correctAfterPreparation) {
@@ -368,6 +372,7 @@ class NativeKotlinTieredInitialReferenceReviewTest {
             assertTrue(issued.toString(),issued is NativeCustomJournalResult.Durable)
             assertEquals(staged.snapshot,(issued as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
             assertEquals(NativeCustomNextCycleSlot.ResumeIssued(nextSelection.nextWorkoutId,2,0,"Day 0"),next())
+            assertEquals(1,transitionStore().inventoryForRecovery("owner-1"))
             val target=staged.snapshot.slots.single().sets.single()
             assertTrue(coldJournal().record("owner-1",nextSelection.nextWorkoutId,
                 CustomWorkoutJournalOperation.Record("multi-next-actual",0,
@@ -394,7 +399,9 @@ class NativeKotlinTieredInitialReferenceReviewTest {
             assertTrue(nextReview(last) is NativeSavedNamedReview.Rejected)
             // A missing earlier receipt cannot be replaced by trusting an
             // issued snapshot or simply recomputing past observations.
+            assertEquals(1,transitionStore().inventoryForRecovery("owner-1"))
             java.nio.file.Files.delete(file)
+            assertNull(transitionStore().inventoryForRecovery("owner-1"))
             assertTrue(nextReview(middle) is NativeSavedNamedReview.Rejected)
             assertTrue(next() is NativeCustomNextCycleSlot.Rejected)
             java.nio.file.Files.write(file,frozen)
@@ -434,6 +441,11 @@ class NativeKotlinTieredInitialReferenceReviewTest {
             completeDay(middle,TieredLinearState(1,n("30")),n("30"),5)
             assertEquals(NativeCustomNextCycleSlot.Next(2,4,"Day 4"),next())
             completeDay(last,TieredLinearState(0,n("40")),n("40"),5)
+            assertEquals(3,transitionStore().inventoryForRecovery("owner-1"))
+            java.nio.file.Files.delete(file)
+            assertNull(transitionStore().inventoryForRecovery("owner-1"))
+            java.nio.file.Files.write(file,frozen)
+            assertEquals(3,transitionStore().inventoryForRecovery("owner-1"))
             assertEquals(NativeCustomNextCycleSlot.Next(3,0,"Day 0"),next())
             val weekThree=NativeMultiTierNextSelection("week-three-day-zero",3,0)
             val nextWeek=nextReview(weekThree) as NativeSavedNamedReview.Signed
@@ -463,6 +475,7 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         assertArrayEquals(frozen,java.nio.file.Files.readAllBytes(file))
         assertEquals(saved,coldDrafts.read("owner-1","cycle-1"))
         assertEquals(staged,(coldPrepared().open("owner-1",nextSelection.nextWorkoutId) as NativeCustomPreparedRead.Found).workout)
+        assertEquals(1,transitionStore().inventoryForRecovery("owner-1"))
         val stale=checkNotNull(transitionStore().reviewStaleScheduled("owner-1","cycle-1",2,0,calendar()))
         assertEquals(staged,stale.preparation)
         assertEquals(n("30"),(stale.previousTargetsBySlot.getValue("slot-0").single().load as DraftSetLoad.Verified).value)
@@ -475,6 +488,7 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         assertTrue(transitionStore().cancelStaleScheduled("owner-1","cycle-1",stale,calendar(),coldPrepared(),true))
         assertArrayEquals(frozen,java.nio.file.Files.readAllBytes(file))
         assertEquals(NativeCustomNextCycleSlot.Next(2,0,"Day 0"),next())
+        assertEquals(1,transitionStore().inventoryForRecovery("owner-1"))
         val replacement=checkNotNull(transitionStore().reviewStaleScheduled("owner-1","cycle-1",2,0,calendar()))
         assertNull(replacement.preparation)
         assertEquals(corrected,replacement.review.nextMultiTierCandidate)
@@ -491,6 +505,7 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         val newPrepared=(prepareDay() as NativeCustomPrepareResult.Prepared).workout
         assertEquals(corrected.snapshot,newPrepared.snapshot)
         assertTrue(issueDay() is NativeCustomJournalResult.Durable)
+        assertEquals(1,transitionStore().inventoryForRecovery("owner-1"))
         assertEquals(saved,coldDrafts.read("owner-1","cycle-1"))
         assertEquals(initialWorkout,(coldPrepared().open("owner-1",first.nextWorkoutId) as NativeCustomPreparedRead.Found).workout)
         active=NativeKotlinOwnerIdentity("other-owner","other-athlete")

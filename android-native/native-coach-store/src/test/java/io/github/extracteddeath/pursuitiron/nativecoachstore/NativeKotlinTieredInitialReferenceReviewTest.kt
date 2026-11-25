@@ -436,7 +436,7 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         assertFalse(saved.isSignedOff)
         val cold=NativeCustomCycleDraftFileStore(root,NativeKotlinApprovalRevisionFence(root),identity)
         val exact=displayed.proposal.proposal.draft
-        assertEquals(NativeCustomDraftReadResult.Found(exact,tieredInitialReceipt=saved.receipt),
+        assertEquals(NativeCustomDraftReadResult.Found(exact,tieredInitialReceipts=listOf(saved.receipt)),
             cold.read("owner-1","cycle-1"))
         assertFalse((store().read("owner-1","cycle-1",inputs()) as NativeCustomSignoffRead.Found).isCurrent)
         assertTrue(prepared.prepare("owner-1","tier-first","cycle-1",1,0,inputs())

@@ -22,6 +22,13 @@ import kotlinx.coroutines.isActive
  */
 internal data class NativeKotlinCustomCycleState(
     val draft: CustomTrainingCycle? = null,
+    val fixedNamedDraft:Boolean=false,
+    val fixedNamedBatch:NativeNamedBatchReview.Ready?=null,
+    val fixedNamedReview:NativeSavedNamedReview?=null,
+    val fixedNamedWorkoutId:String?=null,
+    val fixedNamedPreview:NativeCustomPreflightResult.ReviewedPreview?=null,
+    val fixedNamedPrepared:NativeCustomPreparedWorkout?=null,
+    val fixedNamedIssuedId:String?=null,
     val cycleId: String? = null,
     val busy: Boolean = false,
     val message: String? = null,
@@ -177,6 +184,7 @@ internal class NativeKotlinCustomCycleController(
             is NativeCustomDraftReadResult.Found ->
                 NativeKotlinCustomCycleState(
                     draft = result.draft,
+                    fixedNamedDraft=result.namedReceipts.isNotEmpty(),
                     cycleId = result.draft.cycleId,
                     availableChoices = choices,
                     sourceRevision = source?.revision,
@@ -213,6 +221,10 @@ internal class NativeKotlinCustomCycleController(
      * generated draft may still recover its original calibrated preview. */
     private fun recoverSavedCoachPolicy(cycleId:String) {
         if(current.value.draft?.cycleId!=cycleId)return
+        if(current.value.fixedNamedDraft) {
+            refreshFixedNamedReview(cycleId)
+            return
+        }
         val saved=host.recoverSavedCustomCycleReview(cycleId)
         when(saved) {
             is NativeCustomSavedCoachReview.Ready -> {
@@ -664,12 +676,161 @@ internal class NativeKotlinCustomCycleController(
      * journal/manifest census. No calendar-start date is inferred. */
     private fun selectNextSessionIfReviewed() {
         val value=current.value
+        if(value.fixedNamedDraft)return
         if(value.coachingAudit?.status==CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW &&
             (value.signoff as? NativeCustomSignoffRead.Found)?.isCurrent==true)
             selectNextCycleSession()
     }
 
     fun findNextCycleSession()=run {selectNextCycleSession()}
+
+    // Fixed named flow owns distinct review state. Never publish ordinary
+    // consent flags for a specialist draft or turn a preview into a grant.
+    private fun refreshFixedNamedReview(cycleId:String) {
+        val before=current.value
+        val draft=before.draft ?:return
+        if(draft.cycleId!=cycleId || !before.fixedNamedDraft)return
+        val review=host.recoverFixedNamedCycle(cycleId)
+        val signed=(review as? NativeSavedNamedReview.Signed)?.takeIf{it.draft==draft}
+        val pending=(review as? NativeSavedNamedReview.Ready)?.takeIf{it.draft==draft}
+        current.value=before.copy(fixedNamedReview=signed ?:pending,
+            nextCycleSlot=signed?.let{host.reviewNextCustomCycleSession(cycleId,it.inputs)},
+            nextSlotCycleRevision=signed?.draft?.revision,
+            fixedNamedWorkoutId=null,fixedNamedPreview=null,fixedNamedPrepared=null,
+            fixedNamedIssuedId=null,
+            message=when {
+                signed!=null -> "Exact specialist consent restored and rechecked."
+                pending!=null -> "Reference saved. Review and approve this revised cycle before starting."
+                else -> "Specialist consent could not be verified. No workout can be prepared."
+            })
+    }
+
+    fun refreshFixedNamedCycle()=run {
+        current.value.draft?.cycleId?.let{refreshFixedNamedReview(it)}
+    }
+
+    fun reviewFixedNamedChoices(choices:List<NativeFixedNamedChoice>)=run {
+        val before=current.value
+        val draft=before.draft ?:return@run
+        current.value=before.copy(fixedNamedBatch=null)
+        if(before.fixedNamedDraft)return@run
+        val result=host.previewFixedNamedCycle(draft.cycleId,choices)
+        val ready=(result as? NativeNamedBatchReview.Ready)?.takeIf{
+            it.individual.all{review->review.source.cycle==draft}
+        }
+        current.value=current.value.copy(fixedNamedBatch=ready,
+            message=if(ready!=null)"Review the exact specialist targets before saving."
+                else "Specialist preview refused: "+(result as? NativeNamedBatchReview.Rejected)
+                    ?.reason?.name.orEmpty().lowercase().replace('_',' '))
+    }
+
+    fun acceptFixedNamedChoices(displayed:NativeNamedBatchReview.Ready)=run {
+        val before=current.value
+        val draft=before.draft ?:return@run
+        if(before.fixedNamedDraft || before.fixedNamedBatch!=displayed ||
+            displayed.individual.any{it.source.cycle!=draft})return@run
+        val saved=host.acceptFixedNamedCycle(displayed,true)
+        if(saved !is NativeNamedBatchAcceptance.Saved) {
+            current.value=before.copy(fixedNamedBatch=null,
+                message="Reference review changed or was refused. Nothing approved.")
+            return@run
+        }
+        applyRead(draft.cycleId,host.readCustomCycleDraft(draft.cycleId))
+        refreshFixedNamedReview(draft.cycleId)
+    }
+
+    fun approveFixedNamedCycle(displayed:NativeSavedNamedReview.Ready)=run {
+        val before=current.value
+        val draft=before.draft ?:return@run
+        if(before.fixedNamedReview!=displayed || displayed.draft!=draft)return@run
+        val saved=host.confirmFixedNamedCycle(draft.cycleId,displayed,true)
+        refreshFixedNamedReview(draft.cycleId)
+        if(saved !is NativeCustomSignoffWrite.Committed)
+            current.value=current.value.copy(message="Specialist approval refused. Recheck the saved review.")
+    }
+
+    fun revokeFixedNamedCycle()=run {
+        val before=current.value
+        val review=before.fixedNamedReview as? NativeSavedNamedReview.Signed ?:return@run
+        host.revokeCustomCycleConsent(review.draft.cycleId,review.consent.recordRevision)
+        refreshFixedNamedReview(review.draft.cycleId)
+    }
+
+    fun previewNextFixedNamedWorkout()=run {
+        val before=current.value
+        val review=before.fixedNamedReview as? NativeSavedNamedReview.Signed ?:return@run
+        val draft=before.draft ?:return@run
+        if(review.draft!=draft)return@run
+        val selection=host.reviewNextCustomCycleSession(draft.cycleId,review.inputs)
+        val (id,week,day)=when(selection) {
+            is NativeCustomNextCycleSlot.Next ->
+                Triple("custom-"+UUID.randomUUID().toString().replace("-",""),selection.absoluteWeek,selection.weekday)
+            is NativeCustomNextCycleSlot.Prepared ->
+                Triple(selection.workoutId,selection.absoluteWeek,selection.weekday)
+            else -> {
+                current.value=before.copy(nextCycleSlot=selection,fixedNamedWorkoutId=null,
+                    fixedNamedPreview=null,fixedNamedPrepared=null)
+                return@run
+            }
+        }
+        val checked=host.previewFixedNamedWorkout(id,draft.cycleId,week,day,review.inputs)
+        val ready=(checked as? NativeCustomPreflightResult.ReviewedPreview)?.takeIf{
+            it.receipt==review.consent && it.session.stamp.cycleRevision==draft.revision
+        }
+        val restored=if(ready!=null && selection is NativeCustomNextCycleSlot.Prepared)
+            (host.openPreparedCustomWorkout(id) as? NativeCustomPreparedRead.Found)?.workout
+                ?.takeIf{it.authority==NativeCustomPreparationAuthority.NAMED_CYCLE &&
+                    it.snapshot==ready.session && it.consentFingerprint==ready.receipt.fingerprintSha256 &&
+                    it.consentRevision==ready.receipt.recordRevision}
+        else null
+        current.value=before.copy(nextCycleSlot=selection,fixedNamedWorkoutId=id.takeIf{ready!=null},
+            fixedNamedPreview=ready,fixedNamedPrepared=restored,
+            message=if(ready!=null && (selection !is NativeCustomNextCycleSlot.Prepared || restored!=null))
+                "Exact specialist workout verified. Review before starting."
+                else "Specialist workout or saved preparation could not be verified.")
+    }
+
+    fun prepareNextFixedNamedWorkout()=run {
+        val before=current.value
+        val review=before.fixedNamedReview as? NativeSavedNamedReview.Signed ?:return@run
+        val shown=before.fixedNamedPreview ?:return@run
+        val id=before.fixedNamedWorkoutId ?:return@run
+        if(before.nextCycleSlot !is NativeCustomNextCycleSlot.Next ||
+            shown.receipt!=review.consent || before.draft!=review.draft)return@run
+        val result=host.prepareFixedNamedWorkout(id,review.draft.cycleId,
+            shown.session.absoluteWeek,shown.session.weekday,review.inputs)
+        val saved=if(result is NativeCustomPrepareResult.Prepared)
+            (host.openPreparedCustomWorkout(id) as? NativeCustomPreparedRead.Found)?.workout
+                ?.takeIf{it==result.workout && it.authority==NativeCustomPreparationAuthority.NAMED_CYCLE &&
+                    it.snapshot==shown.session && it.consentFingerprint==shown.receipt.fingerprintSha256 &&
+                    it.consentRevision==shown.receipt.recordRevision}
+        else null
+        current.value=before.copy(fixedNamedPrepared=saved,
+            message=if(saved!=null)"Exact workout prepared. Not issued."
+                else "Specialist preparation refused or changed. Nothing issued.")
+    }
+
+    fun issueNextFixedNamedWorkout()=run {
+        val before=current.value
+        val review=before.fixedNamedReview as? NativeSavedNamedReview.Signed ?:return@run
+        val shown=before.fixedNamedPreview ?:return@run
+        val saved=before.fixedNamedPrepared ?:return@run
+        if(before.draft!=review.draft || shown.receipt!=review.consent ||
+            saved.snapshot!=shown.session || saved.authority!=NativeCustomPreparationAuthority.NAMED_CYCLE ||
+            saved.consentRevision!=shown.receipt.recordRevision ||
+            saved.consentFingerprint!=shown.receipt.fingerprintSha256 ||
+            (host.openPreparedCustomWorkout(saved.workoutId) as? NativeCustomPreparedRead.Found)?.workout!=saved)
+            return@run
+        val issued=host.issueFixedNamedWorkout(saved.workoutId,review.draft.cycleId,
+            shown.session.absoluteWeek,shown.session.weekday,review.inputs)
+        val durable=(issued as? NativeCustomJournalResult.Durable)?.issued?.journal
+            ?.takeIf{it.originalSnapshot==saved.snapshot}
+        current.value=before.copy(fixedNamedIssuedId=durable?.workoutId,
+            fixedNamedPrepared=null,fixedNamedPreview=null,
+            nextCycleSlot=host.reviewNextCustomCycleSession(review.draft.cycleId,review.inputs),
+            message=if(durable!=null)"Workout issued. Open Train to log actuals."
+                else "Specialist issuance refused. Refresh the next workout.")
+    }
 
     private fun selectNextCycleSession() {
         val before=current.value

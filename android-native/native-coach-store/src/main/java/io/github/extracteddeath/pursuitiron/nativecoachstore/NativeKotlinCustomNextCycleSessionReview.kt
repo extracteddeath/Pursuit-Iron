@@ -111,7 +111,8 @@ class NativeKotlinCustomNextCycleSessionReview(
     private val signoffs:NativeKotlinCustomCycleSignoffFileStore,
     private val history:NativeKotlinMixedHistoryReadCoordinator,
     private val inventory:NativeKotlinCustomOutstandingWorkoutInventory,
-    private val prepared:NativeKotlinCustomWorkoutPreparedStore
+    private val prepared:NativeKotlinCustomWorkoutPreparedStore,
+    private val machineRosters:NativeKotlinMachineRosterFileStore?=null
 ) {
     fun review(ownerKey:String,cycleId:String,
         inputs:CustomCoachAuditInputs):NativeCustomNextCycleSlot {
@@ -122,10 +123,11 @@ class NativeKotlinCustomNextCycleSessionReview(
                     it.ownerKey==ownerKey
                 }?:return@withOwnerTransaction no(
                     "No verified active athlete.")
-                val cycle=(drafts.read(ownerKey,cycleId)
-                    as? NativeCustomDraftReadResult.Found)?.draft
+                val stored=(drafts.read(ownerKey,cycleId)
+                    as? NativeCustomDraftReadResult.Found)
                     ?:return@withOwnerTransaction no(
                         "The saved cycle could not be verified.")
+                val cycle=stored.draft
                 val gym=(source.read(ownerKey)
                     as? NativeAuthoringSourceRead.Found)?.source
                     ?:return@withOwnerTransaction no(
@@ -134,17 +136,35 @@ class NativeKotlinCustomNextCycleSessionReview(
                     gym.athleteId!=owner.athleteId)
                     return@withOwnerTransaction no(
                         "Saved program belongs to a different athlete.")
-                val audit=CustomCycleCoachAuditDomain.review(
-                    cycle,gym.setup,gym.catalog,inputs)
-                if(audit.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW ||
-                    audit.issues.isNotEmpty())
+                // A fixed named cycle has a different signed fingerprint.
+                // Never pretend its typed receipts are ordinary consent or
+                // let a stale named record fall back to ordinary review.
+                val fixedNamed=stored.namedReceipts.isNotEmpty()
+                if(stored.tieredInitialReceipt!=null)
                     return@withOwnerTransaction no(
-                        "The full-cycle coaching policy needs a current review.")
-                val consent=(signoffs.read(ownerKey,cycleId,inputs)
-                    as? NativeCustomSignoffRead.Found)
-                if(consent?.isCurrent!=true)
-                    return@withOwnerTransaction no(
-                        "Review and sign this exact cycle first.")
+                        "Tiered progression requires its dedicated reference or transition review.")
+                if(fixedNamed) {
+                    val reviewed=NativeKotlinSavedNamedPercentageReview(
+                        fence,identity,drafts,source,signoffs,history,inventory,machineRosters)
+                        .reviewSigned(ownerKey,cycleId,inputs) as? NativeSavedNamedReview.Signed
+                        ?:return@withOwnerTransaction no(
+                            "Review and sign this exact named cycle first.")
+                    if(reviewed.draft!=cycle ||
+                        reviewed.stamp.gymCatalogSourceRevision!=gym.revision)
+                        return@withOwnerTransaction no("Named cycle source changed.")
+                } else {
+                    val audit=CustomCycleCoachAuditDomain.review(
+                        cycle,gym.setup,gym.catalog,inputs)
+                    if(audit.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW ||
+                        audit.issues.isNotEmpty())
+                        return@withOwnerTransaction no(
+                            "The full-cycle coaching policy needs a current review.")
+                    val consent=(signoffs.read(ownerKey,cycleId,inputs)
+                        as? NativeCustomSignoffRead.Found)
+                    if(consent?.isCurrent!=true)
+                        return@withOwnerTransaction no(
+                            "Review and sign this exact cycle first.")
+                }
                 val timeline=(history.read(ownerKey,owner.athleteId)
                     as? NativeKotlinMixedHistoryReadResult.Review)?.timeline
                     ?:return@withOwnerTransaction no(
@@ -169,9 +189,14 @@ class NativeKotlinCustomNextCycleSessionReview(
                     val original=byId[item.workoutId]
                         ?:return@withOwnerTransaction no(
                             "Original issued targets are unavailable.")
-                    if(original.authority!=NativeCustomPreparationAuthority.CUSTOM_CYCLE)
+                    val permitted=if(fixedNamed)
+                        original.authority==NativeCustomPreparationAuthority.NAMED_CYCLE ||
+                        (original.authority==NativeCustomPreparationAuthority.CUSTOM_CYCLE &&
+                            item.completed && original.snapshot.stamp.cycleRevision<cycle.revision)
+                    else original.authority==NativeCustomPreparationAuthority.CUSTOM_CYCLE
+                    if(!permitted)
                         return@withOwnerTransaction no(
-                            "An activated cycle uses a separate training approval.")
+                            "A workout uses a separate or earlier training approval.")
                     NativeCustomCycleSessionFact(
                         item.workoutId,item.absoluteWeek,item.weekday,
                         original.snapshot.stamp.cycleRevision,

@@ -2475,39 +2475,11 @@ private fun NativeFixedNamedSelectionPanel(draft:CustomTrainingCycle,
 private fun NativeTieredInitialExecutionPanel(state:NativeKotlinCustomCycleState,
     controller:NativeKotlinCustomCycleController,onOpenIssuedWorkout:(String)->Unit) {
     val review=state.tieredInitialReview
-    if(state.tieredReceipts.size>1) {
-        PursuitCard(highlighted=true) {
-            Text("GZCLP · Tier references",style=MaterialTheme.typography.titleLarge)
-            state.message?.let{Text(it,style=MaterialTheme.typography.bodyMedium)}
-            state.tieredReceipts.forEach{r->
-                Text(kotlinExerciseLabel(r.exerciseId),style=MaterialTheme.typography.titleMedium)
-                Text("Week ${r.selection.absoluteWeek} · ${customWeekdays.getOrElse(r.selection.weekday){"Day"}} · ${pretty(r.selection.tier)}",
-                    style=MaterialTheme.typography.labelLarge)
-                Text("Initial: ${r.selection.initialLoad.toPlainString()} ${r.unit} · Increment limit: ${r.selection.maximumAuthorizedIncrease.toPlainString()} ${r.unit}",
-                    style=MaterialTheme.typography.bodySmall)
-            }
-            if(review is io.github.extracteddeath.pursuitiron.nativecoachstore.NativeSavedNamedReview.Ready) {
-                Button(onClick={controller.approveTieredInitialCycle(review)},enabled=!state.busy,
-                    modifier=Modifier.fillMaxWidth()){Text("Approve all reviewed references")}
-            }
-            Text("Multi-thread scheduled workout execution is not enabled in this candidate.",style=MaterialTheme.typography.bodySmall)
-            OutlinedButton(onClick=controller::refreshTieredInitialCycle,enabled=!state.busy,
-                modifier=Modifier.fillMaxWidth()){Text("Refresh tier review")}
-        }
-        return
-    }
-    val receipt=when(review) {
-        is io.github.extracteddeath.pursuitiron.nativecoachstore.NativeSavedNamedReview.Ready ->
-            review.initialTierReceipt
-        is io.github.extracteddeath.pursuitiron.nativecoachstore.NativeSavedNamedReview.Signed ->
-            review.initialTierReceipt
-        else -> null
-    }
     PursuitCard(highlighted=true) {
         Text(if(state.tieredCalendar!=null)"GZCLP · Next workout" else "GZCLP · Initial tier review",
             style=MaterialTheme.typography.titleLarge)
         state.message?.let{Text(it,style=MaterialTheme.typography.bodyMedium)}
-        receipt?.let {
+        state.tieredReceipts.forEach {
             Text(kotlinExerciseLabel(it.exerciseId),style=MaterialTheme.typography.titleMedium)
             Text("Week ${it.selection.absoluteWeek} · ${pretty(it.selection.tier)}",
                 style=MaterialTheme.typography.labelLarge)
@@ -2519,10 +2491,10 @@ private fun NativeTieredInitialExecutionPanel(state:NativeKotlinCustomCycleState
         when(review) {
             is io.github.extracteddeath.pursuitiron.nativecoachstore.NativeSavedNamedReview.Ready -> {
                 Text("Revised cycle · ${review.audit.weeks.size} weeks audited")
-                if(receipt!=null)
+                if(state.tieredReceipts.isNotEmpty())
                     Button(onClick={controller.approveTieredInitialCycle(review)},
                         enabled=!state.busy,modifier=Modifier.fillMaxWidth()){
-                        Text("Approve reviewed initial tier")
+                        Text(if(state.tieredReceipts.size>1)"Approve all reviewed references" else "Approve reviewed initial tier")
                     }
             }
             is io.github.extracteddeath.pursuitiron.nativecoachstore.NativeSavedNamedReview.Signed -> {
@@ -2532,9 +2504,19 @@ private fun NativeTieredInitialExecutionPanel(state:NativeKotlinCustomCycleState
                     is NativeCustomNextCycleSlot.ResumeIssued ->
                         Button(onClick={onOpenIssuedWorkout(next.workoutId)},enabled=!state.busy,
                             modifier=Modifier.fillMaxWidth()){Text("Resume initial workout")}
-                    is NativeCustomNextCycleSlot.Next,is NativeCustomNextCycleSlot.Prepared ->
-                        OutlinedButton(onClick=controller::previewTieredInitialWorkout,enabled=!state.busy,
-                            modifier=Modifier.fillMaxWidth()){Text("Verify initial workout")}
+                    is NativeCustomNextCycleSlot.Next,is NativeCustomNextCycleSlot.Prepared -> {
+                        val position=when(next) {
+                            is NativeCustomNextCycleSlot.Next -> next.absoluteWeek to next.weekday
+                            is NativeCustomNextCycleSlot.Prepared -> next.absoluteWeek to next.weekday
+                            else -> null
+                        }
+                        if(state.tieredReceipts.any{it.selection.absoluteWeek==position?.first &&
+                            it.selection.weekday==position?.second})
+                            OutlinedButton(onClick=controller::previewTieredInitialWorkout,enabled=!state.busy,
+                                modifier=Modifier.fillMaxWidth()){Text("Verify initial workout")}
+                        else Text("The next scheduled day requires supporting-day or multi-thread transition integration.",
+                            style=MaterialTheme.typography.bodySmall)
+                    }
                     is NativeCustomNextCycleSlot.Rejected -> Text(next.reason,color=MaterialTheme.colorScheme.error)
                     else -> {}
                 }

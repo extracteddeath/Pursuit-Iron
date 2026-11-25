@@ -724,15 +724,25 @@ internal class NativeKotlinCustomCycleController(
                 it.initialTierReceipts.isNotEmpty() && it.nextTierCandidate==null
         }
         val singleThread=before.tieredReceipts.size==1
-        val initialNext=signed?.let{host.reviewTieredInitialSession(cycleId,it.inputs)}
-        val calendar=if(singleThread && ready==null && (initialNext==null || initialNext is NativeCustomNextCycleSlot.Rejected))
-            host.reviewTieredCalendar(cycleId) else null
+        val reviewedNext=signed?.let{host.reviewTieredInitialSession(cycleId,it.inputs)}
+        val multiPosition=when(reviewedNext) {
+            is NativeCustomNextCycleSlot.Next -> reviewedNext.absoluteWeek to reviewedNext.weekday
+            is NativeCustomNextCycleSlot.Prepared -> reviewedNext.absoluteWeek to reviewedNext.weekday
+            is NativeCustomNextCycleSlot.ResumeIssued -> reviewedNext.absoluteWeek to reviewedNext.weekday
+            else -> null
+        }
+        val multiSupport=!singleThread && multiPosition!=null &&
+            host.isMultiTieredSupportDay(cycleId,multiPosition.first,multiPosition.second)
+        val initialNext=reviewedNext.takeUnless{multiSupport}
+        val calendar=if(multiSupport)reviewedNext
+            else if(singleThread && ready==null && (initialNext==null || initialNext is NativeCustomNextCycleSlot.Rejected))
+                host.reviewTieredCalendar(cycleId) else null
         val position=when(calendar) {
             is NativeCustomNextCycleSlot.Next -> calendar.absoluteWeek to calendar.weekday
             is NativeCustomNextCycleSlot.Prepared -> calendar.absoluteWeek to calendar.weekday
             else -> null
         }
-        val supporting=before.tieredReceipt?.let{r->
+        val supporting=multiSupport || before.tieredReceipt?.let{r->
             val block=draft.blocks.singleOrNull{it.blockId==r.blockId}
             position!=null && block!=null && position.second!=r.selection.weekday &&
                 position.first in r.selection.absoluteWeek..(r.selection.absoluteWeek+block.weeks-r.weekInBlock) &&
@@ -754,7 +764,7 @@ internal class NativeKotlinCustomCycleController(
             tieredInitialPreview=null,tieredInitialPrepared=null,
             message=when {
                 ready!=null -> "Initial tier references verified. Review this exact revision."
-                signed!=null && !singleThread -> "Multi-thread approval verified. Review the next scheduled initial workout."
+                signed!=null && !singleThread -> "Multi-thread approval verified. Review the next scheduled workout."
                 signed!=null -> "Exact initial tier approval restored and rechecked."
                 calendar!=null && calendar !is NativeCustomNextCycleSlot.Rejected ->
                     "Initial tier review closed. Review the next scheduled workout."

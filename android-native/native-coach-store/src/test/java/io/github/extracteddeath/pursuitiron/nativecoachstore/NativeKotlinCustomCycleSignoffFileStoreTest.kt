@@ -2758,6 +2758,85 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             reader,issuer,history,corrections,prepared)
     }
 
+    @Test fun savedGymSwitchProtectsIssuedHistoryAndRequiresNewApprovalEvenOnReturn() {
+        val f=authoredCoachFixture(initializeHistory=false,phaseTransition=true)
+        initialize()
+        val prior=approved()
+        val originalGym=checkNotNull(source().setup.reviewed).gym
+        assertTrue(f.history.enroll("owner-1","athlete-1"){owner,athlete->
+            active==NativeKotlinOwnerIdentity(owner,athlete)
+        } is NativeHistoryLedgerResult.Durable)
+        val issuedId="gym-a-issued"
+        val waitingId="gym-a-prepared"
+        fun prepare(w:String,week:Int,day:Int)=
+            f.prepared.prepare("owner-1",w,"cycle-1",week,day,inputs())
+        fun issue(w:String,week:Int,day:Int)=
+            f.issuer.issue("owner-1",w,"cycle-1",week,day,inputs())
+        val first=prepare(issuedId,1,0) as NativeCustomPrepareResult.Prepared
+        val waiting=prepare(waitingId,1,2) as NativeCustomPrepareResult.Prepared
+        val issued=issue(issuedId,1,0) as NativeCustomJournalResult.Durable
+        assertEquals(first.workout.snapshot,issued.issued.journal.originalSnapshot)
+        val kg=VerifiedLoadStock.Barbell(LoadUnit.KG,n("10"),
+            mapOf(n("5") to 2,n("2.5") to 2))
+        val next=GymProfileDraft("gym-2",LoadUnit.KG,mapOf("straight-bar" to kg),
+            setOf("flat-bench","rack"),emptySet())
+        assertEquals(NativeAuthoringSourceWrite.Committed(2),
+            sources.addAndSelectGym("owner-1",1,next,true))
+        val stored=(sources.readSavedGyms("owner-1") as NativeSavedGymRead.Ready)
+        assertEquals(LoadUnit.KG,stored.active.unit)
+        assertEquals(kg,stored.active.confirmedStock["straight-bar"])
+        assertEquals(listOf(originalGym),stored.inactive)
+        assertEquals(NativeCustomSignoffRead.Found(prior,false),store().read("owner-1","cycle-1",inputs()))
+        assertEquals(NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.CONSENT_CHANGED),
+            issue(waitingId,1,2))
+        assertEquals(NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.NOT_ISSUED),
+            f.issuer.open("owner-1",waitingId))
+        assertTrue(prepare("gym-b-unapproved",2,0) is NativeCustomPrepareResult.Rejected)
+        assertEquals(NativeCustomPreparedRead.Found(waiting.workout),f.prepared.open("owner-1",waitingId))
+        assertTrue(store().confirm("owner-1","cycle-1",1,2,prior.recordRevision,inputs(),true)
+            is NativeCustomSignoffWrite.Rejected)
+        // The old pound workout stays a pound workout even when KG is active.
+        assertEquals(NativeCustomJournalResult.Durable(issued.issued,true),issue(issuedId,1,0))
+        val target=issued.issued.journal.originalSnapshot.slots.single().sets.single()
+        val logged=f.issuer.record("owner-1",issuedId,CustomWorkoutJournalOperation.Record(
+            "gym-a-actual",0,CustomWorkoutVisitKey(target.setKey,CustomWorkoutVisitPart.MAIN),
+            KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(n("25"),LoadUnit.LB,12,2)))
+        assertTrue(logged.toString(),logged is NativeCustomJournalResult.Durable)
+        val finished=NativeKotlinCustomHistoryTransaction(f.history,f.issuer,fence,identity)
+            .complete("owner-1","athlete-1",issuedId,CustomWorkoutJournalOperation.Finish("gym-a-finish",1))
+        assertTrue(finished.toString(),finished is NativeCustomFinishResult.Committed)
+        val fact=(finished as NativeCustomFinishResult.Committed).evidence.visits.single()
+        assertEquals(target.prescription.load,fact.prescribedLoad)
+        assertEquals(n("25"),fact.actual?.load)
+        assertEquals(LoadUnit.LB,fact.actual?.unit)
+        assertEquals(12,fact.actual?.reps)
+        val before=(f.reader.read("owner-1","athlete-1") as NativeKotlinMixedHistoryReadResult.Review).timeline
+        assertEquals(1,before.completions.size)
+        assertEquals("gym-1",(before.completions.single() as NativeKotlinMixedHistoryCompletion.Custom).gymId)
+        val cold=NativeKotlinCustomAuthoringSourceFileStore(temp.root.toPath(),
+            NativeKotlinApprovalRevisionFence(temp.root.toPath()),identity)
+        assertEquals(NativeAuthoringSourceWrite.Committed(3),cold.selectSavedGym("owner-1",2,"gym-1",true))
+        val returned=cold.readSavedGyms("owner-1") as NativeSavedGymRead.Ready
+        assertEquals(originalGym,returned.active)
+        assertEquals(kg,returned.inactive.single().confirmedStock["straight-bar"])
+        assertEquals(NativeCustomSignoffRead.Found(prior,false),store().read("owner-1","cycle-1",inputs()))
+        assertEquals(NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.CONSENT_CHANGED),
+            issue(waitingId,1,2))
+        val fresh=store().confirm("owner-1","cycle-1",1,3,prior.recordRevision,inputs(),true)
+        assertTrue(fresh.toString(),fresh is NativeCustomSignoffWrite.Committed)
+        assertEquals(NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.CONSENT_CHANGED),
+            issue(waitingId,1,2))
+        val newPrep=prepare("gym-a-new-review",2,0) as NativeCustomPrepareResult.Prepared
+        assertEquals(3L,newPrep.workout.snapshot.stamp.gymCatalogSourceRevision)
+        assertEquals("gym-1",newPrep.workout.snapshot.stamp.gymId)
+        assertEquals(LoadUnit.LB,(newPrep.workout.snapshot.slots.single().sets.single().prescription.load
+            as DraftSetLoad.Verified).unit)
+        assertTrue(issue("gym-a-new-review",2,0) is NativeCustomJournalResult.Durable)
+        assertEquals(before,(f.reader.read("owner-1","athlete-1") as NativeKotlinMixedHistoryReadResult.Review).timeline)
+        assertEquals(first.workout.snapshot,
+            (f.issuer.open("owner-1",issuedId) as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
+    }
+
     @Test fun namedPercentageReferenceReviewUsesRealOwnerSourcesAndNeverIssues() {
         val f=authoredCoachFixture(initializeHistory=false,phaseTransition=true)
         initialize()

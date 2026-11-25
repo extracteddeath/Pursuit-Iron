@@ -911,7 +911,15 @@ internal class NativeKotlinCandidateHost(context:Context) {
     fun reviewTieredInitialSession(cycleId:String,inputs:CustomCoachAuditInputs):NativeCustomNextCycleSlot {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeCustomNextCycleSlot.Rejected("No verified active athlete.")
-        return nextCustomCycleSession.reviewTieredInitial(owner.ownerKey,cycleId,inputs)
+        return reviewInitialTierCalendar(owner.ownerKey,cycleId,inputs)
+    }
+
+    private fun reviewInitialTierCalendar(ownerKey:String,cycleId:String,inputs:CustomCoachAuditInputs):NativeCustomNextCycleSlot {
+        val saved=customDraftStore.read(ownerKey,cycleId) as? NativeCustomDraftReadResult.Found
+            ?:return NativeCustomNextCycleSlot.Rejected("Current tier references are unavailable.")
+        return if(saved.tieredInitialReceipts.size>1)
+            nextCustomCycleSession.reviewMultiTieredInitial(ownerKey,cycleId)
+        else nextCustomCycleSession.reviewTieredInitial(ownerKey,cycleId,inputs)
     }
 
     fun previewTieredInitialWorkout(workoutId:String,cycleId:String,week:Int,weekday:Int,
@@ -919,7 +927,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeCustomPreflightResult.Rejected(NativeCustomPreflightRefusal.NOT_AUTHORIZED)
         return revisionFence.withOwnerTransaction(owner.ownerKey) {
-            val next=nextCustomCycleSession.reviewTieredInitial(owner.ownerKey,cycleId,inputs)
+            val next=reviewInitialTierCalendar(owner.ownerKey,cycleId,inputs)
             val allowed=when(next) {
                 is NativeCustomNextCycleSlot.Next -> next.absoluteWeek==week && next.weekday==weekday
                 is NativeCustomNextCycleSlot.Prepared -> next.workoutId==workoutId &&
@@ -954,7 +962,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val issued=revisionFence.withOwnerTransaction(owner.ownerKey) {
             val week=shown.snapshot.absoluteWeek
             val day=shown.snapshot.weekday
-            val next=nextCustomCycleSession.reviewTieredInitial(owner.ownerKey,cycleId,inputs)
+            val next=reviewInitialTierCalendar(owner.ownerKey,cycleId,inputs)
             val preview=previewTieredInitialWorkout(workoutId,cycleId,week,day,inputs)
                 as? NativeCustomPreflightResult.ReviewedPreview
             if(next !is NativeCustomNextCycleSlot.Prepared || next.workoutId!=workoutId ||

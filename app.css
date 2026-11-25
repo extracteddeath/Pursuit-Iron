@@ -9854,7 +9854,7 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-profile-person>.wpb-profile-card-caption{margin:4px 0 0;}
 #root .wpb .wpb-profile-share-card>.wpb-profile-card-metrics{margin-top:12px;}
 #root .wpb .wpb-profile-share-heading{margin:0;font-size:.875rem;line-height:1.43;font-weight:700;color:var(--wpb-theme-muted);}
-#root .wpb .wpb-profile-person>.wpb-profile-card-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:16px;}
+#root .wpb .wpb-profile-person>.wpb-profile-card-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,9.5rem),1fr));gap:8px;margin-top:16px;}
 #root .wpb .wpb-profile-person>.wpb-profile-card-actions>.wpb-ui-action.wpb-ui-action[data-action]{display:inline-flex;align-items:center;width:100%;min-height:48px;justify-content:center;gap:8px;border-radius:999px;}
 #root .wpb .wpb-profile-card-details{margin-top:var(--pi-space-3);}
 #root .wpb .wpb-profile-edit-body{display:grid;gap:28px;padding-bottom:8px;}

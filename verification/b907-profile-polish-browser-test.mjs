@@ -111,6 +111,8 @@ try{
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'compact Profile has no horizontal overflow');
   await page.$eval('.wpb-profile-card-actions button', b=>b.click());
   await page.waitForSelector('.wpb-profile-card-editor');
+  // B1055: the editor is a bottom sheet; measure it once its entry motion has settled.
+  await page.waitForFunction(()=>document.getAnimations().every(a=>a.playState!=='running'||a.effect?.getTiming?.().iterations===Infinity));
   // The read-only metrics explanation is a real disclosure, not a tiny caption.
   const metricSummary=await page.$eval('.wpb-profile-card-details>summary',el=>{
     const r=el.getBoundingClientRect();
@@ -123,15 +125,17 @@ try{
     'Metrics explanation opens without changing card selections');
   await page.$eval('.wpb-profile-card-details>summary',el=>el.click());
   const geometry=await page.evaluate(()=>{
-   const selectors=['.wpb-profile-edit','.wpb-profile-card-editor .wpb-profile-customize-header>button','.wpb-profile-share-toggles button','.wpb-profile-strength-link'];
-   const rect=e=>{const r=e.getBoundingClientRect();return {w:r.width,h:r.height,left:r.left,right:r.right}};
+   const selectors=['.wpb-profile-edit','.wpb-profile-edit-sheet .wpb-ui-sheet-close','.wpb-profile-share-toggles button','.wpb-profile-strength-link'];
+   // Filter chips are 32px visual with the shared 48px hit area (::after inset), as Material specifies.
+   const rect=e=>{const r=e.getBoundingClientRect(),hit=e.matches('[data-choice-kind="filter"]')?getComputedStyle(e,'::after'):null;
+     const dy=hit?Math.max(0,-parseFloat(hit.top)||0):0;return {w:r.width,h:r.height+2*dy,left:r.left,right:r.right}};
    return {overflow:document.documentElement.scrollWidth>innerWidth+1,targets:selectors.flatMap(s=>[...document.querySelectorAll(s)]).filter(e=>!e.disabled).map(rect)};
   });
   assert.equal(geometry.overflow,false,`no horizontal page overflow at ${width} ${theme}`);
   assert.ok(geometry.targets.length>4&&geometry.targets.every(r=>r.w>=47.5&&r.h>=47.5),`48px enabled actions at ${width} ${theme}: ${JSON.stringify(geometry.targets)}`);
   assert.ok(geometry.targets.every(r=>r.left>=-1&&r.right<=width+1),`no offscreen actions at ${width} ${theme}`);
   await page.evaluate(()=>document.documentElement.style.fontSize='200%');
-  const enlarged=await page.$$eval('.wpb-profile .wpb-ui-action[data-action="tonal"]',buttons=>buttons.filter(b=>!b.disabled).map(b=>{
+  const enlarged=await page.$$eval('.wpb-profile .wpb-ui-action[data-action="tonal"],.wpb-profile-edit-sheet .wpb-ui-choice,.wpb-profile-edit-sheet .wpb-ui-action',buttons=>buttons.filter(b=>!b.disabled).map(b=>{
     const box=b.getBoundingClientRect(),walker=document.createTreeWalker(b,NodeFilter.SHOW_TEXT),rects=[];
     while(walker.nextNode()){const node=walker.currentNode;if(!node.textContent.trim())continue;const range=document.createRange();range.selectNodeContents(node);rects.push(...range.getClientRects());}
     return {label:b.textContent.trim(),fits:rects.every(r=>r.left>=box.left-1&&r.right<=box.right+1)};
@@ -143,7 +147,8 @@ try{
   await page.$$eval('.wpb-profile-share-toggles button',buttons=>buttons.find(b=>b.textContent.includes('Favorite lifts')).click());
   await page.waitForSelector('.wpb-profile-card-favorites select');
   await page.select('.wpb-profile-card-favorites select','bb-bench');
-  assert.match(await page.$eval('.wpb-profile-share-card',e=>e.innerText),/Alex Rivera[\s\S]*Barbell Bench Press/i,'live card reflects identity and favorite lift');
+  assert.match(await page.$eval('.wpb-profile-person',e=>e.innerText),/Alex Rivera/,'live profile reflects the name');
+  assert.match(await page.$eval('.wpb-profile-share-card',e=>e.innerText),/Barbell Bench Press/i,'live card reflects the favorite lift');
   const selected=await page.$$eval('.wpb-profile-card-metrics dt',els=>els.map(e=>e.textContent));
   await page.evaluate(()=>{
     window.__cardText=[];
@@ -156,13 +161,13 @@ try{
   assert.ok(output.image.startsWith('data:image/png;base64,'),'share exports a PNG');
   assert.ok(output.text.includes('Alex Rivera'));
   for(const label of selected)assert.ok(output.text.includes(label.toUpperCase()),'export matches preview metric '+label);
-  await page.$eval('[aria-label="Close share card editor"]',b=>b.click());
+  await page.$eval('.wpb-profile-edit-sheet .wpb-ui-sheet-close',b=>b.click());
   await page.$eval('.wpb-profile',e=>e.scrollTop=0);
   if(width===393)await page.screenshot({path:root+'/verification/b915-profile-'+theme+'-phone.png'});
   const storage=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:profile-layout-v1')));
   assert.equal(storage.cardName,'Alex Rivera');assert.deepEqual(storage.favorites,['bb-bench']);
   await page.reload({waitUntil:'networkidle0'});await page.click('[data-tab="profile"]');await page.waitForSelector('.wpb-profile-strength-link');
-  assert.match(await page.$eval('.wpb-profile-share-card',e=>e.innerText),/Alex Rivera[\s\S]*Barbell Bench Press/i,'share card identity persists');
+  assert.match(await page.$eval('.wpb-profile-person',e=>e.innerText)+await page.$eval('.wpb-profile-share-card',e=>e.innerText),/Alex Rivera[\s\S]*Barbell Bench Press/i,'profile name and share card persist');
   assert.deepEqual(errors,[],'no runtime errors');await context.close();
  }
  console.log('PASS B907 browser: Profile identity card, one 48px link to the Progress strength record, phone/tablet layout at 200% text, two themes, share-card identity/favorites persistence and matched PNG content.');

@@ -619,13 +619,15 @@ try{
           assert.ok(density.head&&density.edit&&density.hero&&density.topPadding<=16
             &&density.edit.width>=48&&density.edit.height>=48,
             'Profile identity/edit start promptly with full-size edit action: '+JSON.stringify(density));
-          assert.ok(density.shareCard&&density.layoutActions&&density.shareCard.top>=density.head.bottom
-            &&density.shareCard.top-density.head.bottom<=16
+          // B1055: person (name, details, level), then Edit/Share, then the share card and the strength row.
+          assert.ok(density.shareCard&&density.layoutActions&&density.identity.top>=density.head.bottom
+            &&density.identity.top-density.head.bottom<=72
+            &&density.hero.top>=density.identity.bottom&&density.edit.top>=density.hero.bottom
+            &&density.shareCard.top>=density.edit.bottom&&density.shareCard.top-density.edit.bottom<=24
             &&density.layoutActions.top>=density.shareCard.bottom
-            &&density.hero.top>=density.identity.bottom&&density.hero.bottom<=density.shareCard.bottom
             &&density.layoutActions.height>=48&&density.stats.length===0,
             // B1030: lifetime totals live in Progress; the strength row follows the card.
-            'Share card integrates identity and XP before the strength row, with compact gaps and no overlaps: '+JSON.stringify(density));
+            'Profile reads person, level, actions, share card, then the strength row, with compact gaps and no overlaps: '+JSON.stringify(density));
         }
         basic.density=density;
         if(tab==='plan'||tab==='profile'||tab==='settings'){

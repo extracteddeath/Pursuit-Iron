@@ -71,6 +71,19 @@ try{
     assert.ok(Math.abs(settings.title-settings.card)<=1,'Settings section titles align with their cards '+JSON.stringify({width,settings}));
     assert.ok(settings.seg.every(x=>x>=11.5),'Training experience labels keep a 12px inset '+JSON.stringify({width,settings}));
     assert.equal(settings.small,0,'Secondary and ghost actions are 48px tall '+ctx);
+    // Continuous Material list: only group edges are rounded.
+    const groups=await page.evaluate(()=>[...document.querySelectorAll('.wpb-settings .wpb-settings-card')].flatMap(card=>{
+      const rows=[...card.children].filter(e=>e.matches('.wpb-settings-row,button:not(.pi-pad)')&&e.getBoundingClientRect().height>0);
+      return rows.slice(1).flatMap((row,i)=>{const prev=rows[i];if(row.previousElementSibling!==prev)return [];
+        const a=getComputedStyle(prev),b=getComputedStyle(row);
+        return [{bottom:[a.borderBottomLeftRadius,a.borderBottomRightRadius],top:[b.borderTopLeftRadius,b.borderTopRightRadius],divider:b.borderTopWidth}];
+      });
+    }));
+    assert.ok(groups.length>=4,'Settings regression exercises several adjacent rows '+ctx);
+    for(const edge of groups){
+      assert.ok([...edge.bottom,...edge.top].every(r=>parseFloat(r)===0),'Adjacent Settings corners must be square '+JSON.stringify({width,edge}));
+      assert.equal(parseFloat(edge.divider),1,'Settings rows retain a straight divider '+ctx);
+    }
 
     // B1052: the library's chip rails bleed to the screen edge with the gutter as scroll padding, and
     // Exercise detail is a full-width top app bar over one 16px-gutter column.

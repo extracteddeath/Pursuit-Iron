@@ -41,7 +41,7 @@ from the fully authored, reviewed cycle.
 | Peak or performance test | Peak/test hold | Requires authored planned percentages/weeks; not earned auto-load |
 | Recovery/deload | Recovery hold | Must preserve its independently audited load/dose/time constraints |
 | Explicit week overrides (DUP, wave, ramp) | Authored weekly plan | No duplicate automatic DP on a previously specified week |
-| e1RM style | Specialist coach review | No e1RM is fabricated from uncalibrated strength/RIR data |
+| e1RM style | Explicit saved effort-adjusted review using the shared strict increment gate | Complete comparable top-range sets at original goal effort; read-only bounded Epley estimate; no silent decrease or automatic write |
 | Mixed working loads, top/backoff, different rep envelopes | Specialist/authored loading | No inferred averaging or silent equalization |
 | Set amplifier attached to working set | Parent progression + separately attached technique | Mini-sets/drops are not independent ordinary working sets |
 | Athlete selects manual | Manual | No progression writes; preserve the program and history |
@@ -115,8 +115,16 @@ recognizes **all seven names** through `NativeProgressionStyle`:
 - **Wave:** complete source-authored weekly sequence; can be calculated from
   a separately confirmed training max and verified inventory with the
   `BasicProgrammedPercentageLoadDomain`, not guessed from current reps.
-- **e1RM:** separately reviewed effort-based coaching only. Preserving its
-  style name does NOT claim validated e1RM prediction or an auto-load grant.
+- **e1RM:** explicit saved strength/peak method, same-prescription review.
+  Current web `modules/next-engine/performance.js` on main
+  `32e3f2bd7cb12107814123d677d5d43d70df97f4` grants the adjacent step only
+  after all sets meet ceiling and planned effort. Native uses the shared
+  strict increment gate with the original goal-RIR check; missing RIR uses
+  that goal for review, never rewrites actuals. An effort-adjusted Epley
+  estimate (up to 15 reps to failure) is informative, not a measured max or
+  an additional weight authority. Authored weekly overrides take priority.
+  Changed-rep/RIR phase re-prescription remains a separate reviewed
+  transition/calibration capability and is not certified by this fixture.
 
 These are typed *program candidate assignments*, not proof that the durable
 on-device progression selection and runtime adaptation have been migrated.

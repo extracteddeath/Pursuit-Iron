@@ -280,7 +280,8 @@ object BasicProgramProgressionPlanDomain {
                     block.purpose!=CustomBlockPurpose.TRAINING ||
                     block.phase==TrainingPhase.HYPERTROPHY ||
                     !loaded || assistance || !sameWeights ||
-                    bands.size!=1 || authored.isNotEmpty() || amplifier))
+                    bands.size!=1 ||
+                    (authored.isNotEmpty() && saved!=SavedProgressionMethod.E1RM) || amplifier))
                 return no("e1RM progression requires a straight weighted primary strength or peak exercise with no conflicting authored week or amplifier.")
             val selectedDynamic=requested==
                 BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION
@@ -318,11 +319,6 @@ object BasicProgramProgressionPlanDomain {
             val strategy:BasicProgressionStrategy?
             val note:String
             when {
-                style==NativeProgressionStyle.E1RM -> {
-                    route=ProgramProgressionRoute.E1RM_COACH_REVIEW
-                    strategy=null
-                    note="Retain e1RM as a specialist effort-based review: no uncalibrated strength estimate or silent load step."
-                }
                 requested==BasicProgressionStrategy.MANUAL_LOGGING -> {
                     route=ProgramProgressionRoute.MANUAL
                     strategy=BasicProgressionStrategy.MANUAL_LOGGING
@@ -339,6 +335,11 @@ object BasicProgramProgressionPlanDomain {
                     route=ProgramProgressionRoute.AUTHORED_WEEKLY_PERIODIZATION
                     strategy=null
                     note="Exact source-authored weekly sets own the changing loads and reps."
+                }
+                style==NativeProgressionStyle.E1RM -> {
+                    route=ProgramProgressionRoute.E1RM_COACH_REVIEW
+                    strategy=null
+                    note="Review effort-adjusted strength evidence and the shared all-set physical increment gate; no automatic load change."
                 }
                 block.purpose==CustomBlockPurpose.PERFORMANCE_TEST ||
                     block.phase==TrainingPhase.PEAK -> {

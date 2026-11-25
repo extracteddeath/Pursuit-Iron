@@ -199,6 +199,12 @@ object CustomBasicProgressionDraftDomain {
         changedReps: Set<Int>
     ): Boolean {
         val strategy = candidate.strategy
+        candidate.e1rmEvidence?.let{evidence->
+            if(strategy!=BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION ||
+                evidence.estimatedOneRepMax<=java.math.BigDecimal.ZERO ||
+                evidence.assumedGoalRirSetCount !in 0..working.size ||
+                (changedLoads.isNotEmpty() && !evidence.everySetMeetsGoal))return false
+        }
         val all = working.indices.toSet()
         val loads = working.map { it.load as DraftSetLoad.Verified }
         if (changedLoads.any { index ->

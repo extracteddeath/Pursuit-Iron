@@ -132,9 +132,13 @@ object CustomBasicHistoryProgressionDomain {
             ProgramProgressionSlotKey(block.blockId,next.weekday,request.slotId) }
             ?:return no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE)
         val unweighted=assignment.route==ProgramProgressionRoute.BASIC_BODYWEIGHT_REPS
+        val e1rm=assignment.route==ProgramProgressionRoute.E1RM_COACH_REVIEW &&
+            saved.progressionMethod==SavedProgressionMethod.E1RM
         val strategy=when(assignment.route) {
             ProgramProgressionRoute.MANUAL -> BasicProgressionStrategy.MANUAL_LOGGING
             ProgramProgressionRoute.BASIC_WEIGHTED -> assignment.basicStrategy
+            ProgramProgressionRoute.E1RM_COACH_REVIEW ->
+                BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION.takeIf{e1rm}
             else -> null
         }
         if(!unweighted && strategy==null)
@@ -352,6 +356,8 @@ object CustomBasicHistoryProgressionDomain {
             val observed=byKey.getValue(item.setKey)
             if(!observed.matchesIssuedMain(oldSlot, item) ||
                 item.prescription.reps!=targetReps ||
+                (e1rm && (item.prescription.targetRir==null ||
+                    item.prescription.targetRir!=working[ordinal].prescription.targetRir)) ||
                 observed.amplifierKind!=null)
                 return no(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE)
             val issued=if(unweighted) {
@@ -409,7 +415,7 @@ object CustomBasicHistoryProgressionDomain {
             checkNotNull(strategy),request.nextWorkoutId,
             validatedScope,validatedScope,priorEvidence,targetReps,
             loads.map{it.value},request.verifiedStock,
-            request.maximumAuthorizedIncrement,exactReps))
+            request.maximumAuthorizedIncrement,exactReps,effortAdjustedE1rm=e1rm))
         return when(calculated) {
             is BasicProgressionResult.Candidate -> CustomBasicHistoryResult.Reviewed(
                 prior.evidence.workoutId,prior.completionOrder,calculated,

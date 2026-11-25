@@ -146,6 +146,43 @@ class BasicProgressionPolicyDomainTest {
         assertEquals("last-week",advance.evidenceWorkoutId)
     }
 
+    @Test fun explicitE1rmUsesTheSamePhysicalStepOnlyAtCompleteTopRangeAndGoalEffort() {
+        val mode=BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION
+        val base=request(mode,reps=listOf(10,10,10)).copy(effortAdjustedE1rm=true)
+        val prior=checkNotNull(base.previous)
+        fun review(reserves:List<Int?>,reps:List<Int> = listOf(10,10,10))=
+            candidate(base.copy(previous=prior.copy(observations=prior.observations.mapIndexed{i,fact->
+                fact.copy(actualRir=reserves[i],actualReps=reps[i])})))
+        val earned=review(listOf(2,null,2))
+        assertEquals(List(3){n("105")},earned.proposedWorkingLoads)
+        assertEquals(setOf(0,1,2),earned.increasedOrdinals)
+        assertEquals(BasicE1rmEvidence(n("140.0"),1,true),earned.e1rmEvidence)
+        assertEquals(setOf(0,1,2),earned.approvedFutureLoadFacts.keys)
+        val effortMiss=review(listOf(2,0,2))
+        assertEquals(List(3){n("100")},effortMiss.proposedWorkingLoads)
+        assertEquals(BasicE1rmEvidence(n("140.0"),0,false),effortMiss.e1rmEvidence)
+        assertTrue(effortMiss.approvedFutureLoadFacts.isEmpty())
+        val repMiss=review(listOf(2,2,2),listOf(10,9,10))
+        assertEquals(List(3){n("100")},repMiss.proposedWorkingLoads)
+        assertTrue(repMiss.increasedOrdinals.isEmpty())
+        // Coaching-off strict DP stays a simple all-set ceiling rule.
+        val ordinary=candidate(base.copy(effortAdjustedE1rm=false))
+        assertEquals(List(3){n("105")},ordinary.proposedWorkingLoads)
+        assertNull(ordinary.e1rmEvidence)
+        val missingGoal=base.copy(previous=prior.copy(observations=prior.observations.map{
+            it.copy(issuedRir=null,actualRir=null)}))
+        assertEquals(BasicProgressionResult.Refused(BasicProgressionRefusal.HISTORY_NOT_COMPARABLE),
+            BasicProgressionPolicyDomain.review(missingGoal))
+        val noisy=base.copy(previous=prior.copy(observations=prior.observations.map{
+            it.copy(actualReps=15,actualRir=2)}))
+        assertEquals(BasicProgressionResult.Refused(BasicProgressionRefusal.HISTORY_NOT_COMPARABLE),
+            BasicProgressionPolicyDomain.review(noisy))
+        assertEquals(BasicProgressionResult.Refused(BasicProgressionRefusal.INVALID_SOURCE_OR_LOAD),
+            BasicProgressionPolicyDomain.review(base.copy(strategy=BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION)))
+        assertFalse(earned.maySaveFutureProgram)
+        assertFalse(earned.mayModifyIssuedWorkout)
+    }
+
     @Test fun dynamicOnlyIncreasesSetPositionsThatHitTheirOwnCeiling() {
         val result=candidate(request(BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION,
             reps=listOf(10,9,10)))

@@ -383,6 +383,52 @@ class NativeKotlinTieredInitialReferenceReviewTest {
             val numeric=TieredLinearProgressionDomain.review(request.copy(nextWorkoutId="week-three",
                 completed=ledger.exposures)) as TieredLinearResult.Candidate
             assertEquals(TieredLinearState(0,n("35")),numeric.state)
+            // Reopen from durable receipts and train the other independent
+            // threads on the same week. A different day has its own receipt.
+            fun nextReview(s:NativeMultiTierNextSelection)=transitionStore().previewMultiUsingSavedRules("owner-1","cycle-1",s)
+            val middle=NativeMultiTierNextSelection("week-two-day-two",2,2)
+            val last=NativeMultiTierNextSelection("week-two-day-four",2,4)
+            assertTrue(nextReview(last) is NativeSavedNamedReview.Rejected)
+            // A missing earlier receipt cannot be replaced by trusting an
+            // issued snapshot or simply recomputing past observations.
+            java.nio.file.Files.delete(file)
+            assertTrue(nextReview(middle) is NativeSavedNamedReview.Rejected)
+            java.nio.file.Files.write(file,frozen)
+            fun completeDay(s:NativeMultiTierNextSelection,expected:TieredLinearState,expectedLoad:BigDecimal,reps:Int) {
+                val shownDay=nextReview(s) as NativeSavedNamedReview.Signed
+                val day=checkNotNull(shownDay.nextMultiTierCandidate)
+                assertEquals(expected,day.slots.single().result.state)
+                assertEquals(expectedLoad,(day.snapshot.slots.single().sets.single().prescription.load as DraftSetLoad.Verified).value)
+                assertEquals(NativeTieredTransitionConsentResult.RECORDED,confirmDay(shownDay))
+                val recovered=recoverDay(s.absoluteWeek,s.weekday) as NativeTieredTransitionRecovery.Ready
+                assertEquals(shownDay,recovered.review)
+                val p=(coldPrepared().prepareFirstTierTransition("owner-1",s.nextWorkoutId,"cycle-1",
+                    s.absoluteWeek,s.weekday,transitionStore()) as NativeCustomPrepareResult.Prepared).workout
+                assertEquals(day.snapshot,p.snapshot)
+                assertEquals(recovered.receiptFingerprint,p.consentFingerprint)
+                assertTrue(coldJournal().issueFirstTierTransition("owner-1",s.nextWorkoutId,"cycle-1",
+                    s.absoluteWeek,s.weekday,transitionStore()) is NativeCustomJournalResult.Durable)
+                val setKey=p.snapshot.slots.single().sets.single().setKey
+                assertTrue(coldJournal().record("owner-1",s.nextWorkoutId,
+                    CustomWorkoutJournalOperation.Record("${s.nextWorkoutId}-actual",0,
+                        CustomWorkoutVisitKey(setKey,CustomWorkoutVisitPart.MAIN),
+                        KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(expectedLoad,LoadUnit.LB,reps,0)))
+                    is NativeCustomJournalResult.Durable)
+                val result=NativeKotlinCustomHistoryTransaction(history,coldJournal(),coldFence,identity)
+                    .complete("owner-1","athlete-1",s.nextWorkoutId,
+                        CustomWorkoutJournalOperation.Finish("${s.nextWorkoutId}-finish",1))
+                assertTrue(result.toString(),result is NativeCustomFinishResult.Committed)
+            }
+            completeDay(middle,TieredLinearState(1,n("30")),n("30"),5)
+            completeDay(last,TieredLinearState(0,n("40")),n("40"),5)
+            val weekThree=NativeMultiTierNextSelection("week-three-day-zero",3,0)
+            val nextWeek=nextReview(weekThree) as NativeSavedNamedReview.Signed
+            val nextCandidate=checkNotNull(nextWeek.nextMultiTierCandidate)
+            assertEquals(TieredLinearState(0,n("35")),nextCandidate.slots.single().result.state)
+            assertEquals(listOf(first.nextWorkoutId,nextSelection.nextWorkoutId),
+                nextCandidate.slots.single().evidence.request.completed.map{it.workoutId})
+            assertEquals(saved.draft.revision+4,nextCandidate.draft.revision)
+            assertArrayEquals(frozen,java.nio.file.Files.readAllBytes(file))
             assertEquals(saved,coldDrafts.read("owner-1","cycle-1"))
             return
         }

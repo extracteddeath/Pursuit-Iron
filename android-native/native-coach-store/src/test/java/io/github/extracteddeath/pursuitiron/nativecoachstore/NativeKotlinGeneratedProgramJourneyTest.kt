@@ -872,9 +872,17 @@ class NativeKotlinGeneratedProgramJourneyTest {
             .slots.map { it.exerciseId }, nextWeek.slots.map { it.exerciseId })
     }
 
-    @Test fun completedBasicProgramEarnsReviewedWeekTwoLoadsOnlyAfterExplicitConsent() {
-        val (cycle, inputs) = saveGenerated()
-        val days = cycle.blocks.single().days.sortedBy { it.weekday }
+    @Test fun completedBasicProgramEarnsReviewedWeekTwoLoadsOnlyAfterExplicitConsent() =
+        completeBasicOrManualWeek(false)
+
+    @Test fun generatedManualMethodAndCoachingOffPreserveCorrectedHistoryAndNextTargets() =
+        completeBasicOrManualWeek(true)
+
+    private fun completeBasicOrManualWeek(manual:Boolean) {
+        val (base, inputs) = saveGenerated()
+        assertTrue(Disk().settings.save(owner,0,CoachAssistancePolicy.MANUAL)
+            is NativeCoachSettingsWrite.Saved)
+        val days = base.blocks.single().days.sortedBy { it.weekday }
         val firstDay = days.first()
         val selected = firstDay.slots.first { slot ->
             slot.progressionMethod in setOf(SavedProgressionMethod.AUTO,
@@ -887,6 +895,20 @@ class NativeKotlinGeneratedProgramJourneyTest {
                             it.amplifier == null
                     }
                 }
+        }
+        val cycle=if(!manual)base else {
+            val block=base.blocks.single()
+            val changed=base.copy(revision=base.revision+1,blocks=listOf(block.copy(
+                days=block.days.map{day->if(day.weekday!=firstDay.weekday)day else
+                    day.copy(slots=day.slots.map{slot->if(slot.slotId!=selected.slotId)slot else
+                        slot.copy(progressionMethod=SavedProgressionMethod.MANUAL)})})))
+            assertTrue(Disk().drafts.save(owner,cycleId,base.revision,changed)
+                is NativeCustomDraftWriteResult.Committed)
+            assertTrue(Disk().prepared.prepare(owner,"unapproved-manual",cycleId,1,
+                firstDay.weekday,inputs) is NativeCustomPrepareResult.Rejected)
+            assertTrue(Disk().consent.confirm(owner,cycleId,changed.revision,1,1,inputs,true)
+                is NativeCustomSignoffWrite.Committed)
+            changed
         }
         val finishedWeekOne = linkedMapOf<String, CustomWorkoutDaySnapshot>()
         for ((dayIndex, day) in days.withIndex()) {
@@ -940,6 +962,54 @@ class NativeKotlinGeneratedProgramJourneyTest {
             n("5")) as NativeCustomBasicNextReadResult.Reviewed
         assertEquals(cycle.revision, review.next.stamp.cycleRevision)
         val projection = review.projection as CustomBasicHistoryResult.Reviewed
+        if(manual) {
+            val expected=selected.sets.filter{it.type==DraftSetType.WORKING}
+                .map{(it.load as DraftSetLoad.Verified).value}
+            fun verifyManual(read:NativeCustomBasicNextReadResult.Reviewed) {
+                val p=read.projection as CustomBasicHistoryResult.Reviewed
+                assertEquals(BasicProgressionDecision.MANUAL_REPEAT,p.candidate.decision)
+                assertEquals(expected,p.candidate.proposedWorkingLoads)
+                assertTrue(p.candidate.increasedOrdinals.isEmpty())
+                assertNull(p.historyWorkoutId)
+                assertFalse(read.mayIssueWorkout)
+                assertFalse(read.maySaveProgram)
+            }
+            verifyManual(review)
+            val id="earned-basic-w1-0"
+            val old=(Disk().journals.open(owner,id) as NativeCustomJournalResult.Durable).issued.journal
+            val target=old.snapshot.slots.single{it.slotId==selected.slotId}.sets
+                .first{it.prescription.type==DraftSetType.WORKING}
+            val visit=CustomWorkoutVisitKey(target.setKey,CustomWorkoutVisitPart.MAIN)
+            val recorded=old.effectiveVisits.getValue(visit).operation as CustomWorkoutJournalOperation.Record
+            val correction=CustomSavedVisitCorrection("manual-corrected",0,visit,recorded.eventId,
+                KotlinJournalSetOutcome.COMPLETED,
+                checkNotNull(recorded.performed).copy(reps=target.prescription.reps.minimum,actualRir=0))
+            val d=Disk()
+            assertTrue(NativeKotlinCustomHistoryCorrectionTransaction(d.history,d.journals,
+                d.corrections,d.fence,identity).correct(owner,athlete,id,correction)
+                is NativeCustomCorrectionTransactionResult.Committed)
+            val facts=(Disk().timeline.read(owner,athlete) as NativeKotlinMixedHistoryReadResult.Review)
+                .timeline.completions.first() as NativeKotlinMixedHistoryCompletion.Custom
+            assertEquals(correction.performed,facts.evidence.visits.single{it.setKey==target.setKey}.actual)
+            val fresh=Disk()
+            val after=NativeKotlinCustomBasicNextReview(fresh.fence,identity,fresh.drafts,
+                fresh.sources,fresh.preflight,fresh.timeline,fresh.journals,fresh.machines)
+                .reviewAuthored(owner,cycleId,inputs,2,firstDay.weekday,selected.slotId,
+                    "manual-next",BigDecimal.ZERO) as NativeCustomBasicNextReadResult.Reviewed
+            assertTrue(after.historyRevision>review.historyRevision)
+            verifyManual(after)
+            assertEquals(review.next,after.next)
+            assertTrue(Disk().prepared.prepare(owner,"manual-next",cycleId,2,firstDay.weekday,inputs)
+                is NativeCustomPrepareResult.Prepared)
+            val issued=Disk().journals.issue(owner,"manual-next",cycleId,2,firstDay.weekday,inputs)
+                as NativeCustomJournalResult.Durable
+            assertEquals(after.next,issued.issued.journal.originalSnapshot)
+            assertEquals(cycle,(Disk().drafts.read(owner,cycleId) as NativeCustomDraftReadResult.Found).draft)
+            for((oldId,snapshot) in finishedWeekOne)
+                assertEquals(snapshot,(Disk().journals.open(owner,oldId)
+                    as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
+            return
+        }
         assertEquals("earned-basic-w1-0", projection.historyWorkoutId)
         assertTrue("Expected a verified physical next increment",
             projection.candidate.increasedOrdinals.isNotEmpty())

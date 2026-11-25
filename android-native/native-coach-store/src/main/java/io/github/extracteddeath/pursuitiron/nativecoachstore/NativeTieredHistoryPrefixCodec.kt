@@ -43,18 +43,18 @@ internal object NativeTieredHistoryPrefixCodec {
             require(e.issuedTargets.map{it.ordinal}==e.issuedTargets.indices.toList())
             require(e.observations.map{it.workingOrdinal}==e.issuedTargets.indices.toList())
             for((target,fact) in e.issuedTargets.zip(e.observations)) {
-                val reps=if(tier==PercentageTier.PRIMARY)listOf(3,2,1)[e.issuedStage]
-                    else listOf(10,8,6)[e.issuedStage]
-                require(validNumber(target.load) && target.load.signum()>0 && target.minimumReps==reps)
+                // Numerical recipe/stage matching belongs to the canonical
+                // tier replay and full-cycle audit, not this file grammar.
+                require(validNumber(target.load) && target.load.signum()>0 && target.minimumReps in 1..100)
                 require(target.repOut==(e.recoveryReference==null && target.ordinal==e.issuedTargets.lastIndex))
                 val actual=checkNotNull(fact.actualLoad)
                 val issued=checkNotNull(fact.issuedLoad)
                 require(validNumber(actual) && validNumber(issued))
                 require(actual.compareTo(target.load)==0 && issued.compareTo(target.load)==0)
-                require(fact.actualRir==null || fact.actualRir in 0..10)
-                require(fact.issuedRir==null || fact.issuedRir in 0..10)
+                require(fact.actualRir?.let{it in 0..10}!=false)
+                require(fact.issuedRir?.let{it in 0..10}!=false)
                 require(when(fact.outcome) {
-                    SetOutcome.COMPLETED -> fact.actualReps in 1..100
+                    SetOutcome.COMPLETED -> fact.actualReps?.let{it in 1..100}==true
                     SetOutcome.FAILED_ATTEMPT -> fact.actualReps==0 && fact.actualRir==null
                     SetOutcome.SKIPPED -> false
                 })
@@ -85,7 +85,10 @@ internal object NativeTieredHistoryPrefixCodec {
                 // byte-identical prefix under another gym/day/slot.
                 listOf(scope.athleteId,scope.programId,scope.gymId,scope.blockId,
                     scope.trainingDayId,scope.exerciseId,scope.unit.name,scope.basis.name,
-                    tier.name,slotId).forEach{require(id.matches(it));out.writeUTF(it)}
+                    tier.name,slotId).forEachIndexed{index,value->
+                    require(if(index==4)(0..6).any{value==scope.blockId+":d"+it} else id.matches(value))
+                    out.writeUTF(value)
+                }
                 out.writeBoolean(scope.machineInstanceId!=null)
                 scope.machineInstanceId?.let{require(it.length in 1..80);out.writeUTF(it)}
                 out.writeInt(prefix.size)

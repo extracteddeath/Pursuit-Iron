@@ -141,35 +141,50 @@ class NativeKotlinCustomWorkoutPreflight(
         return runCatching{fence.withOwnerTransaction(ownerKey){
             val owner=identity.signedInIdentity()?.takeIf{it.ownerKey==ownerKey}
                 ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.NOT_AUTHORIZED)
-            val recovered=transitionConsent.recover(ownerKey,cycleId,absoluteWeek)
+            val recovered=transitionConsent.recoverForSession(ownerKey,cycleId,absoluteWeek,weekday)
                 as? NativeTieredTransitionRecovery.Ready
                 ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
             val signed=recovered.review
+            val multi=signed.nextMultiTierCandidate
             val next=signed.nextTierCandidate
-                ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
-            val initial=signed.initialTierEvidence
-                ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
-            val key=initial.key.copy(weekInBlock=initial.key.weekInBlock+next.priorTierTransitions.size+1)
-            if(next.selection.nextWorkoutId!=workoutId || next.selection.absoluteWeek!=absoluteWeek ||
-                key.weekday!=weekday || signed.consent.cycleId!=cycleId ||
-                signed.consent.ownerKey!=ownerKey || signed.consent.athleteId!=owner.athleteId)
+            if((multi==null)==(next==null))
+                return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
+            val selectedId=multi?.selection?.nextWorkoutId ?:checkNotNull(next).selection.nextWorkoutId
+            val selectedWeek=multi?.selection?.absoluteWeek ?:checkNotNull(next).selection.absoluteWeek
+            val selectedDay=multi?.selection?.weekday ?:signed.initialTierEvidence?.key?.weekday
+            if(selectedId!=workoutId || selectedWeek!=absoluteWeek || selectedDay!=weekday ||
+                signed.consent.cycleId!=cycleId || signed.consent.ownerKey!=ownerKey ||
+                signed.consent.athleteId!=owner.athleteId)
                 return@withOwnerTransaction deny(NativeCustomPreflightRefusal.INVALID_SELECTION)
             val source=(sources.read(ownerKey) as? NativeAuthoringSourceRead.Found)?.source
                 ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.NO_REVIEWED_GYM)
             if(source.ownerKey!=ownerKey || source.athleteId!=owner.athleteId ||
                 source.revision!=signed.stamp.gymCatalogSourceRevision)
                 return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
-            val cycle=next.draft.proposal.draft
-            val preview=CustomWorkoutSnapshotDomain.reviewSpecialistForConsent(cycle,
-                source.setup,source.catalog,source.revision,signed.inputs,signed.evidence,
-                listOf(initial),absoluteWeek,weekday,
-                next.priorTierTransitions+CustomTieredTransitionWeekEvidence(key,next.request))
-                as? CustomWorkoutSnapshotResult.Preview
-                ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.COACH_AUDIT_FAILED)
-            val snapshot=preview.snapshot
+            val cycle=multi?.draft ?:checkNotNull(next).draft.proposal.draft
+            val keys:List<CustomNamedPercentageWeekKey>
+            val snapshot=if(multi!=null) {
+                // Recovery already rederived the complete exact snapshot
+                // from the owner-reviewed physical source and ledger.
+                keys=multi.slots.map{it.evidence.key}
+                multi.snapshot
+            } else {
+                val single=checkNotNull(next)
+                val initial=signed.initialTierEvidence
+                    ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
+                val key=initial.key.copy(weekInBlock=initial.key.weekInBlock+single.priorTierTransitions.size+1)
+                keys=listOf(key)
+                (CustomWorkoutSnapshotDomain.reviewSpecialistForConsent(cycle,
+                    source.setup,source.catalog,source.revision,signed.inputs,signed.evidence,
+                    listOf(initial),absoluteWeek,weekday,
+                    single.priorTierTransitions+CustomTieredTransitionWeekEvidence(key,single.request))
+                    as? CustomWorkoutSnapshotResult.Preview)?.snapshot
+                    ?:return@withOwnerTransaction deny(NativeCustomPreflightRefusal.COACH_AUDIT_FAILED)
+            }
             if(snapshot.stamp!=signed.stamp.copy(cycleRevision=cycle.revision) ||
-                snapshot.blockId!=key.blockId || snapshot.weekInBlock!=key.weekInBlock ||
-                snapshot.slots.none{it.slotId==key.slotId})
+                snapshot.absoluteWeek!=absoluteWeek || snapshot.weekday!=weekday || keys.isEmpty() ||
+                keys.any{key->snapshot.blockId!=key.blockId || snapshot.weekInBlock!=key.weekInBlock ||
+                    snapshot.slots.none{it.slotId==key.slotId}})
                 return@withOwnerTransaction deny(NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT)
             val roster=if(machineRosters==null)null else
                 (machineRosters.read(ownerKey) as? NativeMachineRosterResult.Saved)?.snapshot

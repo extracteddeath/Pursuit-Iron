@@ -120,6 +120,204 @@ class NativeKotlinFirstTierTransitionConsentStore(
         return (payload+digest(payload)).also{require(it.size<=maxBytes)}
     }
 
+    private val multiMaxBytes=NativeCustomCycleDraftCodec.MAX_BYTES+
+        32*NativeTieredHistoryPrefixCodec.MAX_BYTES+NativeCustomCoachAuditInputsCodec.MAX_BYTES+32768
+
+    private data class FrozenDay(
+        val owner:String,val athlete:String,val cycle:String,
+        val selection:NativeMultiTierNextSelection,val inputs:CustomCoachAuditInputs,
+        val consentRevision:Long,val cycleRevision:Long,val sourceRevision:Long,
+        val consentFingerprint:String,val historyRevision:Long,
+        val slots:Map<String,ByteArray>,val resets:Set<String>,val proposed:ByteArray
+    )
+
+    private fun multiPath(owner:String,cycle:String,week:Int,weekday:Int):Path {
+        val key=fingerprint("$owner/$cycle".toByteArray(Charsets.UTF_8))
+        return directory.resolve("tier-day-transition-$key-w$week-d$weekday.bin")
+    }
+
+    /** One receipt binds the entire session, not a separate approval per
+     * slot. Prefix bytes are canonical and retain corrected actuals at
+     * consent; the original consent authenticates scope and reference. */
+    private fun encodeMulti(review:NativeSavedNamedReview.Signed):ByteArray {
+        val next=checkNotNull(review.nextMultiTierCandidate)
+        val consent=review.consent
+        require(next.historyRevision==review.historyRevision && next.slots.size in 1..32)
+        val sorted=next.slots.sortedBy{it.evidence.key.slotId}
+        require(sorted.map{it.evidence.key.slotId}.distinct().size==sorted.size)
+        require(next.selection.recoverySlotIds.all{id->sorted.any{it.evidence.key.slotId==id}})
+        val body=ByteArrayOutputStream().also{buffer->
+            DataOutputStream(buffer).use{out->
+                fun segment(bytes:ByteArray){out.writeInt(bytes.size);out.write(bytes)}
+                out.writeInt(0x50495444);out.writeInt(1) // PITD
+                out.writeUTF(consent.ownerKey);out.writeUTF(consent.athleteId);out.writeUTF(consent.cycleId)
+                out.writeLong(consent.recordRevision);out.writeLong(consent.cycleRevision);out.writeLong(consent.sourceRevision)
+                out.writeUTF(consent.fingerprintSha256);out.writeLong(next.historyRevision)
+                out.writeUTF(next.selection.nextWorkoutId);out.writeInt(next.selection.absoluteWeek)
+                out.writeInt(next.selection.weekday);out.writeInt(sorted.size)
+                for(slot in sorted){
+                    val key=slot.evidence.key
+                    val request=slot.evidence.request
+                    require(request.nextWorkoutId==next.selection.nextWorkoutId &&
+                        request.sourceSlotId==key.slotId && key.weekday==next.selection.weekday &&
+                        request.recovery==(key.slotId in next.selection.recoverySlotIds))
+                    out.writeUTF(key.slotId);out.writeBoolean(request.recovery)
+                    out.writeBoolean(slot.requiresExplicitResetReview)
+                    segment(NativeTieredHistoryPrefixCodec.encode(request.scope,request.tier,key.slotId,request.completed))
+                }
+                segment(NativeCustomCycleDraftCodec.encode(next.draft))
+                segment(NativeCustomCoachAuditInputsCodec.encode(review.inputs))
+            }
+        }.toByteArray()
+        return (body+digest(body)).also{require(it.size<=multiMaxBytes)}
+    }
+
+    private fun readMulti(file:Path):ByteArray=readBytes(file,multiMaxBytes)
+
+    private fun decodeMulti(stored:ByteArray):FrozenDay {
+        require(stored.size in 40..multiMaxBytes)
+        val body=stored.copyOfRange(0,stored.size-32)
+        require(MessageDigest.isEqual(digest(body),stored.copyOfRange(stored.size-32,stored.size)))
+        return DataInputStream(ByteArrayInputStream(body)).use{input->
+            require(input.readInt()==0x50495444 && input.readInt()==1)
+            fun identifier()=input.readUTF().also{require(id.matches(it))}
+            fun revision()=input.readLong().also{require(it in 1..9_007_199_254_740_991L)}
+            fun flag()=input.readUnsignedByte().also{require(it in 0..1)}==1
+            fun segment(max:Int):ByteArray {
+                val length=input.readInt()
+                require(length in 1..max && length<=input.available())
+                return ByteArray(length).also{input.readFully(it)}
+            }
+            val owner=identifier();val athlete=identifier();val cycle=identifier()
+            val consentRev=revision();val cycleRev=revision();val sourceRev=revision()
+            val consentHash=input.readUTF().also{require(sha.matches(it))}
+            val historyRev=revision()
+            val workout=identifier();val week=input.readInt().also{require(it in 2..104)}
+            val weekday=input.readInt().also{require(it in 0..6)}
+            val count=input.readInt().also{require(it in 1..32)}
+            val slots=linkedMapOf<String,ByteArray>()
+            val recovery=linkedSetOf<String>()
+            val resets=linkedSetOf<String>()
+            repeat(count){
+                val slot=identifier()
+                require(slot !in slots && (slots.isEmpty() || slots.keys.last()<slot))
+                if(flag())recovery+=slot
+                if(flag())resets+=slot
+                slots[slot]=segment(NativeTieredHistoryPrefixCodec.MAX_BYTES)
+            }
+            val proposed=segment(NativeCustomCycleDraftCodec.MAX_BYTES)
+            val inputBytes=segment(NativeCustomCoachAuditInputsCodec.MAX_BYTES)
+            val inputs=NativeCustomCoachAuditInputsCodec.decode(inputBytes)
+            require(input.available()==0 && NativeCustomCoachAuditInputsCodec.encode(inputs).contentEquals(inputBytes))
+            FrozenDay(owner,athlete,cycle,NativeMultiTierNextSelection(workout,week,weekday,recovery.toSet()),
+                inputs,consentRev,cycleRev,sourceRev,consentHash,historyRev,slots.toMap(),resets.toSet(),proposed)
+        }
+    }
+
+    /** The only new write path is another day-keyed receipt in this store.
+     * It reopens the signed review under the owner fence and requires exact
+     * explicit approval of the displayed reset and recovery slots. */
+    fun confirmMulti(ownerKey:String,cycleId:String,displayed:NativeSavedNamedReview.Signed,
+        athleteConfirmed:Boolean,resetSlots:Set<String> = emptySet(),
+        recoverySlots:Set<String> = emptySet()):NativeTieredTransitionConsentResult {
+        if(!athleteConfirmed)return NativeTieredTransitionConsentResult.CONFIRMATION_REQUIRED
+        if(!id.matches(ownerKey)||!id.matches(cycleId))return NativeTieredTransitionConsentResult.NOT_AUTHORIZED
+        return runCatching{fence.withOwnerTransaction(ownerKey){
+            val owner=identity.signedInIdentity()?.takeIf{it.ownerKey==ownerKey}
+                ?:return@withOwnerTransaction NativeTieredTransitionConsentResult.NOT_AUTHORIZED
+            val shown=displayed.nextMultiTierCandidate
+                ?:return@withOwnerTransaction NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED
+            val reviewer=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
+                signoffs,history,outstanding,machineRosters)
+            val fresh=reviewer.previewMultiTieredNext(ownerKey,cycleId,displayed.inputs,shown.selection)
+                as? NativeSavedNamedReview.Signed
+                ?:return@withOwnerTransaction NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED
+            if(fresh!=displayed || fresh.consent.ownerKey!=ownerKey ||
+                fresh.consent.athleteId!=owner.athleteId || fresh.consent.cycleId!=cycleId)
+                return@withOwnerTransaction NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED
+            val next=checkNotNull(fresh.nextMultiTierCandidate)
+            if(resetSlots!=next.slots.filter{it.requiresExplicitResetReview}.map{it.evidence.key.slotId}.toSet() ||
+                recoverySlots!=next.selection.recoverySlotIds)
+                return@withOwnerTransaction NativeTieredTransitionConsentResult.CONFIRMATION_REQUIRED
+            if(Files.isSymbolicLink(directory))
+                return@withOwnerTransaction NativeTieredTransitionConsentResult.STORAGE_UNAVAILABLE
+            val file=multiPath(ownerKey,cycleId,next.selection.absoluteWeek,next.selection.weekday)
+            val bytes=encodeMulti(fresh)
+            if(Files.exists(file,LinkOption.NOFOLLOW_LINKS)){
+                val old=runCatching{readMulti(file)}.getOrNull()
+                    ?:return@withOwnerTransaction NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT
+                return@withOwnerTransaction if(MessageDigest.isEqual(old,bytes))
+                    NativeTieredTransitionConsentResult.REPLAYED else NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT
+            }
+            if(!writeReceipt(file,bytes,owner,false))
+                return@withOwnerTransaction NativeTieredTransitionConsentResult.NOT_AUTHORIZED
+            NativeTieredTransitionConsentResult.RECORDED
+        }}.getOrElse{NativeTieredTransitionConsentResult.STORAGE_UNAVAILABLE}
+    }
+
+    /** Cold re-review has no caller-supplied inputs or reference values.
+     * No preparation or issuance is authorized by this receipt alone. */
+    fun recoverMulti(ownerKey:String,cycleId:String,week:Int,weekday:Int):NativeTieredTransitionRecovery {
+        fun no(reason:NativeTieredTransitionConsentResult)=NativeTieredTransitionRecovery.Refused(reason)
+        if(!id.matches(ownerKey)||!id.matches(cycleId)||week !in 2..104||weekday !in 0..6)
+            return no(NativeTieredTransitionConsentResult.NOT_AUTHORIZED)
+        return runCatching{fence.withOwnerTransaction(ownerKey){
+            val owner=identity.signedInIdentity()?.takeIf{it.ownerKey==ownerKey}
+                ?:return@withOwnerTransaction no(NativeTieredTransitionConsentResult.NOT_AUTHORIZED)
+            if(Files.isSymbolicLink(directory))
+                return@withOwnerTransaction no(NativeTieredTransitionConsentResult.STORAGE_UNAVAILABLE)
+            val file=multiPath(ownerKey,cycleId,week,weekday)
+            if(!Files.exists(file,LinkOption.NOFOLLOW_LINKS))
+                return@withOwnerTransaction no(NativeTieredTransitionConsentResult.MISSING)
+            val bytes=runCatching{readMulti(file)}.getOrNull()
+                ?:return@withOwnerTransaction no(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT)
+            val old=runCatching{decodeMulti(bytes)}.getOrNull()
+                ?:return@withOwnerTransaction no(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT)
+            if(old.owner!=ownerKey || old.athlete!=owner.athleteId || old.cycle!=cycleId ||
+                old.selection.absoluteWeek!=week || old.selection.weekday!=weekday)
+                return@withOwnerTransaction no(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT)
+            val reviewer=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
+                signoffs,history,outstanding,machineRosters)
+            val fresh=reviewer.previewMultiTieredNextForPreparation(ownerKey,cycleId,old.inputs,old.selection,
+                fingerprint(bytes)) as? NativeSavedNamedReview.Signed
+                ?:return@withOwnerTransaction no(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED)
+            if(identity.signedInIdentity()!=owner)
+                return@withOwnerTransaction no(NativeTieredTransitionConsentResult.NOT_AUTHORIZED)
+            if(!MessageDigest.isEqual(bytes,encodeMulti(fresh)))
+                return@withOwnerTransaction no(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED)
+            NativeTieredTransitionRecovery.Ready(fresh,fingerprint(bytes))
+        }}.getOrElse{no(NativeTieredTransitionConsentResult.STORAGE_UNAVAILABLE)}
+    }
+
+    /** Dispatch from the existing preflight according to signed root shape.
+     * Single-thread receipts retain their established path; multi-root
+     * receipts are addressed by the exact calendar day. */
+    internal fun recoverForSession(ownerKey:String,cycleId:String,week:Int,weekday:Int):NativeTieredTransitionRecovery {
+        val stored=drafts.read(ownerKey,cycleId) as? NativeCustomDraftReadResult.Found
+            ?:return NativeTieredTransitionRecovery.Refused(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED)
+        return if(stored.tieredInitialReceipts.size>1)recoverMulti(ownerKey,cycleId,week,weekday)
+            else recover(ownerKey,cycleId,week)
+    }
+
+    /** Shared atomic persistence for both receipt shapes. Owner fence is
+     * held by the caller. Never replace an existing receipt by default. */
+    private fun writeReceipt(file:Path,bytes:ByteArray,owner:NativeKotlinOwnerIdentity,replace:Boolean):Boolean {
+        Files.createDirectories(directory)
+        require(!Files.isSymbolicLink(directory))
+        val pending=Files.createTempFile(directory,"tier-consent-", ".pending")
+        try {
+            FileChannel.open(pending,StandardOpenOption.WRITE,StandardOpenOption.TRUNCATE_EXISTING).use{channel->
+                val buffer=ByteBuffer.wrap(bytes)
+                while(buffer.hasRemaining())channel.write(buffer)
+                channel.force(true)
+            }
+            if(identity.signedInIdentity()!=owner)return false
+            if(replace)Files.move(pending,file,StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING)
+            else Files.move(pending,file,StandardCopyOption.ATOMIC_MOVE)
+            return true
+        }finally{Files.deleteIfExists(pending)}
+    }
+
     fun confirm(ownerKey:String,cycleId:String,displayed:NativeSavedNamedReview.Signed,
         athleteConfirmed:Boolean,resetConfirmed:Boolean=false,recoveryConfirmed:Boolean=false):
         NativeTieredTransitionConsentResult =
@@ -305,10 +503,10 @@ class NativeKotlinFirstTierTransitionConsentStore(
             issued.issueFirstTierTransition(ownerKey,id,cycleId,week,day,this)
         }}.getOrElse{NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.STORAGE_UNAVAILABLE)}
 
-    private fun readBytes(file:Path):ByteArray {
+    private fun readBytes(file:Path,limit:Int=maxBytes):ByteArray {
         require(!Files.isSymbolicLink(file) && Files.isRegularFile(file,LinkOption.NOFOLLOW_LINKS))
-        require(Files.size(file) in 40L..maxBytes.toLong())
-        return Files.readAllBytes(file).also{require(it.size in 40..maxBytes)}
+        require(Files.size(file) in 40L..limit.toLong())
+        return Files.readAllBytes(file).also{require(it.size in 40..limit)}
     }
     private fun decode(stored:ByteArray):NativeFrozenTierTransition {
         val payload=stored.copyOfRange(0,stored.size-32)
@@ -723,21 +921,8 @@ class NativeKotlinFirstTierTransitionConsentStore(
             }else if(replaceFingerprint!=null)
                 return@withOwnerTransaction NativeTieredTransitionConsentResult.MISSING
             if(!write)return@withOwnerTransaction NativeTieredTransitionConsentResult.MISSING
-            Files.createDirectories(directory)
-            val pending=Files.createTempFile(directory,"tier-first-transition-", ".pending")
-            try {
-                FileChannel.open(pending,StandardOpenOption.WRITE,
-                    StandardOpenOption.TRUNCATE_EXISTING).use{channel->
-                    val buffer=ByteBuffer.wrap(bytes)
-                    while(buffer.hasRemaining())channel.write(buffer)
-                    channel.force(true)
-                }
-                if(identity.signedInIdentity()!=owner)
-                    return@withOwnerTransaction NativeTieredTransitionConsentResult.NOT_AUTHORIZED
-                if(exists)Files.move(pending,file,StandardCopyOption.ATOMIC_MOVE,
-                    StandardCopyOption.REPLACE_EXISTING)
-                else Files.move(pending,file,StandardCopyOption.ATOMIC_MOVE)
-            }finally{Files.deleteIfExists(pending)}
+            if(!writeReceipt(file,bytes,owner,exists))
+                return@withOwnerTransaction NativeTieredTransitionConsentResult.NOT_AUTHORIZED
             if(exists)NativeTieredTransitionConsentResult.REPLACED else NativeTieredTransitionConsentResult.RECORDED
         }}.getOrElse{NativeTieredTransitionConsentResult.STORAGE_UNAVAILABLE}
     }

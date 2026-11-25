@@ -1900,7 +1900,7 @@ assert.ok(basicPreviewScreen.includes('} else if(state.tieredDraft) {') &&
   basicPreviewScreen.includes('NativeTieredInitialExecutionPanel(state,controller,onOpenIssuedWorkout)') &&
   basicPreviewScreen.includes('!state.fixedNamedDraft && !state.tieredDraft') &&
   basicPreviewScreen.includes('controller.approveTieredInitialCycle(review)') &&
-  basicPreviewController.includes('tieredDraft=result.tieredInitialReceipt!=null') &&
+  basicPreviewController.includes('tieredDraft=result.tieredInitialReceipts.isNotEmpty()') &&
   basicPreviewController.includes('host.recoverTieredInitialCycle(cycleId)') &&
   basicPreviewController.includes('host.confirmTieredInitialCycle(draft.cycleId,displayed,true)') &&
   basicPreviewController.includes('if(before.tieredDraft)return'),
@@ -1965,3 +1965,9 @@ assert.ok(basicPreviewScreen.includes('Previous approved targets') &&
   machineChoiceHost.includes('tieredTransitions.cancelStaleScheduled') &&
   machineChoiceHost.includes('tieredTransitions.replaceStaleScheduled'),
   'Corrected tier history must show previous and corrected targets and require explicit replacement before issuing');
+
+assert.ok(basicPreviewController.includes('tieredReceipts=result.tieredInitialReceipts') &&
+  basicPreviewController.includes('val singleThread=before.tieredReceipts.size==1') &&
+  basicPreviewScreen.includes('if(state.tieredReceipts.size>1)') &&
+  basicPreviewScreen.includes('Approve all reviewed references'),
+  'A persisted multi-thread tier cycle must never fall back to ordinary or single-thread issuance');

@@ -1045,7 +1045,7 @@ function StyleTag({ theme } = {}) {
       .wpb-action-tile{box-shadow:none!important;border:1px solid ${C.borderSoft}!important;background:${C.card}!important;}
       .wpb-premium-tabs{background:${C.bg2};border:1px solid ${C.borderSoft};border-radius:12px;padding:3px;}
       .wpb-premium-tabs>button[aria-selected="true"]{background:${C.cardHi}!important;box-shadow:none!important;color:${C.text}!important;}
-      .wpb input:not(:where(.wpb-switcher-search,.wpb-history-editor-input)),.wpb select,.wpb textarea{border-radius:10px!important;}
+      .wpb input:not(:where(.wpb-switcher-search,.wpb-history-editor-input,.wpb-library-search-input)),.wpb select,.wpb textarea{border-radius:10px!important;}
       .wpb input:focus,.wpb select:focus,.wpb textarea:focus{border-color:${C.accent}!important;box-shadow:0 0 0 3px ${C.accentDim};}
 
       /* M84 UI/UX PASS — clearer hierarchy, safer touch targets, and tighter Program density. */
@@ -1161,12 +1161,12 @@ function StyleTag({ theme } = {}) {
       .wpb [data-wpb-dialog]>div:first-child:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)){box-shadow:0 18px 60px rgba(0,0,0,.28);}
       .wpb-backdrop{backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);}
       /* M95 CONTROL CONSISTENCY — non-workout controls share one interaction language. */
-      .wpb-page-shell:not(.wpb-workout) input:not([type="range"]):not(.wpb-ui-control),
+      .wpb-page-shell:not(.wpb-workout) input:not([type="range"]):not(.wpb-ui-control):not(.wpb-library-search-input),
       .wpb-page-shell:not(.wpb-workout) select:not(.wpb-ui-control),
       .wpb-page-shell:not(.wpb-workout) textarea:not(.wpb-ui-control){
         min-height:42px;border-radius:10px!important;border-color:${C.borderSoft}!important;background:${C.bg2}!important;box-shadow:none!important;
       }
-      .wpb-page-shell:not(.wpb-workout) input:not([type="range"]):not(.wpb-ui-control):focus,
+      .wpb-page-shell:not(.wpb-workout) input:not([type="range"]):not(.wpb-ui-control):not(.wpb-library-search-input):focus,
       .wpb-page-shell:not(.wpb-workout) select:not(.wpb-ui-control):focus,
       .wpb-page-shell:not(.wpb-workout) textarea:not(.wpb-ui-control):focus{
         border-color:color-mix(in srgb,${C.accent} 58%,${C.border})!important;box-shadow:0 0 0 3px ${C.accentDim}!important;
@@ -1607,7 +1607,7 @@ function StyleTag({ theme } = {}) {
          the classic PWA tell where select/input text is subtly different from the surrounding UI. */
       .wpb input,.wpb select,.wpb textarea,.wpb button{font:inherit;}
       .wpb input::placeholder,.wpb textarea::placeholder{color:${C.faint};opacity:1;}
-      .wpb-page-shell:not(.wpb-workout) input:not([type="range"]):not(.wpb-ui-control),
+      .wpb-page-shell:not(.wpb-workout) input:not([type="range"]):not(.wpb-ui-control):not(.wpb-library-search-input),
       .wpb-page-shell:not(.wpb-workout) select:not(.wpb-ui-control),
       .wpb-page-shell:not(.wpb-workout) textarea:not(.wpb-ui-control){
         border-radius:var(--r-control)!important;
@@ -1615,7 +1615,7 @@ function StyleTag({ theme } = {}) {
         background:${C.bg2}!important;
         color:${C.text}!important;
       }
-      .wpb-page-shell:not(.wpb-workout) input:not([type="range"]):not(.wpb-ui-control):focus,
+      .wpb-page-shell:not(.wpb-workout) input:not([type="range"]):not(.wpb-ui-control):not(.wpb-library-search-input):focus,
       .wpb-page-shell:not(.wpb-workout) select:not(.wpb-ui-control):focus,
       .wpb-page-shell:not(.wpb-workout) textarea:not(.wpb-ui-control):focus{
         border-color:color-mix(in srgb,${C.accent} 48%,${C.border})!important;
@@ -2155,8 +2155,7 @@ function StyleTag({ theme } = {}) {
          height changes while expanded; closed rows may be skipped safely when far off-screen. */
       .wpb .wpb-history-session,
 .wpb .wpb-exercise-history-session,
-.wpb .wpb-cycle-list-card,
-.wpb .wpb-library-row{content-visibility:auto;contain-intrinsic-size:auto 118px;}
+.wpb .wpb-cycle-list-card{content-visibility:auto;contain-intrinsic-size:auto 118px;}
       .wpb .wpb-history-session[data-open="1"]{content-visibility:visible;}
 
       /* Stronger accessibility modes should not depend on subtle translucent borders. */

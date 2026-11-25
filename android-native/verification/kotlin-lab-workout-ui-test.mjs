@@ -1913,3 +1913,15 @@ assert.ok(basicPreviewScreen.includes('controller::previewTieredInitialWorkout')
   machineChoiceHost.includes('nextCustomCycleSession.reviewTieredInitial') &&
   machineChoiceHost.includes('customIssuedStore.issueTieredInitial'),
   'Initial tier Plan handoff must use separate calendar, prepare and journal authority');
+
+
+assert.ok(basicPreviewScreen.includes('if(scheme==NamedPercentageScheme.GZCLP)') &&
+  basicPreviewScreen.includes('controller.reviewTieredInitialReference(absoluteWeek,weekday,slotId,tier,') &&
+  basicPreviewScreen.includes('controller.acceptTieredInitialReference(shown)') &&
+  basicPreviewScreen.includes('selection.maximumAuthorizedIncrease==increase') &&
+  basicPreviewController.includes('before.tieredReference!=displayed') &&
+  basicPreviewController.includes('displayed.source.cycle!=draft') &&
+  basicPreviewController.includes('host.acceptTieredInitialReference(displayed,true)') &&
+  machineChoiceHost.includes('fixedNamedDraftReview.previewTieredInitial(NativeTieredInitialSelection(') &&
+  machineChoiceHost.includes('fixedNamedDraftReview.acceptTieredInitial(displayed.selection,displayed,confirmed)'),
+  'Native GZCLP authoring must preview explicit load and increment and save only the exact reviewed unsigned revision');

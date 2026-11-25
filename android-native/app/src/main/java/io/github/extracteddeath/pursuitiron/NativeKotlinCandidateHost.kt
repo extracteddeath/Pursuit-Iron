@@ -864,6 +864,26 @@ internal class NativeKotlinCandidateHost(context:Context) {
             mixedHistoryReader,outstandingCustomInventory,machineRosters)
     }
 
+    /** Explicit GZCLP start; the existing specialist reviewer owns all numeric decisions. */
+    fun previewTieredInitialReference(cycleId:String,absoluteWeek:Int,weekday:Int,
+        slotId:String,tier:PercentageTier,initialLoad:BigDecimal,maximumIncrease:BigDecimal,
+        nextWorkoutId:String):NativeTieredInitialReview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeTieredInitialReview.Rejected(NativeNamedPercentageRefusal.NOT_AUTHORIZED)
+        return fixedNamedDraftReview.previewTieredInitial(NativeTieredInitialSelection(
+            owner.ownerKey,cycleId,absoluteWeek,weekday,slotId,nextWorkoutId,tier,
+            initialLoad,maximumIncrease))
+    }
+
+    fun acceptTieredInitialReference(displayed:NativeTieredInitialReview.Ready,
+        confirmed:Boolean):NativeTieredInitialAcceptance {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeTieredInitialAcceptance.Rejected(NativeNamedPercentageRefusal.NOT_AUTHORIZED)
+        if(displayed.selection.ownerKey!=owner.ownerKey)
+            return NativeTieredInitialAcceptance.Rejected(NativeNamedPercentageRefusal.NOT_AUTHORIZED)
+        return fixedNamedDraftReview.acceptTieredInitial(displayed.selection,displayed,confirmed)
+    }
+
     fun recoverTieredInitialCycle(cycleId:String):NativeSavedNamedReview {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeSavedNamedReview.Rejected(NativeSavedNamedReviewRefusal.NOT_AUTHORIZED)

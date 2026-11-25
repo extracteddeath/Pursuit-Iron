@@ -899,6 +899,12 @@ internal class NativeKotlinCandidateHost(context:Context) {
             mixedHistoryReader,outstandingCustomInventory,machineRosters)
     }
 
+    fun reviewTieredCalendar(cycleId:String):NativeCustomNextCycleSlot {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomNextCycleSlot.Rejected("No verified active athlete.")
+        return nextCustomCycleSession.reviewTieredCalendar(owner.ownerKey,cycleId)
+    }
+
     fun reviewTieredInitialSession(cycleId:String,inputs:CustomCoachAuditInputs):NativeCustomNextCycleSlot {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeCustomNextCycleSlot.Rejected("No verified active athlete.")

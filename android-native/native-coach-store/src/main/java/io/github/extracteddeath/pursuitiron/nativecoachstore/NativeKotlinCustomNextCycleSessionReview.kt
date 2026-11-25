@@ -72,19 +72,45 @@ internal object NativeCustomNextCycleSlotDomain {
             if(transition)cycle.revision else revision,item.issued,item.completed)
     }
 
-    /** Map an initial day from a multi-root signed draft. Multiple slots
-     * share a journal; later transitions are deliberately not inferred. */
+    /** Authored support is permitted only on a day with no active tier
+     * thread, inside a block containing reviewed roots. Never mistake a
+     * later exposure on a tier weekday for an ordinary supporting day. */
+    fun isMultiTieredSupportDay(cycle:CustomTrainingCycle,roots:List<NativeTieredInitialDraftReceipt>,
+        week:Int,weekday:Int):Boolean {
+        var offset=0
+        for(block in cycle.blocks) {
+            val end=offset+block.weeks
+            if(week in (offset+1)..end) {
+                val local=roots.filter{it.blockId==block.blockId}
+                return local.isNotEmpty() && week>=local.minOf{it.selection.absoluteWeek} &&
+                    block.days.any{it.weekday==weekday} &&
+                    local.none{it.selection.weekday==weekday && it.selection.absoluteWeek<=week}
+            }
+            offset=end
+        }
+        return false
+    }
+
+    /** Map initial and authored support days from a multi-root signed
+     * draft. Multiple slots share one journal; later transitions are
+     * deliberately not inferred. */
     fun multiInitialFact(cycle:CustomTrainingCycle,roots:List<NativeTieredInitialDraftReceipt>,
         item:NativeCustomInventoryFact,origin:NativeCustomPreparedWorkout,
         consent:NativeKotlinCustomCycleSignoff):NativeCustomCycleSessionFact? {
         val revision=origin.snapshot.stamp.cycleRevision
         val matches=roots.any{r->r.selection.nextWorkoutId==item.workoutId &&
             r.selection.absoluteWeek==item.absoluteWeek && r.selection.weekday==item.weekday}
-        val valid=if(origin.authority==NativeCustomPreparationAuthority.TIERED_INITIAL)
-            matches && revision==cycle.revision && origin.consentRevision==consent.recordRevision &&
-                origin.consentFingerprint==consent.fingerprintSha256
-        else origin.authority==NativeCustomPreparationAuthority.CUSTOM_CYCLE &&
-            item.completed && revision<cycle.revision
+        val current=revision==cycle.revision && origin.consentRevision==consent.recordRevision &&
+            origin.consentFingerprint==consent.fingerprintSha256
+        val valid=when(origin.authority) {
+            NativeCustomPreparationAuthority.TIERED_INITIAL -> matches && current
+            NativeCustomPreparationAuthority.TIERED_SUPPORT -> current &&
+                roots.none{it.selection.nextWorkoutId==item.workoutId} &&
+                isMultiTieredSupportDay(cycle,roots,item.absoluteWeek,item.weekday) &&
+                origin.snapshot.slots.none{slot->slot.sets.any{it.prescription.percentageIntent!=null}}
+            NativeCustomPreparationAuthority.CUSTOM_CYCLE -> item.completed && revision<cycle.revision
+            else -> false
+        }
         if(!valid)return null
         return NativeCustomCycleSessionFact(item.workoutId,item.absoluteWeek,item.weekday,
             revision,item.issued,item.completed)
@@ -178,6 +204,16 @@ class NativeKotlinCustomNextCycleSessionReview(
     fun reviewTieredInitial(ownerKey:String,cycleId:String,
         inputs:CustomCoachAuditInputs):NativeCustomNextCycleSlot =
         reviewInternal(ownerKey,cycleId,inputs,true)
+
+    /** Classify a specific multi-root calendar position using the same
+     * policy as preparation and issuance. This is display-only. */
+    fun isMultiTieredSupportDay(ownerKey:String,cycleId:String,week:Int,weekday:Int):Boolean =
+        runCatching{fence.withOwnerTransaction(ownerKey){
+            val stored=drafts.read(ownerKey,cycleId) as? NativeCustomDraftReadResult.Found
+                ?:return@withOwnerTransaction false
+            stored.tieredInitialReceipts.size>1 &&
+                NativeCustomNextCycleSlotDomain.isMultiTieredSupportDay(stored.draft,stored.tieredInitialReceipts,week,weekday)
+        }}.getOrDefault(false)
 
     /** Multi-root schedule uses the same authenticated initial review and
      * complete census. It does not enable a later tier transition. */

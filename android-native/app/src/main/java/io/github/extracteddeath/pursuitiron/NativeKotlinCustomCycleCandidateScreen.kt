@@ -2475,6 +2475,27 @@ private fun NativeFixedNamedSelectionPanel(draft:CustomTrainingCycle,
 private fun NativeTieredInitialExecutionPanel(state:NativeKotlinCustomCycleState,
     controller:NativeKotlinCustomCycleController,onOpenIssuedWorkout:(String)->Unit) {
     val review=state.tieredInitialReview
+    if(state.tieredReceipts.size>1) {
+        PursuitCard(highlighted=true) {
+            Text("GZCLP · Tier references",style=MaterialTheme.typography.titleLarge)
+            state.message?.let{Text(it,style=MaterialTheme.typography.bodyMedium)}
+            state.tieredReceipts.forEach{r->
+                Text(kotlinExerciseLabel(r.exerciseId),style=MaterialTheme.typography.titleMedium)
+                Text("Week ${r.selection.absoluteWeek} · ${customWeekdays.getOrElse(r.selection.weekday){"Day"}} · ${pretty(r.selection.tier)}",
+                    style=MaterialTheme.typography.labelLarge)
+                Text("Initial: ${r.selection.initialLoad.toPlainString()} ${r.unit} · Increment limit: ${r.selection.maximumAuthorizedIncrease.toPlainString()} ${r.unit}",
+                    style=MaterialTheme.typography.bodySmall)
+            }
+            if(review is io.github.extracteddeath.pursuitiron.nativecoachstore.NativeSavedNamedReview.Ready) {
+                Button(onClick={controller.approveTieredInitialCycle(review)},enabled=!state.busy,
+                    modifier=Modifier.fillMaxWidth()){Text("Approve all reviewed references")}
+            }
+            Text("Multi-thread scheduled workout execution is not enabled in this candidate.",style=MaterialTheme.typography.bodySmall)
+            OutlinedButton(onClick=controller::refreshTieredInitialCycle,enabled=!state.busy,
+                modifier=Modifier.fillMaxWidth()){Text("Refresh tier review")}
+        }
+        return
+    }
     val receipt=when(review) {
         is io.github.extracteddeath.pursuitiron.nativecoachstore.NativeSavedNamedReview.Ready ->
             review.initialTierReceipt

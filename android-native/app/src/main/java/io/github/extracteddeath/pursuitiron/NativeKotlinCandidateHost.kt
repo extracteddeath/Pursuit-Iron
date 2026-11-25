@@ -171,6 +171,9 @@ internal class NativeKotlinCandidateHost(context:Context) {
         revisionFence,localAthlete,customDraftStore,authoringSourceStore,
         customCycleSignoffs,mixedHistoryReader,outstandingCustomInventory,
         customPreparedStore,machineRosters)
+    private val tieredTransitions=NativeKotlinFirstTierTransitionConsentStore(
+        root,revisionFence,localAthlete,customDraftStore,authoringSourceStore,
+        customCycleSignoffs,mixedHistoryReader,outstandingCustomInventory,machineRosters)
     private val composerActivationInventory=NativeKotlinComposerActivationInventory(
         journalStore,approvalStore)
     private val futureActivationPreflight=NativeKotlinFutureBlockActivationPreflight(
@@ -1008,6 +1011,51 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 return@withOwnerTransaction NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.NOT_PREPARED)
             customIssuedStore.issueTieredSupport(owner.ownerKey,workoutId,cycleId,week,day,mixedHistoryReader)
         }
+        if(issued is NativeCustomJournalResult.Durable)
+            pinMachineChoiceForIssuedWorkout(workoutId,custom=true)
+        return issued
+    }
+
+    fun recoverTieredTransition(cycleId:String,week:Int,weekday:Int):NativeTieredTransitionRecovery {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeTieredTransitionRecovery.Refused(NativeTieredTransitionConsentResult.NOT_AUTHORIZED)
+        return tieredTransitions.recoverScheduled(owner.ownerKey,cycleId,week,weekday,nextCustomCycleSession)
+    }
+
+    fun previewTieredTransition(cycleId:String,weekday:Int,selection:NativeTieredNextSelection):NativeSavedNamedReview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeSavedNamedReview.Rejected(NativeSavedNamedReviewRefusal.NOT_AUTHORIZED)
+        return tieredTransitions.previewScheduled(owner.ownerKey,cycleId,weekday,selection,nextCustomCycleSession)
+    }
+
+    fun confirmTieredTransition(cycleId:String,shown:NativeSavedNamedReview.Signed,
+        reset:Boolean,recovery:Boolean):NativeTieredTransitionConsentResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeTieredTransitionConsentResult.NOT_AUTHORIZED
+        return tieredTransitions.confirmScheduled(owner.ownerKey,cycleId,shown,nextCustomCycleSession,
+            true,reset,recovery)
+    }
+
+    fun previewTieredTransitionWorkout(cycleId:String,id:String,week:Int,weekday:Int):NativeFirstTierTransitionPreflight {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFirstTierTransitionPreflight.Rejected(NativeCustomPreflightRefusal.NOT_AUTHORIZED)
+        return tieredTransitions.inspectScheduled(owner.ownerKey,cycleId,id,week,weekday,
+            nextCustomCycleSession,customWorkoutPreflight)
+    }
+
+    fun prepareTieredTransitionWorkout(cycleId:String,shown:NativeFirstTierTransitionPreflight.Reviewed):NativeCustomPrepareResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomPrepareResult.Rejected(NativeCustomPrepareRefusal.NOT_AUTHORIZED)
+        return tieredTransitions.prepareScheduled(owner.ownerKey,cycleId,shown,nextCustomCycleSession,
+            customWorkoutPreflight,customPreparedStore)
+    }
+
+    fun issueTieredTransitionWorkout(cycleId:String,shown:NativeCustomPreparedWorkout):NativeCustomJournalResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.NOT_AUTHORIZED)
+        val workoutId=shown.workoutId
+        val issued=tieredTransitions.issueScheduled(owner.ownerKey,cycleId,shown,nextCustomCycleSession,
+            customWorkoutPreflight,customPreparedStore,customIssuedStore)
         if(issued is NativeCustomJournalResult.Durable)
             pinMachineChoiceForIssuedWorkout(workoutId,custom=true)
         return issued

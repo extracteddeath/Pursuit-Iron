@@ -841,7 +841,7 @@ class NativeKotlinCustomWorkoutPreparedStore(
 
     /** Authored supporting session, distinct from initial and transition
      * prescriptions. No caller-supplied training policy is used. */
-    internal fun prepareTieredSupport(
+    fun prepareTieredSupport(
         ownerKey:String,workoutId:String,cycleId:String,absoluteWeek:Int,weekday:Int,
         history:NativeKotlinMixedHistoryReadCoordinator,
         outstanding:NativeKotlinCustomOutstandingWorkoutInventory

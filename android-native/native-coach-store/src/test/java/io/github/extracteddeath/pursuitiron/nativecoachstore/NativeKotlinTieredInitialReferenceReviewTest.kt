@@ -620,7 +620,7 @@ class NativeKotlinTieredInitialReferenceReviewTest {
     }
 
     @Test fun recoveryAndResetNeedSeparateConsentThroughActualIssuedWeeks() {
-        initialize(5)
+        initialize(6)
         approved()
         enroll()
         val initial=selection()
@@ -718,12 +718,21 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         assertTrue(reset.requiresReviewedReset)
         assertTrue(reset.state.load<n("25"))
         transition(5,"tier-reset",false,0,reset.state.load.toString(),reset.state.load.toString(),true,3)
+        val afterResetLedger=reader.readTieredLedger("owner-1","athlete-1",initialProposal.request.scope,
+            initial.slotId,initial.tier,6) as NativeOwnerTieredLedgerResult.Review
+        val afterReset=TieredLinearProgressionDomain.review(initialProposal.request.copy(
+            nextWorkoutId="tier-after-reset",completed=afterResetLedger.exposures)) as TieredLinearResult.Candidate
+        assertTrue(afterReset.requiresReviewedReset) // historic reset remains in replay
+        // But no second reset approval is needed just because a prior one
+        // appears in the complete ledger. Its frozen receipt proves consent.
+        transition(6,"tier-after-reset",false,0,afterReset.state.load.toString(),
+            afterReset.state.load.toString(),false,3)
         val all=reader.readTieredLedger("owner-1","athlete-1",initialProposal.request.scope,
-            initial.slotId,initial.tier,6)
+            initial.slotId,initial.tier,7)
         assertTrue(all.toString(),all is NativeOwnerTieredLedgerResult.Review)
         val exposures=(all as NativeOwnerTieredLedgerResult.Review).exposures
-        assertEquals(listOf(initial.nextWorkoutId,"tier-recovery","tier-stage-one","tier-stage-two","tier-reset"),
-            exposures.map{it.workoutId})
+        assertEquals(listOf(initial.nextWorkoutId,"tier-recovery","tier-stage-one","tier-stage-two",
+            "tier-reset","tier-after-reset"),exposures.map{it.workoutId})
         assertEquals(n("25"),exposures[1].recoveryReference)
         assertFalse(exposures[1].comparableTraining)
         assertEquals(SetOutcome.FAILED_ATTEMPT,exposures[3].observations.single().outcome)

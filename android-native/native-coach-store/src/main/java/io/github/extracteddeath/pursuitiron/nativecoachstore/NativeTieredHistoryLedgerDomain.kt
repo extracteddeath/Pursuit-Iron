@@ -35,7 +35,8 @@ internal object NativeTieredHistoryLedgerDomain {
         scope: BasicProgressionScope,
         slotId: String,
         tier: PercentageTier,
-        nextAbsoluteWeek: Int
+        nextAbsoluteWeek: Int,
+        historicalPrefix:Boolean=false
     ): NativeOwnerTieredLedgerResult {
         fun deny(reason: NativeOwnerTieredLedgerRefusal, workoutId: String? = null,
             detail: CustomTieredJournalRefusal? = null) =
@@ -64,8 +65,10 @@ internal object NativeTieredHistoryLedgerDomain {
             if (snap.stamp.cycleId != scope.programId || snap.blockId != scope.blockId ||
                 snap.blockId + ":d" + snap.weekday != scope.trainingDayId) continue
             // Calendar ownership is independent of gym or equipment choice.
-            if (snap.absoluteWeek >= nextAbsoluteWeek)
+            if (snap.absoluteWeek >= nextAbsoluteWeek) {
+                if(historicalPrefix)continue
                 return deny(NativeOwnerTieredLedgerRefusal.TARGET_ALREADY_TRAINED, entry.workoutId)
+            }
             if (snap.absoluteWeek <= lastWeek)
                 return deny(NativeOwnerTieredLedgerRefusal.NONCHRONOLOGICAL_HISTORY, entry.workoutId)
             lastWeek = snap.absoluteWeek

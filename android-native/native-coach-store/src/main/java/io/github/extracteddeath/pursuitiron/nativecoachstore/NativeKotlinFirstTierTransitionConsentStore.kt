@@ -353,6 +353,44 @@ internal class NativeKotlinFirstTierTransitionConsentStore(
                     initial.blockId,initial.blockId+":d"+selection.weekday,initial.exerciseId,
                     initial.machineInstanceId,initial.unit,initial.basis)
                 val sorted=unordered.sortedBy{it.selection.absoluteWeek}
+                // Reconstruct the physical request from the signed initial
+                // source rather than trusting numerical fields in a receipt.
+                val source=(sources.read(ownerKey) as? NativeAuthoringSourceRead.Found)?.source
+                    ?:return@withOwnerTransaction null
+                val inputs=sorted.first().inputs
+                require(source.ownerKey==ownerKey && source.athleteId==owner.athleteId &&
+                    source.revision==initial.stamp.gymCatalogSourceRevision &&
+                    NativeCustomCycleSignoffFingerprint.calculateTieredInitial(
+                        stored.draft,source,inputs,initial)==origin.consentFingerprint)
+                val roster=if(machineRosters==null)null else
+                    (machineRosters.read(ownerKey) as? NativeMachineRosterResult.Saved)?.snapshot
+                        ?:return@withOwnerTransaction null
+                require((roster?.revision?:0L)==initial.machineRosterRevision &&
+                    (roster==null || roster.ownerId==ownerKey))
+                val stripped=stored.draft.weekOverrides.mapValues{(_,edits)->
+                    edits.filterNot{edit->edit.sets.any{it.percentageIntent!=null}}}
+                    .filterNot{(blockId,edits)->blockId==initial.blockId && edits.isEmpty()}
+                val base=stored.draft.copy(revision=initial.stamp.cycleRevision,weekOverrides=stripped)
+                val original=(CustomWorkoutSnapshotDomain.reviewForConsent(base,source.setup,
+                    source.catalog,source.revision,inputs,selection.absoluteWeek,selection.weekday)
+                    as? CustomWorkoutSnapshotResult.Preview)?.snapshot
+                    ?:return@withOwnerTransaction null
+                require(original.stamp==initial.stamp &&
+                    NativeKotlinCustomMachineBindingPolicy.review(ownerKey,original,source.catalog,roster)
+                        is NativeCustomMachineBindingReview.Verified)
+                val selected=original.slots.single{it.slotId==selection.slotId}
+                val physical=NativeKotlinCustomSelectedStockDomain.resolve(source,selected,roster)
+                    ?:return@withOwnerTransaction null
+                val stock=physical.stock?:return@withOwnerTransaction null
+                require(selected.exerciseId==initial.exerciseId &&
+                    selected.machineInstanceId==initial.machineInstanceId &&
+                    physical.machineInstanceId==initial.machineInstanceId &&
+                    stock.unit==initial.unit && stock.basis==initial.basis)
+                val initialRequest=TieredLinearRequest(selection.nextWorkoutId,scope,selection.tier,
+                    TieredLinearState(0,selection.initialLoad),true,emptyList(),stock,
+                    selection.maximumAuthorizedIncrease,
+                    selected.sets.count{it.prescription.type==DraftSetType.WORKING},sourceSlotId=selection.slotId)
+                var historicalCycle=stored.draft
                 val prefixIds=mutableListOf(selection.nextWorkoutId)
                 var priorRevision=initial.historyRevision
                 for((index,old) in sorted.withIndex()){
@@ -368,9 +406,28 @@ internal class NativeKotlinFirstTierTransitionConsentStore(
                         old.historyRevision<=timeline.manifestRevision)
                     val prefix=NativeTieredHistoryPrefixCodec.decode(old.prefix,scope,selection.tier,selection.slotId)
                     require(prefix.map{it.workoutId}==prefixIds && prefixIds.all{it in completed})
-                    val proposed=NativeCustomCycleDraftCodec.decode(old.proposedCycle)
-                    require(NativeCustomCycleDraftCodec.encode(proposed).contentEquals(old.proposedCycle) &&
-                        proposed.cycleId==cycleId && proposed.athleteId==owner.athleteId)
+                    require(old.inputs==inputs && old.setBudget==initialRequest.approvedSetBudget)
+                    val ledger=history.readTieredHistoryPrefixForRecovery(ownerKey,owner.athleteId,scope,
+                        selection.slotId,selection.tier,week) as? NativeOwnerTieredLedgerResult.Review
+                        ?:return@withOwnerTransaction null
+                    require(ledger.manifestRevision==timeline.manifestRevision &&
+                        ledger.exposures.size==prefix.size &&
+                        prefix.zip(ledger.exposures).all{(saved,live)->
+                            saved.copy(observations=live.observations)==live} &&
+                        (old.historyRevision!=ledger.manifestRevision || prefix==ledger.exposures))
+                    val request=initialRequest.copy(nextWorkoutId=old.selection.nextWorkoutId,
+                        completed=prefix,recovery=old.selection.recovery)
+                    val numeric=TieredLinearProgressionDomain.review(request)
+                        as? TieredLinearResult.Candidate?:return@withOwnerTransaction null
+                    require(needsNewTierResetConsent(request,numeric)==old.resetRequired)
+                    val replay=CustomPercentageDraftDomain.reviewTiered(
+                        CustomPercentageDraftSource(historicalCycle,
+                            initial.stamp.copy(cycleRevision=historicalCycle.revision),
+                            initial.blockId,initial.weekInBlock+index+1,selection.weekday,selection.slotId),
+                        request) as? CustomPercentageDraftResult.Proposed?:return@withOwnerTransaction null
+                    val proposed=replay.proposal.draft
+                    require(NativeCustomCycleDraftCodec.encode(proposed).contentEquals(old.proposedCycle))
+                    historicalCycle=proposed
                     val workoutId=old.selection.nextWorkoutId
                     val fact=census.sessions.singleOrNull{it.workoutId==workoutId}
                     if(fact!=null){

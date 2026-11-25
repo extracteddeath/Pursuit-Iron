@@ -1854,9 +1854,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background-image:none!important;
   background-color:var(--pi-m3e-surface-container-low)!important;
 }
-#root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-option[aria-pressed="true"]{
-  background-color:var(--pi-m3e-primary-container)!important;
-}
 /* Sheets, dialogs and menus are high-elevation tonal containers, not glossy
    overlays. Keep actual modal z-order, detents and keyboard avoidance. */
 #root[data-pi-motion="expressive"] .wpb .wpb-backdrop>[data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)),#root[data-pi-motion="expressive"] .wpb .wpb-pop,#root[data-pi-motion="expressive"] .wpb .wpb-dialog{
@@ -1901,7 +1898,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    semantics, ordering, filtered content and scroll position. */
 #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results>.wpb-library-row:is(:active,:focus-visible){
   border-radius:var(--pi-m3e-list-compressed) 23px 23px var(--pi-m3e-list-compressed)!important;
-  border-color:color-mix(in srgb,var(--pi-m3e-primary) 44%,transparent)!important;
 }
 /* Responsive 2026 list height: long names can wrap, and the actual content
    determines the row height. No rigid cropping or a second inaccessible title. */
@@ -9928,4 +9924,4 @@ background:var(--pi-color-card)!important;
   background:var(--pi-r11-quiet);box-shadow:none;text-align:left;cursor:pointer;
   content-visibility:auto;contain-intrinsic-size:auto 118px;
 }
-#root .wpb .wpb-library .wpb-library-results>.wpb-library-row :is(span,strong){min-width:0;overflow-wrap:anywhere;white-space:normal;line-height:1.28;}
+#root .wpb .wpb-library .wpb-library-results>.wpb-library-row span,#root .wpb .wpb-library .wpb-library-results>.wpb-library-row strong{min-width:0;overflow-wrap:anywhere;white-space:normal;line-height:1.28;}

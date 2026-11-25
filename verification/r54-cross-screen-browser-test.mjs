@@ -993,8 +993,9 @@ try{
         tools:tools.map(el=>({height:el.offsetHeight,background:getComputedStyle(el).backgroundColor,
           border:getComputedStyle(el).borderTopColor}))};
     });
-    assert.ok(surrounding.note?.height>=44&&surrounding.coach?.height>=40&&surrounding.coach.height<=48&&
-      surrounding.note.background!==surrounding.coach.background&&surrounding.tools.length>=3&&
+    // B1056: Coach appears only when it has something actionable; when present it is one 48px+ tonal row.
+    assert.ok(surrounding.note?.height>=44&&(!surrounding.coach||(surrounding.coach.height>=48&&surrounding.coach.height<=72&&
+      surrounding.note.background!==surrounding.coach.background))&&surrounding.tools.length>=3&&
       surrounding.tools.every(x=>x.height>=48&&x.background==='rgba(0, 0, 0, 0)'&&x.border==='rgba(0, 0, 0, 0)'),
       'Theme-tinted note and compact Coach coexist with unfilled full-size tool targets: '+JSON.stringify(surrounding));
     await page.click('button[aria-label^="Edit pinned note for "]');

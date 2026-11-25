@@ -391,9 +391,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-workout .wpb-ex-nav-step{
   border-radius:12px!important;
 }
-#root[data-pi-motion="expressive"] .wpb-workout .wpb-coach-card{
-  border-radius:var(--pi-layout-radius)!important;
-}
 @media(max-width:420px){
   /* Progress and Settings scroll panes match UiRootHeader: 12px at 320px,
      16px at 393px. Home already has its own shared-inset scroll owner. */
@@ -3795,27 +3792,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   translate:none!important;
   scale:none!important;
 }
-/* Coach stays a compact theme-tinted disclosure with quiet supporting text. */
-#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-scroll>
-  button[aria-label="Expand Coach guidance"]{
-  box-sizing:border-box;
-  min-height:40px!important;
-  margin-bottom:8px!important;
-  padding:7px 10px!important;
-  background-color:var(--pi-color-card)!important;
-  background-image:none!important;
-  border:1px solid color-mix(in srgb,var(--pi-m3e-primary) 20%,transparent)!important;
-  border-radius:16px!important;
-  box-shadow:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-scroll>.wpb-coach-card{
-  background-color:var(--pi-color-card)!important;
-  background-image:none!important;
-  border:1px solid color-mix(in srgb,var(--pi-m3e-primary) 20%,transparent)!important;
-  border-radius:16px!important;
-  box-shadow:none!important;
-  margin-bottom:10px!important;
-}
 #root[data-pi-motion="expressive"] .wpb-workout .wpb-exercise-heading{
   padding:1px 2px 0!important;
   gap:8px!important;
@@ -3883,8 +3859,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb-workout :is(.wpb-workout-actions>.wpb-workout-finish),
 #root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-tool.wpb-workout-tool,
-#root[data-pi-motion="expressive"] .wpb-workout .wpb-coach-card.wpb-coach-card,
-#root[data-pi-motion="expressive"] .wpb-workout :where(button[aria-label="Expand Coach guidance"]):not(.pi-pad.pi-pad),
 #root[data-pi-motion="expressive"] .wpb-workout :where(button[aria-label^="Edit pinned note for "]):not(.pi-pad.pi-pad),
 #root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-footer-primary[aria-label="Next exercise"]{
     background-color:ButtonFace!important;
@@ -6452,16 +6426,6 @@ background:var(--pi-color-card)!important;
   padding:10px 14px 14px!important;
   scroll-padding-block:16px!important;
 }
-#root .wpb-workout .wpb-workout-scroll>.wpb-coach-card,
-#root .wpb-workout .wpb-workout-scroll>button[aria-label="Expand Coach guidance"]{
-  min-height:42px!important;
-  border-radius:12px!important;
-  margin-bottom:10px!important;
-  padding:8px 11px!important;
-  background:var(--pi-m3e-primary-container)!important;
-  border-color:color-mix(in srgb,var(--pi-m3e-primary) 22%,transparent)!important;
-  box-shadow:none!important;
-}
 #root .wpb-workout .wpb-exercise-heading{
   gap:10px!important;
   padding:1px 0 0!important;
@@ -8866,22 +8830,24 @@ background:var(--pi-color-card)!important;
 #root .wpb-workout .wpb-b973-set-type[aria-pressed="true"]{border-color:var(--wpb-theme-accent);background:var(--wpb-theme-accent-dim);}
 #root .wpb-workout .wpb-b973-set-detail{display:block;margin-top:3px;color:var(--wpb-theme-muted);font-size:.75rem;line-height:1.4;overflow-wrap:anywhere;}
 #root .wpb-workout .wpb-b973-set-guidance{padding:8px 4px 0;color:var(--wpb-theme-muted);font-size:.75rem;line-height:1.5;}
+/* B1056: Coach is one tonal row above the set list: icon, "Coach · context" overline over the action,
+   expanding in place. No caps label squeezed beside a context word, no card-in-card items. */
 #root .wpb-workout .wpb-b973-coach-collapsed,#root .wpb-workout .wpb-b973-coach-toggle{display:flex;align-items:center;width:100%;min-height:48px;text-align:left;cursor:pointer}
-#root .wpb-workout .wpb-b973-coach-collapsed,#root .wpb-workout .wpb-b973-coach-open{border:1px solid var(--wpb-theme-border-soft);background:var(--wpb-theme-card);text-align:left}
-#root .wpb-workout .wpb-b973-coach-collapsed{gap:7px;margin:0 0 9px;padding:7px 10px;border-radius:12px}
-#root .wpb-workout .wpb-b973-coach-toggle{gap:8px;padding:0;border:0;background:transparent;color:inherit}
-#root .wpb-workout .wpb-b973-coach-label{flex-shrink:0;font-size:.6875rem;font-weight:750;letter-spacing:.04em;text-transform:uppercase;color:var(--wpb-theme-accent-ink);}
-#root .wpb-workout .wpb-b973-coach-summary{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--wpb-theme-text);font-size:.75rem;font-weight:650;}
-#root .wpb-workout .wpb-b973-coach-context{flex-shrink:0;color:var(--wpb-theme-muted);font-size:.6875rem;}
-#root .wpb-workout .wpb-b973-coach-open{width:100%;margin:0 0 14px;padding:11px 13px;border-radius:16px;color:var(--wpb-theme-text);}
-
-#root .wpb-workout .wpb-b973-coach-open-context{font-size:.75rem;color:var(--wpb-theme-muted);}
-#root .wpb-workout .wpb-b973-coach-hide{margin-left:auto;font-size:.75rem;color:var(--wpb-theme-muted);}
-#root .wpb-workout .wpb-b973-coach-item{padding:8px 10px;border:1px solid var(--wpb-theme-border-soft);border-radius:12px;background:var(--wpb-theme-bg-tint);}
-#root .wpb-workout .wpb-b973-coach-item[data-lead="true"]{padding:9px 10px;border-color:color-mix(in srgb,var(--wpb-theme-accent) 15%,var(--wpb-theme-border-soft));background:var(--wpb-theme-accent-dim);}
-#root .wpb-workout .wpb-b973-coach-item-title{font-size:.875rem;font-weight:750;line-height:1.35;color:var(--wpb-theme-text);overflow-wrap:anywhere;}
-#root .wpb-workout .wpb-b973-coach-item-copy{margin-top:3px;color:var(--wpb-theme-muted);font-size:.875rem;line-height:1.45;overflow-wrap:anywhere;}
-#root .wpb-workout .wpb-b973-coach-item-evidence{margin-top:5px;color:var(--wpb-theme-muted);font-size:.75rem;line-height:1.35;overflow-wrap:anywhere;}
+#root .wpb-workout .wpb-b973-coach-collapsed,#root .wpb-workout .wpb-b973-coach-open{border:0;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-text);text-align:left}
+#root .wpb-workout .wpb-b973-coach-collapsed{gap:12px;margin:0 0 12px;padding:8px 12px;border-radius:12px}
+#root .wpb-workout .wpb-b973-coach-toggle{gap:12px;padding:8px 12px;border:0;background:transparent;color:inherit}
+#root .wpb-workout .wpb-b973-coach-open{width:100%;margin:0 0 12px;padding:0;border-radius:12px;}
+#root .wpb-workout .wpb-b973-coach-icon{flex:0 0 18px;color:var(--wpb-theme-accent-ink);}
+#root .wpb-workout .wpb-b973-coach-copy{flex:1;min-width:0;display:grid;gap:2px;}
+#root .wpb-workout .wpb-b973-coach-overline{display:flex;flex-wrap:wrap;gap:0 6px;font-size:.6875rem;line-height:1.3;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--wpb-theme-muted);}
+#root .wpb-workout .wpb-b973-coach-label{color:var(--wpb-theme-accent-ink);}
+#root .wpb-workout .wpb-b973-coach-context::before{content:"\00B7";margin-right:6px;}
+#root .wpb-workout .wpb-b973-coach-summary{color:var(--wpb-theme-text);font-size:.875rem;line-height:1.35;font-weight:650;overflow-wrap:anywhere;}
+#root .wpb-workout .wpb-b973-coach-chevron{flex:0 0 18px;color:var(--wpb-theme-muted);}
+#root .wpb-workout .wpb-b973-coach-body{display:grid;gap:4px;padding:0 12px 12px 42px;}
+#root .wpb-workout .wpb-b973-coach-item-copy{margin:0;color:var(--wpb-theme-muted);font-size:.875rem;line-height:1.45;overflow-wrap:anywhere;}
+@media(forced-colors:active){#root .wpb-workout .wpb-b973-coach-collapsed,#root .wpb-workout .wpb-b973-coach-open{border:1px solid ButtonText;background:ButtonFace;color:ButtonText;}}
+#root .wpb-workout .wpb-b973-coach-item-evidence{margin:0;color:var(--wpb-theme-muted);font-size:.75rem;line-height:1.35;overflow-wrap:anywhere;}
 @media (forced-colors:active){
 #root .wpb-workout .wpb-b973-set-type[aria-pressed="true"]{outline:2px solid Highlight;outline-offset:-2px;}
 #root .wpb-workout .wpb-b973-set-close:focus-visible,#root .wpb-workout .wpb-b973-coach-collapsed:focus-visible,#root .wpb-workout .wpb-b973-coach-toggle:focus-visible{outline-color:Highlight}

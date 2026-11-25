@@ -133,6 +133,14 @@ object CustomCycleCoachAuditDomain {
         inputs:CustomCoachAuditInputs,
         stamp:CustomWorkoutSourceStamp,
         evidence:List<CustomNamedPercentageWeekEvidence>
+    ):CustomCoachAudit = reviewSpecialistForReview(cycle,setup,catalog,inputs,stamp,evidence,emptyList())
+
+    /** First tier entries only; no later transition or reset is authorized. */
+    fun reviewSpecialistForReview(
+        cycle:CustomTrainingCycle,setup:AthleteSetupReview,catalog:List<CatalogMovement>,
+        inputs:CustomCoachAuditInputs,stamp:CustomWorkoutSourceStamp,
+        evidence:List<CustomNamedPercentageWeekEvidence>,
+        initialTiers:List<CustomTieredInitialWeekEvidence>
     ):CustomCoachAudit {
         val profile=setup.reviewed
         if(profile==null || profile.athleteProfileId!=stamp.athleteId ||
@@ -142,7 +150,7 @@ object CustomCycleCoachAuditDomain {
                 listOf(CustomCoachIssue(CustomCoachIssueKind.INVALID_CUSTOM_CYCLE,
                     "weekOverrides","Named review source differs from reviewed setup.")),
                 null,emptyList(),profile?.profileRevision,cycle.revision,emptyMap())
-        return reviewInternal(cycle,setup,catalog,inputs,emptyMap(),stamp to evidence)
+        return reviewInternal(cycle,setup,catalog,inputs,emptyMap(),stamp to evidence,initialTiers)
     }
 
     private fun reviewInternal(
@@ -151,7 +159,8 @@ object CustomCycleCoachAuditDomain {
         catalog:List<CatalogMovement>,
         inputs:CustomCoachAuditInputs,
         prospectiveByBlock:Map<String,ProspectiveBlockCoachingContext>,
-        named:Pair<CustomWorkoutSourceStamp,List<CustomNamedPercentageWeekEvidence>>?
+        named:Pair<CustomWorkoutSourceStamp,List<CustomNamedPercentageWeekEvidence>>?,
+        initialTiers:List<CustomTieredInitialWeekEvidence> = emptyList()
     ):CustomCoachAudit {
         val issues = mutableListOf<CustomCoachIssue>()
         fun add(kind: CustomCoachIssueKind, where: String, why: String) {
@@ -225,7 +234,7 @@ object CustomCycleCoachAuditDomain {
         val structural = if(named==null) CustomTrainingCycleDomain.review(
             cycle, options.map { it.availability })
         else CustomTrainingCycleDomain.reviewNamedForAudit(
-            cycle,options.map{it.availability},named.first,named.second)
+            cycle,options.map{it.availability},named.first,named.second,initialTiers)
         if (structural.verifiedDraft == null) {
             structural.issues.take(40).forEach {
                 add(CustomCoachIssueKind.INVALID_CUSTOM_CYCLE,

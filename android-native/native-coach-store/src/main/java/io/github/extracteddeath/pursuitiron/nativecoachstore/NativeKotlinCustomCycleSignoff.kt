@@ -135,6 +135,26 @@ internal object NativeCustomCycleSignoffFingerprint {
             .joinToString(""){"%02x".format(it.toInt() and 255)}
     }
 
+    /** Multi-root approval uses the same complete authored fingerprint,
+     * plus all roots in canonical calendar/slot order. Single-root consent
+     * retains its existing fingerprint bytes. */
+    fun calculateTieredInitialBatch(cycle:CustomTrainingCycle,source:NativeCustomAuthoringSnapshot,
+        inputs:CustomCoachAuditInputs,receipts:List<NativeTieredInitialDraftReceipt>):String {
+        require(NativeTieredInitialDraftReceiptCodec.validBatch(receipts,source.ownerKey,cycle))
+        if(receipts.size==1)return calculateTieredInitial(cycle,source,inputs,receipts.single())
+        val bytes=ByteArrayOutputStream()
+        DataOutputStream(bytes).use{out->
+            out.writeUTF("PursuitIron/initial-tier-batch-consent/v1")
+            out.writeUTF(calculate(cycle,source,inputs))
+            out.writeInt(receipts.size)
+            receipts.sortedWith(compareBy<NativeTieredInitialDraftReceipt>(
+                {it.selection.absoluteWeek},{it.selection.weekday},{it.selection.slotId}))
+                .forEach{NativeTieredInitialDraftReceiptCodec.write(out,it)}
+        }
+        return MessageDigest.getInstance("SHA-256").digest(bytes.toByteArray())
+            .joinToString(""){"%02x".format(it.toInt() and 255)}
+    }
+
     /** Initial tier consent binds the immutable workout ID, exact initial
      * reference, increment limit, scope and source/history revision. */
     fun calculateTieredInitial(cycle:CustomTrainingCycle,source:NativeCustomAuthoringSnapshot,

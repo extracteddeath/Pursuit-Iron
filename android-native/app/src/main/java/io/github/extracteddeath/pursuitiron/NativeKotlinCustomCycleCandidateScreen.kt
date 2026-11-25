@@ -2355,6 +2355,7 @@ private fun NativeFixedNamedSelectionPanel(draft:CustomTrainingCycle,
     var reference by remember(blockId,weekday,slotId,scheme){mutableStateOf("")}
     var maximumIncrease by remember(blockId,weekday,slotId){mutableStateOf("")}
     var choices by remember(draft.cycleId,draft.revision){mutableStateOf(emptyList<NativeFixedNamedChoice>())}
+    var tierChoices by remember(draft.cycleId,draft.revision){mutableStateOf(emptyList<NativeTieredInitialChoice>())}
     val busy=state.busy
     PursuitCard {
         TextButton(onClick={expanded=!expanded},enabled=!busy){
@@ -2369,8 +2370,10 @@ private fun NativeFixedNamedSelectionPanel(draft:CustomTrainingCycle,
                 {d->block.days.first{it.weekday==d}.label}){weekday=it}
             CycleChoiceRow("Exercise",day.slots.map{it.slotId},slotId,
                 {id->kotlinExerciseLabel(day.slots.first{it.slotId==id}.exerciseId)}){slotId=it}
-            CycleChoiceRow("Protocol",NamedPercentageScheme.entries,
-                scheme,::pretty){scheme=it}
+            if(choices.isEmpty() && tierChoices.isEmpty())
+                CycleChoiceRow("Protocol",NamedPercentageScheme.entries,scheme,::pretty){scheme=it}
+            else Text("Protocol: ${pretty(scheme)} · Remove selected references to change",
+                style=MaterialTheme.typography.labelLarge)
             CycleChoiceRow("Tier",PercentageTier.entries,tier,::pretty){tier=it}
             if(scheme==NamedPercentageScheme.TEXAS)
                 CycleChoiceRow("Texas day",PercentageDayRole.entries.filter{it!=PercentageDayRole.STANDARD},
@@ -2381,7 +2384,7 @@ private fun NativeFixedNamedSelectionPanel(draft:CustomTrainingCycle,
                 keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
                 modifier=Modifier.fillMaxWidth())
             if(scheme==NamedPercentageScheme.GZCLP) {
-                Text("Start one tier progression thread. Review the authored supporting days and later tier transitions in Plan.",
+                Text("Add a separate reference for each GZCLP exercise and training day. Slots on the same day share one workout. Review all targets before saving.",
                     style=MaterialTheme.typography.bodySmall)
                 OutlinedTextField(from,{from=it},singleLine=true,label={Text("Initial block week")},
                     keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),modifier=Modifier.fillMaxWidth())
@@ -2391,30 +2394,68 @@ private fun NativeFixedNamedSelectionPanel(draft:CustomTrainingCycle,
                 val week=from.toIntOrNull()
                 val load=reference.toBigDecimalOrNull()
                 val increase=maximumIncrease.toBigDecimalOrNull()
-                val absoluteWeek=draft.blocks.takeWhile{it.blockId!=blockId}.sumOf{it.weeks}+(week?:0)
-                val valid=week!=null && week in 1..block.weeks && load!=null && load.signum()>0 &&
-                    increase!=null && increase.signum()>0 && unit!=null
+                val blockOffset=draft.blocks.takeWhile{it.blockId!=blockId}.sumOf{it.weeks}
+                val absoluteWeek=blockOffset+(week?:0)
+                val choice=if(week!=null && week in 1..block.weeks && load!=null && load.signum()>0 &&
+                    increase!=null && increase.signum()>0 && unit!=null)
+                    NativeTieredInitialChoice(absoluteWeek,weekday,slotId,tier,load,increase)
+                else null
+                val alreadyAdded=tierChoices.any{it.absoluteWeek in (blockOffset+1)..(blockOffset+block.weeks) &&
+                    it.weekday==weekday && it.slotId==slotId}
                 Button(onClick={
-                    if(valid)controller.reviewTieredInitialReference(absoluteWeek,weekday,slotId,tier,
-                        checkNotNull(load),checkNotNull(increase))
-                },enabled=!busy && valid,modifier=Modifier.fillMaxWidth()){Text("Review initial tier targets")}
+                    choice?.let{tierChoices=tierChoices+it}
+                    reference=""
+                    maximumIncrease=""
+                },enabled=!busy && choice!=null && !alreadyAdded && tierChoices.size<104,
+                    modifier=Modifier.fillMaxWidth()){Text("Add tier reference")}
+                if(alreadyAdded)Text("This slot already has an initial reference in this block. Remove it to change the reference.",
+                    style=MaterialTheme.typography.bodySmall)
+                Text("${tierChoices.size} selected tier references",style=MaterialTheme.typography.labelLarge)
+                tierChoices.forEachIndexed{index,selected->
+                    var offset=0
+                    val selectedBlock=draft.blocks.firstOrNull{b->
+                        val found=selected.absoluteWeek in (offset+1)..(offset+b.weeks)
+                        offset+=b.weeks
+                        found
+                    }
+                    val exercise=selectedBlock?.days?.firstOrNull{it.weekday==selected.weekday}
+                        ?.slots?.firstOrNull{it.slotId==selected.slotId}
+                    Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(exercise?.let{kotlinExerciseLabel(it.exerciseId)}?:selected.slotId,
+                                style=MaterialTheme.typography.labelLarge)
+                            Text("Week ${selected.absoluteWeek} · ${customWeekdays.getOrElse(selected.weekday){"Day"}} · ${pretty(selected.tier)}",
+                                style=MaterialTheme.typography.bodySmall)
+                            val selectedUnit=(exercise?.sets?.firstOrNull{it.type==DraftSetType.WORKING}?.load as? DraftSetLoad.Verified)?.unit
+                            Text("${selected.initialLoad.toPlainString()} ${selectedUnit?.name.orEmpty()} · Increase limit ${selected.maximumAuthorizedIncrease.toPlainString()}",
+                                style=MaterialTheme.typography.bodySmall)
+                        }
+                        TextButton(onClick={tierChoices=tierChoices.filterIndexed{i,_->i!=index}},enabled=!busy){Text("Remove")}
+                    }
+                }
+                Button(onClick={controller.reviewTieredInitialChoices(tierChoices)},
+                    enabled=!busy && tierChoices.isNotEmpty(),modifier=Modifier.fillMaxWidth()){
+                    Text("Review initial tier targets")
+                }
                 state.message?.let{Text(it,style=MaterialTheme.typography.bodySmall)}
-                val shown=state.tieredReference?.takeIf{review->
-                    val selection=review.selection
-                    valid && selection.absoluteWeek==absoluteWeek && selection.weekday==weekday &&
-                        selection.slotId==slotId && selection.tier==tier &&
-                        selection.initialLoad==load && selection.maximumAuthorizedIncrease==increase
+                val shown=state.tieredReferenceBatch?.takeIf{review->
+                    review.selections.map{NativeTieredInitialChoice.from(it)}==tierChoices
                 }
                 if(shown!=null) {
-                    val src=shown.source
-                    val edit=shown.proposal.proposal.draft.weekOverrides[src.blockId].orEmpty()
-                        .singleOrNull{it.weekInBlock==src.weekInBlock && it.weekday==weekday && it.slotId==slotId}
-                    edit?.sets?.forEach{set->
-                        Text("${kotlinIssuedLoadLabel(set.load)} · ${set.repTargetLabel()}",
-                            style=MaterialTheme.typography.bodySmall)
+                    shown.individual.forEach{review->
+                        val src=review.source
+                        val selection=review.selection
+                        Text("Week ${selection.absoluteWeek} · ${customWeekdays.getOrElse(selection.weekday){"Day"}} · ${kotlinExerciseLabel(review.request.scope.exerciseId)}",
+                            style=MaterialTheme.typography.labelLarge)
+                        val edit=shown.draft.weekOverrides[src.blockId].orEmpty()
+                            .singleOrNull{it.weekInBlock==src.weekInBlock && it.weekday==selection.weekday && it.slotId==selection.slotId}
+                        edit?.sets?.forEach{set->
+                            Text("${kotlinIssuedLoadLabel(set.load)} · ${set.repTargetLabel()}",
+                                style=MaterialTheme.typography.bodySmall)
+                        }
                     }
-                    Button(onClick={controller.acceptTieredInitialReference(shown)},enabled=!busy,
-                        modifier=Modifier.fillMaxWidth()){Text("Confirm reference and save unsigned revision")}
+                    Button(onClick={controller.acceptTieredInitialChoices(shown)},enabled=!busy,
+                        modifier=Modifier.fillMaxWidth()){Text("Confirm references and save unsigned revision")}
                 }
             } else {
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
@@ -2475,18 +2516,11 @@ private fun NativeFixedNamedSelectionPanel(draft:CustomTrainingCycle,
 private fun NativeTieredInitialExecutionPanel(state:NativeKotlinCustomCycleState,
     controller:NativeKotlinCustomCycleController,onOpenIssuedWorkout:(String)->Unit) {
     val review=state.tieredInitialReview
-    val receipt=when(review) {
-        is io.github.extracteddeath.pursuitiron.nativecoachstore.NativeSavedNamedReview.Ready ->
-            review.initialTierReceipt
-        is io.github.extracteddeath.pursuitiron.nativecoachstore.NativeSavedNamedReview.Signed ->
-            review.initialTierReceipt
-        else -> null
-    }
     PursuitCard(highlighted=true) {
         Text(if(state.tieredCalendar!=null)"GZCLP · Next workout" else "GZCLP · Initial tier review",
             style=MaterialTheme.typography.titleLarge)
         state.message?.let{Text(it,style=MaterialTheme.typography.bodyMedium)}
-        receipt?.let {
+        state.tieredReceipts.forEach {
             Text(kotlinExerciseLabel(it.exerciseId),style=MaterialTheme.typography.titleMedium)
             Text("Week ${it.selection.absoluteWeek} · ${pretty(it.selection.tier)}",
                 style=MaterialTheme.typography.labelLarge)
@@ -2498,10 +2532,10 @@ private fun NativeTieredInitialExecutionPanel(state:NativeKotlinCustomCycleState
         when(review) {
             is io.github.extracteddeath.pursuitiron.nativecoachstore.NativeSavedNamedReview.Ready -> {
                 Text("Revised cycle · ${review.audit.weeks.size} weeks audited")
-                if(receipt!=null)
+                if(state.tieredReceipts.isNotEmpty())
                     Button(onClick={controller.approveTieredInitialCycle(review)},
                         enabled=!state.busy,modifier=Modifier.fillMaxWidth()){
-                        Text("Approve reviewed initial tier")
+                        Text(if(state.tieredReceipts.size>1)"Approve all reviewed references" else "Approve reviewed initial tier")
                     }
             }
             is io.github.extracteddeath.pursuitiron.nativecoachstore.NativeSavedNamedReview.Signed -> {
@@ -2511,9 +2545,19 @@ private fun NativeTieredInitialExecutionPanel(state:NativeKotlinCustomCycleState
                     is NativeCustomNextCycleSlot.ResumeIssued ->
                         Button(onClick={onOpenIssuedWorkout(next.workoutId)},enabled=!state.busy,
                             modifier=Modifier.fillMaxWidth()){Text("Resume initial workout")}
-                    is NativeCustomNextCycleSlot.Next,is NativeCustomNextCycleSlot.Prepared ->
-                        OutlinedButton(onClick=controller::previewTieredInitialWorkout,enabled=!state.busy,
-                            modifier=Modifier.fillMaxWidth()){Text("Verify initial workout")}
+                    is NativeCustomNextCycleSlot.Next,is NativeCustomNextCycleSlot.Prepared -> {
+                        val position=when(next) {
+                            is NativeCustomNextCycleSlot.Next -> next.absoluteWeek to next.weekday
+                            is NativeCustomNextCycleSlot.Prepared -> next.absoluteWeek to next.weekday
+                            else -> null
+                        }
+                        if(state.tieredReceipts.any{it.selection.absoluteWeek==position?.first &&
+                            it.selection.weekday==position?.second})
+                            OutlinedButton(onClick=controller::previewTieredInitialWorkout,enabled=!state.busy,
+                                modifier=Modifier.fillMaxWidth()){Text("Verify initial workout")}
+                        else Text("The next scheduled day requires supporting-day or multi-thread transition integration.",
+                            style=MaterialTheme.typography.bodySmall)
+                    }
                     is NativeCustomNextCycleSlot.Rejected -> Text(next.reason,color=MaterialTheme.colorScheme.error)
                     else -> {}
                 }

@@ -374,8 +374,8 @@ class NativeKotlinCustomCycleSignoffFileStore(
             if(source.revision!=fresh.stamp.gymCatalogSourceRevision ||
                 source.athleteId!=owner.athleteId || current(ownerKey)!=owner)
                 return@withOwnerTransaction deny(NativeCustomSignoffRefusal.STALE_SOURCE)
-            val hash=if(tiered)NativeCustomCycleSignoffFingerprint.calculateTieredInitial(
-                fresh.draft,source,savedInputs,checkNotNull(fresh.initialTierReceipt))
+            val hash=if(tiered)NativeCustomCycleSignoffFingerprint.calculateTieredInitialBatch(
+                fresh.draft,source,savedInputs,fresh.initialTierReceipts)
             else NativeCustomCycleSignoffFingerprint.calculateNamed(fresh.draft,source,savedInputs,fresh.receipts)
             val approved=NativeKotlinCustomCycleSignoff(ownerKey,owner.athleteId,cycleId,
                 fresh.draft.revision,source.revision,previous.revision+1,hash,
@@ -428,8 +428,8 @@ class NativeKotlinCustomCycleSignoffFileStore(
                 ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
             val stored=(drafts.read(ownerKey,cycleId) as? NativeCustomDraftReadResult.Found)
                 ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.NO_CONFIRMED_DRAFT)
-            if(if(tiered) stored.tieredInitialReceipt==null || stored.namedReceipts.isNotEmpty()
-                else stored.namedReceipts.isEmpty() || stored.tieredInitialReceipt!=null)
+            if(if(tiered) stored.tieredInitialReceipts.isEmpty() || stored.namedReceipts.isNotEmpty()
+                else stored.namedReceipts.isEmpty() || stored.tieredInitialReceipts.isNotEmpty())
                 return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.NO_CONFIRMED_DRAFT)
             val reviewer=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
                 this,history,outstanding,machineRosters)

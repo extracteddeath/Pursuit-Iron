@@ -1900,7 +1900,7 @@ assert.ok(basicPreviewScreen.includes('} else if(state.tieredDraft) {') &&
   basicPreviewScreen.includes('NativeTieredInitialExecutionPanel(state,controller,onOpenIssuedWorkout)') &&
   basicPreviewScreen.includes('!state.fixedNamedDraft && !state.tieredDraft') &&
   basicPreviewScreen.includes('controller.approveTieredInitialCycle(review)') &&
-  basicPreviewController.includes('tieredDraft=result.tieredInitialReceipt!=null') &&
+  basicPreviewController.includes('tieredDraft=result.tieredInitialReceipts.isNotEmpty()') &&
   basicPreviewController.includes('host.recoverTieredInitialCycle(cycleId)') &&
   basicPreviewController.includes('host.confirmTieredInitialCycle(draft.cycleId,displayed,true)') &&
   basicPreviewController.includes('if(before.tieredDraft)return'),
@@ -1916,15 +1916,17 @@ assert.ok(basicPreviewScreen.includes('controller::previewTieredInitialWorkout')
 
 
 assert.ok(basicPreviewScreen.includes('if(scheme==NamedPercentageScheme.GZCLP)') &&
-  basicPreviewScreen.includes('controller.reviewTieredInitialReference(absoluteWeek,weekday,slotId,tier,') &&
-  basicPreviewScreen.includes('controller.acceptTieredInitialReference(shown)') &&
-  basicPreviewScreen.includes('selection.maximumAuthorizedIncrease==increase') &&
-  basicPreviewController.includes('before.tieredReference!=displayed') &&
-  basicPreviewController.includes('displayed.source.cycle!=draft') &&
-  basicPreviewController.includes('host.acceptTieredInitialReference(displayed,true)') &&
-  machineChoiceHost.includes('fixedNamedDraftReview.previewTieredInitial(NativeTieredInitialSelection(') &&
-  machineChoiceHost.includes('fixedNamedDraftReview.acceptTieredInitial(displayed.selection,displayed,confirmed)'),
-  'Native GZCLP authoring must preview explicit load and increment and save only the exact reviewed unsigned revision');
+  basicPreviewScreen.includes('controller.reviewTieredInitialChoices(tierChoices)') &&
+  basicPreviewScreen.includes('controller.acceptTieredInitialChoices(shown)') &&
+  basicPreviewScreen.includes('review.selections.map{NativeTieredInitialChoice.from(it)}==tierChoices') &&
+  basicPreviewScreen.includes('val alreadyAdded=tierChoices.any') &&
+  basicPreviewController.includes('before.tieredReferenceBatch!=displayed') &&
+  basicPreviewController.includes('displayed.individual.any{it.source.cycle!=draft}') &&
+  basicPreviewController.includes('host.acceptTieredInitialChoices(displayed,true)') &&
+  machineChoiceHost.includes('choices.map{it.absoluteWeek to it.weekday}.distinct().associateWith') &&
+  machineChoiceHost.includes('fixedNamedDraftReview.previewTieredInitialBatch(selections)') &&
+  machineChoiceHost.includes('fixedNamedDraftReview.acceptTieredInitialBatch(displayed.selections,displayed,confirmed)'),
+  'Native GZCLP authoring must review all explicit references, share one journal ID per day, and save only the exact reviewed unsigned revision');
 
 assert.ok(basicPreviewController.includes('host.reviewTieredCalendar(cycleId)') &&
   basicPreviewController.includes('tieredCalendar=calendar') &&
@@ -1965,3 +1967,21 @@ assert.ok(basicPreviewScreen.includes('Previous approved targets') &&
   machineChoiceHost.includes('tieredTransitions.cancelStaleScheduled') &&
   machineChoiceHost.includes('tieredTransitions.replaceStaleScheduled'),
   'Corrected tier history must show previous and corrected targets and require explicit replacement before issuing');
+
+assert.ok(basicPreviewController.includes('tieredReceipts=result.tieredInitialReceipts') &&
+  basicPreviewController.includes('val singleThread=before.tieredReceipts.size==1') &&
+  basicPreviewScreen.includes('state.tieredReceipts.forEach') &&
+  basicPreviewScreen.includes('Approve all reviewed references'),
+  'A persisted multi-thread tier cycle must never fall back to ordinary or single-thread issuance');
+
+assert.ok(basicPreviewController.includes('selectedInitialTier(review,next)') &&
+  machineChoiceHost.includes('nextCustomCycleSession.reviewMultiTieredInitial') &&
+  basicPreviewScreen.includes('Verify initial workout'),
+  'Multi-root initial execution uses the existing exact initial review and issuer');
+
+assert.ok(basicPreviewController.includes('host.isMultiTieredSupportDay') &&
+  basicPreviewController.includes('val calendar=if(multiSupport)reviewedNext') &&
+  machineChoiceHost.includes('nextCustomCycleSession.isMultiTieredSupportDay') &&
+  basicPreviewScreen.includes('controller::previewTieredSupportWorkout') &&
+  basicPreviewScreen.includes('controller::issueTieredSupportWorkout'),
+  'Multi-root authored support days must reuse the existing supporting-day controls and authoritative calendar policy');

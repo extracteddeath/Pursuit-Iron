@@ -160,7 +160,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val nextCustomCycleSession=NativeKotlinCustomNextCycleSessionReview(
         revisionFence,localAthlete,customDraftStore,authoringSourceStore,
         customCycleSignoffs,mixedHistoryReader,outstandingCustomInventory,
-        customPreparedStore)
+        customPreparedStore,machineRosters)
     private val composerActivationInventory=NativeKotlinComposerActivationInventory(
         journalStore,approvalStore)
     private val futureActivationPreflight=NativeKotlinFutureBlockActivationPreflight(

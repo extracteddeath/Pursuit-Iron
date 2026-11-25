@@ -3227,6 +3227,13 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertTrue(proposed.toString(),proposed is NativeNamedBatchReview.Ready)
         proposed as NativeNamedBatchReview.Ready
         assertTrue(reviewer.acceptBatch(selections,proposed,true) is NativeNamedBatchAcceptance.Saved)
+        fun nextCalendar():NativeCustomNextCycleSlot {
+            val coldPrepared=NativeKotlinCustomWorkoutPreparedStore(temp.root.toPath(),
+                fence,identity,preflight)
+            return NativeKotlinCustomNextCycleSessionReview(fence,identity,drafts,sources,
+                store(),f.reader,inventory,coldPrepared).review("owner-1","cycle-1",inputs())
+        }
+        assertTrue(nextCalendar() is NativeCustomNextCycleSlot.Rejected)
         val signedReader=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
             store(),f.reader,inventory)
         val pending=signedReader.review("owner-1","cycle-1",inputs())
@@ -3242,9 +3249,12 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         fun issue(w:String,week:Int,day:Int)=coldIssuer().issueNamed(
             "owner-1",w,"cycle-1",week,day,inputs(),f.reader)
         val workout="fixed-named-w1"
+        val label=proposed.draft.blocks.first().days.single{it.weekday==0}.label
+        assertEquals(NativeCustomNextCycleSlot.Next(1,0,label),nextCalendar())
         assertTrue(issue(workout,1,0) is NativeCustomJournalResult.Rejected)
         val prepared=prepare(workout,1,0)
         assertTrue(prepared.toString(),prepared is NativeCustomPrepareResult.Prepared)
+        assertEquals(NativeCustomNextCycleSlot.Prepared(workout,1,0,label),nextCalendar())
         val snapshot=(prepared as NativeCustomPrepareResult.Prepared).workout.snapshot
         val target=snapshot.slots.single().sets.single()
         val intent=checkNotNull(target.prescription.percentageIntent)
@@ -3253,6 +3263,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(repOut,intent.repOut)
         val issued=issue(workout,1,0)
         assertTrue(issued.toString(),issued is NativeCustomJournalResult.Durable)
+        assertEquals(NativeCustomNextCycleSlot.ResumeIssued(workout,1,0,label),nextCalendar())
         val visit=CustomWorkoutVisitKey(target.setKey,CustomWorkoutVisitPart.MAIN)
         val load=(target.prescription.load as DraftSetLoad.Verified).value
         assertTrue(coldIssuer().record("owner-1",workout,
@@ -3275,6 +3286,8 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(fact,(timeline.completions.single() as NativeKotlinMixedHistoryCompletion.Custom).evidence.visits.single())
         assertEquals(snapshot,(coldIssuer().open("owner-1",workout) as NativeCustomJournalResult.Durable)
             .issued.journal.originalSnapshot)
+        val nextDay=proposed.draft.blocks.first().days.filter{it.weekday>0}.minBy{it.weekday}
+        assertEquals(NativeCustomNextCycleSlot.Next(1,nextDay.weekday,nextDay.label),nextCalendar())
         assertTrue(prepare("duplicate-fixed-day",1,0) is NativeCustomPrepareResult.Rejected)
         val next=prepare("fixed-named-w2",2,2)
         assertTrue(next.toString(),next is NativeCustomPrepareResult.Prepared)
@@ -3293,6 +3306,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             assertTrue(store().revoke("owner-1","cycle-1",(signed as NativeCustomSignoffWrite.Committed).receipt.recordRevision)
                 is NativeCustomSignoffWrite.Committed)
             assertTrue(issue("fixed-named-w2",2,2) is NativeCustomJournalResult.Rejected)
+            assertTrue(nextCalendar() is NativeCustomNextCycleSlot.Rejected)
             return
         }
         val secondId="fixed-named-w2"

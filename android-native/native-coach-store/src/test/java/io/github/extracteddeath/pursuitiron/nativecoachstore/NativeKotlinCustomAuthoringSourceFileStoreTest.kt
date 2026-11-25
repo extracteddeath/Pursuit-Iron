@@ -136,6 +136,8 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
             store().addAndSelectGym("owner-1",1,second,false))
         assertEquals(NativeAuthoringSourceWrite.Rejected(NativeAuthoringSourceRefusal.INVALID_SOURCE),
             store().addAndSelectGym("owner-1",1,second.copy(confirmedStock=mapOf("cable-1" to stock)),true))
+        assertEquals(NativeAuthoringSourceWrite.Rejected(NativeAuthoringSourceRefusal.INVALID_SOURCE),
+            store().addAndSelectGym("owner-1",1,second.copy(gymId=null),true))
         assertEquals(first,store().readSavedGyms("owner-1"))
         assertEquals(NativeAuthoringSourceWrite.Committed(2),
             store().addAndSelectGym("owner-1",1,second,true))

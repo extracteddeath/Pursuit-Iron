@@ -463,6 +463,36 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         assertArrayEquals(frozen,java.nio.file.Files.readAllBytes(file))
         assertEquals(saved,coldDrafts.read("owner-1","cycle-1"))
         assertEquals(staged,(coldPrepared().open("owner-1",nextSelection.nextWorkoutId) as NativeCustomPreparedRead.Found).workout)
+        val stale=checkNotNull(transitionStore().reviewStaleScheduled("owner-1","cycle-1",2,0,calendar()))
+        assertEquals(staged,stale.preparation)
+        assertEquals(n("30"),(stale.previousTargetsBySlot.getValue("slot-0").single().load as DraftSetLoad.Verified).value)
+        val corrected=checkNotNull(stale.review.nextMultiTierCandidate)
+        assertEquals(TieredLinearState(1,n("25")),corrected.slots.single().result.state)
+        assertEquals(nextSelection,corrected.selection)
+        assertEquals(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT,
+            transitionStore().replaceStaleMultiScheduled("owner-1","cycle-1",stale,calendar(),true,emptySet(),emptySet()))
+        assertFalse(transitionStore().cancelStaleScheduled("owner-1","cycle-1",stale,calendar(),coldPrepared(),false))
+        assertTrue(transitionStore().cancelStaleScheduled("owner-1","cycle-1",stale,calendar(),coldPrepared(),true))
+        assertArrayEquals(frozen,java.nio.file.Files.readAllBytes(file))
+        assertEquals(NativeCustomNextCycleSlot.Next(2,0,"Day 0"),next())
+        val replacement=checkNotNull(transitionStore().reviewStaleScheduled("owner-1","cycle-1",2,0,calendar()))
+        assertNull(replacement.preparation)
+        assertEquals(corrected,replacement.review.nextMultiTierCandidate)
+        assertEquals(NativeTieredTransitionConsentResult.CONFIRMATION_REQUIRED,
+            transitionStore().replaceStaleMultiScheduled("owner-1","cycle-1",replacement,calendar(),false,emptySet(),emptySet()))
+        assertEquals(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED,
+            transitionStore().replaceStaleMultiScheduled("owner-1","cycle-1",
+                replacement.copy(previousReceiptFingerprint="0".repeat(64)),calendar(),true,emptySet(),emptySet()))
+        assertEquals(NativeTieredTransitionConsentResult.REPLACED,
+            transitionStore().replaceStaleMultiScheduled("owner-1","cycle-1",replacement,calendar(),true,emptySet(),emptySet()))
+        val reapproved=recoverDay() as NativeTieredTransitionRecovery.Ready
+        assertEquals(corrected,reapproved.review.nextMultiTierCandidate)
+        assertFalse(reapproved.receiptFingerprint==restoredDay.receiptFingerprint)
+        val newPrepared=(prepareDay() as NativeCustomPrepareResult.Prepared).workout
+        assertEquals(corrected.snapshot,newPrepared.snapshot)
+        assertTrue(issueDay() is NativeCustomJournalResult.Durable)
+        assertEquals(saved,coldDrafts.read("owner-1","cycle-1"))
+        assertEquals(initialWorkout,(coldPrepared().open("owner-1",first.nextWorkoutId) as NativeCustomPreparedRead.Found).workout)
         active=NativeKotlinOwnerIdentity("other-owner","other-athlete")
         assertTrue(preview(nextSelection) is NativeSavedNamedReview.Rejected)
         assertTrue(coldSignoffs.recoverTieredInitialReview("owner-1","cycle-1",reader,inventory)

@@ -39,7 +39,8 @@ data class NativeStaleTierTransitionReview(
     val review:NativeSavedNamedReview.Signed,
     val previousReceiptFingerprint:String,
     val previousTargets:List<CustomAuthoredSet>,
-    val preparation:NativeCustomPreparedWorkout?
+    val preparation:NativeCustomPreparedWorkout?,
+    val previousTargetsBySlot:Map<String,List<CustomAuthoredSet>> = emptyMap()
 )
 
 /** Decoded only from the private, bounded receipt file. The historical
@@ -494,6 +495,37 @@ class NativeKotlinFirstTierTransitionConsentStore(
             result
         }}.getOrElse{NativeTieredTransitionRecovery.Refused(NativeTieredTransitionConsentResult.STORAGE_UNAVAILABLE)}
 
+    /** One stale-day recovery path, shared by review, cancellation and
+     * replacement. Replaying the frozen recipe never grants issuance. */
+    private fun staleMultiReview(ownerKey:String,cycleId:String,week:Int,weekday:Int):NativeStaleTierTransitionReview? {
+        val owner=identity.signedInIdentity()?.takeIf{it.ownerKey==ownerKey} ?:return null
+        if((recoverMulti(ownerKey,cycleId,week,weekday) as? NativeTieredTransitionRecovery.Refused)
+                ?.reason!=NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED)return null
+        val old=decodeMulti(readMulti(multiPath(ownerKey,cycleId,week,weekday)))
+        if(old.owner!=ownerKey || old.athlete!=owner.athleteId || old.cycle!=cycleId ||
+            old.selection.absoluteWeek!=week || old.selection.weekday!=weekday)return null
+        val preparation=outstanding.preparedOrigin(ownerKey,old.selection.nextWorkoutId)
+        if(preparation!=null && (preparation.authority!=NativeCustomPreparationAuthority.TIERED_TRANSITION ||
+            preparation.consentFingerprint!=old.fingerprint || preparation.consentRevision!=old.consentRevision))
+            return null
+        val reviewer=NativeKotlinSavedNamedPercentageReview(fence,identity,drafts,sources,
+            signoffs,history,outstanding,machineRosters)
+        val fresh=reviewer.previewMultiTieredNextForPreparation(ownerKey,cycleId,old.inputs,old.selection,
+            old.fingerprint.takeIf{preparation!=null},priorMultiDays(ownerKey,cycleId,week,weekday),old)
+            as? NativeSavedNamedReview.Signed ?:return null
+        val next=fresh.nextMultiTierCandidate?:return null
+        val oldDraft=NativeCustomCycleDraftCodec.decode(old.proposed)
+        val targets=linkedMapOf<String,List<CustomAuthoredSet>>()
+        for(slot in next.slots) {
+            val key=slot.evidence.key
+            targets[key.slotId]=oldDraft.weekOverrides[key.blockId]?.singleOrNull{
+                it.weekInBlock==key.weekInBlock && it.weekday==key.weekday && it.slotId==key.slotId
+            }?.sets ?:return null
+        }
+        if(identity.signedInIdentity()!=owner)return null
+        return NativeStaleTierTransitionReview(fresh,old.fingerprint,emptyList(),preparation,targets)
+    }
+
     /** The old receipt and any unissued preparation remain unchanged.
      * Recover the same workout ID and recovery choice, with newer verified
      * history and proof of the original frozen recipe. */
@@ -502,8 +534,15 @@ class NativeKotlinFirstTierTransitionConsentStore(
         runCatching{fence.withOwnerTransaction(ownerKey){
             val owner=identity.signedInIdentity()?.takeIf{it.ownerKey==ownerKey}
                 ?:return@withOwnerTransaction null
-            if(!scheduled(ownerKey,cycleId,week,weekday,null,calendar) ||
-                (recover(ownerKey,cycleId,week) as? NativeTieredTransitionRecovery.Refused)
+            if(!scheduled(ownerKey,cycleId,week,weekday,null,calendar))return@withOwnerTransaction null
+            val roots=(drafts.read(ownerKey,cycleId) as? NativeCustomDraftReadResult.Found)
+                ?.tieredInitialReceipts ?:return@withOwnerTransaction null
+            if(roots.size>1) {
+                val stale=staleMultiReview(ownerKey,cycleId,week,weekday) ?:return@withOwnerTransaction null
+                val id=stale.review.nextMultiTierCandidate?.selection?.nextWorkoutId ?:return@withOwnerTransaction null
+                return@withOwnerTransaction stale.takeIf{scheduled(ownerKey,cycleId,week,weekday,id,calendar)}
+            }
+            if((recover(ownerKey,cycleId,week) as? NativeTieredTransitionRecovery.Refused)
                     ?.reason!=NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED)
                 return@withOwnerTransaction null
             val first=firstWeek(ownerKey,cycleId)?:return@withOwnerTransaction null
@@ -560,6 +599,30 @@ class NativeKotlinFirstTierTransitionConsentStore(
                 return@withOwnerTransaction NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED
             replaceStaleUnprepared(ownerKey,cycleId,shown.review,shown.previousReceiptFingerprint,
                 confirmed,reset,recovery)
+        }}.getOrElse{NativeTieredTransitionConsentResult.STORAGE_UNAVAILABLE}
+
+    fun replaceStaleMultiScheduled(ownerKey:String,cycleId:String,shown:NativeStaleTierTransitionReview,
+        calendar:NativeKotlinCustomNextCycleSessionReview,confirmed:Boolean,
+        resetSlots:Set<String>,recoverySlots:Set<String>):NativeTieredTransitionConsentResult =
+        runCatching{fence.withOwnerTransaction(ownerKey){
+            if(!confirmed)return@withOwnerTransaction NativeTieredTransitionConsentResult.CONFIRMATION_REQUIRED
+            val owner=identity.signedInIdentity()?.takeIf{it.ownerKey==ownerKey}
+                ?:return@withOwnerTransaction NativeTieredTransitionConsentResult.NOT_AUTHORIZED
+            val next=shown.review.nextMultiTierCandidate
+                ?:return@withOwnerTransaction NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED
+            val sel=next.selection
+            if(shown.preparation!=null)return@withOwnerTransaction NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT
+            if(reviewStaleScheduled(ownerKey,cycleId,sel.absoluteWeek,sel.weekday,calendar)!=shown)
+                return@withOwnerTransaction NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED
+            if(resetSlots!=next.slots.filter{it.requiresExplicitResetReview}.map{it.evidence.key.slotId}.toSet() ||
+                recoverySlots!=sel.recoverySlotIds)
+                return@withOwnerTransaction NativeTieredTransitionConsentResult.CONFIRMATION_REQUIRED
+            val file=multiPath(ownerKey,cycleId,sel.absoluteWeek,sel.weekday)
+            if(fingerprint(readMulti(file))!=shown.previousReceiptFingerprint)
+                return@withOwnerTransaction NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT
+            if(!writeReceipt(file,encodeMulti(shown.review),owner,true))
+                return@withOwnerTransaction NativeTieredTransitionConsentResult.NOT_AUTHORIZED
+            NativeTieredTransitionConsentResult.REPLACED
         }}.getOrElse{NativeTieredTransitionConsentResult.STORAGE_UNAVAILABLE}
 
     fun confirmScheduled(ownerKey:String,cycleId:String,displayed:NativeSavedNamedReview.Signed,
@@ -772,6 +835,11 @@ class NativeKotlinFirstTierTransitionConsentStore(
             val owner=identity.signedInIdentity()?.takeIf{
                 it.ownerKey==ownerKey && it.athleteId==saved.athleteId
             }?:return@withOwnerTransaction false
+            val roots=(drafts.read(ownerKey,cycleId) as? NativeCustomDraftReadResult.Found)
+                ?.tieredInitialReceipts ?:return@withOwnerTransaction false
+            if(roots.size>1)
+                return@withOwnerTransaction staleMultiReview(ownerKey,cycleId,week,saved.snapshot.weekday)
+                    ?.preparation==saved
             val first=firstWeek(ownerKey,cycleId)?:return@withOwnerTransaction false
             if(Files.isSymbolicLink(directory)||week !in first..104)
                 return@withOwnerTransaction false

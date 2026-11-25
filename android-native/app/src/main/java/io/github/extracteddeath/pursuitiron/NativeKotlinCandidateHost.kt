@@ -1096,6 +1096,14 @@ internal class NativeKotlinCandidateHost(context:Context) {
             true,reset,recovery)
     }
 
+    fun replaceStaleMultiTieredTransition(cycleId:String,shown:NativeStaleTierTransitionReview,
+        resets:Set<String>,recoveries:Set<String>):NativeTieredTransitionConsentResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeTieredTransitionConsentResult.NOT_AUTHORIZED
+        return tieredTransitions.replaceStaleMultiScheduled(owner.ownerKey,cycleId,shown,nextCustomCycleSession,
+            true,resets,recoveries)
+    }
+
     fun confirmTieredTransition(cycleId:String,shown:NativeSavedNamedReview.Signed,
         reset:Boolean,recovery:Boolean):NativeTieredTransitionConsentResult {
         val owner=localAthlete.signedInIdentity()

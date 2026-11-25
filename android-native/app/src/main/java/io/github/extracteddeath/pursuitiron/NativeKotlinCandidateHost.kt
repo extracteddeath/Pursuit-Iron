@@ -78,6 +78,12 @@ internal sealed interface NativeWorkoutMachineCreationResult {
     data class Rejected(val reason:String):NativeWorkoutMachineCreationResult
 }
 
+internal data class NativeFixedNamedChoice(
+    val absoluteWeek:Int,val weekday:Int,val slotId:String,
+    val scheme:NamedPercentageScheme,val tier:PercentageTier,
+    val dayRole:PercentageDayRole,val reference:BigDecimal
+)
+
 internal class NativeKotlinCandidateHost(context:Context) {
     private val root=context.applicationContext.noBackupFilesDir
         .resolve("kotlin-coach-v1").toPath()
@@ -829,17 +835,16 @@ internal class NativeKotlinCandidateHost(context:Context) {
 
     /** Fixed specialist handoff: Compose supplies only the selected cycle,
      * slot, weeks and explicit reference, never owner, stock or history. */
-    fun previewFixedNamedCycle(cycleId:String,weeks:List<Int>,weekday:Int,slotId:String,
-        scheme:NamedPercentageScheme,tier:PercentageTier,role:PercentageDayRole,
-        reference:BigDecimal):NativeNamedBatchReview {
+    fun previewFixedNamedCycle(cycleId:String,choices:List<NativeFixedNamedChoice>):NativeNamedBatchReview {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeNamedBatchReview.Rejected(NativeNamedPercentageRefusal.NOT_AUTHORIZED)
-        if(scheme==NamedPercentageScheme.GZCLP || weeks.isEmpty() || weeks.size>104 ||
-            weeks.distinct().size!=weeks.size)
+        if(choices.isEmpty() || choices.size>104 ||
+            choices.any{it.scheme==NamedPercentageScheme.GZCLP})
             return NativeNamedBatchReview.Rejected(NativeNamedPercentageRefusal.INVALID_SELECTION)
-        val selections=weeks.map{week->NativeNamedPercentageSelection(
-            owner.ownerKey,cycleId,week,weekday,slotId,scheme,tier,role,
-            NamedPercentageProtocolDomain.referenceKind(scheme),reference)}
+        val selections=choices.map{choice->NativeNamedPercentageSelection(
+            owner.ownerKey,cycleId,choice.absoluteWeek,choice.weekday,choice.slotId,
+            choice.scheme,choice.tier,choice.dayRole,
+            NamedPercentageProtocolDomain.referenceKind(choice.scheme),choice.reference)}
         return fixedNamedDraftReview.previewBatch(selections)
     }
 

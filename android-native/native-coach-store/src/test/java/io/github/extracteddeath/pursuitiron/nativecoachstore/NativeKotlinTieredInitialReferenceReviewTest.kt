@@ -654,14 +654,15 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         assertTrue(first.toString(),first is NativeCustomPrepareResult.Prepared)
         assertTrue(coldJournal().issueTieredInitial("owner-1",initial.nextWorkoutId,"cycle-1",1,0,inputs(),reader)
             is NativeCustomJournalResult.Durable)
-        finish(initial.nextWorkoutId,(first as NativeCustomPrepareResult.Prepared).workout.snapshot,1)
+        val firstSnapshot=(first as NativeCustomPrepareResult.Prepared).workout.snapshot
+        finish(initial.nextWorkoutId,firstSnapshot,1)
 
         fun transition(week:Int,workout:String,recovery:Boolean,stage:Int,
             expectedReference:String,expectedLoad:String,reset:Boolean,actualReps:Int) {
             val selection=NativeTieredNextSelection(workout,week,recovery)
             val preview=coldStore().preview("owner-1","cycle-1",inputs(),selection)
             assertTrue(preview.toString(),preview is NativeSavedNamedReview.Signed)
-            val displayed=preview as NativeSavedNamedReview.Signed
+            var displayed=preview as NativeSavedNamedReview.Signed
             val candidate=checkNotNull(displayed.nextTierCandidate)
             assertEquals(stage,candidate.result.state.stage)
             assertEquals(0,n(expectedReference).compareTo(candidate.result.state.load))
@@ -683,6 +684,37 @@ class NativeKotlinTieredInitialReferenceReviewTest {
             assertEquals(NativeTieredTransitionConsentResult.RECORDED,
                 coldStore().confirm("owner-1","cycle-1",displayed,true,
                     resetConfirmed=reset,recoveryConfirmed=recovery))
+            if(week==2) {
+                val old=coldStore().recover("owner-1","cycle-1",week)
+                    as NativeTieredTransitionRecovery.Ready
+                val correction=NativeKotlinCustomHistoryCorrectionTransaction(history,coldJournal(),
+                    NativeKotlinCustomSavedCorrectionFileStore(root,fence,identity,coldJournal(),history),
+                    fence,identity).correct("owner-1","athlete-1",initial.nextWorkoutId,
+                    CustomSavedVisitCorrection("tier-preparation-correction",0,
+                        CustomWorkoutVisitKey(firstSnapshot.slots.single().sets.single().setKey,
+                            CustomWorkoutVisitPart.MAIN),"${initial.nextWorkoutId}-actual",
+                        KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(n("25"),LoadUnit.LB,2,0)))
+                assertTrue(correction.toString(),correction is NativeCustomCorrectionTransactionResult.Committed)
+                assertEquals(NativeTieredTransitionRecovery.Refused(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED),
+                    coldStore().recover("owner-1","cycle-1",week))
+                val fresh=coldStore().preview("owner-1","cycle-1",inputs(),selection)
+                assertTrue(fresh.toString(),fresh is NativeSavedNamedReview.Signed)
+                displayed=fresh as NativeSavedNamedReview.Signed
+                assertEquals(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT,
+                    coldStore().confirm("owner-1","cycle-1",displayed,true,recoveryConfirmed=true))
+                assertEquals(NativeTieredTransitionConsentResult.CONFIRMATION_REQUIRED,
+                    coldStore().replaceStaleUnprepared("owner-1","cycle-1",displayed,
+                        old.receiptFingerprint,true))
+                assertEquals(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT,
+                    coldStore().replaceStaleUnprepared("owner-1","cycle-1",displayed,
+                        "0".repeat(64),true,recoveryConfirmed=true))
+                assertEquals(NativeTieredTransitionConsentResult.REPLACED,
+                    coldStore().replaceStaleUnprepared("owner-1","cycle-1",displayed,
+                        old.receiptFingerprint,true,recoveryConfirmed=true))
+                assertEquals(NativeTieredTransitionConsentResult.CONFLICT_OR_CORRUPT,
+                    coldStore().replaceStaleUnprepared("owner-1","cycle-1",displayed,
+                        old.receiptFingerprint,true,recoveryConfirmed=true))
+            }
             val recovered=coldStore().recover("owner-1","cycle-1",week)
             assertTrue(recovered.toString(),recovered is NativeTieredTransitionRecovery.Ready)
             assertEquals(displayed,(recovered as NativeTieredTransitionRecovery.Ready).review)
@@ -698,6 +730,9 @@ class NativeKotlinTieredInitialReferenceReviewTest {
             assertEquals(0,n(expectedReference).compareTo(intent.referenceLoad))
             assertEquals(0,n(expectedLoad).compareTo((target.load as DraftSetLoad.Verified).value))
             assertEquals(NativeCustomPrepareResult.Prepared(workoutPlan,true),prepare())
+            assertEquals(NativeTieredTransitionConsentResult.STALE_OR_UNVERIFIED,
+                coldStore().replaceStaleUnprepared("owner-1","cycle-1",displayed,
+                    recovered.receiptFingerprint,true,resetConfirmed=reset,recoveryConfirmed=recovery))
             val issued=issue()
             assertTrue(issued.toString(),issued is NativeCustomJournalResult.Durable)
             assertEquals(workoutPlan.snapshot,(issued as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)

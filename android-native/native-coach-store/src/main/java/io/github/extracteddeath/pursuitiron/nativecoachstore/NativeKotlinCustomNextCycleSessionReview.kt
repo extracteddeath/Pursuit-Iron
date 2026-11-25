@@ -123,8 +123,17 @@ class NativeKotlinCustomNextCycleSessionReview(
         inputs:CustomCoachAuditInputs):NativeCustomNextCycleSlot =
         reviewInternal(ownerKey,cycleId,inputs,true)
 
+    /** Read-only schedule discovery after initial approval, including after
+     * Finish. This is not a specialist preview, preparation or issue grant.
+     * The actual transition reviewer still authenticates every receipt. */
+    fun reviewTieredCalendar(ownerKey:String,cycleId:String):NativeCustomNextCycleSlot {
+        val inputs=signoffs.signedTieredInputs(ownerKey,cycleId)
+            ?:return NativeCustomNextCycleSlot.Rejected("Current tiered approval is unavailable.")
+        return reviewInternal(ownerKey,cycleId,inputs,true,calendarOnly=true)
+    }
+
     private fun reviewInternal(ownerKey:String,cycleId:String,
-        inputs:CustomCoachAuditInputs,tiered:Boolean):NativeCustomNextCycleSlot {
+        inputs:CustomCoachAuditInputs,tiered:Boolean,calendarOnly:Boolean=false):NativeCustomNextCycleSlot {
         fun no(message:String)=NativeCustomNextCycleSlot.Rejected(message)
         return runCatching {
             fence.withOwnerTransaction(ownerKey) {
@@ -153,7 +162,10 @@ class NativeKotlinCustomNextCycleSessionReview(
                 if((initial!=null)!=tiered || (tiered && fixedNamed))
                     return@withOwnerTransaction no(
                         "Tiered progression requires its dedicated reference or transition review.")
-                if(tiered) {
+                if(calendarOnly) {
+                    if(signoffs.signedTieredInputs(ownerKey,cycleId)!=inputs)
+                        return@withOwnerTransaction no("Current tiered approval is unavailable.")
+                } else if(tiered) {
                     val reviewed=signoffs.recoverTieredInitialReview(ownerKey,cycleId,
                         history,inventory,machineRosters) as? NativeSavedNamedReview.Signed
                         ?:return@withOwnerTransaction no("Current initial tier approval is unavailable or completed.")
@@ -207,7 +219,20 @@ class NativeKotlinCustomNextCycleSessionReview(
                     val original=byId[item.workoutId]
                         ?:return@withOwnerTransaction no(
                             "Original issued targets are unavailable.")
+                    // Transition previews use an incrementing derived revision;
+                    // the saved authored cycle does not change. Only for this
+                    // factual calendar read, normalize a scoped transition's
+                    // position to its authored revision. Issuance never uses
+                    // this projection and must check the real receipt/revision.
+                    val transitionOffset=initial?.let{item.absoluteWeek-it.selection.absoluteWeek} ?:0
+                    val tierBlock=initial?.let{receipt->cycle.blocks.singleOrNull{it.blockId==receipt.blockId}}
+                    val tierTransition=calendarOnly && initial!=null && tierBlock!=null &&
+                        original.authority==NativeCustomPreparationAuthority.TIERED_TRANSITION &&
+                        item.weekday==initial.selection.weekday &&
+                        transitionOffset in 1..(tierBlock.weeks-initial.weekInBlock) &&
+                        original.snapshot.stamp.cycleRevision==cycle.revision+transitionOffset.toLong()
                     val permitted=if(tiered)
+                        tierTransition ||
                         (original.authority==NativeCustomPreparationAuthority.TIERED_INITIAL &&
                             initial!=null && item.workoutId==initial.selection.nextWorkoutId &&
                             item.absoluteWeek==initial.selection.absoluteWeek &&
@@ -224,13 +249,13 @@ class NativeKotlinCustomNextCycleSessionReview(
                             "A workout uses a separate or earlier training approval.")
                     NativeCustomCycleSessionFact(
                         item.workoutId,item.absoluteWeek,item.weekday,
-                        original.snapshot.stamp.cycleRevision,
+                        if(tierTransition)cycle.revision else original.snapshot.stamp.cycleRevision,
                         item.issued,item.completed)
                 }
                 if(identity.signedInIdentity()!=owner)
                     return@withOwnerTransaction no("Active athlete changed.")
                 val next=NativeCustomNextCycleSlotDomain.select(cycle,facts)
-                if(!tiered)return@withOwnerTransaction next
+                if(!tiered || calendarOnly)return@withOwnerTransaction next
                 val exact=checkNotNull(initial).selection
                 val matches=when(next) {
                     is NativeCustomNextCycleSlot.Next ->

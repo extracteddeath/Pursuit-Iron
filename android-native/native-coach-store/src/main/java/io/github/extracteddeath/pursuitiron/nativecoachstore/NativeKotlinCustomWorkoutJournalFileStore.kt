@@ -241,6 +241,13 @@ class NativeKotlinCustomWorkoutJournalFileStore(
         issueReviewed(ownerKey,workoutId,cycleId,absoluteWeek,weekday,inputs,
             NativeCustomPreparationAuthority.NAMED_CYCLE,null,historyReader)
 
+    fun issueTieredInitial(ownerKey:String,workoutId:String,cycleId:String,
+        absoluteWeek:Int,weekday:Int,inputs:CustomCoachAuditInputs,
+        historyReader:NativeKotlinMixedHistoryReadCoordinator
+    ):NativeCustomJournalResult =
+        issueReviewed(ownerKey,workoutId,cycleId,absoluteWeek,weekday,inputs,
+            NativeCustomPreparationAuthority.TIERED_INITIAL,null,historyReader)
+
     private fun issueReviewed(ownerKey:String,workoutId:String,cycleId:String,
         absoluteWeek:Int,weekday:Int,inputs:CustomCoachAuditInputs,
         authority:NativeCustomPreparationAuthority,
@@ -316,14 +323,18 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                     other.reason!=NativeJournalFileRefusal.NOT_ISSUED)
                     return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                         NativeCustomJournalRefusal.WORKOUT_ID_CONFLICT)
-                if(authority==NativeCustomPreparationAuthority.NAMED_CYCLE) {
+                if(authority in setOf(NativeCustomPreparationAuthority.NAMED_CYCLE,
+                    NativeCustomPreparationAuthority.TIERED_INITIAL)) {
                     if(namedHistory==null ||
                         NativeKotlinBlockCalibrationConsentStore.hasRecord(root,ownerKey,workoutId))
                         return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                             NativeCustomJournalRefusal.CONSENT_CHANGED)
-                    val reviewed=preflight.inspectNamed(ownerKey,workoutId,cycleId,
-                        absoluteWeek,weekday,inputs,namedHistory,
-                        NativeKotlinCustomOutstandingWorkoutInventory(prepared,this))
+                    val inventory=NativeKotlinCustomOutstandingWorkoutInventory(prepared,this)
+                    val reviewed=(if(authority==NativeCustomPreparationAuthority.TIERED_INITIAL)
+                        preflight.inspectTieredInitial(ownerKey,workoutId,cycleId,
+                            absoluteWeek,weekday,inputs,namedHistory,inventory)
+                    else preflight.inspectNamed(ownerKey,workoutId,cycleId,
+                        absoluteWeek,weekday,inputs,namedHistory,inventory))
                         as? NativeCustomPreflightResult.ReviewedPreview
                         ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                             NativeCustomJournalRefusal.CONSENT_CHANGED)

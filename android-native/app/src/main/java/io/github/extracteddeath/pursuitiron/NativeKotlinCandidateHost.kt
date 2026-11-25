@@ -84,6 +84,17 @@ internal data class NativeFixedNamedChoice(
     val dayRole:PercentageDayRole,val reference:BigDecimal
 )
 
+internal data class NativeTieredInitialChoice(
+    val absoluteWeek:Int,val weekday:Int,val slotId:String,val tier:PercentageTier,
+    val initialLoad:BigDecimal,val maximumAuthorizedIncrease:BigDecimal
+) {
+    companion object {
+        fun from(selection:NativeTieredInitialSelection)=NativeTieredInitialChoice(
+            selection.absoluteWeek,selection.weekday,selection.slotId,selection.tier,
+            selection.initialLoad,selection.maximumAuthorizedIncrease)
+    }
+}
+
 internal class NativeKotlinCandidateHost(context:Context) {
     private val root=context.applicationContext.noBackupFilesDir
         .resolve("kotlin-coach-v1").toPath()
@@ -867,24 +878,31 @@ internal class NativeKotlinCandidateHost(context:Context) {
             mixedHistoryReader,outstandingCustomInventory,machineRosters)
     }
 
-    /** Explicit GZCLP start; the existing specialist reviewer owns all numeric decisions. */
-    fun previewTieredInitialReference(cycleId:String,absoluteWeek:Int,weekday:Int,
-        slotId:String,tier:PercentageTier,initialLoad:BigDecimal,maximumIncrease:BigDecimal,
-        nextWorkoutId:String):NativeTieredInitialReview {
+    /** Compose supplies only explicit references and stable positions.
+     * Allocate one workout ID per scheduled day, including when several
+     * independently progressed slots share that session. The same batch
+     * review handles one or many references; the store owns all numbers. */
+    fun previewTieredInitialChoices(cycleId:String,choices:List<NativeTieredInitialChoice>):NativeTieredInitialBatchReview {
         val owner=localAthlete.signedInIdentity()
-            ?:return NativeTieredInitialReview.Rejected(NativeNamedPercentageRefusal.NOT_AUTHORIZED)
-        return fixedNamedDraftReview.previewTieredInitial(NativeTieredInitialSelection(
-            owner.ownerKey,cycleId,absoluteWeek,weekday,slotId,nextWorkoutId,tier,
-            initialLoad,maximumIncrease))
+            ?:return NativeTieredInitialBatchReview.Rejected(NativeNamedPercentageRefusal.NOT_AUTHORIZED)
+        if(choices.size !in 1..104)
+            return NativeTieredInitialBatchReview.Rejected(NativeNamedPercentageRefusal.INVALID_SELECTION)
+        val ids=choices.map{it.absoluteWeek to it.weekday}.distinct().associateWith{
+            "tier-"+java.util.UUID.randomUUID().toString()
+        }
+        val selections=choices.map{choice->NativeTieredInitialSelection(owner.ownerKey,cycleId,
+            choice.absoluteWeek,choice.weekday,choice.slotId,ids.getValue(choice.absoluteWeek to choice.weekday),
+            choice.tier,choice.initialLoad,choice.maximumAuthorizedIncrease)}
+        return fixedNamedDraftReview.previewTieredInitialBatch(selections)
     }
 
-    fun acceptTieredInitialReference(displayed:NativeTieredInitialReview.Ready,
-        confirmed:Boolean):NativeTieredInitialAcceptance {
+    fun acceptTieredInitialChoices(displayed:NativeTieredInitialBatchReview.Ready,
+        confirmed:Boolean):NativeTieredInitialBatchAcceptance {
         val owner=localAthlete.signedInIdentity()
-            ?:return NativeTieredInitialAcceptance.Rejected(NativeNamedPercentageRefusal.NOT_AUTHORIZED)
-        if(displayed.selection.ownerKey!=owner.ownerKey)
-            return NativeTieredInitialAcceptance.Rejected(NativeNamedPercentageRefusal.NOT_AUTHORIZED)
-        return fixedNamedDraftReview.acceptTieredInitial(displayed.selection,displayed,confirmed)
+            ?:return NativeTieredInitialBatchAcceptance.Rejected(NativeNamedPercentageRefusal.NOT_AUTHORIZED)
+        if(displayed.selections.any{it.ownerKey!=owner.ownerKey})
+            return NativeTieredInitialBatchAcceptance.Rejected(NativeNamedPercentageRefusal.NOT_AUTHORIZED)
+        return fixedNamedDraftReview.acceptTieredInitialBatch(displayed.selections,displayed,confirmed)
     }
 
     fun recoverTieredInitialCycle(cycleId:String):NativeSavedNamedReview {

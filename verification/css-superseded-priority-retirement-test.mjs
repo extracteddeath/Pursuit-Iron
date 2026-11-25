@@ -22,7 +22,7 @@ assert.ok(laterWizard.includes('border-radius:19px 25px 25px 25px!important;') &
 // shared page-header canvas, and its actions are uncontained icon/text buttons.
 assert.ok(!css.includes('.wpb-library.wpb-library.wpb-library .wpb-library-header'),
  'Library header has no tonal R11 surface painter');
-assert.ok(/\.wpb-library-headline>:is\(\.wpb-library-back,\.wpb-library-find\)\{[^}]*border:0;[^}]*border-radius:50%;[^}]*background:transparent/.test(css),
+assert.ok(/\.wpb-library-headline>\.wpb-library-back,\.wpb-library-headline>\.wpb-library-find\{[^}]*border:0;[^}]*border-radius:50%;[^}]*background:transparent/.test(css),
  'Library header icon actions are standard uncontained icon buttons');
 
 // B1052: the exercise detail header now has one owner, a flat full-width top app bar.

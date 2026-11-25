@@ -297,17 +297,18 @@ object CustomWorkoutSnapshotDomain {
         sourceRevision:Long,inputs:CustomCoachAuditInputs,
         evidence:List<CustomNamedPercentageWeekEvidence>,
         initialTiers:List<CustomTieredInitialWeekEvidence>,
-        absoluteWeek:Int,weekday:Int
+        absoluteWeek:Int,weekday:Int,
+        tierTransitions:List<CustomTieredTransitionWeekEvidence> = emptyList()
     ):CustomWorkoutSnapshotResult {
         val athlete=setup.reviewed
             ?:return CustomWorkoutSnapshotResult.Rejected(
                 CustomWorkoutSnapshotRefusal.UNREVIEWED_ATHLETE)
-        if(evidence.isEmpty() && initialTiers.isEmpty())return CustomWorkoutSnapshotResult.Rejected(
+        if(evidence.isEmpty() && initialTiers.isEmpty() && tierTransitions.isEmpty())return CustomWorkoutSnapshotResult.Rejected(
             CustomWorkoutSnapshotRefusal.COACHING_REVIEW_REQUIRED)
         val stamp=CustomWorkoutSourceStamp(athlete.athleteProfileId,athlete.profileRevision,
             cycle.cycleId,cycle.revision,athlete.gym.gymId,sourceRevision)
         val audit=CustomCycleCoachAuditDomain.reviewSpecialistForReview(
-            cycle,setup,catalog,inputs,stamp,evidence,initialTiers)
+            cycle,setup,catalog,inputs,stamp,evidence,initialTiers,tierTransitions)
         val structural=audit.structuralReview
         if(audit.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW ||
             audit.issues.isNotEmpty() || audit.auditedCycleRevision!=cycle.revision ||

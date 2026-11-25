@@ -3320,7 +3320,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb .wpb-settings-row--stack{flex-direction:column;align-items:stretch;}
 .wpb .wpb-settings-row--stack>.wpb-settings-row-copy{flex:none;}
 .wpb .wpb-settings-row--stack>.wpb-settings-row-control{width:100%;}
-.wpb .wpb-settings-card>:where(button):not(.pi-pad),.wpb .wpb-settings-card>.wpb-settings-row{border-radius:var(--pi-m3e-list-compressed,8px);transition:background-color var(--pi-motion-paint,160ms) var(--pi-ease);}
+.wpb .wpb-settings-card>:where(button):not(.pi-pad),.wpb .wpb-settings-card>.wpb-settings-row{border-radius:0;transition:background-color var(--pi-motion-paint,160ms) var(--pi-ease);}
 .wpb .wpb-settings-card>:where(button):not(.pi-pad):first-child,.wpb .wpb-settings-card>.wpb-settings-row:first-child{border-top-left-radius:var(--pi-shape-card);border-top-right-radius:var(--pi-shape-card);}
 .wpb .wpb-settings-card>:where(button):not(.pi-pad):last-child,.wpb .wpb-settings-card>.wpb-settings-row:last-child{border-bottom-left-radius:var(--pi-shape-card);border-bottom-right-radius:var(--pi-shape-card);}
 .wpb .wpb-settings-card>:is(button,.wpb-settings-row)+:where(button):not(.pi-pad),.wpb .wpb-settings-card>:is(button,.wpb-settings-row)+.wpb-settings-row{border-top:1px solid var(--pi-color-divider);}

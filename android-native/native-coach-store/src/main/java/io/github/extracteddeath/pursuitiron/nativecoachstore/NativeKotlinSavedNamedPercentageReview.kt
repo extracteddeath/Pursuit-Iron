@@ -215,7 +215,7 @@ class NativeKotlinSavedNamedPercentageReview(
             val timeline=(history.read(ownerKey,owner.athleteId)
                 as? NativeKotlinMixedHistoryReadResult.Review)?.timeline
                 ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
-            if(if(signed && (roots.isEmpty() || next!=null || supportingDay))timeline.manifestRevision<historyRevision
+            if(if(signed && (roots.size!=1 || next!=null || supportingDay))timeline.manifestRevision<historyRevision
                 else timeline.manifestRevision!=historyRevision)
                 return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
             val completed=timeline.completions.filterIsInstance<NativeKotlinMixedHistoryCompletion.Custom>()
@@ -262,7 +262,7 @@ class NativeKotlinSavedNamedPercentageReview(
                 val selection=initial.selection
                 if((!signed && (NativeFutureWeekProposalInventoryPolicy.blocks(census.sessions,cycleId,selection.absoluteWeek) ||
                     census.sessions.any{it.cycleId==cycleId && it.absoluteWeek>=selection.absoluteWeek})) ||
-                    (next==null && !supportingDay && timeline.completions.any{it.manifest.workoutId==selection.nextWorkoutId}))
+                    (roots.size==1 && next==null && !supportingDay && timeline.completions.any{it.manifest.workoutId==selection.nextWorkoutId}))
                     return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.PROTECTED_WEEK)
                 val original=(CustomWorkoutSnapshotDomain.reviewForConsent(base,source.setup,
                     source.catalog,source.revision,inputs,selection.absoluteWeek,selection.weekday)
@@ -292,12 +292,13 @@ class NativeKotlinSavedNamedPercentageReview(
                 // below, then replays the full corrected ledger for the
                 // next week. Never rederive the old issued recipe using
                 // newer actuals.
-                if(next==null && !supportingDay) {
+                val rootCompleted=signed && roots.size>1 && selection.nextWorkoutId in completed
+                if(next==null && !supportingDay && !rootCompleted) {
                     val ledger=history.readTieredLedger(ownerKey,owner.athleteId,scope,
                         selection.slotId,selection.tier,selection.absoluteWeek)
                         as? NativeOwnerTieredLedgerResult.Review
                         ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
-                    if(ledger.manifestRevision!=historyRevision || ledger.exposures.isNotEmpty())
+                    if(ledger.manifestRevision!=timeline.manifestRevision || ledger.exposures.isNotEmpty())
                         return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
                 }
                 val request=TieredLinearRequest(selection.nextWorkoutId,scope,selection.tier,
@@ -314,6 +315,27 @@ class NativeKotlinSavedNamedPercentageReview(
                 audit.issues.isNotEmpty() || audit.auditedCycleRevision!=candidate.revision ||
                 audit.structuralReview?.verifiedDraft!=candidate)
                 return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.FULL_CYCLE_AUDIT_FAILED,audit)
+            // Each completed multi-root day must retain the exact signed
+            // original snapshot. Other roots can still be issued independently.
+            if(signed && roots.size>1) {
+                for(root in roots.distinctBy{it.selection.nextWorkoutId}.filter{it.selection.nextWorkoutId in completed}) {
+                    val s=root.selection
+                    val fact=census.sessions.singleOrNull{it.workoutId==s.nextWorkoutId &&
+                        it.cycleId==cycleId && it.absoluteWeek==s.absoluteWeek &&
+                        it.weekday==s.weekday && it.issued && it.completed}
+                        ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
+                    val origin=outstanding.preparedOrigin(ownerKey,fact.workoutId)
+                        ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.HISTORY_CHANGED)
+                    val exact=(CustomWorkoutSnapshotDomain.reviewSpecialistForConsent(candidate,
+                        source.setup,source.catalog,source.revision,inputs,evidence,tierEvidences,
+                        s.absoluteWeek,s.weekday) as? CustomWorkoutSnapshotResult.Preview)?.snapshot
+                        ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.FULL_CYCLE_AUDIT_FAILED)
+                    if(origin.authority!=NativeCustomPreparationAuthority.TIERED_INITIAL ||
+                        origin.consentRevision!=prior.recordRevision ||
+                        origin.consentFingerprint!=prior.fingerprintSha256 || origin.snapshot!=exact)
+                        return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.STALE_PRIOR_CONSENT)
+                }
+            }
             if(next!=null || supportingDay) {
                 val selection=initial?.selection
                     ?:return@withOwnerTransaction deny(NativeSavedNamedReviewRefusal.NO_CONFIRMED_DRAFT)

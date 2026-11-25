@@ -2686,6 +2686,14 @@ private fun NativeTieredTransitionControls(state:NativeKotlinCustomCycleState,
             Text("${kotlinIssuedLoadLabel(set.load)} · ${set.repTargetLabel()}",
                 style=MaterialTheme.typography.bodySmall)
         }
+        old.previousTargetsBySlot.forEach{(id,sets)->
+            val root=state.tieredReceipts.firstOrNull{it.selection.slotId==id}
+            Text(root?.let{kotlinExerciseLabel(it.exerciseId)}?:id,style=MaterialTheme.typography.labelLarge)
+            sets.forEach{set->
+                Text("${kotlinIssuedLoadLabel(set.load)} · ${set.repTargetLabel()}",
+                    style=MaterialTheme.typography.bodySmall)
+            }
+        }
         if(old.preparation!=null)
             Text("The old prepared workout cannot be issued after this history correction.",
                 style=MaterialTheme.typography.bodyMedium)
@@ -2748,10 +2756,13 @@ private fun NativeTieredTransitionControls(state:NativeKotlinCustomCycleState,
                 Text("Confirm this recovery exposure")
             }
         }
-        if(shown==null)Button(onClick={controller.approveTieredTransition(false,false,resetSlots,confirmedRecoverySlots)},
+        if(shown==null && stale?.preparation!=null)
+            OutlinedButton(onClick=controller::discardStaleTieredPreparation,enabled=!state.busy,
+                modifier=Modifier.fillMaxWidth()){Text("Discard unissued preparation")}
+        else if(shown==null)Button(onClick={controller.approveTieredTransition(false,false,resetSlots,confirmedRecoverySlots)},
             enabled=!state.busy && resetSlots==next.slots.filter{it.requiresExplicitResetReview}.map{it.evidence.key.slotId}.toSet() &&
                 confirmedRecoverySlots==next.selection.recoverySlotIds,modifier=Modifier.fillMaxWidth()){
-            Text("Approve exact tier targets")
+            Text(if(stale!=null)"Replace approval with corrected targets" else "Approve exact tier targets")
         }
     }
     shown?.let{verified->

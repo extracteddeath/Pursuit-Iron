@@ -310,10 +310,17 @@ class NativeKotlinTieredInitialReferenceReviewTest {
             NativeKotlinApprovalRevisionFence(root),identity,preflight)
         fun coldJournal()=NativeKotlinCustomWorkoutJournalFileStore(root,fence,identity,
             coldPrepared(),preflight,history,composer)
-        fun prepareSupport(w:String="support-day",day:Int=2)=
-            coldPrepared().prepareTieredSupport("owner-1",w,"cycle-1",1,day,reader,inventory)
-        fun issueSupport(w:String="support-day",day:Int=2)=
-            coldJournal().issueTieredSupport("owner-1",w,"cycle-1",1,day,reader)
+        fun prepareSupport(w:String="support-day",day:Int=2,week:Int=1)=
+            coldPrepared().prepareTieredSupport("owner-1",w,"cycle-1",week,day,reader,inventory)
+        fun issueSupport(w:String="support-day",day:Int=2,week:Int=1)=
+            coldJournal().issueTieredSupport("owner-1",w,"cycle-1",week,day,reader)
+        fun calendar()=NativeKotlinCustomNextCycleSessionReview(
+            NativeKotlinApprovalRevisionFence(root),identity,drafts,sources,store(),reader,inventory,coldPrepared())
+        fun transitions()=NativeKotlinFirstTierTransitionConsentStore(root,
+            NativeKotlinApprovalRevisionFence(root),identity,drafts,sources,store(),reader,inventory)
+        fun previewTransition(w:String="tier-next",week:Int=2,day:Int=0,recovery:Boolean=false)=
+            transitions().previewScheduled("owner-1","cycle-1",day,
+                NativeTieredNextSelection(w,week,recovery),calendar())
         assertTrue(prepareSupport() is NativeCustomPrepareResult.Rejected)
         val first=prepared.prepareTieredInitial("owner-1",initial.nextWorkoutId,"cycle-1",1,0,
             inputs(),reader,inventory) as NativeCustomPrepareResult.Prepared
@@ -333,8 +340,7 @@ class NativeKotlinTieredInitialReferenceReviewTest {
             assertTrue(result.toString(),result is NativeCustomFinishResult.Committed)
         }
         finish(initial.nextWorkoutId,first.workout.snapshot,n("25"),5)
-        fun calendar()=NativeKotlinCustomNextCycleSessionReview(
-            NativeKotlinApprovalRevisionFence(root),identity,drafts,sources,store(),reader,inventory,coldPrepared())
+        assertTrue(previewTransition() is NativeSavedNamedReview.Rejected)
         assertEquals(NativeCustomNextCycleSlot.Next(1,2,"Day 2"),
             calendar().reviewTieredCalendar("owner-1","cycle-1"))
         assertTrue(prepareSupport("out-of-order",4) is NativeCustomPrepareResult.Rejected)
@@ -372,10 +378,49 @@ class NativeKotlinTieredInitialReferenceReviewTest {
         val ledger=reader.readTieredLedger("owner-1","athlete-1",proposal.request.scope,
             initial.slotId,initial.tier,2) as NativeOwnerTieredLedgerResult.Review
         assertEquals(listOf(initial.nextWorkoutId),ledger.exposures.map{it.workoutId})
-        val next=reviewer.previewTieredNext("owner-1","cycle-1",inputs(),NativeTieredNextSelection("tier-next",2))
+        assertTrue(previewTransition(day=2) is NativeSavedNamedReview.Rejected)
+        assertTrue(previewTransition(week=3) is NativeSavedNamedReview.Rejected)
+        assertEquals(NativeTieredTransitionRecovery.Refused(NativeTieredTransitionConsentResult.MISSING),
+            transitions().recoverScheduled("owner-1","cycle-1",2,0,calendar()))
+        val next=previewTransition()
         assertTrue(next.toString(),next is NativeSavedNamedReview.Signed)
-        assertEquals(TieredLinearState(0,n("30")),
-            (next as NativeSavedNamedReview.Signed).nextTierCandidate?.result?.state)
+        val reviewed=next as NativeSavedNamedReview.Signed
+        assertEquals(TieredLinearState(0,n("30")),reviewed.nextTierCandidate?.result?.state)
+        assertEquals(NativeTieredTransitionConsentResult.CONFIRMATION_REQUIRED,
+            transitions().confirmScheduled("owner-1","cycle-1",reviewed,calendar(),false,false,false))
+        assertEquals(NativeTieredTransitionConsentResult.RECORDED,
+            transitions().confirmScheduled("owner-1","cycle-1",reviewed,calendar(),true,false,false))
+        val recovered=transitions().recoverScheduled("owner-1","cycle-1",2,0,calendar())
+            as NativeTieredTransitionRecovery.Ready
+        assertEquals(reviewed,recovered.review)
+        assertTrue(previewTransition("new-id") is NativeSavedNamedReview.Rejected)
+        fun inspectTransition()=transitions().inspectScheduled("owner-1","cycle-1","tier-next",2,0,calendar(),preflight)
+        val pre=inspectTransition() as NativeFirstTierTransitionPreflight.Reviewed
+        assertEquals(recovered.receiptFingerprint,pre.receiptFingerprint)
+        val staged=transitions().prepareScheduled("owner-1","cycle-1",pre,calendar(),preflight,coldPrepared())
+            as NativeCustomPrepareResult.Prepared
+        assertEquals(NativeCustomNextCycleSlot.Prepared("tier-next",2,0,"Day 0"),
+            calendar().reviewTieredCalendar("owner-1","cycle-1"))
+        assertEquals(pre,inspectTransition())
+        val second=transitions().issueScheduled("owner-1","cycle-1",staged.workout,calendar(),preflight,coldPrepared(),coldJournal())
+        assertTrue(second.toString(),second is NativeCustomJournalResult.Durable)
+        assertEquals(NativeCustomNextCycleSlot.ResumeIssued("tier-next",2,0,"Day 0"),
+            calendar().reviewTieredCalendar("owner-1","cycle-1"))
+        finish("tier-next",staged.workout.snapshot,n("30"),5)
+        assertEquals(NativeCustomNextCycleSlot.Next(2,2,"Day 2"),
+            calendar().reviewTieredCalendar("owner-1","cycle-1"))
+        assertTrue(previewTransition("tier-third",3) is NativeSavedNamedReview.Rejected)
+        for(day in listOf(2,4)) {
+            val id="support-w2-d"+day
+            val p=prepareSupport(id,day,2) as NativeCustomPrepareResult.Prepared
+            assertEquals(set(),p.workout.snapshot.slots.single().sets.single().prescription)
+            assertTrue(issueSupport(id,day,2) is NativeCustomJournalResult.Durable)
+            finish(id,p.workout.snapshot,n("20"),12)
+        }
+        assertEquals(NativeCustomNextCycleSlot.Next(3,0,"Day 0"),
+            calendar().reviewTieredCalendar("owner-1","cycle-1"))
+        val third=previewTransition("tier-third",3) as NativeSavedNamedReview.Signed
+        assertEquals(TieredLinearState(0,n("35")),third.nextTierCandidate?.result?.state)
     }
 
     @Test fun initialTierIssuesOnlyExactApprovedIdAndBuildsNextCandidateFromDurableLedger() {

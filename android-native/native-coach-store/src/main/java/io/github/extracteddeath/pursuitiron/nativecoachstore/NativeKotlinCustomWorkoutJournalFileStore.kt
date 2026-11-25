@@ -248,7 +248,7 @@ class NativeKotlinCustomWorkoutJournalFileStore(
         issueReviewed(ownerKey,workoutId,cycleId,absoluteWeek,weekday,inputs,
             NativeCustomPreparationAuthority.TIERED_INITIAL,null,historyReader)
 
-    internal fun issueTieredSupport(ownerKey:String,workoutId:String,cycleId:String,
+    fun issueTieredSupport(ownerKey:String,workoutId:String,cycleId:String,
         absoluteWeek:Int,weekday:Int,historyReader:NativeKotlinMixedHistoryReadCoordinator
     ):NativeCustomJournalResult =
         issueReviewed(ownerKey,workoutId,cycleId,absoluteWeek,weekday,CustomCoachAuditInputs(),

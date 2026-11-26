@@ -12,7 +12,9 @@ assert.match(ui,/preferredExerciseId\?\.takeIf\{it in choices\}/);
 assert.match(ui,/val permitted=exerciseId in exerciseChoices/);
 assert.match(ui,/CoachExerciseChoiceSearchDomain\.filter\(\s*exerciseChoices,exerciseSearch,::kotlinExerciseLabel\)/);
 assert.match(domain,/return approved\.distinct\(\)\.filter/);
-assert.match(domain,/tokens\.all \{ searchable\.contains\(it\) \}/);
+assert.match(domain,/tokens\.all\s*\{\s*searchable\.contains\(it\)\s*\}/);
+assert.match(domain,/val terms=tokens\(query\)/);
+assert.match(domain,/matches\(terms\)\{listOf\(label\(id\),id\)\}/);
 
 // Touch-safe full-width results, explicit selection, searchable pagination.
 assert.match(ui,/label=\{Text\("Search approved exercises"\)\}/);

@@ -124,6 +124,24 @@ class CustomExerciseSwapRankingDomainTest {
                 search="horizontal press").map{it.choice.exerciseId})
     }
 
+    @Test fun crossFieldSearchPreservesFullRankingAndUsesVisibleLabels() {
+        val variants=rows+option("handle-b","pushdown",ComposerPattern.ISOLATION,
+            listOf(TrainingMuscle.TRICEPS),attachment="dual_rope")
+        val before=CustomExerciseSwapRankingDomain.rank(variants,"press-original")
+        val label:(String)->String={if(it=="handle-b")"Incline cable extension" else it}
+        val first=CustomExerciseSwapRankingDomain.rank(variants,"press-original",
+            search="TRICEPS rope incline accessory",displayLabel=label)
+        val reversed=CustomExerciseSwapRankingDomain.rank(variants,"press-original",
+            search="accessory incline rope triceps",displayLabel=label)
+        assertEquals(before.filter{it.choice.exerciseId=="handle-b"},first)
+        assertEquals(first,reversed)
+        assertTrue(CustomExerciseSwapRankingDomain.rank(variants,"press-original",
+            search="incline single rope",displayLabel=label).isEmpty())
+        assertEquals(before.filter{it.choice.exerciseId in setOf("press-variant","other-press")},
+            CustomExerciseSwapRankingDomain.rank(variants,"press-original",
+                search="chest horizontal"))
+    }
+
     @Test fun sameFamilyOnlyUsesReviewedFamilyNotNameOrPatternGuess() {
         val candidates=rows+option("press-isolation","press",
             ComposerPattern.ISOLATION,listOf(chest))

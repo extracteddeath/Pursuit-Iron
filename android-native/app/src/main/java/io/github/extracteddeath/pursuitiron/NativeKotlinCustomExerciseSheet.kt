@@ -246,26 +246,12 @@ internal fun NativeKotlinCustomExerciseSheet(
     }
     val option = available.firstOrNull { it.exerciseId == exerciseId }
     val parsed = parsedSets(forms, option)
-    // A query can span the movement, equipment variant, attachment and muscle.
-    // Matching is independent of token order; ranking is still calculated from
-    // the ENTIRE verified gym catalog before the search filter is applied.
-    val terms=search.trim().replace('_',' ').replace('-',' ')
-        .lowercase().split(Regex("\\s+"))
-        .filter { it.isNotEmpty() }
-    val labeled=available.filter { choice ->
-        val searchable=(listOfNotNull(
-            choice.exerciseId,choice.familyId,choice.variantId,choice.attachmentId,
-            kotlinExerciseLabel(choice.exerciseId),choice.pattern?.name,
-            choice.role?.name
-        ) + choice.muscleCredits.map { it.muscle.name })
-            .joinToString(" ").replace('_',' ').replace('-',' ').lowercase()
-        terms.all { searchable.contains(it) }
-    }
     // Rank using the FULL eligible current-gym catalog first. Search only
     // filters the visible candidates; it must never remove the source
     // movement before its pattern/family/muscle context is inspected.
     val ranked=CustomExerciseSwapRankingDomain.rank(
-        available,replacing?.exerciseId,
+        available,replacing?.exerciseId,search=search,
+        displayLabel=::kotlinExerciseLabel,
         samePatternOnly=samePatternOnly,
         sharedMusclesOnly=sharedMusclesOnly,
         sameRoleOnly=sameRoleOnly,
@@ -275,9 +261,6 @@ internal fun NativeKotlinCustomExerciseSheet(
         sourceHasWorkingSets=replacing?.sets?.any {
             it.type==DraftSetType.WORKING
         }==true)
-    // Compare the entire verified choice, including attachment/variant.
-    // A matching name must not make a sibling attachment appear authorized.
-    val matchedChoices=labeled.toSet()
     // Only installed, source-reviewed built-in identities can assert a
     // physical incline. Custom authoring and unreviewed variants may be
     // searched by name but cannot invent a verified bench setting.
@@ -292,8 +275,7 @@ internal fun NativeKotlinCustomExerciseSheet(
     val selectedAngle=NativeBenchAngle.entries.firstOrNull {it.name==inclineLevel}
     val searched=ranked.filter { rankedChoice ->
         val choice=rankedChoice.choice
-        choice in matchedChoices &&
-            (selectedAngle==null ||
+        (selectedAngle==null ||
                 verifiedAngleFor(choice.exerciseId)==selectedAngle) &&
             (attachmentId==null || choice.attachmentId==attachmentId)
     }

@@ -10,16 +10,17 @@ object Stage2BasicProbe {
         require(args.size==2)
         val scope=BasicProgressionScope("athlete","cycle","gym","block","day",
             "machine_press","machine-A",LoadUnit.LB,LoadBasis.MACHINE_STACK)
-        val band=RepBand(5,8)
         val rows=Files.readAllLines(Path.of(args[0])).filter{it.isNotBlank()&&!it.startsWith("#")}
         val output=rows.map{line->
             val f=line.split('|')
             require(f.size==10)
             val style=f[1]
-            if(style.substringBefore(':') in setOf("select","select-v13"))
+            if(style.substringBefore(':') in setOf("select","select-v13","select-saved-auto"))
                 return@map selection(f)
+            val waveGate=style=="wave-gate"
+            val band=if(waveGate)RepBand(3,5) else RepBand(5,8)
             val mode=when(style) {
-                "double","e1rm" -> BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION
+                "double","e1rm","wave-gate" -> BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION
                 "dynamic" -> BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION
                 "linear" -> BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION
                 else -> error("Unknown strategy")
@@ -37,12 +38,16 @@ object Stage2BasicProbe {
                 band,loads.size,facts,scope.trainingDayId)
             val result=BasicProgressionPolicyDomain.review(BasicProgressionRequest(
                 mode,"next",scope,scope,history,band,loads,stock,BigDecimal("5"),
-                effortAdjustedE1rm=style=="e1rm")) as BasicProgressionResult.Candidate
+                effortAdjustedE1rm=style=="e1rm" || waveGate)) as BasicProgressionResult.Candidate
             require(!result.mayModifyIssuedWorkout&&!result.mayModifyLoggedSets&&!result.maySaveFutureProgram)
             require(result.approvedFutureLoadFacts.keys==result.increasedOrdinals)
             require(history.observations==facts)
             val weights=result.proposedWorkingLoads.joinToString(","){it.stripTrailingZeros().toPlainString()}
-            val estimate=result.e1rmEvidence?.estimatedOneRepMax?.stripTrailingZeros()?.toPlainString()?:"-"
+            // A Wave gate probe compares only the shared weight decision, not a
+            // fabricated native Wave method or an estimate that Wave does not use.
+            if(waveGate)require(result.e1rmEvidence!=null)
+            val estimate=if(waveGate)"-" else
+                result.e1rmEvidence?.estimatedOneRepMax?.stripTrailingZeros()?.toPlainString()?:"-"
             f[0]+"|"+weights+"|"+estimate
         }
         val file=Path.of(args[1]);Files.createDirectories(file.toAbsolutePath().parent)
@@ -81,7 +86,8 @@ object Stage2BasicProbe {
         } ?: DraftSetLoad.ExplicitBodyweight
         val set=CustomAuthoredSet(DraftSetType.WORKING,load,band,2,45,90,
             exactRepTarget=band.minimum)
-        val slot=CustomExerciseSlot("slot",movement.exerciseId,role,listOf(set,set))
+        val slot=CustomExerciseSlot("slot",movement.exerciseId,role,listOf(set,set),
+            progressionMethod=if(f[1]=="select-saved-auto")SavedProgressionMethod.AUTO else null)
         val block=CustomTrainingBlock("block","Block",phase,CustomBlockPurpose.TRAINING,6,
             CustomSplitIdentity.Named(ComposerSplit.FULL_BODY),
             listOf(CustomTrainingDay(0,"Day",ComposerSessionPurpose.UNSPECIFIED,listOf(slot))))

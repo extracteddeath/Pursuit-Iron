@@ -167,7 +167,8 @@ internal fun NativeKotlinExerciseHistorySheet(
         Column(Modifier.fillMaxWidth()
             .padding(horizontal=PursuitSpace.md),
             verticalArrangement=Arrangement.spacedBy(PursuitSpace.md)) {
-            PageHeading("EXERCISE HISTORY",kotlinExerciseLabel(exerciseId),
+            PageHeading("EXERCISE HISTORY",
+                MeasuredExerciseCatalogDomain.find(exerciseId)?.displayName?:kotlinExerciseLabel(exerciseId),
                 "Full training history · corrections included")
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End) {
                 TextButton(
@@ -190,6 +191,33 @@ internal fun NativeKotlinExerciseHistorySheet(
                         "Verified saved history could not be opened. Your workout entries are unchanged.")
                 is NativeKotlinMixedHistoryReadResult.Review -> {
                     val verified=result.timeline
+                    if(MeasuredExerciseCatalogDomain.find(exerciseId)!=null) {
+                        val measured=remember(verified,exerciseId) {
+                            verified.completions.asReversed()
+                                .filterIsInstance<NativeKotlinMixedHistoryCompletion.Measured>()
+                                .filter{nativeMeasuredHistoryPlans(
+                                    it.stored.journal.approvedPlan.sets,exerciseId).isNotEmpty()}
+                        }
+                        if(measured.isEmpty())PursuitEmptyState("No recorded measurements yet",
+                            "Finish a measured workout with this exercise to see its actual results here.")
+                        else {
+                            PursuitHistoryStatus(
+                                "${measured.size} training sessions",
+                                "Newest session first. Recorded sides, skipped and failed attempts, loads and physical setups remain distinct.")
+                            LazyColumn(Modifier.fillMaxWidth().heightIn(max=520.dp),
+                                contentPadding=PaddingValues(bottom=PursuitSpace.xl),
+                                verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                                items(measured,key={it.manifest.workoutId}) { session ->
+                                    PursuitHistoryStatus(nativeExerciseHistorySessionTitle(
+                                        session.manifest,historyZone,historyLocale),
+                                        "Gym · ${session.stored.journal.approvedPlan.gymId}")
+                                    PursuitCard {
+                                        NativeKotlinMeasuredHistoryRows(session,exerciseId)
+                                    }
+                                }
+                            }
+                        }
+                    } else {
                     val allowed=remember(verified) {
                         NativeExerciseFavorites.loggedIds(verified).toSet()
                     }
@@ -432,6 +460,7 @@ internal fun NativeKotlinExerciseHistorySheet(
                                 }
                             }
                         }
+                    }
                     }
                 }
             }

@@ -1129,15 +1129,22 @@ private fun NativeKotlinSavedCustomHistoryVisitRow(
     }
 }
 
+/** Exact identity projection shared by workout and exercise History. */
+internal fun nativeMeasuredHistoryPlans(
+    plans:List<MeasuredExerciseSetPlan>,exerciseId:String?=null
+):List<MeasuredExerciseSetPlan> = if(exerciseId==null)plans
+    else plans.filter{it.exerciseId==exerciseId}
+
 /** Source-exact Material 3 presentation for typed measured results. */
 @Composable
-private fun NativeKotlinMeasuredHistoryRows(
-    entry:NativeKotlinMixedHistoryCompletion.Measured
+internal fun NativeKotlinMeasuredHistoryRows(
+    entry:NativeKotlinMixedHistoryCompletion.Measured,
+    exerciseId:String?=null
 ) {
     val journal=entry.stored.journal
     PursuitSectionHeading("Recorded measurements",
         "Each side and its original physical setup are preserved. These are not loaded-rep personal records.")
-    journal.approvedPlan.sets.forEach{plan->
+    nativeMeasuredHistoryPlans(journal.approvedPlan.sets,exerciseId).forEach{plan->
         val definition=MeasuredExerciseCatalogDomain.find(plan.exerciseId)
         val review=MeasuredWorkoutResultReviewDomain.review(
             plan,journal.bySetKey[plan.setKey])

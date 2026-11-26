@@ -18,6 +18,21 @@ class NativeKotlinHistoryDatesTest {
         return NativeKotlinMixedHistoryCompletion.Composer(manifest,
             KotlinWorkoutHistoryEvidence(source,manifest.workoutId,manifest.finishEventId,2,emptyList(),emptyList()))
     }
+    @Test fun measuredExerciseHistoryFiltersExactIdentityWithoutCollapsingRepeatedSetsOrSides() {
+        fun plan(key:String,exercise:String,sides:Set<MeasuredSide>)=MeasuredExerciseSetPlan(
+            "workout-1",key,exercise,"gym-1",1,"floor",40,sides,emptySet())
+        val first=plan("set-1","plank",setOf(MeasuredSide.BOTH))
+        val bilateral=plan("set-2","side-plank",setOf(MeasuredSide.LEFT,MeasuredSide.RIGHT))
+        val later=plan("set-3","plank",setOf(MeasuredSide.BOTH)).copy(targetAmount=60)
+        val plans=listOf(first,bilateral,later)
+        assertEquals(plans,nativeMeasuredHistoryPlans(plans))
+        assertEquals(listOf(first,later),nativeMeasuredHistoryPlans(plans,"plank"))
+        assertEquals(listOf(bilateral),nativeMeasuredHistoryPlans(plans,"side-plank"))
+        assertTrue(nativeMeasuredHistoryPlans(plans,"weighted-plank").isEmpty())
+        assertTrue(nativeMeasuredHistoryPlans(plans,"PLANK").isEmpty())
+        assertEquals(setOf(MeasuredSide.LEFT,MeasuredSide.RIGHT),
+            nativeMeasuredHistoryPlans(plans,"side-plank").single().sides)
+    }
     @Test fun oldSessionsRemainExplicitlyUndatedWithoutUsingTheirOrderAsATimestamp() {
         val sessions=listOf(entry(1),entry(2))
         val sections=nativeHistoryMonths(sessions,ZoneId.of("UTC"))

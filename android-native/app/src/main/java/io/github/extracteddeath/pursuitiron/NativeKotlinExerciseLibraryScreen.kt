@@ -29,7 +29,7 @@ internal fun NativeKotlinExerciseLibraryAccess(
     var open by rememberSaveable(source.ownerKey,source.athleteId) { mutableStateOf(false) }
     PursuitCard {
         PursuitSectionHeading("Exercise library",
-            "${source.catalog.size} exercises · ${source.setup.reviewed?.excludedExerciseIds?.size ?: 0} excluded")
+            "${source.catalog.size+MeasuredExerciseCatalogDomain.all.size} exercises · ${source.setup.reviewed?.excludedExerciseIds?.size ?: 0} excluded")
         Text("Find movements by muscle, equipment or attachment. Exclusions apply to future exercise choices; saved workout targets stay separate.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -89,7 +89,7 @@ private fun NativeKotlinExerciseLibrarySheet(
             ?: kotlinGymAttachmentLabel(id)
     }
     val records=remember(source) {
-        nativeExerciseLibraryRecords(source,
+        nativeExerciseLibraryEntries(source,
             {equipmentNames[it] ?: kotlinGymFacilityLabel(it)},
             ::kotlinGymFacilityLabel,::kotlinGymAttachmentLabel)
     }
@@ -168,14 +168,14 @@ private fun NativeKotlinExerciseLibrarySheet(
                 gearId=null;familyId=null;angleId=null;attachmentId=null
                 availability=NativeLibraryAvailability.ALL
             }) {Text("Clear search and filters")}
-        val inherited=original.toSet()-records.map{it.movement.exerciseId}.toSet()
+        val inherited=original.toSet()-records.map{it.exerciseId}.toSet()
         if(inherited.isNotEmpty())Text("${inherited.size} exclusion(s) from an older catalog will be retained.",
             style=MaterialTheme.typography.bodySmall)
         Text("${matches.size} matching exercises",style=MaterialTheme.typography.labelLarge)
         if(records.isEmpty())Text("No verified exercise definitions are available. Reload your gym before changing preferences.")
         else if(matches.isEmpty())Text("No exercises match. Clear the search or filters to browse the saved catalog.")
         matches.take(visibleCount).forEach { record ->
-            val id=record.movement.exerciseId
+            val id=record.exerciseId
             val pending=(id in draft)!=(id in original)
             val status=when {
                 pending -> if(id in draft)"Exclude pending" else "Include pending · save to recheck eligibility"
@@ -191,11 +191,26 @@ private fun NativeKotlinExerciseLibrarySheet(
             modifier=Modifier.fillMaxWidth()) {Text("Show more exercises (${matches.size-visibleCount} remaining)")}
 
     }
-    selectedId?.let { id ->records.singleOrNull{it.movement.exerciseId==id}?.let { record ->
-        val move=record.movement
+    selectedId?.let { id ->records.singleOrNull{it.exerciseId==id}?.let { record ->
+        val move=record.standard
         val athlete=checkNotNull(source.setup.reviewed)
         NativeEditSheet(busy,onDismiss={selectedId=null}) {
             PursuitSectionHeading(record.label,if(record.eligible)"Eligible for exercise selection" else "Review saved requirements and preferences")
+            if(record is NativeMeasuredLibraryRecord) {
+                val definition=record.definition
+                Text(record.equipmentLabel+" · "+record.variantDescription)
+                Text("Measurement · "+when(definition.kind){
+                    MeasuredExerciseKind.HOLD_SECONDS->"Elapsed seconds"
+                    MeasuredExerciseKind.CARRY_CENTIMETERS->"Distance"
+                    MeasuredExerciseKind.BANDED_REPETITIONS->"Repetitions with a verified band"
+                })
+                Text("Load · "+nativeLibraryWords(definition.loadKind.name))
+                Text("Sides · "+nativeLibraryWords(definition.sideRule.name))
+                definition.requiredFixtures.sorted().forEach{Text("Required · "+kotlinGymFacilityLabel(it))}
+                Text("Measured sessions use typed targets and actuals. Recorded results are available in workout History; no repetition-based load or muscle credits are inferred.",
+                    style=MaterialTheme.typography.bodySmall)
+                if(!record.eligible && !record.savedExcluded)Text("Review gym stock, fixtures and preferences before choosing this exercise.")
+            } else if(move!=null) {
             Text(record.equipmentLabel+" · "+kotlinLoadBasisLabel(move.expectedLoadBasis))
             Text("Variant · "+record.variantDescription,
                 style=MaterialTheme.typography.bodyMedium)
@@ -225,7 +240,7 @@ private fun NativeKotlinExerciseLibrarySheet(
             if(move.expectedLoadBasis?.countsTowardBarbellLimit==true && athlete.maxBarbellExercisesPerDay==0)
                 Text("Your saved barbell-per-day limit is zero.")
             if(!record.eligible && !record.savedExcluded)Text("This movement is not currently eligible. Review gym stock, fixtures and preferences; browsing cannot approve it.")
-            val related=nativeExerciseFamilyVariants(records,id)
+            val related=nativeExerciseFamilyVariants(records.filterIsInstance<NativeKotlinExerciseLibraryRecord>(),id)
             if(related.isNotEmpty()) {
                 var expandVariants by rememberSaveable(source.ownerKey,id) {
                     mutableStateOf(false)
@@ -252,6 +267,7 @@ private fun NativeKotlinExerciseLibrarySheet(
                         else "Show all ${related.size} variants")
                 }
             }
+            }
             val excluded=id in draft
             OutlinedButton(onClick={draft=if(excluded)draft-id else draft+id},
                 enabled=!busy && !stale && (excluded || draft.size<CoachAthleteSetupDomain.MAX_EXCLUDED_EXERCISES),
@@ -261,27 +277,27 @@ private fun NativeKotlinExerciseLibrarySheet(
             Text(if((id in draft)!=(id in original))"Change pending · use Save exclusions in the library."
                 else if(excluded)"Excluded in saved preferences." else "Included in saved preferences.",
                 style=MaterialTheme.typography.bodySmall)
-            if(historyHost!=null)OutlinedButton(onClick={historyId=id},enabled=!busy,
+            if(historyHost!=null && move!=null)OutlinedButton(onClick={historyId=id},enabled=!busy,
                 modifier=Modifier.fillMaxWidth()) {Text("View recorded exercise history")}
             TextButton(onClick={selectedId=null},enabled=!busy,modifier=Modifier.fillMaxWidth()) {Text("Back to library")}
         }
     }}
-    if(historyHost!=null)historyId?.let { id ->
+    if(historyHost!=null)historyId?.takeIf{MeasuredExerciseCatalogDomain.find(it)==null}?.let { id ->
         NativeKotlinExerciseHistorySheet(historyHost,id,onDismiss={historyId=null})
     }
     filterPicker?.let { kind ->
         val options:List<Pair<String?,String>> = when(kind) {
             "muscle" -> listOf(null to "All muscles")+TrainingMuscle.entries.map{it.name to nativeLibraryWords(it.name)}
-            "pattern" -> listOf(null to "Any movement pattern")+records.map{it.movement.pattern}.distinct()
+            "pattern" -> listOf(null to "Any movement pattern")+records.mapNotNull{it.standard?.pattern}.distinct()
                 .sortedBy{nativeLibraryWords(it.name)}.map{it.name to nativeLibraryWords(it.name)}
-            "role" -> listOf(null to "Any program role")+records.map{it.movement.role}.distinct()
+            "role" -> listOf(null to "Any program role")+records.mapNotNull{it.standard?.role}.distinct()
                 .sortedBy{nativeLibraryWords(it.name)}.map{it.name to nativeLibraryWords(it.name)}
             "gear" -> listOf(null to "Any equipment or fixture")+records.flatMap{it.gearIds}.distinct()
                 .sortedBy{gearLabel(it)}.map{it to gearLabel(it)}
-            "family" -> listOf(null to "Any exercise family")+records.map{it.movement.familyId}.distinct()
+            "family" -> listOf(null to "Any exercise family")+records.mapNotNull{it.standard?.familyId}.distinct()
                 .sortedBy{nativeLibraryWords(it)}.map{it to nativeLibraryWords(it)}
             "angle" -> listOf(null to "Any incline level")+NativeBenchAngle.entries.map{it.name to it.display}
-            "attachment" -> listOf(null to "Any attachment")+records.mapNotNull{it.movement.attachmentId}.distinct()
+            "attachment" -> listOf(null to "Any attachment")+records.mapNotNull{it.standard?.attachmentId}.distinct()
                 .sortedBy{kotlinGymAttachmentLabel(it)}.map{it to kotlinGymAttachmentLabel(it)}
             else -> NativeLibraryAvailability.entries.map{
                 it.name to nativeLibraryWords(it.name)

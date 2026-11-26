@@ -13,7 +13,8 @@ for(const name of ['LOW_INCLINE','HIGH_INCLINE','INCLINE','FLAT','DECLINE']) {
 assert.match(facets,/nativeExerciseFamilyVariants/);
 assert.match(facets,/familyId==current\.movement\.familyId/);
 assert.match(presentation,/record\.angle==angle/);
-assert.match(presentation,/record\.movement\.attachmentId==attachmentId/);
+assert.match(presentation,/val move=record\.standard/);
+assert.match(presentation,/attachmentId==null \|\| move\?\.attachmentId==attachmentId/);
 assert.match(library,/Other variants in this exercise family/);
 assert.match(library,/Selected|selectedId=sibling\.movement\.exerciseId/);
 assert.match(library,/"family"->familyId=id/);

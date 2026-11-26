@@ -121,9 +121,12 @@ object NativeKotlinGymCatalogEditingDomain {
         val athlete=checkNotNull(source.setup.reviewed)
         if(athlete.excludedExerciseIds!=change.previous)
             return NativeGymCatalogEdit.Rejected(NativeGymCatalogEditRefusal.STALE_SOURCE)
-        val known=source.catalog.map{it.exerciseId}.toSet()
-        if(known.size!=source.catalog.size || known.isEmpty())
+        val standard=source.catalog.map{it.exerciseId}.toSet()
+        val typed=MeasuredExerciseCatalogDomain.all.map{it.exerciseId}.toSet()
+        if(standard.size!=source.catalog.size || standard.isEmpty() ||
+            standard.any{it in typed})
             return NativeGymCatalogEdit.Rejected(NativeGymCatalogEditRefusal.INVALID_CATALOG)
+        val known=standard+typed
         // Keep inherited exclusions absent from this catalog. They need a
         // separate identity reconciliation, never an accidental Clear all.
         if(change.next==change.previous || change.next.size>CoachAthleteSetupDomain.MAX_EXCLUDED_EXERCISES ||
@@ -217,6 +220,7 @@ object NativeKotlinGymCatalogEditingDomain {
             catalog.map{it.exerciseId}.distinct().size!=catalog.size ||
             catalog.map{it.familyId to it.variantId}.distinct().size!=catalog.size ||
             catalog.any { move ->
+                MeasuredExerciseCatalogDomain.find(move.exerciseId)!=null ||
                 !id.matches(move.exerciseId) ||
                 !id.matches(move.familyId) || !id.matches(move.variantId) ||
                 (move.attachmentId?.let { !id.matches(it) } == true) ||

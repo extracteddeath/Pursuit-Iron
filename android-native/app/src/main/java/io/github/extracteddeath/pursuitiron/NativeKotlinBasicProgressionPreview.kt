@@ -71,7 +71,12 @@ internal fun NativeKotlinBasicProgressionPreview(
 
     Column(verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
         val e1rm=(projection as? CustomBasicHistoryResult.Reviewed)?.candidate?.e1rmEvidence
-        Text(if(e1rm==null)"Basic progression" else "e1RM progression review",
+        val wave=(projection as? CustomBasicHistoryResult.Reviewed)?.candidate?.waveGoalEffortMet
+        Text(when {
+            wave!=null -> "Auto Wave progression review"
+            e1rm!=null -> "e1RM progression review"
+            else -> "Basic progression"
+        },
             style=MaterialTheme.typography.titleSmall)
         when(projection) {
             is CustomBasicHistoryResult.ManualBodyweight -> {
@@ -106,7 +111,7 @@ internal fun NativeKotlinBasicProgressionPreview(
                     BasicProgressionDecision.MANUAL_REPEAT ->
                         "Manual logging: keep your exact prescribed targets."
                     BasicProgressionDecision.BUILD_REPS ->
-                        if(candidate.e1rmEvidence?.everySetMeetsGoal==false)
+                        if(candidate.e1rmEvidence?.everySetMeetsGoal==false || candidate.waveGoalEffortMet==false)
                             "Effort was below the prescribed reserve. Hold the working weight and restore target effort."
                         else "Keep the current working weights and build completed reps."
                     BasicProgressionDecision.EARNED_INCREMENT ->
@@ -126,6 +131,9 @@ internal fun NativeKotlinBasicProgressionPreview(
                 if (candidate.dynamicSetDecisions.isEmpty())
                     Text(description,style=MaterialTheme.typography.bodySmall)
                 val working = workingSets(projection.slotId)
+                if(candidate.waveAssumedGoalRirSetCount>0)
+                    Text(ProgressionEffortDomain.assumptionNote(candidate.waveAssumedGoalRirSetCount).trim(),
+                        style=MaterialTheme.typography.bodySmall)
                 candidate.e1rmEvidence?.let{evidence->
                     val unit=if((working.first().prescription.load as DraftSetLoad.Verified).unit==LoadUnit.LB)"lb" else "kg"
                     Text("Estimated 1RM: ${evidence.estimatedOneRepMax.stripTrailingZeros().toPlainString()} $unit · not a tested maximum",

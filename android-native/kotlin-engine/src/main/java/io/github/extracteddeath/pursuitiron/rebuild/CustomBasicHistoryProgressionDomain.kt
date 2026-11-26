@@ -136,6 +136,9 @@ object CustomBasicHistoryProgressionDomain {
             (saved.progressionMethod==SavedProgressionMethod.E1RM ||
                 (saved.progressionMethod==SavedProgressionMethod.AUTO &&
                     assignment.selectedStyle==NativeProgressionStyle.E1RM))
+        val autoWave=saved.progressionMethod==SavedProgressionMethod.AUTO &&
+            assignment.route==ProgramProgressionRoute.BASIC_WEIGHTED &&
+            assignment.selectedStyle==NativeProgressionStyle.WAVE
         val strategy=when(assignment.route) {
             ProgramProgressionRoute.MANUAL -> BasicProgressionStrategy.MANUAL_LOGGING
             ProgramProgressionRoute.BASIC_WEIGHTED -> assignment.basicStrategy
@@ -358,7 +361,7 @@ object CustomBasicHistoryProgressionDomain {
             val observed=byKey.getValue(item.setKey)
             if(!observed.matchesIssuedMain(oldSlot, item) ||
                 item.prescription.reps!=targetReps ||
-                (e1rm && (item.prescription.targetRir==null ||
+                ((e1rm || autoWave) && (item.prescription.targetRir==null ||
                     item.prescription.targetRir!=working[ordinal].prescription.targetRir)) ||
                 observed.amplifierKind!=null)
                 return no(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE)
@@ -417,7 +420,8 @@ object CustomBasicHistoryProgressionDomain {
             checkNotNull(strategy),request.nextWorkoutId,
             validatedScope,validatedScope,priorEvidence,targetReps,
             loads.map{it.value},request.verifiedStock,
-            request.maximumAuthorizedIncrement,exactReps,effortAdjustedE1rm=e1rm))
+            request.maximumAuthorizedIncrement,exactReps,effortAdjustedE1rm=e1rm,
+            requireGoalEffort=autoWave))
         return when(calculated) {
             is BasicProgressionResult.Candidate -> CustomBasicHistoryResult.Reviewed(
                 prior.evidence.workoutId,prior.completionOrder,calculated,

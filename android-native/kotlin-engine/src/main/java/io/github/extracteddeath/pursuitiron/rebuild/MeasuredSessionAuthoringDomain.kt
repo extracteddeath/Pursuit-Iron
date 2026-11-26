@@ -60,7 +60,7 @@ object MeasuredSessionAuthoringDomain {
                             ?.let {profile.gym.confirmedStock[it]}
                         stock!=null &&
                             stock.basis==definition.expectedBasis &&
-                            stock.unit==profile.gym.unit &&
+                            EquipmentLoadDomain.hasPrescribableLoad(stock,profile.gym.unit) &&
                             (definition.kind!=MeasuredExerciseKind.CARRY_CENTIMETERS ||
                                 "dumbbells" in profile.gym.availableFacilities) &&
                             (definition.exerciseId!="weighted-plank" ||

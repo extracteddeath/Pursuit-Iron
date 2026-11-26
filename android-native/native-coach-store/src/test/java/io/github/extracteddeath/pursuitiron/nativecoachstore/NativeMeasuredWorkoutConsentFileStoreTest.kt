@@ -34,7 +34,7 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
     private fun parent()=NativeMeasuredWorkoutParentFileStore(
         root,fence,identity,approvals(),history,composer,custom)
     private fun source(version:Long=1,withBands:Boolean=false,
-        withMeasuredLoads:Boolean=false):NativeCustomAuthoringSnapshot {
+        withMeasuredLoads:Boolean=false,withAllMeasuredFixtures:Boolean=false):NativeCustomAuthoringSnapshot {
         val setup=CoachAthleteSetupDomain.review(AthleteSetupDraft(
             profileRevision="profile-1",athleteProfileId="athlete-1",
             goal=AthleteTrainingGoal.HYPERTROPHY,
@@ -56,7 +56,9 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
                     (if(withBands)setOf("bands","verified-band-pushup-setup")
                         else emptySet())+
                     (if(withMeasuredLoads)setOf("dumbbells","pinchable-plates",
-                        "secure-plank-load-placement") else emptySet()),
+                        "secure-plank-load-placement") else emptySet())+
+                    (if(withAllMeasuredFixtures)setOf("stable-copenhagen-support",
+                        "confirmed-l-sit-support","secured-hang-towel") else emptySet()),
                 if(withBands)setOf("band-blue","rope-attachment") else emptySet()),
             allowBodyweight=true,allowSupersets=false,
             allowTricepsOnLower=false,maxBarbellExercisesPerDay=0,
@@ -473,7 +475,8 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
 
 
     @Test fun mixedMeasuredSessionColdReplaysAndFinishesAsOneRealHistoryWorkout() {
-        val current=source(withBands=true,withMeasuredLoads=true)
+        val current=source(withBands=true,withMeasuredLoads=true,
+            withAllMeasuredFixtures=true)
         assertEquals(NativeAuthoringSourceWrite.Committed(1),
             sources.publish("owner-1",0,current))
         assertTrue(history.enroll("owner-1","athlete-1"){o,a->
@@ -488,11 +491,28 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
             MeasuredSessionSelection("band-pushup",12,1,bandId="band-blue"),
             MeasuredSessionSelection("plate-pinch",40,1,
                 singleSide=MeasuredSide.LEFT,
-                targetExternalLoad=java.math.BigDecimal("20")))
+                targetExternalLoad=java.math.BigDecimal("20")),
+            MeasuredSessionSelection("superman",35,1),
+            MeasuredSessionSelection("side-plank",35,1),
+            MeasuredSessionSelection("dead-hang",35,1),
+            MeasuredSessionSelection("hollow-hold",35,1),
+            MeasuredSessionSelection("copenhagen",35,1),
+            MeasuredSessionSelection("wall-sit",35,1),
+            MeasuredSessionSelection("l-sit",35,1),
+            MeasuredSessionSelection("weighted-plank",35,1,
+                targetExternalLoad=java.math.BigDecimal("20")),
+            MeasuredSessionSelection("towel-hang",35,1),
+            MeasuredSessionSelection("suitcase-carry",2000,1,
+                singleSide=MeasuredSide.RIGHT,
+                targetExternalLoad=java.math.BigDecimal("25")))
+        assertEquals(MeasuredExerciseCatalogDomain.all.map{it.exerciseId}.toSet(),
+            MeasuredSessionAuthoringDomain.available(setup).map{it.exerciseId}.toSet())
         val plan=checkNotNull(MeasuredSessionAuthoringDomain.compose(
             "mixed-verified-1",current.revision,setup,selections))
-        assertEquals(5,plan.sets.size)
-        assertEquals((1..5).map{"set-$it"},plan.sets.map{it.setKey})
+        assertEquals(15,plan.sets.size)
+        assertEquals((1..15).map{"set-$it"},plan.sets.map{it.setKey})
+        assertEquals(MeasuredExerciseCatalogDomain.all.map{it.exerciseId}.toSet(),
+            plan.sets.map{it.exerciseId}.toSet())
         assertTrue(approvals().preview("owner-1",plan,1)
             is NativeMeasuredConsentResult.Preview)
         assertTrue(approvals().confirm("owner-1",plan,1,true)
@@ -508,25 +528,27 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
             // Use the actual typed input boundary used by the native logger.
             // Targets are not copied into performed observations.
             val (unit,quantity)=when(set.exerciseId){
-                "farmers"->MeasuredEntryUnit.FEET to "80"
+                "farmers","suitcase-carry"->MeasuredEntryUnit.FEET to "80"
                 "band-pushup"->MeasuredEntryUnit.REPETITIONS to "15"
                 else->MeasuredEntryUnit.MINUTES_SECONDS to "0:43"
             }
             val input=MeasuredExerciseEntryInput(
-                set.sides.associateWith{quantity},unit,
+                set.sides.associateWith{if(it==MeasuredSide.RIGHT &&
+                    set.sides.size==2)"0:39" else quantity},unit,
                 externalLoadText=when(set.exerciseId){
-                    "farmers"->"30"
-                    "plate-pinch"->"25"
+                    "farmers","suitcase-carry"->"30"
+                    "plate-pinch","weighted-plank"->"25"
                     else->null
                 },externalLoadUnit=set.unit,physicalSetupId=set.physicalSetupId,
-                bandId=set.bandId,carryElapsedSecondsText=if(set.exerciseId=="farmers")"36" else null)
+                bandId=set.bandId,carryElapsedSecondsText=if(
+                    set.exerciseId in setOf("farmers","suitcase-carry"))"36" else null)
             fun parse(value:MeasuredExerciseEntryInput)=MeasuredExerciseEntryDomain.parse(
                 set,MeasuredSetOutcome.COMPLETED,value)
             val untouched=(parent().open("owner-1",plan.workoutId)
                 as NativeMeasuredWorkoutStoreResult.Durable).stored.journal
             assertEquals(MeasuredExerciseEntryDecision.Rejected(MeasuredEntryRefusal.WRONG_PHYSICAL_SETUP),
                 parse(input.copy(physicalSetupId="unverified-station")))
-            if(set.exerciseId=="farmers" || set.exerciseId=="plate-pinch"){
+            if(set.intendedExternalLoad!=null){
                 assertEquals(MeasuredExerciseEntryDecision.Rejected(MeasuredEntryRefusal.UNVERIFIED_LOAD),
                     parse(input.copy(externalLoadText="27")))
                 assertEquals(MeasuredExerciseEntryDecision.Rejected(MeasuredEntryRefusal.UNVERIFIED_LOAD),
@@ -542,12 +564,13 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
             val parsed=parse(input) as MeasuredExerciseEntryDecision.Accepted
             assertFalse(parsed.isSaved)
             assertFalse(parsed.mayPublishHistory)
-            assertEquals(set.exerciseId=="farmers",parsed.approximateDistanceConversion)
+            assertEquals(set.exerciseId in setOf("farmers","suitcase-carry"),
+                parsed.approximateDistanceConversion)
             val actual=checkNotNull(parsed.actual)
-            assertEquals(set.sides.associateWith{when(set.exerciseId){
-                "farmers"->2438
+            assertEquals(set.sides.associateWith{side->when(set.exerciseId){
+                "farmers","suitcase-carry"->2438
                 "band-pushup"->15
-                else->43
+                else->if(side==MeasuredSide.RIGHT && set.sides.size==2)39 else 43
             }},actual.sides.associate{it.side to it.amount})
             val saved=parent().record("owner-1",plan.workoutId,
                 MeasuredWorkoutOperation.Record("measured-${index+1}",
@@ -566,15 +589,15 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
             as MeasuredExerciseEntryDecision.Accepted
         assertFalse(revised.approximateDistanceConversion)
         assertTrue(parent().record("owner-1",plan.workoutId,MeasuredWorkoutOperation.Record(
-            "carry-corrected",5L,carry.setKey,MeasuredSetOutcome.COMPLETED,revised.actual,
+            "carry-corrected",15L,carry.setKey,MeasuredSetOutcome.COMPLETED,revised.actual,
             "measured-3")) is NativeMeasuredWorkoutStoreResult.Durable)
         val beforeFinish=parent().open("owner-1",plan.workoutId)
         assertTrue(beforeFinish is NativeMeasuredWorkoutStoreResult.Durable)
-        assertEquals(6L,(beforeFinish as NativeMeasuredWorkoutStoreResult.Durable)
+        assertEquals(16L,(beforeFinish as NativeMeasuredWorkoutStoreResult.Durable)
             .stored.journal.revision)
         val completed=NativeKotlinMeasuredHistoryTransaction(
             history,parent(),fence,identity).complete("owner-1","athlete-1",
-                plan.workoutId,MeasuredWorkoutOperation.Finish("mixed-finish",6L))
+                plan.workoutId,MeasuredWorkoutOperation.Finish("mixed-finish",16L))
         assertTrue(completed.toString(),
             completed is NativeMeasuredFinishResult.Committed)
         val replayed=NativeKotlinMeasuredHistoryReadCoordinator(
@@ -585,14 +608,21 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
         assertEquals("mixed-finish",historySet.finishedByEventId)
         assertEquals(plan.sets.map{it.exerciseId},
             historySet.approvedPlan.sets.map{it.exerciseId})
-        assertEquals(5,historySet.bySetKey.values.count{it.effectiveRecord!=null})
+        assertEquals(15,historySet.bySetKey.values.count{it.effectiveRecord!=null})
         assertEquals(plan,historySet.approvedPlan)
         val expected=listOf("43 s","43 s","24.5 m · External 25 lb per hand · Elapsed 35 s",
             "15 reps · Band band-blue","Left 43 s · External 25 lb added")
         for((index,set) in plan.sets.withIndex()){
-            val result=MeasuredWorkoutResultReviewDomain.review(set,historySet.bySetKey.getValue(set.setKey))
+            val saved=historySet.bySetKey.getValue(set.setKey)
+            val result=MeasuredWorkoutResultReviewDomain.review(set,saved)
             assertEquals(set.exerciseId,MeasuredSetReviewStatus.COMPLETED,result.status)
-            assertEquals(set.exerciseId,expected[index],result.actualSummary)
+            if(index<expected.size)
+                assertEquals(set.exerciseId,expected[index],result.actualSummary)
+            val actual=checkNotNull((saved.effectiveRecord?.operation
+                as MeasuredJournalOperation.Record).actual)
+            assertEquals(set.sides,actual.sides.map{it.side}.toSet())
+            if(set.sides.size==2)assertEquals(mapOf(MeasuredSide.LEFT to 43,
+                MeasuredSide.RIGHT to 39),actual.sides.associate{it.side to it.amount})
         }
         assertEquals(historySet,(parent().open("owner-1",plan.workoutId)
             as NativeMeasuredWorkoutStoreResult.Durable).stored.journal)

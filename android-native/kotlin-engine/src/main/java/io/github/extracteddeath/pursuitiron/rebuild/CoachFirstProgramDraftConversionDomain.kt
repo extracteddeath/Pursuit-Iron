@@ -213,7 +213,8 @@ object CoachFirstProgramDraftConversionDomain {
         // A generator must account for the progression route of EVERY saved
         // slot. Do this only after the fully-authored cycle passed inventory
         // and source review; never guess a weight from an unreviewed draft.
-        val reviewedAuto=policy.policyId==CoachFirstProgramStartDomain.POLICY_VERSION
+        val weeklyIntent=policy.policyId==CoachFirstProgramStartDomain.POLICY_VERSION
+        val reviewedAuto=weeklyIntent || policy.policyId==CoachFirstProgramStartDomain.V13_POLICY_VERSION
         val progressionPlan=BasicProgramProgressionPlanDomain.review(
             next,reviewedCatalog=curatedCatalog.associateBy{it.exerciseId},
             experience=athlete.experience,reviewedAuto=reviewedAuto)
@@ -236,6 +237,9 @@ object CoachFirstProgramDraftConversionDomain {
         // generation persists methods into its actual saved slot records.
         val persistChoices=reviewedAuto || policy.policyId==
             CoachFirstProgramStartDomain.V12_POLICY_VERSION
+        fun storedMethod(decision:ProgramProgressionAssignment):SavedProgressionMethod? =
+            if(weeklyIntent && decision.weeklyAutoEligible)SavedProgressionMethod.AUTO
+            else BasicProgramProgressionPlanDomain.savedChoice(decision)
         val selectedByKey=progressionPlan.assignments.associateBy{it.key}
         val persistedBlocks=next.blocks.map{block->
             val savedDays=block.days.map{day->
@@ -246,7 +250,7 @@ object CoachFirstProgramDraftConversionDomain {
                         ?:return reject(FirstProgramDraftStatus.CYCLE_REVIEW_FAILED,
                             "A generated slot has no source-linked progression decision.")
                     if(persistChoices) {
-                        val selectedMethod=BasicProgramProgressionPlanDomain.savedChoice(decision)
+                        val selectedMethod=storedMethod(decision)
                         // Newly generated source AUTHORIZES the starting rung
                         // explicitly. The rep floor is a conservative, reviewed
                         // initial prescription chosen at program construction,
@@ -284,7 +288,7 @@ object CoachFirstProgramDraftConversionDomain {
                 actual.key!=planned.key ||
                     actual.route!=planned.route ||
                     actual.basicStrategy!=planned.basicStrategy ||
-                    (persistChoices && actual.savedMethod != BasicProgramProgressionPlanDomain.savedChoice(planned))
+                    (persistChoices && actual.savedMethod != storedMethod(planned))
             })
             return reject(FirstProgramDraftStatus.CYCLE_REVIEW_FAILED,
                 "Saved progression choices could not reproduce the original reviewed program.")

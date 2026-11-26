@@ -49,7 +49,9 @@ data class ProgramProgressionAssignment(
     val authoredWeekNumbers:Set<Int>,
     val explanation:String,
     val selectedStyle:NativeProgressionStyle?=null,
-    val savedMethod:SavedProgressionMethod?=null
+    val savedMethod:SavedProgressionMethod?=null,
+    /** Same eligibility proof used by the actual weekly selector and new generator. */
+    val weeklyAutoEligible:Boolean=false
 ) {
     val mayChangeSavedProgram:Boolean get()=false
     val mayModifyIssuedSet:Boolean get()=false
@@ -256,14 +258,15 @@ object BasicProgramProgressionPlanDomain {
             // to identifiable primary free-bar strength-skill work until
             // secondary strength role and phase provenance are available.
             val autoWeek=previewWeek?.takeIf{it.blockId==block.blockId}?.weekInBlock
-            val scheduledAuto=automatic && explicitStyle==NativeProgressionStyle.AUTO &&
-                autoWeek!=null && autoWeek !in authored && reviewedBarbell &&
+            val weeklyAutoEligible=automatic && reviewedBarbell &&
                 experience in setOf(AthleteExperience.INTERMEDIATE,AthleteExperience.ADVANCED) &&
                 block.phase==TrainingPhase.STRENGTH && block.purpose==CustomBlockPurpose.TRAINING &&
                 day.purpose==ComposerSessionPurpose.STRENGTH_SKILL &&
                 slot.role==ComposerRole.PRIMARY && sameWeights && bands.size==1 &&
                 bands.single().maximum<=6 && !amplifier &&
                 working.all{it.targetRir!=null}
+            val scheduledAuto=weeklyAutoEligible && explicitStyle==NativeProgressionStyle.AUTO &&
+                autoWeek!=null && autoWeek !in authored
             // Compare integer positions to the pinned weekly style boundaries
             // (35%, 75%, or halfway for short blocks); no float rounding.
             val position=if(block.weeks==1)50 else (autoWeek?.minus(1)?:0)*100
@@ -448,7 +451,7 @@ object BasicProgramProgressionPlanDomain {
             }
             assignments+=ProgramProgressionAssignment(
                 key,slot.exerciseId,route,strategy,working.size,amplifier,
-                Collections.unmodifiableSet(authored),note,style,saved)
+                Collections.unmodifiableSet(authored),note,style,saved,weeklyAutoEligible)
         }
         return ProgramProgressionPlan.Ready(
             Collections.unmodifiableList(assignments))

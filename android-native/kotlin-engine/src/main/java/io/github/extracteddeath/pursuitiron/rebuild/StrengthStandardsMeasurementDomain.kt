@@ -28,6 +28,14 @@ object StrengthStandardsMeasurementDomain {
         }
     }
 
+    /** An external added-load observation alone is not the total load
+     * lifted by a weighted bodyweight movement. Until a separately
+     * reviewed model includes the athlete's mass, do not infer a max or
+     * derive percentage prescriptions from that number. Ordinary earned
+     * added-load progression and factual records remain available. */
+    fun supportsMaxBasedPrescription(exerciseId:String,basis:LoadBasis):Boolean =
+        exerciseId!="weighted-pullup" && basis!=LoadBasis.ASSISTANCE_COUNTERWEIGHT
+
     val estimateRepRange = 1..10
 
     /** Epley estimate for 1–10 real reps; do not extrapolate very high reps. */

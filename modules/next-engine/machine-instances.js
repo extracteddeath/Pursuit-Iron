@@ -174,13 +174,24 @@ export function machineHistory(history, { gymId, exerciseId, machineInstanceId, 
 export function latestMachineSet(history, scope) {
     return machineHistory(history, scope).at(-1) ?? null;
 }
+/** A different day on the SAME physical machine is a starting reference,
+ * not comparable progression evidence. Never borrow another gym or station.
+ */
+export function machineStartingReference(history, scope) {
+    const latestPositive = requested => machineHistory(history, requested)
+        .filter(row => row.weight > 0).at(-1) ?? null;
+    const sameDay = scope.dayId != null ? latestPositive(scope) : null;
+    if (sameDay) return { ...sameDay, referenceOnly: false };
+    const otherDay = latestPositive({ ...scope, dayId: null });
+    return otherDay ? { ...otherDay, referenceOnly: true } : null;
+}
 /** Filter a targeted exercise without stripping other exercises or their muscle dose. */
 export function historyForMachineRecommendation(history, exerciseId, machineInstanceId, gymId, gym = null) {
     return (Array.isArray(history) ? history : []).map(entry => {
         const performance = entry?.perf?.[exerciseId];
         if (!performance?.sets || (entry.gymId ?? UNKNOWN_GYM_ID) !== gymId)
             return entry?.perf?.[exerciseId]
-                ? { ...entry, perf: { ...entry.perf, [exerciseId]: { ...performance, sets: [] } } }
+                ? { ...entry, perf: { ...entry.perf, [exerciseId]: { ...performance, sets: [], weight: null, reps: null } } }
                 : entry;
         const sets = performance.sets.filter(set =>
             effectiveMachineHistoryId(set, performance,

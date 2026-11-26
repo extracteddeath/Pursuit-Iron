@@ -1357,7 +1357,12 @@ class NativeKotlinGeneratedProgramJourneyTest {
         }.sets.map { it.prescription }
         val offered = checkNotNull(CustomBasicProgressionDraftDomain.forWeekEdit(
             selected.slotId, before, review.projection))
-        if(unloaded)assertTrue(offered.all{it.load==DraftSetLoad.ExplicitBodyweight})
+        if(unloaded) {
+            assertTrue(offered.all{it.load==DraftSetLoad.ExplicitBodyweight})
+            // Independent expected values must survive the candidate-to-draft
+            // transport, not merely agree between preview and issued journal.
+            assertEquals(before.map{it.reps.minimum+1},offered.map{it.exactRepTarget})
+        }
         assertEquals(before.size, offered.size)
         assertEquals(before.filter { it.type == DraftSetType.WARMUP },
             offered.filter { it.type == DraftSetType.WARMUP })

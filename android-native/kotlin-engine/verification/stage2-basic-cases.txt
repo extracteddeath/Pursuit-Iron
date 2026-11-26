@@ -59,3 +59,13 @@ weekly-auto-w5|select-week:5:6|barbell_bench|strength_accumulation|advanced|prim
 weekly-auto-w6|select-week:6:6|barbell_bench|strength_accumulation|advanced|primary_strength|3,6|e1rm|e1rm|matched
 weekly-auto-short|select-week:3:4|barbell_bench|strength_accumulation|intermediate|primary_strength|3,6|e1rm|e1rm|matched
 weekly-auto-novice|select-week:4:6|barbell_bench|strength_accumulation|novice|primary_strength|3,6|linear|linear|matched
+
+# Explicit reviewed phase intent is separate from older coarse strength fixtures.
+weekly-secondary-w4|select-week:4:6|barbell_bench|strength_accumulation|advanced|secondary_strength|3,6|double|double|matched
+weekly-secondary-w5|select-week:5:6|barbell_bench|strength_accumulation|advanced|secondary_strength|3,6|e1rm|e1rm|matched
+intensification-primary-start|select-week:1:6|barbell_bench|intensification|advanced|primary_strength|3,5|wave|wave|matched
+intensification-primary-end|select-week:6:6|barbell_bench|intensification|advanced|primary_strength|3,5|wave|wave|matched
+intensification-primary-short|select-week:1:4|barbell_bench|intensification|intermediate|primary_strength|3,5|e1rm|e1rm|matched
+intensification-secondary|select-week:1:6|barbell_bench|intensification|advanced|secondary_strength|3,5|e1rm|e1rm|matched
+intensification-novice|select-week:4:6|barbell_bench|intensification|novice|primary_strength|3,5|linear|linear|matched
+intensification-high-reps|select-week:4:6|barbell_bench|intensification|advanced|primary_strength|6,8|double|double|matched

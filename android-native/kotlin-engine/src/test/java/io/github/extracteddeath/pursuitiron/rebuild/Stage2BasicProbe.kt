@@ -94,7 +94,8 @@ object Stage2BasicProbe {
         val block=CustomTrainingBlock("block","Block",phase,CustomBlockPurpose.TRAINING,weeks,
             CustomSplitIdentity.Named(ComposerSplit.FULL_BODY),
             listOf(CustomTrainingDay(0,"Day",if(weekly)ComposerSessionPurpose.STRENGTH_SKILL
-                else ComposerSessionPurpose.UNSPECIFIED,listOf(slot))))
+                else ComposerSessionPurpose.UNSPECIFIED,listOf(slot))),
+            strengthIntensification=weekly && f[3]=="intensification")
         val cycle=CustomTrainingCycle("cycle",1,"athlete",AthleteTrainingGoal.POWERBUILDING,
             "Selection fixture",listOf(block))
         val key=ProgramProgressionSlotKey("block",0,"slot")

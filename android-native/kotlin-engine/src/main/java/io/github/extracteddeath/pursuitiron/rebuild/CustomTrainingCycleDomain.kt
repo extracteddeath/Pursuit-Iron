@@ -102,8 +102,13 @@ data class CustomTrainingBlock(
     val purpose: CustomBlockPurpose,
     val weeks: Int,
     val split: CustomSplitIdentity,
-    val days: List<CustomTrainingDay>
-)
+    val days: List<CustomTrainingDay>,
+    /** Explicit reviewed strength progression phase. False preserves the original accumulation policy. */
+    val strengthIntensification: Boolean = false
+) {
+    val validStrengthProgressionPhase:Boolean get() = !strengthIntensification ||
+        (phase==TrainingPhase.STRENGTH && purpose==CustomBlockPurpose.TRAINING)
+}
 
 /** A week-level replacement of ONE slot, preserving other week prescriptions. */
 data class CustomWeekSlotOverride(
@@ -382,6 +387,9 @@ object CustomTrainingCycleDomain {
         }
         for ((blockIndex, block) in input.blocks.withIndex()) {
             val prefix = "block.$blockIndex"
+            if(!block.validStrengthProgressionPhase)
+                issue(CustomCycleIssueKind.INVALID_CYCLE_LENGTH,prefix,
+                    "Intensification must belong to a strength training block.")
             if (block.days.isEmpty() || block.days.size > 7)
                 issue(CustomCycleIssueKind.INVALID_DAY, prefix,
                     "A custom block needs 1–7 authored training days.")

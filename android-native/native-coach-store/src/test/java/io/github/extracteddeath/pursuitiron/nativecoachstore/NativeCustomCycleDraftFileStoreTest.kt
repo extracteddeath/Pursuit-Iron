@@ -102,6 +102,34 @@ class NativeCustomCycleDraftFileStoreTest {
         assertArrayEquals(ordinary,NativeCustomCycleDraftCodec.encode(original))
     }
 
+    @Test fun explicitStrengthIntensificationRoundTripsWithoutRetconningOldBytes() {
+        val start=original()
+        val old=NativeCustomCycleDraftCodec.encode(start)
+        assertEquals(8,java.nio.ByteBuffer.wrap(old).getInt(4))
+        assertTrue(NativeCustomCycleDraftCodec.decode(old).blocks.none{it.strengthIntensification})
+        val strength=start.blocks.last()
+        val revised=start.copy(revision=2,blocks=listOf(start.blocks.first(),
+            strength.copy(strengthIntensification=true)))
+        val bytes=NativeCustomCycleDraftCodec.encode(revised)
+        assertEquals(10,java.nio.ByteBuffer.wrap(bytes).getInt(4))
+        assertEquals(revised,NativeCustomCycleDraftCodec.decode(bytes))
+        assertArrayEquals(bytes,NativeCustomCycleDraftCodec.encode(NativeCustomCycleDraftCodec.decode(bytes)))
+        assertEquals(saved(1),repository().save("owner-1","cycle-1",0,start))
+        assertEquals(saved(2),repository().save("owner-1","cycle-1",1,revised))
+        assertEquals(revised,(repository().read("owner-1","cycle-1") as NativeCustomDraftReadResult.Found).draft)
+        assertEquals(start.blocks.first(),revised.blocks.first())
+        assertEquals(strength.days,revised.blocks.last().days)
+        assertArrayEquals(old,NativeCustomCycleDraftCodec.encode(start))
+        for(invalid in listOf(revised.blocks.last().copy(phase=TrainingPhase.HYPERTROPHY),
+            revised.blocks.last().copy(purpose=CustomBlockPurpose.RECOVERY))) {
+            val bad=revised.copy(blocks=listOf(revised.blocks.first(),invalid))
+            assertThrows(IllegalArgumentException::class.java){NativeCustomCycleDraftCodec.encode(bad)}
+            assertNull(CustomTrainingCycleDomain.review(bad,listOf(
+                CustomExerciseAvailability("bench",stock,false,setOf("straight-bar")),
+                CustomExerciseAvailability("pullup",null,true))).verifiedDraft)
+        }
+    }
+
     @Test fun exactTargetsSurviveBaseWeekOverrideAndColdOwnerRead() {
         val start=original()
         val first=start.blocks.first()
@@ -158,7 +186,7 @@ class NativeCustomCycleDraftFileStoreTest {
         val before=NativeCustomCycleDraftCodec.encode(baseline)
         assertEquals(8,java.nio.ByteBuffer.wrap(before).getInt(4))
         assertEquals(baseline,NativeCustomCycleDraftCodec.decode(before))
-        for (unsupported in listOf(0, 1, 2, 3, 4, 5, 6, 10)) {
+        for (unsupported in listOf(0, 1, 2, 3, 4, 5, 6, 11)) {
             val bytes = before.copyOf()
             java.nio.ByteBuffer.wrap(bytes).putInt(4, unsupported)
             assertThrows(java.io.IOException::class.java) {

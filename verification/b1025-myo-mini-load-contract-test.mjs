@@ -53,10 +53,11 @@ assert.deepEqual(later.slice(1).map(s => s.weight), ['50', '50', '50']);
 // Growth is still 3-5 minis, inherits activation load and uses the 3-rep
 // floor. It is not a new independently progressing/drop-loaded set.
 const completedThird = { ...fixed[3], done: true, reps: '5' };
-const extended = syncSubSets(growMyoSets([...fixed.slice(0, 3), completedThird]), ex, 'lb');
+const completedPrefix = [fixed[0], ...fixed.slice(1,3).map(row=>({...row,done:true}))];
+const extended = syncSubSets(growMyoSets([...completedPrefix, completedThird]), ex, 'lb');
 assert.equal(extended.length, 5, 'successful third mini may add a fourth');
 assert.equal(extended[4].weight, '47.5', 'grown mini uses activation weight');
-assert.equal(growMyoSets([...fixed.slice(0, 3), { ...completedThird, reps: '2' }]).length, 4,
+assert.equal(growMyoSets([...completedPrefix, { ...completedThird, reps: '2' }]).length, 4,
     'failed mini stops growth');
 
 // Drop sets remain separate, preserving their explicit fractions.
@@ -67,3 +68,28 @@ const drops = syncSubSets([activation,
 assert.ok(Number(drops[1].weight) < 47.5 && Number(drops[1].weight) > Number(drops[2].weight),
     'only drop sets should reduce load across extension rows');
 console.log('PASS B1025: myo activation-load invariant, rep-only ownership, manual/logged preservation, growth, and drops');
+
+// Wrong-exercise correction: all earned extensions must retract when their
+// source work is undone, and re-logging can earn them again normally.
+const firstThree=[activation,...[0,1,2].map(()=>({weight:'47.5',reps:'5',done:true,sub:true,kind:'myo',prescribed:true,auto:true,valueOwner:'prescription',target:{w:'47.5',reps:'3-5'}}))];
+const fourth=growMyoSets(firstThree);
+assert.equal(fourth.length,5);
+const fifth=growMyoSets(fourth.map((row,i)=>i===4?{...row,done:true}:row));
+assert.equal(fifth.length,6);
+const allLogged=fifth.map(row=>({...row,done:true}));
+assert.equal(growMyoSets(allLogged),allLogged,'never grow beyond five');
+const allUndone=allLogged.map(row=>({...row,done:false}));
+const reset=growMyoSets(allUndone);
+assert.equal(reset.length,4,'activation plus exactly three initial minis after undo');
+assert.ok(reset.every(row=>!row.done));
+assert.equal(growMyoSets(reset),reset,'reset remains stable on reload');
+const replay=growMyoSets(reset.map(row=>({...row,done:true})));
+assert.equal(replay.length,5,'fourth mini can be re-earned after correction');
+const gap=fifth.map((row,i)=>i===2?{...row,done:false}:row);
+assert.equal(growMyoSets(gap).length,5,'unearned pending fifth removed while logged fourth is protected');
+const manualFifth={...fifth[5],valueOwner:'user',auto:false,weightOwner:'user'};
+const preserved=growMyoSets([...allUndone.slice(0,5),manualFifth]);
+assert.equal(preserved[5],manualFifth,'explicitly edited mini remains protected');
+assert.equal(growMyoSets([activation,...firstThree.slice(1).map((row,i)=>({...row,done:i===2}))]).length,4,'out-of-order third cannot earn extra work');
+assert.equal(growMyoSets([{...activation,done:false},...firstThree.slice(1)]).length,4,'undone activation cannot earn extra work');
+console.log('PASS myo undo, replay, out-of-order protection and earned mini limits.');

@@ -119,21 +119,34 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
     private fun complete(id:Int,day:Int,
         sessionPolicies:List<ExercisePrescriptionPolicy> = policies,
         actualRir:Int?=2,
-        workingReps:Int=12
+        workingReps:Int=12,
+        exceptionalPress:Boolean=false
     ):Pair<KotlinWorkoutJournalState,String> {
         var journal=accept(id,day,sessionPolicies)
         var pressKey=""
+        var exceptionalOrdinal=0
         for ((index,target) in journal.snapshot.targets.withIndex()) {
             val load=(target.load as DraftSetLoad.Verified)
             if(target.exerciseId=="db-press" &&
                 target.type==DraftSetType.WORKING && pressKey.isEmpty())
                 pressKey=target.setKey
+            val outcome=if(exceptionalPress && target.exerciseId=="db-press" &&
+                target.type==DraftSetType.WORKING)when(exceptionalOrdinal++) {
+                0 -> KotlinJournalSetOutcome.SKIPPED
+                1 -> KotlinJournalSetOutcome.FAILED_ATTEMPT
+                else -> KotlinJournalSetOutcome.COMPLETED
+            } else KotlinJournalSetOutcome.COMPLETED
+            val performed=when(outcome) {
+                KotlinJournalSetOutcome.SKIPPED -> null
+                KotlinJournalSetOutcome.FAILED_ATTEMPT ->
+                    KotlinPerformedSet(load.value,load.unit,0,null)
+                KotlinJournalSetOutcome.COMPLETED ->
+                    KotlinPerformedSet(load.value,load.unit,
+                        if(target.type==DraftSetType.WARMUP)target.reps.minimum else workingReps,
+                        if(target.type==DraftSetType.WARMUP)null else actualRir)
+            }
             val event=KotlinJournalOperation.RecordSet(
-                "set-$id-$index",journal.revision,target.setKey,
-                KotlinJournalSetOutcome.COMPLETED,
-                KotlinPerformedSet(load.value,load.unit,
-                    if(target.type==DraftSetType.WARMUP)target.reps.minimum else workingReps,
-                    if(target.type==DraftSetType.WARMUP)null else actualRir))
+                "set-$id-$index",journal.revision,target.setKey,outcome,performed)
             val written=journals.appendStored(
                 "owner-1",journal.snapshot.workoutId,event,
                 approvals::canAccessIssuedWorkout)
@@ -1046,6 +1059,61 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         assertTrue(issued.journal.snapshot.targets.filter {it.exerciseId=="db-press"}.all {
             (it.load as DraftSetLoad.Verified).value.compareTo(n("35"))==0 && it.targetRir==2
         })
+    }
+
+    @Test fun finishedSkipAndFailedAttemptDoNotReviveOlderGeneratedEarnedLoad() {
+        enrolled()
+        complete(1,1)
+        complete(2,1)
+        val earned=(review() as NativeOwnerLoadReviewResult.Review)
+            .coaching as NativeCurrentLoadReviewResult.Reviewed
+        assertEquals(n("35"),earned.coaching.candidateLoad)
+        val (last,_)=complete(3,1,exceptionalPress=true)
+        val cold=KotlinNativeJournalFileStore(root)
+        val restored=(cold.openStored("owner-1","workout-3",approvals::canAccessIssuedWorkout)
+            as NativeJournalFileResult.Durable).journal
+        assertEquals(last.snapshot,restored.snapshot)
+        val press=restored.snapshot.targets.filter{
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }
+        assertTrue(press.size>=2)
+        val skip=restored.effectiveSets.getValue(press[0].setKey).operation as KotlinJournalOperation.RecordSet
+        val fail=restored.effectiveSets.getValue(press[1].setKey).operation as KotlinJournalOperation.RecordSet
+        assertEquals(KotlinJournalSetOutcome.SKIPPED,skip.outcome)
+        assertNull(skip.performed)
+        assertEquals(KotlinJournalSetOutcome.FAILED_ATTEMPT,fail.outcome)
+        assertEquals(0,fail.performed?.reps)
+        assertNull(fail.performed?.actualRir)
+        assertEquals((press[1].load as DraftSetLoad.Verified).value,fail.performed?.load)
+        val current=review()
+        if(current is NativeOwnerLoadReviewResult.Review) {
+            val coaching=current.coaching
+            if(coaching is NativeCurrentLoadReviewResult.Reviewed) {
+                assertNotEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,coaching.coaching.status)
+                assertNull(coaching.coaching.candidateLoad)
+                assertFalse(coaching.coaching.maySaveProgram)
+            }
+        }
+        // A previously earned review must be invalidated by the new
+        // completion, not accepted using an older favorable pair.
+        val before=checkNotNull(approvals.currentOwnedApproval("owner-1"))
+        assertEquals(3L,before.storageRevision)
+        assertEquals(NativeKotlinCoachAcceptanceResult.Rejected(
+            NativeKotlinCoachAcceptanceRefusal.HISTORY_CHANGED),
+            accept(intent(earned).copy(expectedApprovalRevision=3,newWorkoutId="workout-4")))
+        val approval=checkNotNull(approvals.currentOwnedApproval("owner-1"))
+        assertEquals(before,approval)
+        // Null purpose override means the confirmed program baseline owns
+        // the weight; it is not a missing or silently changed prescription.
+        assertNull(approval.policies.single{
+            it.exerciseId=="db-press" && it.purpose==ComposerSessionPurpose.HYPERTROPHY
+        }.purposeWorkingLoad)
+        assertEquals(n("30"),(approval.program.exercises.single{
+            it.exerciseId=="db-press"
+        }.equipment as ComposerEquipment.Verified).plannedLoad)
+        assertTrue(press.all{(it.load as DraftSetLoad.Verified).value.compareTo(n("30"))==0})
+        assertEquals(restored,(cold.openStored("owner-1","workout-3",approvals::canAccessIssuedWorkout)
+            as NativeJournalFileResult.Durable).journal)
     }
 
     @Test fun correctionBeforeExplicitAcceptanceInvalidatesPreviouslyShownReview() {

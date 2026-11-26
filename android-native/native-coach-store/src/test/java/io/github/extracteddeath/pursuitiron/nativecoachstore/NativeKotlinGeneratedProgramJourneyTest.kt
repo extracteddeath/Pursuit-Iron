@@ -1224,8 +1224,13 @@ class NativeKotlinGeneratedProgramJourneyTest {
     @Test fun generatedBodyweightRepProgressionUsesNoLoadAndNoAuthorizedWeightStep() =
         completeBasicOrManualWeek(false,repMethod=SavedProgressionMethod.BODYWEIGHT_REPS)
 
+    @Test fun generatedFinishedSkipAndFailedAttemptRemainDistinctAndCannotEarnProgression() {
+        completeBasicOrManualWeek(manual=false,exceptional=true)
+    }
+
     private fun completeBasicOrManualWeek(manual:Boolean,correctBeforeApproval:Boolean=false,
-        repMethod:SavedProgressionMethod?=null) {
+        repMethod:SavedProgressionMethod?=null,exceptional:Boolean=false) {
+        require(!exceptional || !manual && !correctBeforeApproval && repMethod==null)
         require(repMethod==null || repMethod in setOf(SavedProgressionMethod.REP_TARGETS,
             SavedProgressionMethod.LADDER,SavedProgressionMethod.BODYWEIGHT_REPS) &&
             !manual && !correctBeforeApproval)
@@ -1286,6 +1291,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
             var journal = (Disk().journals.issue(owner, workoutId, cycleId,
                 1, day.weekday, inputs) as NativeCustomJournalResult.Durable).issued.journal
             val immutable = journal.snapshot
+            var exceptionalOrdinal=0
             for ((setIndex, set) in immutable.slots.flatMap { it.sets }.withIndex()) {
                 val prescription = set.prescription
                 val earned = day.weekday == firstDay.weekday &&
@@ -1299,11 +1305,21 @@ class NativeKotlinGeneratedProgramJourneyTest {
                     DraftSetLoad.ExplicitBodyweight ->
                         KotlinPerformedSet(null, null, performedReps, null)
                 }
+                val outcome=if(exceptional && earned)when(exceptionalOrdinal++) {
+                    0 -> KotlinJournalSetOutcome.SKIPPED
+                    1 -> KotlinJournalSetOutcome.FAILED_ATTEMPT
+                    else -> KotlinJournalSetOutcome.COMPLETED
+                } else KotlinJournalSetOutcome.COMPLETED
+                val actual=when(outcome) {
+                    KotlinJournalSetOutcome.SKIPPED -> null
+                    KotlinJournalSetOutcome.FAILED_ATTEMPT -> performed.copy(reps=0)
+                    KotlinJournalSetOutcome.COMPLETED -> performed
+                }
                 journal = (Disk().journals.record(owner, workoutId,
                     CustomWorkoutJournalOperation.Record(
                         "earned-w1-$dayIndex-$setIndex", journal.revision,
                         CustomWorkoutVisitKey(set.setKey, CustomWorkoutVisitPart.MAIN),
-                        KotlinJournalSetOutcome.COMPLETED, performed))
+                        outcome, actual))
                     as NativeCustomJournalResult.Durable).issued.journal
                 assertEquals(immutable, (Disk().journals.open(owner, workoutId)
                     as NativeCustomJournalResult.Durable).issued.journal.snapshot)
@@ -1329,6 +1345,40 @@ class NativeKotlinGeneratedProgramJourneyTest {
             2, firstDay.weekday, selected.slotId, "earned-basic-future",
             if(unloaded)BigDecimal.ZERO else n("5")) as NativeCustomBasicNextReadResult.Reviewed
         assertEquals(cycle.revision, review.next.stamp.cycleRevision)
+        if(exceptional) {
+            val refusal=review.projection as CustomBasicHistoryResult.Rejected
+            assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,refusal.reason)
+            assertEquals(BasicProgressionRefusal.INCOMPLETE_OR_UNVERIFIED_SETS,refusal.evaluatorReason)
+            val id="earned-basic-w1-0"
+            val frozen=finishedWeekOne.getValue(id)
+            val originalWork=frozen.slots.single{it.slotId==selected.slotId}.sets
+                .filter{it.prescription.type==DraftSetType.WORKING}
+            val cold=Disk()
+            val history=(cold.timeline.read(owner,athlete) as NativeKotlinMixedHistoryReadResult.Review)
+                .timeline.completions.filterIsInstance<NativeKotlinMixedHistoryCompletion.Custom>()
+                .single{it.manifest.workoutId==id}
+            val skip=history.evidence.visits.single{it.setKey==originalWork[0].setKey}
+            val fail=history.evidence.visits.single{it.setKey==originalWork[1].setKey}
+            assertEquals(KotlinJournalSetOutcome.SKIPPED,skip.outcome)
+            assertNull(skip.actual)
+            assertEquals(originalWork[0].prescription.load,skip.prescribedLoad)
+            assertEquals(KotlinJournalSetOutcome.FAILED_ATTEMPT,fail.outcome)
+            assertEquals(0,fail.actual?.reps)
+            assertNull(fail.actual?.actualRir)
+            assertEquals((originalWork[1].prescription.load as DraftSetLoad.Verified).value,fail.actual?.load)
+            assertFalse(review.maySaveProgram)
+            assertFalse(review.mayIssueWorkout)
+            assertEquals(cycle,(cold.drafts.read(owner,cycleId) as NativeCustomDraftReadResult.Found).draft)
+            assertTrue(cold.prepared.prepare(owner,"exceptional-held-next",cycleId,2,
+                firstDay.weekday,inputs) is NativeCustomPrepareResult.Prepared)
+            val issued=(Disk().journals.issue(owner,"exceptional-held-next",cycleId,2,
+                firstDay.weekday,inputs) as NativeCustomJournalResult.Durable).issued.journal
+            assertEquals(review.next,issued.originalSnapshot)
+            for((oldId,snapshot) in finishedWeekOne)
+                assertEquals(snapshot,(Disk().journals.open(owner,oldId)
+                    as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
+            return
+        }
         if(unloaded){
             val projection=review.projection as CustomBasicHistoryResult.UnloadedReviewed
             assertEquals("earned-basic-w1-${days.indexOf(firstDay)}",projection.historyWorkoutId)

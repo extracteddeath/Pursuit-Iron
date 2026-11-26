@@ -20,13 +20,14 @@ const allRows=bytes.toString('utf8').split(/\r?\n/).filter(l=>l&&!l.startsWith('
   const f=l.split('|');assert.equal(f.length,10);return f;
 });
 assert.equal(new Set(allRows.map(f=>f[0])).size,allRows.length);
-const selectionRows=allRows.filter(f=>f[1]==='select'||f[1].startsWith('select:')).map(f=>{
+const isSelection=f=>['select','select-v13'].includes(f[1].split(':')[0]);
+const selectionRows=allRows.filter(isSelection).map(f=>{
   const [id,mode,exerciseId,phase,experience,role,band,expectedWeb,expectedKotlin,classification]=f;
   const manualStyle=mode.split(':')[1];
   assert.ok(['matched','catalog-trait-gap','unloaded-rep-route','advanced-auto-gap','explicit-source-gate'].includes(classification));
-  return {id,exerciseId,phase,experience,role,band:band.split(',').map(Number),manualStyle,expectedWeb,expectedKotlin,classification};
+  return {id,exerciseId,phase,experience,role,band:band.split(',').map(Number),manualStyle,selectionPolicy:mode.startsWith('select-v13')?'v13':'v12',expectedWeb,expectedKotlin,classification};
 });
-const rows=allRows.filter(f=>!(f[1]==='select'||f[1].startsWith('select:'))).map(f=>{
+const rows=allRows.filter(f=>!isSelection(f)).map(f=>{
   const [id,style,loads,reps,rir,stock,expectedWeb,expectedKotlin,estimates,classification]=f;
   assert.ok(['double','dynamic','linear','e1rm'].includes(style));
   assert.ok(['matched','basic-effort-policy','basic-linear-floor','original-goal-assumption'].includes(classification));

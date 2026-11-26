@@ -16,7 +16,7 @@ internal object BasicRepTargetStepDomain {
         if(issuedTargets.isEmpty() || issuedTargets.size>32 ||
             actualReps.size!=issuedTargets.size ||
             issuedTargets.any {it !in band.minimum..band.maximum} ||
-            actualReps.any {it !in 1..100})return null
+            actualReps.any {!KotlinSetNumberAuthorityDomain.validCompletedReps(it)})return null
         return Collections.unmodifiableList(issuedTargets.mapIndexed {i,target ->
             if(actualReps[i]>=target && target<band.maximum) target+1 else target
         })
@@ -100,8 +100,8 @@ object BasicBodyweightRepProgressionDomain {
             facts.any {
                 it.outcome!=SetOutcome.COMPLETED ||
                 it.actualLoad!=null || it.issuedLoad!=null ||
-                it.actualReps==null || it.actualReps !in 1..100 ||
-                (it.actualRir!=null && it.actualRir !in 0..10)
+                !KotlinSetNumberAuthorityDomain.validCompletedReps(it.actualReps) ||
+                !KotlinSetNumberAuthorityDomain.validRir(it.actualRir)
             })
             return no(BasicUnloadedRefusal.INCOMPLETE_WORK)
         val completedReps=facts.map{it.actualReps!!}

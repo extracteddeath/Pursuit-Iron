@@ -33,7 +33,7 @@ object StrengthStandardsMeasurementDomain {
     /** Epley estimate for 1–10 real reps; do not extrapolate very high reps. */
     fun epley(load:BigDecimal,reps:Int):BigDecimal? {
         if(reps !in estimateRepRange || load<=BigDecimal.ZERO ||
-            load>BigDecimal("100000"))return null
+            !KotlinSetNumberAuthorityDomain.validPhysicalLoadRange(load))return null
         if(reps==1)return load
         return epleyAtRepCount(load,reps,4)
     }
@@ -42,7 +42,7 @@ object StrengthStandardsMeasurementDomain {
      * current web's bounded Epley arithmetic (up to 15 reps to failure).
      * The caller must resolve reported/assumed goal effort before calling. */
     fun effortAdjustedEpley(load:BigDecimal,performedReps:Int,reserve:Int):BigDecimal? {
-        if(performedReps !in 1..15 || reserve !in 0..10 ||
+        if(performedReps !in 1..15 || !KotlinSetNumberAuthorityDomain.validRir(reserve) ||
             performedReps+reserve>15 || load<=BigDecimal.ZERO ||
             !KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(load))return null
         return epleyAtRepCount(load,performedReps+reserve,1)

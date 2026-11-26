@@ -214,13 +214,12 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val customNextWorkoutCoach=NativeKotlinCustomNextWorkoutReview(
         revisionFence,localAthlete,futureActivationCommit,
         activatedCycleSignoffs,authoringSourceStore,mixedHistoryReader,
-        customIssuedStore,coachSettings,customWorkoutPreflight,machineRosters)
+        coachSettings,customWorkoutPreflight,machineRosters)
     // Basic logging/progression is independent of opt-in fatigue coaching.
     // This is only a verified read; it cannot prepare, issue or save a set.
     private val customBasicNextReview=NativeKotlinCustomBasicNextReview(
         revisionFence,localAthlete,customDraftStore,authoringSourceStore,
-        customWorkoutPreflight,mixedHistoryReader,customIssuedStore,
-        machineRosters)
+        customWorkoutPreflight,mixedHistoryReader,machineRosters)
     private val ownerFutureWeekProposals=NativeKotlinReviewedFutureWeekProposal(
         revisionFence,localAthlete,customDraftStore,authoringSourceStore,
         customCycleSignoffs,adaptiveCyclePermissions,coachSettings,

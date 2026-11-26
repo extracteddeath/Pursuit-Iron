@@ -54,12 +54,8 @@ data class ProgressionEvidence(
  * fatigue, rep targets, the whole exercise history and explicit user choice.
  */
 object DoubleProgressionEvidenceDomain {
-    private val zero=BigDecimal.ZERO
-    private val maximumLoad=BigDecimal("100000")
-
     private fun validLoad(value: BigDecimal?): Boolean =
-        value != null && value >= zero && value <= maximumLoad &&
-            value.stripTrailingZeros().scale() <= 3
+        value != null && KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(value)
 
     fun assess(
         targets: RepBand,
@@ -76,13 +72,13 @@ object DoubleProgressionEvidenceDomain {
             require(observation.workingOrdinal in 0 until expectedWorkingSets)
             require(if(explicitlyUnloaded)observation.issuedLoad==null
                 else observation.issuedLoad==null || validLoad(observation.issuedLoad))
-            require(observation.issuedRir == null || observation.issuedRir in 0..10)
+            require(KotlinSetNumberAuthorityDomain.validRir(observation.issuedRir))
             when(observation.outcome) {
                 SetOutcome.COMPLETED -> require(
                     (if(explicitlyUnloaded)observation.actualLoad==null
                         else validLoad(observation.actualLoad)) &&
-                        observation.actualReps != null && observation.actualReps in 1..100 &&
-                        (observation.actualRir == null || observation.actualRir in 0..10))
+                        KotlinSetNumberAuthorityDomain.validCompletedReps(observation.actualReps) &&
+                        KotlinSetNumberAuthorityDomain.validRir(observation.actualRir))
                 SetOutcome.FAILED_ATTEMPT -> require(
                     (if(explicitlyUnloaded)observation.actualLoad==null
                         else validLoad(observation.actualLoad)) &&

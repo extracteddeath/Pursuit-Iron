@@ -32,8 +32,7 @@ sealed interface NativeCustomBasicNextReadResult {
  * athlete turns coaching assistance off. Nothing here writes future sets.
  *
  * Every request reopens signed cycle consent and current gym sources,
- * the complete corrected history ledger, and each original issued custom
- * workout. It selects one physical implement through the same authority
+ * the complete corrected history ledger and its verified issued snapshots. It selects one physical implement through the same authority
  * as native custom coaching and delegates ALL numbers to the pure basic
  * progression engine. UI-supplied workout identifiers are never grants.
  */
@@ -44,7 +43,6 @@ class NativeKotlinCustomBasicNextReview(
     private val sources:NativeKotlinCustomAuthoringSourceFileStore,
     private val preflight:NativeKotlinCustomWorkoutPreflight,
     private val history:NativeKotlinMixedHistoryReadCoordinator,
-    private val journals:NativeKotlinCustomWorkoutJournalFileStore,
     private val machineRosters:NativeKotlinMachineRosterFileStore?=null
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
@@ -107,7 +105,7 @@ class NativeKotlinCustomBasicNextReview(
                     source,selected,roster)
                     ?:return@withOwnerTransaction refuse(
                         NativeCustomBasicNextRefusal.CURRENT_GYM_UNAVAILABLE)
-                val fetched=history.read(ownerKey,owner.athleteId)
+                val (fetched,completed)=history.readForCustomCoaching(ownerKey,owner.athleteId)
                 val full=fetched as? NativeKotlinMixedHistoryReadResult.Review
                     ?:return@withOwnerTransaction when(fetched) {
                         is NativeKotlinMixedHistoryReadResult.Rejected ->
@@ -121,25 +119,6 @@ class NativeKotlinCustomBasicNextReview(
                 })
                     return@withOwnerTransaction refuse(
                         NativeCustomBasicNextRefusal.INVALID_SCOPE)
-                val completed=ArrayList<CustomCoachingHistoricalSession>()
-                for(entry in full.timeline.completions) {
-                    if(entry !is NativeKotlinMixedHistoryCompletion.Custom)
-                        continue
-                    val stored=(journals.open(ownerKey,entry.manifest.workoutId)
-                        as? NativeCustomJournalResult.Durable)?.issued?.journal
-                        ?:return@withOwnerTransaction refuse(
-                            NativeCustomBasicNextRefusal.VERIFIED_WORKOUT_UNAVAILABLE)
-                    val old=stored.snapshot
-                    if(stored.workoutId!=entry.evidence.workoutId ||
-                        old.stamp.athleteId!=owner.athleteId ||
-                        old.stamp.cycleId!=entry.evidence.cycleId ||
-                        old.stamp.cycleRevision!=entry.evidence.cycleRevision ||
-                        old.stamp.gymId!=entry.gymId)
-                        return@withOwnerTransaction refuse(
-                            NativeCustomBasicNextRefusal.VERIFIED_WORKOUT_UNAVAILABLE)
-                    completed+=CustomCoachingHistoricalSession(
-                        entry.manifest.completionOrder,old,entry.evidence)
-                }
                 if(identity.signedInIdentity()!=owner)
                     return@withOwnerTransaction refuse(
                         NativeCustomBasicNextRefusal.NOT_AUTHORIZED)

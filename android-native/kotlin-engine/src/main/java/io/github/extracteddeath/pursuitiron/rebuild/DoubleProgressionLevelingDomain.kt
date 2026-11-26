@@ -105,7 +105,7 @@ object DoubleProgressionLevelingDomain {
         if(rows.size !in 2..32 || rows.map{it.setKey}.distinct().size!=rows.size ||
             rows.any {it.setKey.isBlank() || it.load!=null &&
                 !KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(it.load) ||
-                it.reps!=null && it.reps !in 1..100})
+                it.reps!=null && !KotlinSetNumberAuthorityDomain.validCompletedReps(it.reps)})
             return refuse(CurrentWorkoutLevelingReview.Reason.INVALID_ENTRY)
         // A zero added-plate landmine row still represents the real bar.
         // Other unweighted/blank rows and sub-sets remain outside the average.
@@ -202,12 +202,12 @@ object DoubleProgressionLevelingDomain {
         verifiedStock: VerifiedLoadStock?
     ): LevelingReviewResult {
         fun reject(reason: LevelingRefusal) = LevelingReviewResult.Rejected(reason)
-        if (facts.size !in 2..12 || goalRir !in 0..10 ||
+        if (facts.size !in 2..12 || !KotlinSetNumberAuthorityDomain.validRir(goalRir) ||
             facts.any {
                 !KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(it.load) ||
                 it.load.signum()==0 && verifiedStock?.basis?.permitsZeroAddedLoad!=true ||
                 it.reps <= 0 ||
-                it.actualRir != null && it.actualRir !in 0..10
+                !KotlinSetNumberAuthorityDomain.validRir(it.actualRir)
             })
             return reject(LevelingRefusal.INCOMPLETE_OR_INVALID)
         if (repBand.minimum <= 0 || repBand.maximum < repBand.minimum)

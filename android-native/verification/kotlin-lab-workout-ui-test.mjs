@@ -1858,13 +1858,36 @@ assert.ok(
   basicPreviewController.includes('host.reviewNextAuthoredBasicProgression(') &&
   basicPreviewController.includes('next.copy(declaredNonSetSeconds=shown.declaredNonSetSeconds)==shown') &&
   basicPreviewHost.includes('customBasicNextReview.reviewAuthored(') &&
-  basicNativeOwner.includes('history.read(ownerKey,owner.athleteId)') &&
+  basicNativeOwner.includes('history.readForCustomCoaching(ownerKey,owner.athleteId)') &&
+  !basicNativeOwner.includes('journals.open(') &&
   basicNativeOwner.includes('CustomBasicHistoryProgressionDomain.review(') &&
   basicPreviewPanel.includes('candidate.proposedWorkingLoads.forEachIndexed') &&
   basicPreviewPanel.includes('Read-only suggestion from verified workout history.') &&
   !basicPreviewPanel.includes('onClick='),
   'Basic Plan preview must remain owner-verified, independent of optional coach assistance and non-issuable'
 );
+
+// Both ordinary and optional coaching consume the same verified journal
+// traversal, never a second independent load/evidence reader.
+const customHistoryReader=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinMixedHistoryReadCoordinator.kt');
+const optionalCustomCoach=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinCustomNextWorkoutReview.kt');
+assert.ok(optionalCustomCoach.includes('history.readForCustomCoaching(ownerKey,current.athleteId)') &&
+  !optionalCustomCoach.includes('journals.open(') &&
+  customHistoryReader.includes('val result=readFenced(owner,athlete) { entry,journal,evidence ->') &&
+  customHistoryReader.includes('result is NativeKotlinMixedHistoryReadResult.Rejected -> result to emptyList()'),
+  'A coaching read must not replay each journal again or expose partial evidence after failed verification');
+
+// Factual rep/RIR bounds and physical load precision are common to entry,
+// history evidence and the pure weighted/unweighted progression requests.
+const directProgressionEvidence=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/ProgressionEvidenceDomain.kt');
+const weightedBasicNumbers=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/BasicProgressionPolicyDomain.kt');
+const unloadedBasicNumbers=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/BasicBodyweightRepProgressionDomain.kt');
+assert.ok([numberEditor,directProgressionEvidence,weightedBasicNumbers,unloadedBasicNumbers].every(source=>
+  source.includes('KotlinSetNumberAuthorityDomain.validCompletedReps(') &&
+  source.includes('KotlinSetNumberAuthorityDomain.validRir(')) &&
+  directProgressionEvidence.includes('KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(value)') &&
+  !directProgressionEvidence.includes('BigDecimal("100000")'),
+  'Factual receipt acceptance must not diverge between entry, evidence and progression');
 
 const customRepEditor = read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomJournalScreen.kt');
 const repReference = read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutReference.kt');

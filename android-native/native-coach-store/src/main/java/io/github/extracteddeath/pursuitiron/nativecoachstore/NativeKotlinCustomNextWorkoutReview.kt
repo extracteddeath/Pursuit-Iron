@@ -67,7 +67,6 @@ class NativeKotlinCustomNextWorkoutReview(
     private val signoffs:NativeKotlinActivatedCycleSignoffFileStore?,
     private val sources:NativeKotlinCustomAuthoringSourceFileStore,
     private val history:NativeKotlinMixedHistoryReadCoordinator,
-    private val journals:NativeKotlinCustomWorkoutJournalFileStore,
     private val assistance:NativeKotlinCoachAssistanceSettingsStore?=null,
     private val authoredPreflight:NativeKotlinCustomWorkoutPreflight?=null,
     private val machineRosters:NativeKotlinMachineRosterFileStore?=null
@@ -209,31 +208,13 @@ class NativeKotlinCustomNextWorkoutReview(
                     NativeCustomNextCoachRefusal.CURRENT_GYM_UNAVAILABLE)
             val selectedMachine=physical.machineInstanceId
             val verifiedStock=physical.stock
-            val historyRead=history.read(ownerKey,current.athleteId)
+            val (historyRead,completions)=history.readForCustomCoaching(ownerKey,current.athleteId)
             val full=historyRead as? NativeKotlinMixedHistoryReadResult.Review
                 ?:return@withOwnerTransaction when(historyRead) {
                     is NativeKotlinMixedHistoryReadResult.Rejected ->
                         NativeCustomNextCoachResult.HistoryRejected(historyRead.reason)
                     else -> reject(NativeCustomNextCoachRefusal.HISTORY_CHANGED_OR_UNVERIFIED)
                 }
-            val completions=ArrayList<CustomCoachingHistoricalSession>()
-            for(entry in full.timeline.completions){
-                if(entry !is NativeKotlinMixedHistoryCompletion.Custom)
-                    continue
-                val stored=(journals.open(ownerKey,entry.manifest.workoutId)
-                    as? NativeCustomJournalResult.Durable)?.issued?.journal
-                    ?:return@withOwnerTransaction reject(
-                        NativeCustomNextCoachRefusal.HISTORY_CHANGED_OR_UNVERIFIED)
-                val snap=stored.snapshot
-                if(stored.workoutId!=entry.evidence.workoutId ||
-                    snap.stamp.athleteId!=current.athleteId ||
-                    snap.stamp.cycleId!=entry.evidence.cycleId ||
-                    snap.stamp.cycleRevision!=entry.evidence.cycleRevision)
-                    return@withOwnerTransaction reject(
-                        NativeCustomNextCoachRefusal.HISTORY_CHANGED_OR_UNVERIFIED)
-                completions+=CustomCoachingHistoricalSession(
-                    entry.manifest.completionOrder,snap,entry.evidence)
-            }
             if(identity.signedInIdentity()!=current)
                 return@withOwnerTransaction reject(
                     NativeCustomNextCoachRefusal.NOT_AUTHORIZED)

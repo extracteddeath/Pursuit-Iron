@@ -138,6 +138,37 @@ class KotlinWorkoutEntryDomainTest {
         }
     }
 
+    @Test fun factualRepAndEffortBoundsAgreeAcrossEntryJournalsAndProgression() {
+        for(load in listOf(verified.load,body.load)) {
+            val target=verified.copy(load=load)
+            val weight=(load as? DraftSetLoad.Verified)?.value
+            val unit=(load as? DraftSetLoad.Verified)?.unit
+            for(reps in listOf(0,1,100,101)) for(rir in listOf(null,-1,0,10,11)) {
+                val expected=reps in 1..100 && (rir==null || rir in 0..10)
+                val actual=KotlinPerformedSet(weight,unit,reps,rir)
+                val entry=KotlinWorkoutEntryDomain.parse(target,weight?.toPlainString().orEmpty(),
+                    reps.toString(),rir?.toString().orEmpty())
+                assertEquals("$load reps=$reps rir=$rir",expected,entry is KotlinSetEntryResult.Accepted)
+                assertEquals(expected,KotlinWorkoutJournalDomain.validPerformed(target,
+                    KotlinJournalSetOutcome.COMPLETED,actual))
+                assertEquals(expected,CustomWorkoutJournalDomain.actualValid(load,
+                    KotlinJournalSetOutcome.COMPLETED,actual))
+                val factual=KotlinWorkingSetEvidenceDomain.review(0,load,2,
+                    KotlinJournalSetOutcome.COMPLETED,actual)
+                assertEquals(expected,factual is KotlinWorkingSetEvidenceReview.Accepted)
+                val direct=WorkingSetFact(0,SetOutcome.COMPLETED,weight,reps,rir,weight,2)
+                val assessed=runCatching{DoubleProgressionEvidenceDomain.assess(
+                    RepBand(5,8),1,listOf(direct),explicitlyUnloaded=weight==null)}
+                assertEquals(expected,assessed.isSuccess)
+                if(expected && rir==null) {
+                    assertNull((factual as KotlinWorkingSetEvidenceReview.Accepted).evidence.fact.actualRir)
+                    assertTrue(ProgressionEffortDomain.resolve(direct).assumed)
+                    assertEquals(2,ProgressionEffortDomain.resolve(direct).rir)
+                }
+            }
+        }
+    }
+
     @Test fun reviewingAFailedSetCannotPromoteItsFactualZeroToSuccessfulWork() {
         val failed=(KotlinWorkoutEntryDomain.parse(
             verified.load,"205","0","",failed=true) as KotlinSetEntryResult.Accepted)

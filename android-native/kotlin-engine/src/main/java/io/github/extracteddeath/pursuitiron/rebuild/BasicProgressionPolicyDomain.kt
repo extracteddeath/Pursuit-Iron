@@ -201,11 +201,11 @@ object BasicProgressionPolicyDomain {
         if (facts.size != loads.size ||
             facts.map { it.workingOrdinal } != loads.indices.toList() ||
             facts.any { it.outcome != SetOutcome.COMPLETED ||
-                it.actualReps == null || it.actualReps !in 1..100 ||
+                !KotlinSetNumberAuthorityDomain.validCompletedReps(it.actualReps) ||
                 it.actualLoad == null || it.issuedLoad == null ||
                 !KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(it.actualLoad) ||
                 !KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(it.issuedLoad) ||
-                (it.actualRir != null && it.actualRir !in 0..10)
+                !KotlinSetNumberAuthorityDomain.validRir(it.actualRir)
             })
             return reject(BasicProgressionRefusal.INCOMPLETE_OR_UNVERIFIED_SETS)
 
@@ -228,7 +228,7 @@ object BasicProgressionPolicyDomain {
         if(request.effortAdjustedE1rm || request.requireGoalEffort) {
             // Same-prescription Wave and e1RM share the same effort gate.
             // Only e1RM computes an estimate; neither grants a load.
-            if(facts.any{it.issuedRir !in 0..10})
+            if(facts.any{it.issuedRir==null || !KotlinSetNumberAuthorityDomain.validRir(it.issuedRir)})
                 return reject(BasicProgressionRefusal.HISTORY_NOT_COMPARABLE)
             val effort=facts.map(ProgressionEffortDomain::resolve)
             assumedGoalCount=effort.count{it.assumed}
@@ -282,10 +282,16 @@ object BasicProgressionPolicyDomain {
         if (stock == null || stock.unit != request.nextScope.unit ||
             stock.basis != request.nextScope.basis)
             return reject(BasicProgressionRefusal.STOCK_NOT_VERIFIED)
-        val inspected = loads.map {
-            EquipmentLoadDomain.inspect(stock,it,request.nextScope.unit)
-                as? LoadInspection.Confirmed
-                ?: return reject(BasicProgressionRefusal.STOCK_NOT_VERIFIED)
+        // Same verified stock, scope and request. Reuse a physical inspection
+        // for numerically identical issued weights; a new request always
+        // validates current stock again. Never cache observations or ordinals.
+        val inspectionsByLoad = HashMap<BigDecimal,LoadInspection.Confirmed>()
+        val inspected = loads.map { load ->
+            inspectionsByLoad.getOrPut(load.stripTrailingZeros()) {
+                EquipmentLoadDomain.inspect(stock,load,request.nextScope.unit)
+                    as? LoadInspection.Confirmed
+                    ?: return reject(BasicProgressionRefusal.STOCK_NOT_VERIFIED)
+            }
         }
         if (inspected.any { !it.exact })
             return reject(BasicProgressionRefusal.STOCK_NOT_VERIFIED)
@@ -321,6 +327,11 @@ object BasicProgressionPolicyDomain {
         val approved = linkedMapOf<Int,KotlinFutureLoadFact>()
         var blockedByLimit = false
         var atMaximum = false
+        // Identical physical facts have identical verification inputs here.
+        // Reuse only the number-authority result, not the earned-set decision.
+        val verifiedStepsByLoad = HashMap<BigDecimal,KotlinFutureLoadReview>()
+        val loadSource=if(assistance)KotlinFutureLoadSource.EARNED_ASSISTANCE_DECREMENT
+            else KotlinFutureLoadSource.EARNED_NEXT_INCREMENT
         for (ordinal in eligible) {
             val next = inspected[ordinal].nextHarder
             if (next == null) {
@@ -329,12 +340,13 @@ object BasicProgressionPolicyDomain {
                 if (uniformStrategy) break
                 continue
             }
-            val verified = KotlinFutureLoadNumberAuthorityDomain.review(
-                issuedLoad=loads[ordinal],candidateLoad=next,
-                unit=request.nextScope.unit,basis=request.nextScope.basis,
-                stock=stock,maximumAuthorizedIncrease=request.maximumAuthorizedIncrement,
-                source=if(assistance)KotlinFutureLoadSource.EARNED_ASSISTANCE_DECREMENT
-                    else KotlinFutureLoadSource.EARNED_NEXT_INCREMENT)
+            val verified = verifiedStepsByLoad.getOrPut(loads[ordinal].stripTrailingZeros()) {
+                KotlinFutureLoadNumberAuthorityDomain.review(
+                    issuedLoad=loads[ordinal],candidateLoad=next,
+                    unit=request.nextScope.unit,basis=request.nextScope.basis,
+                    stock=stock,maximumAuthorizedIncrease=request.maximumAuthorizedIncrement,
+                    source=loadSource)
+            }
             if (verified is KotlinFutureLoadReview.Rejected) {
                 if (verified.reason == KotlinFutureLoadRefusal.NO_LOWER_ASSISTED_SETTING) {
                     atMaximum = true

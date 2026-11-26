@@ -132,9 +132,27 @@ export function reconcilePendingRepTargets(sets, cell) {
 
 // Refresh a resumed prescription only while BOTH values still equal the saved automatic prefill.
 // Old snapshots without ownership metadata, manual/added rows and logged work are preserved.
+// Reconcile only surplus untouched automatic working rows on resume. Explicit
+// additions, completed work and edited values are receipts/athlete choices,
+// not permission to silently change the scheduled dose. Never add sets here.
+export function reconcileSurplusWorkingRows(sets, fresh) {
+    if (!Array.isArray(sets) || !Array.isArray(fresh)) return sets;
+    const count = fresh.filter(s => s && !s.warm && !s.sub && !s.added).length;
+    let ordinal = 0;
+    const kept = sets.filter(s => {
+        if (!s || s.warm || s.sub || s.added) return true;
+        if (ordinal++ < count) return true;
+        return s.done || s.valueOwner !== 'prescription' || s.auto !== true
+            || s.liveAdjustment || s.target?.prefillReps == null
+            || String(s.weight) !== String(s.target?.w)
+            || String(s.reps) !== String(s.target.prefillReps);
+    });
+    return kept.length === sets.length ? sets : kept;
+}
+
 export function refreshPendingSetTargets(sets, fresh) {
     if (!Array.isArray(sets) || !Array.isArray(fresh)) return sets;
-    sets = reconcileRestoredLiveAdjustments(sets);
+    sets = reconcileSurplusWorkingRows(reconcileRestoredLiveAdjustments(sets), fresh);
     const work = fresh.filter(s => !s.warm && !s.sub && !s.added);
     let ordinal = 0, changed = false;
     const out = sets.map(s => {

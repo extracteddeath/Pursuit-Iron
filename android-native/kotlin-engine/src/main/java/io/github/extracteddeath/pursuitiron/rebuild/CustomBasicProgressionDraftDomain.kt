@@ -205,6 +205,15 @@ object CustomBasicProgressionDraftDomain {
                 evidence.assumedGoalRirSetCount !in 0..working.size ||
                 (changedLoads.isNotEmpty() && !evidence.everySetMeetsGoal))return false
         }
+        // Wave uses the same effort-qualified all-set gate, but no estimate.
+        // Validate the emitted shape without recomputing evidence or granting consent.
+        val waveEffort=candidate.waveGoalEffortMet
+        if(waveEffort==null) {
+            if(candidate.waveAssumedGoalRirSetCount!=0)return false
+        } else if(strategy!=BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION ||
+            candidate.e1rmEvidence!=null ||
+            candidate.waveAssumedGoalRirSetCount !in 0..working.size ||
+            (changedLoads.isNotEmpty() && !waveEffort))return false
         val all = working.indices.toSet()
         val loads = working.map { it.load as DraftSetLoad.Verified }
         if (changedLoads.any { index ->

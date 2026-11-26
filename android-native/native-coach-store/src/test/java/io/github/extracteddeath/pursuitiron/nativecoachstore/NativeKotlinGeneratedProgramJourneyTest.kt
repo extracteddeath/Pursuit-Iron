@@ -1257,6 +1257,9 @@ class NativeKotlinGeneratedProgramJourneyTest {
     @Test fun generatedExactRepTargetsEarnOnlyOneRepWithoutChangingWeights() =
         completeBasicOrManualWeek(false,repMethod=SavedProgressionMethod.REP_TARGETS)
 
+    @Test fun generatedExplicitLinearEarnsAdjacentLoadAtRepFloorWithCoachingOff() =
+        completeBasicOrManualWeek(false,repMethod=SavedProgressionMethod.LINEAR)
+
     @Test fun generatedRepLadderEarnsAdjacentWeightAndResetsToItsActualRepFloor() =
         completeBasicOrManualWeek(false,repMethod=SavedProgressionMethod.LADDER)
 
@@ -1271,7 +1274,8 @@ class NativeKotlinGeneratedProgramJourneyTest {
         repMethod:SavedProgressionMethod?=null,exceptional:Boolean=false) {
         require(!exceptional || !manual && !correctBeforeApproval && repMethod==null)
         require(repMethod==null || repMethod in setOf(SavedProgressionMethod.REP_TARGETS,
-            SavedProgressionMethod.LADDER,SavedProgressionMethod.BODYWEIGHT_REPS) &&
+            SavedProgressionMethod.LADDER,SavedProgressionMethod.BODYWEIGHT_REPS,
+            SavedProgressionMethod.LINEAR) &&
             !manual && !correctBeforeApproval)
         val unloaded=repMethod==SavedProgressionMethod.BODYWEIGHT_REPS
         val (base, inputs) = if(unloaded)saveGenerated(split=ComposerSplit.FULL_BODY,includeNewTargets=true)
@@ -1309,7 +1313,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
                     day.copy(slots=day.slots.map{slot->if(slot.slotId!=selected.slotId)slot else
                         slot.copy(progressionMethod=repMethod ?: if(manual)SavedProgressionMethod.MANUAL
                             else SavedProgressionMethod.DOUBLE,
-                            sets=if(repMethod==null)slot.sets else slot.sets.map{set->
+                            sets=if(repMethod==null || repMethod==SavedProgressionMethod.LINEAR)slot.sets else slot.sets.map{set->
                                 if(set.type!=DraftSetType.WORKING)set else set.copy(
                                     exactRepTarget=if(repMethod==SavedProgressionMethod.LADDER)
                                         set.reps.maximum else set.reps.minimum)
@@ -1336,7 +1340,8 @@ class NativeKotlinGeneratedProgramJourneyTest {
                 val earned = day.weekday == firstDay.weekday &&
                     set.slotId == selected.slotId &&
                     prescription.type == DraftSetType.WORKING
-                val performedReps = if (earned) prescription.exactRepTarget ?: prescription.reps.maximum
+                val performedReps = if (earned && repMethod!=SavedProgressionMethod.LINEAR)
+                    prescription.exactRepTarget ?: prescription.reps.maximum
                     else prescription.exactRepTarget ?: prescription.reps.minimum
                 val performed = when (val load = prescription.load) {
                     is DraftSetLoad.Verified ->
@@ -1498,6 +1503,23 @@ class NativeKotlinGeneratedProgramJourneyTest {
         } else {
             assertTrue("Expected a verified physical next increment",
                 projection.candidate.increasedOrdinals.isNotEmpty())
+            if(repMethod==SavedProgressionMethod.LINEAR) {
+                val work=review.next.slots.single{it.slotId==selected.slotId}.sets
+                    .filter{it.prescription.type==DraftSetType.WORKING}.map{it.prescription}
+                assertEquals(BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION,projection.candidate.strategy)
+                assertEquals(work.map{(it.load as DraftSetLoad.Verified).value+n("5")},
+                    projection.candidate.proposedWorkingLoads)
+                assertEquals(work.indices.toSet(),projection.candidate.increasedOrdinals)
+                assertNull(projection.candidate.proposedRepTargets)
+                val facts=(Disk().timeline.read(owner,athlete) as NativeKotlinMixedHistoryReadResult.Review)
+                    .timeline.completions.filterIsInstance<NativeKotlinMixedHistoryCompletion.Custom>()
+                    .single{it.manifest.workoutId==projection.historyWorkoutId}
+                    .evidence.visits.filter{it.slotId==selected.slotId &&
+                        it.setType==DraftSetType.WORKING}
+                assertEquals(work.map{it.reps.minimum},facts.map{it.actual?.reps})
+                assertTrue(work.all{it.reps.minimum<it.reps.maximum})
+                assertTrue(facts.all{it.actual?.actualRir==null})
+            }
             if(repMethod==SavedProgressionMethod.LADDER){
                 val work=review.next.slots.single{it.slotId==selected.slotId}.sets
                     .filter{it.prescription.type==DraftSetType.WORKING}.map{it.prescription}

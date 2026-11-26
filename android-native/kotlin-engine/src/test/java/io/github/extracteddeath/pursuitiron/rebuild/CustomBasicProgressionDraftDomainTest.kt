@@ -41,6 +41,34 @@ class CustomBasicProgressionDraftDomainTest {
             sourceScope=scope,approvedFutureLoadFacts=approved))
     }
 
+    @Test fun waveWeekEditRequiresConsistentEffortEvidenceAlongsideExactPhysicalProof() {
+        val original=listOf(set(100),set(100))
+        val base=BasicProgressionResult.Candidate(
+            BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,
+            listOf(BigDecimal(105),BigDecimal(105)),setOf(0,1),
+            BasicProgressionDecision.EARNED_INCREMENT,"previous",
+            waveGoalEffortMet=true,waveAssumedGoalRirSetCount=1)
+        val valid=withProof(weighted(base),original)
+        assertEquals(listOf(pounds(105),pounds(105)),
+            checkNotNull(CustomBasicProgressionDraftDomain.forWeekEdit(
+                "slot",original,valid)).map{it.load})
+        for(invalid in listOf(
+            valid.candidate.copy(waveGoalEffortMet=false),
+            valid.candidate.copy(waveGoalEffortMet=null),
+            valid.candidate.copy(waveAssumedGoalRirSetCount=3),
+            valid.candidate.copy(waveAssumedGoalRirSetCount=-1),
+            valid.candidate.copy(strategy=BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION),
+            valid.candidate.copy(e1rmEvidence=BasicE1rmEvidence(BigDecimal("140"),1,true)))) {
+            assertNull(CustomBasicProgressionDraftDomain.reviewedSets(
+                "slot",original,valid.copy(candidate=invalid)))
+        }
+        val held=weighted(base.copy(proposedWorkingLoads=listOf(BigDecimal(100),BigDecimal(100)),
+            increasedOrdinals=emptySet(),decision=BasicProgressionDecision.BUILD_REPS,
+            waveGoalEffortMet=false))
+        assertEquals(original,CustomBasicProgressionDraftDomain.reviewedSets("slot",original,held))
+        assertNull(CustomBasicProgressionDraftDomain.forWeekEdit("slot",original,held))
+    }
+
     @Test fun uniformProgressionNeverIssuesDifferentNextLoadsForIdenticalSets() {
         val candidate=weighted(BasicProgressionResult.Candidate(
             BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,

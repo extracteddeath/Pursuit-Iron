@@ -1275,7 +1275,13 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
         assertEquals(before.issued,(issued.open("owner-1","workout-2") as NativeCustomJournalResult.Durable).issued)
     }
 
-    @Test fun remainingCustomSkipKeepsActualAndSkipsAmplifierPlusLaterSetAtomically() {
+    @Test fun remainingCustomSkipKeepsActualAndSkipsAmplifierPlusLaterSetAtomically() =
+        runRemainingCustomSkip(false)
+
+    @Test fun muscleReductionKeepsActivationAndAtomicallySkipsAffectedFollowUpAndTail() =
+        runRemainingCustomSkip(true)
+
+    private fun runRemainingCustomSkip(byMuscle:Boolean) {
         val base=cycle()
         val sets=listOf(set(16).copy(amplifier=CustomSetAmplifier(
             CustomAmplifierKind.MYO_REPS,5,15,followUpActiveSeconds=50)),set(16))
@@ -1297,7 +1303,29 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
                 it.fileName.toString().endsWith(".bin") }.findFirst().get()
         }
         val before=java.nio.file.Files.readAllBytes(file)
-        val stale=issued.skipRemainingExercise("owner-1","workout-2",0,"slot-0")
+        fun coldStore()=NativeKotlinCustomWorkoutJournalFileStore(temp.root.toPath(),
+            NativeKotlinApprovalRevisionFence(temp.root.toPath()),identity,prepared,preflight,
+            history,composerJournal,null,sources)
+        val shown=if(byMuscle) {
+            coldStore().reviewMuscleConcerns("owner-1","workout-2").single{
+                it.muscle==TrainingMuscle.ABS && it.action==WorkoutConcernAction.REDUCE
+            }.also{
+                assertEquals(listOf(
+                    CustomWorkoutVisitKey("cycle-1:w2:d0:slot-0:s1",CustomWorkoutVisitPart.FOLLOW_UP),
+                    CustomWorkoutVisitKey("cycle-1:w2:d0:slot-0:s2",CustomWorkoutVisitPart.MAIN)),it.entries)
+                assertEquals(1,it.groups.single().recordedCount)
+                assertTrue(coldStore().applyMuscleConcern("owner-1","workout-2",
+                    it.copy(groups=it.groups.map{group->group.copy(entries=group.entries.take(1))}))
+                    is NativeCustomJournalResult.Rejected)
+                current=NativeKotlinOwnerIdentity("owner-2","athlete-2")
+                assertTrue(coldStore().applyMuscleConcern("owner-1","workout-2",it)
+                    is NativeCustomJournalResult.Rejected)
+                current=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+                assertArrayEquals(before,java.nio.file.Files.readAllBytes(file))
+            }
+        } else null
+        val stale=if(shown!=null) coldStore().applyMuscleConcern("owner-1","workout-2",
+            shown.copy(journalRevision=0)) else issued.skipRemainingExercise("owner-1","workout-2",0,"slot-0")
         assertEquals(CustomWorkoutJournalRefusal.STALE_REVISION,
             (stale as NativeCustomJournalResult.Rejected).journalReason)
         assertArrayEquals(before,java.nio.file.Files.readAllBytes(file))
@@ -1311,7 +1339,8 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
                 observedPartial=true
         }
         val result=try {
-            issued.skipRemainingExercise("owner-1","workout-2",1,"slot-0")
+            (if(shown!=null)coldStore().applyMuscleConcern("owner-1","workout-2",shown)
+                else issued.skipRemainingExercise("owner-1","workout-2",1,"slot-0"))
                 as NativeCustomJournalResult.Durable
         } finally {onIdentityRead=null}
         assertTrue(checks>=2)
@@ -1327,6 +1356,22 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
         assertEquals(2,saved.effectiveVisits.values.count{(it.operation as CustomWorkoutJournalOperation.Record).outcome==KotlinJournalSetOutcome.SKIPPED})
         assertFalse(saved.effectiveVisits.containsKey(CustomWorkoutVisitKey("cycle-1:w2:d0:slot-0:s2",CustomWorkoutVisitPart.FOLLOW_UP)))
         assertEquals(saved,(issued.open("owner-1","workout-2") as NativeCustomJournalResult.Durable).issued.journal)
+        if(shown!=null) {
+            assertTrue(coldStore().reviewMuscleConcerns("owner-1","workout-2").none{
+                it.muscle==TrainingMuscle.ABS
+            })
+            assertTrue(coldStore().applyMuscleConcern("owner-1","workout-2",shown)
+                is NativeCustomJournalResult.Rejected)
+            assertEquals(saved,(coldStore().open("owner-1","workout-2") as NativeCustomJournalResult.Durable).issued.journal)
+            val finish=CustomWorkoutJournalOperation.Finish("muscle-finish",saved.revision)
+            val transaction=NativeKotlinCustomHistoryTransaction(history,coldStore(),fence,identity)
+            val committed=transaction.complete("owner-1","athlete-1","workout-2",finish)
+                as NativeCustomFinishResult.Committed
+            assertEquals(3,committed.evidence.visits.size)
+            assertEquals(1,committed.evidence.visits.count{it.actual!=null})
+            assertEquals(committed.copy(replayed=true),
+                transaction.complete("owner-1","athlete-1","workout-2",finish))
+        }
     }
 
 }

@@ -189,6 +189,42 @@ class NativeKotlinMixedHistoryReadCoordinator(
     }
 
     /**
+     * Collect coaching snapshots from the SAME verified journal replay.
+     * Discard every collected session if any ledger entry, correction,
+     * owner or final revision check fails. No persistent cache, and no
+     * additional journal reopen merely to recover an already-verified target.
+     */
+    internal fun readForCustomCoaching(owner:String,athlete:String):
+        Pair<NativeKotlinMixedHistoryReadResult,List<CustomCoachingHistoricalSession>> {
+        if(!id.matches(owner) || !id.matches(athlete))
+            return rejected(NativeKotlinMixedHistoryRefusal.INVALID_SCOPE) to emptyList()
+        return runCatching {
+            fence.withOwnerTransaction(owner) {
+                val sessions=ArrayList<CustomCoachingHistoricalSession>()
+                var invalid=false
+                val result=readFenced(owner,athlete) { entry,journal,evidence ->
+                    val snapshot=journal.snapshot
+                    if(journal.workoutId!=evidence.workoutId ||
+                        snapshot.stamp.athleteId!=athlete ||
+                        snapshot.stamp.cycleId!=evidence.cycleId ||
+                        snapshot.stamp.cycleRevision!=evidence.cycleRevision ||
+                        snapshot.stamp.gymId!=journal.originalSnapshot.stamp.gymId)
+                        invalid=true
+                    else sessions+=CustomCoachingHistoricalSession(
+                        entry.completionOrder,snapshot,evidence)
+                }
+                when {
+                    result is NativeKotlinMixedHistoryReadResult.Rejected -> result to emptyList()
+                    invalid -> rejected(NativeKotlinMixedHistoryRefusal.UNVERIFIED_CUSTOM) to emptyList()
+                    else -> result to Collections.unmodifiableList(sessions)
+                }
+            }
+        }.getOrElse {
+            rejected(NativeKotlinMixedHistoryRefusal.STORAGE_UNAVAILABLE) to emptyList()
+        }
+    }
+
+    /**
      * Safe factual bridge: verification and projection both occur under the
      * SAME owner fence. Do not project a caller-constructed timeline as a
      * replacement for this path. A UI must still reject async/stale results

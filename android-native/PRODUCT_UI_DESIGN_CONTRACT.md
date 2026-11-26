@@ -57,6 +57,62 @@ current-workout versus future-program consent.
 This is an acceptance requirement, **not a declaration that these flows have
 passed visual or device review**. The APK gate below remains in force.
 
+## Shared UI authority — binding cross-stage requirement, 2026-11-26
+
+Apply the same consolidation discipline used in S2 to S3–S6 and S8.
+One owner for each fact, one interaction implementation for the same athlete
+task, one visual token for each semantic role. Prefer removing duplicate
+behavior over adding wrappers. Do not start a parallel UI rewrite or invent
+an abstract component framework. Extend an existing owner where it works;
+keep source-specific differences at the narrow typed boundary.
+
+| Shared surface or behavior | Existing starting owner (inspect before extending) | Required consumers and ownership |
+| --- | --- | --- |
+| Color, shape, spacing, typography, motion, scaffold and responsive action roles | NativeDesignTokens, PursuitDesignComponents, NativeComponents, existing Material theme | All screens, sheets, dialogs, compact/expanded layouts; no screen-local copies of semantic token values or competing component families. |
+| Navigation, selection, Back/return and Start/Resume | NativeKotlinNavigationState, existing Plan workspace and host | Today, Plan, Train, Profile, Settings, More; one active workout identity and one route history. Contextual shortcuts enter the canonical destination and retain state. |
+| Workout overview and current prescription | Existing native plan presentation and owner-fenced prepared/issued session | Today, Plan, preview and Train render the same reviewed source revision; draft, approved, prepared, issued and completed are explicit states. Do not generate a plan in a composable or build separate estimates of its sets, loads, reps, RIR or duration. |
+| Set editor, stepper, correction and completion actions | NativeSetValueFields, NativeSetEditSheet, PursuitSetEntryActions in NativeComponents; existing history observation editor | Generated, authored, manual, Focus, full workout and History correction share typed editor behavior, units, field validation and accessible labels. User-entered draft remains separate from Target and Last; an explicit record action reaches the existing journal owner. |
+| Exercise heading, focus navigation and timer | PursuitExerciseHeading, PursuitWorkoutFocusHeader, NativeKotlinWorkoutFocusNavigation, NativeKotlinWorkoutRestTimer | Same exercise/slot/visit identity, saved draft and timer across both loggers and compact/wide layouts; main set vs follow-up remains typed, not a separate copy of rest arithmetic or completion rules. |
+| Target/Last, prior RIR, progression reason and plate diagram | NativeKotlinWorkoutReference, existing native read-only projections and physical number authority | Plan, Train, Focus, History and coaching previews reuse verified source facts and formatting. Missing actual stays missing; visible estimate is not a target, and displayed weight is not re-rounded. |
+| History, PR, Strength Standards and Progress | Existing authenticated corrected timeline/facts, strength measurement domain, History panels | One factual revision, exercise and station identity and correction-aware result. Share projection within a read; invalidate on owner/gym/revision change. No screen-specific PR/strength/load calculation or stale global cache. |
+| Future edits, swaps, notes, gym and machine selection | Existing host/controllers, reviewed draft/consent and equipment authorities | Context-specific entry points use the same underlying action, ranking and validation. Distinguish today's actual, current workout change, and future-program change. Preserve independent station/day histories, per-set amplifiers and intentional progression differences. |
+
+### S6 shared-surface acceptance procedure
+
+1. Inventory each existing consumer, component, state holder, numeric source and
+   mutation command; identify concrete duplicates and divergences before changing
+   code. Record the canonical owner and intentional exceptions. Reuse currently
+   working implementations rather than duplicating their appearance.
+2. Consolidate one complete athlete flow at a time: shared typed state projection,
+   one component or interaction owner, narrow callbacks to engine/store authority.
+   No separate draft state for Focus versus normal Train; screen-local ephemeral
+   presentation (scroll, expanded/collapsed) is allowed when it does not own a fact.
+   Keep recomposition work bounded; avoid duplicate full-history reads or expensive
+   projections on ordinary field edits. Never cache across an unverified revision.
+3. Test paired consumers of every changed shared behavior: same target/actual,
+   units, unknown RIR, exercise and station identity, consent, edited draft,
+   cancellation and cold recovery. Add an actual behavioral Compose/JVM test
+   where possible, with source contract as supplemental protection only.
+4. Review phone, tablet/foldable, large text, both themes, screen-reader labels,
+   Back and keyboard, animation interruption, loading/error and retry. Keep
+   Material 3 Expressive and 48dp actions; no duplicate surface hierarchy,
+   inconsistent rounded corners or repeated competing controls. Compare real
+   tasks with the web UI; do not claim speed/quality without evidence.
+5. A shared change is incomplete until all applicable consumers are wired and
+   checked. Record the affected S6A–D and S8 acceptance IDs and exceptions in
+   the existing execution ledger, not a new parallel denominator. Do not
+   certify design/device completion from code inspection. Stage 2 exit remains
+   prerequisite for S3; complete UI source integration and owner authorization
+   remain prerequisites for any APK.
+
+Existing source review found both generated and custom loggers already use
+NativeSetValueFields, NativeSetEditSheet, PursuitSetEntryActions,
+PursuitWorkoutSetReference, PursuitWorkoutFocusHeader and NativeKotlinWorkoutRestTimer;
+History observation editor also uses NativeSetValueFields. These are reusable
+owners, not a reason to introduce another component library. This is an
+implementation/acceptance requirement, not a claim every screen is shared or
+finished.
+
 ## Design direction / Material baseline
 
 - Modern Material 3 Expressive with pinned Compose `material3:1.5.0-rc01`;

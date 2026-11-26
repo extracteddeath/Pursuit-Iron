@@ -252,7 +252,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
                 val id="wave-w$week-d${d.weekday}"
                 if(d.weekday==day.weekday && week>1) {
                     val basic=NativeKotlinCustomBasicNextReview(disk.fence,identity,disk.drafts,
-                        disk.sources,disk.preflight,disk.timeline,disk.journals,disk.machines)
+                        disk.sources,disk.preflight,disk.timeline,disk.machines)
                     val reviewed=basic.reviewAuthored(owner,cycleId,inputs,week,d.weekday,slot.slotId,
                         "wave-basic-w$week",n("5"))
                     assertTrue(reviewed.toString(),reviewed is NativeCustomBasicNextReadResult.Reviewed)
@@ -514,7 +514,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
         fun review():NativeCustomBasicNextReadResult.Reviewed {
             val cold=Disk()
             return NativeKotlinCustomBasicNextReview(cold.fence,identity,cold.drafts,cold.sources,
-                cold.preflight,cold.timeline,cold.journals,cold.machines)
+                cold.preflight,cold.timeline,cold.machines)
                 .reviewAuthored(owner,cycleId,inputs,nextWeek,day.weekday,slot.slotId,"e1rm-future",n("10"))
                 as NativeCustomBasicNextReadResult.Reviewed
         }
@@ -579,6 +579,15 @@ class NativeKotlinGeneratedProgramJourneyTest {
         val facts=(Disk().timeline.read(owner,athlete) as NativeKotlinMixedHistoryReadResult.Review)
             .timeline.completions.single() as NativeKotlinMixedHistoryCompletion.Custom
         assertNull(facts.evidence.visits.single{it.setKey==target.setKey}.actual?.actualRir)
+        // The single-pass owner-fenced coaching projection must retain the
+        // exact prior effective snapshot and corrected factual evidence,
+        // not substitute the newly issued prescription or infer actual RIR.
+        val (historyRead,sessions)=Disk().timeline.readForCustomCoaching(owner,athlete)
+        assertEquals(Disk().timeline.read(owner,athlete),historyRead)
+        assertEquals(1,sessions.size)
+        assertEquals(facts.manifest.completionOrder,sessions.single().completionOrder)
+        assertEquals(original,sessions.single().snapshot)
+        assertEquals(facts.evidence,sessions.single().evidence)
     }
 
     @Test fun nativeStagedAuditPreservesAnUnfinishedGeneratedCustomWorkout() {
@@ -1388,10 +1397,15 @@ class NativeKotlinGeneratedProgramJourneyTest {
             days.first().label), Disk().next(inputs))
 
         val signedReader = Disk()
+        val (verifiedHistory,coachingSessions)=signedReader.timeline.readForCustomCoaching(owner,athlete)
+        assertEquals(signedReader.timeline.read(owner,athlete),verifiedHistory)
+        assertEquals(finishedWeekOne.values.toList(),coachingSessions.map{it.snapshot})
+        assertEquals(finishedWeekOne.keys.toList(),coachingSessions.map{it.evidence.workoutId})
+        assertEquals((1..finishedWeekOne.size).map{it.toLong()},coachingSessions.map{it.completionOrder})
         val basic = NativeKotlinCustomBasicNextReview(
             signedReader.fence, identity, signedReader.drafts,
             signedReader.sources, signedReader.preflight, signedReader.timeline,
-            signedReader.journals, signedReader.machines)
+            signedReader.machines)
         val review = basic.reviewAuthored(owner, cycleId, inputs,
             2, firstDay.weekday, selected.slotId, "earned-basic-future",
             if(unloaded)BigDecimal.ZERO else n("5")) as NativeCustomBasicNextReadResult.Reviewed
@@ -1428,6 +1442,26 @@ class NativeKotlinGeneratedProgramJourneyTest {
             for((oldId,snapshot) in finishedWeekOne)
                 assertEquals(snapshot,(Disk().journals.open(owner,oldId)
                     as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
+            // The last completed entry fails after earlier entries were
+            // verified. None of the already collected evidence may escape.
+            val digest=java.security.MessageDigest.getInstance("SHA-256").digest(
+                (owner+"\u0000"+finishedWeekOne.keys.last()).toByteArray(Charsets.UTF_8))
+                .joinToString(""){"%02x".format(it.toInt() and 255)}
+            val file=cold.root.resolve("issued-custom-$digest.bin")
+            val originalBytes=java.nio.file.Files.readAllBytes(file)
+            val damaged=originalBytes.copyOf()
+            damaged[damaged.lastIndex]=(damaged.last().toInt() xor 1).toByte()
+            java.nio.file.Files.write(file,damaged)
+            try {
+                val (rejected,partial)=Disk().timeline.readForCustomCoaching(owner,athlete)
+                assertEquals(NativeKotlinMixedHistoryReadResult.Rejected(
+                    NativeKotlinMixedHistoryRefusal.UNVERIFIED_CUSTOM),rejected)
+                assertTrue(partial.isEmpty())
+                assertArrayEquals(damaged,java.nio.file.Files.readAllBytes(file))
+            } finally {
+                java.nio.file.Files.write(file,originalBytes)
+            }
+            assertEquals(verifiedHistory,Disk().timeline.readForCustomCoaching(owner,athlete).first)
             return
         }
         if(unloaded){
@@ -1479,7 +1513,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
             assertEquals(correction.performed,facts.evidence.visits.single{it.setKey==target.setKey}.actual)
             val fresh=Disk()
             val after=NativeKotlinCustomBasicNextReview(fresh.fence,identity,fresh.drafts,
-                fresh.sources,fresh.preflight,fresh.timeline,fresh.journals,fresh.machines)
+                fresh.sources,fresh.preflight,fresh.timeline,fresh.machines)
                 .reviewAuthored(owner,cycleId,inputs,2,firstDay.weekday,selected.slotId,
                     "manual-next",BigDecimal.ZERO) as NativeCustomBasicNextReadResult.Reviewed
             assertTrue(after.historyRevision>review.historyRevision)
@@ -1560,7 +1594,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
                 .single{it.manifest.workoutId==originalId}
             assertEquals(correction.performed,corrected.evidence.visits.single{it.setKey==target.setKey}.actual)
             val after=NativeKotlinCustomBasicNextReview(cold.fence,identity,cold.drafts,cold.sources,
-                cold.preflight,cold.timeline,cold.journals,cold.machines)
+                cold.preflight,cold.timeline,cold.machines)
                 .reviewAuthored(owner,cycleId,inputs,2,firstDay.weekday,selected.slotId,
                     "earned-basic-future",n("5")) as NativeCustomBasicNextReadResult.Reviewed
             val held=after.projection as CustomBasicHistoryResult.Reviewed
@@ -2013,8 +2047,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
             val ownerReview=Disk()
             val basic=NativeKotlinCustomBasicNextReview(
                 ownerReview.fence,identity,ownerReview.drafts,ownerReview.sources,
-                ownerReview.preflight,ownerReview.timeline,ownerReview.journals,
-                ownerReview.machines)
+                ownerReview.preflight,ownerReview.timeline,ownerReview.machines)
             val read=basic.reviewAuthored(owner,cycleId,inputs,2,day.weekday,
                 sourceSlot.slotId,"bodyweight-next-2",BigDecimal.ZERO)
             assertTrue(read.toString(),
@@ -2132,7 +2165,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
         val slot=day.slots.first()
         val basic=NativeKotlinCustomBasicNextReview(
             disk.fence,identity,disk.drafts,disk.sources,disk.preflight,
-            disk.timeline,disk.journals,disk.machines)
+            disk.timeline,disk.machines)
         val clean=basic.reviewAuthored(owner,cycleId,inputs,
             1,day.weekday,slot.slotId,"first-basic-review",n("5"))
         assertTrue(clean.toString(),
@@ -2154,7 +2187,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
                 slot.slotId,"first-basic-review",n("5")))
         val coach=NativeKotlinCustomNextWorkoutReview(
             disk.fence,identity,null,null,disk.sources,disk.timeline,
-            disk.journals,null,disk.preflight,disk.machines)
+            null,disk.preflight,disk.machines)
         assertEquals(NativeCustomNextCoachResult.Rejected(
             NativeCustomNextCoachRefusal.CURRENT_GYM_UNAVAILABLE),
             coach.reviewAuthored(owner,cycleId,inputs,1,day.weekday,
@@ -2268,7 +2301,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
         val disk=Disk()
         val ownerCoach=NativeKotlinCustomNextWorkoutReview(
             disk.fence,identity,null,null,disk.sources,disk.timeline,
-            disk.journals,null,disk.preflight)
+            null,disk.preflight)
         val authenticated=ownerCoach.reviewAuthored(
             owner,cycleId,inputs,2,day.weekday,selected.slotId,
             CoachReadiness.NORMAL,false,n("5"),
@@ -2303,7 +2336,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
         })
         val basicOwner=NativeKotlinCustomBasicNextReview(
             disk.fence,identity,disk.drafts,disk.sources,disk.preflight,
-            disk.timeline,disk.journals,disk.machines)
+            disk.timeline,disk.machines)
         val basicRead=basicOwner.reviewAuthored(
             owner,cycleId,inputs,2,day.weekday,basicSlot.slotId,
             "generated-next-basic-2",n("5"))
@@ -2366,7 +2399,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
             progressionSave is NativeCoachSettingsWrite.Saved)
         val settingsCoach=NativeKotlinCustomNextWorkoutReview(
             disk.fence,identity,null,null,disk.sources,disk.timeline,
-            disk.journals,disk.settings,disk.preflight)
+            disk.settings,disk.preflight)
         val progressionOnly=settingsCoach.reviewAuthored(owner,cycleId,
             inputs,2,day.weekday,selected.slotId,
             CoachReadiness.NORMAL,false,n("5"))
@@ -2446,7 +2479,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
         val reopenedDisk = Disk()
         val freshReader = NativeKotlinCustomBasicNextReview(reopenedDisk.fence, identity,
             reopenedDisk.drafts, reopenedDisk.sources, reopenedDisk.preflight, reopenedDisk.timeline,
-            reopenedDisk.journals, reopenedDisk.machines)
+            reopenedDisk.machines)
         val refreshed = freshReader.reviewAuthored(owner, cycleId, inputs, 2, day.weekday,
             basicSlot.slotId, "corrected-basic-review", n("5")) as NativeCustomBasicNextReadResult.Reviewed
         assertEquals(BasicProgressionRefusal.BASELINE_DIFFERS_FROM_HISTORY,

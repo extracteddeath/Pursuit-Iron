@@ -53,7 +53,6 @@ data class AssistedCounterweightReview(
 
 object AssistedCounterweightProgressionDomain {
     private val zero=BigDecimal.ZERO
-    private val maximum=BigDecimal("100000")
     private fun equal(a:BigDecimal,b:BigDecimal)=a.compareTo(b)==0
     private fun canonical(v:BigDecimal)=BigDecimal(v.stripTrailingZeros().toPlainString())
 
@@ -88,8 +87,7 @@ object AssistedCounterweightProgressionDomain {
         if(stock?.basis!=LoadBasis.ASSISTANCE_COUNTERWEIGHT)
             return reject(AssistedCounterweightReviewStatus.WRONG_LOAD_BASIS)
         if(request.maximumAssistanceReduction<=zero ||
-            request.maximumAssistanceReduction>maximum ||
-            request.maximumAssistanceReduction.stripTrailingZeros().scale()>3)
+            !KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(request.maximumAssistanceReduction))
             return reject(AssistedCounterweightReviewStatus.CHANGE_EXCEEDS_ATHLETE_LIMIT)
         if(old.workoutId.isBlank() || recent.workoutId.isBlank() ||
             old.workoutId==recent.workoutId ||

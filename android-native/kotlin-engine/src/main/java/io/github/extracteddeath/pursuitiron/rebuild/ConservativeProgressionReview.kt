@@ -66,7 +66,6 @@ data class IncreaseReview(
 
 object ConservativeProgressionReview {
     private val zero=BigDecimal.ZERO
-    private val maxAllowedStep=BigDecimal("100000")
     private val minimumProgressionRir=2
 
     private fun onlyObservedLoad(workout: ProgressionWorkoutEvidence): BigDecimal? {
@@ -93,8 +92,8 @@ object ConservativeProgressionReview {
         require(previous.unit == latest.unit &&
             previous.targetReps == latest.targetReps &&
             previous.expectedWorkingSets == latest.expectedWorkingSets)
-        require(maximumAllowedStep > zero && maximumAllowedStep <= maxAllowedStep &&
-            maximumAllowedStep.stripTrailingZeros().scale() <= 3)
+        require(maximumAllowedStep > zero &&
+            KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(maximumAllowedStep))
 
         val previousFacts=reviewedEvidence(previous)
         val latestFacts=reviewedEvidence(latest)

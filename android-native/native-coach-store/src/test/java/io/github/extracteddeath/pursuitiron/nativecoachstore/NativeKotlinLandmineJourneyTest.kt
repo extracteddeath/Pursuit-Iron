@@ -213,7 +213,7 @@ class NativeKotlinLandmineJourneyTest {
                 NativeKotlinApprovalFileAuthority(root,fence(),identity),identity,fence(),
                 NativeKotlinCustomSavedCorrectionFileStore(root,fence(),identity,journals,history))
             val reviewer=NativeKotlinCustomNextWorkoutReview(fence(),identity,null,null,sources(),
-                reader,journals,NativeKotlinCoachAssistanceSettingsStore(root,fence(),identity),preflight)
+                reader,NativeKotlinCoachAssistanceSettingsStore(root,fence(),identity),preflight)
             return NativeKotlinBlockCalibrationConsentStore(root,fence(),identity,reviewer,draft,sources(),
                 permissions,reader,NativeKotlinCustomOutstandingWorkoutInventory(prepared,journals),
                 composer,prepared)

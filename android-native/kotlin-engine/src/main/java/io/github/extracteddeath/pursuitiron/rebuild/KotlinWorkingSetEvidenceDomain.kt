@@ -51,7 +51,7 @@ object KotlinWorkingSetEvidenceDomain {
         actual:KotlinPerformedSet?
     ):KotlinWorkingSetEvidenceReview {
         if(workingOrdinal !in 0..31 ||
-            (issuedRir!=null && issuedRir !in 0..10))
+            !KotlinSetNumberAuthorityDomain.validRir(issuedRir))
             return KotlinWorkingSetEvidenceReview.Rejected(
                 KotlinWorkingSetEvidenceRefusal.INVALID_WORKING_ORDINAL_OR_ISSUED_RIR)
         val reviewed=KotlinSetNumberAuthorityDomain.review(

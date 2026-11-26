@@ -299,7 +299,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             val corrections=NativeKotlinCustomSavedCorrectionFileStore(root,lock,identity,issuer,history)
             val reader=NativeKotlinMixedHistoryReadCoordinator(history,composer,
                 KotlinNativeSavedCorrectionFileStore(root,composer),issuer,authority,identity,lock,corrections)
-            val basic=NativeKotlinCustomBasicNextReview(lock,identity,draftStore,sourceStore,preflight,reader,issuer,roster)
+            val basic=NativeKotlinCustomBasicNextReview(lock,identity,draftStore,sourceStore,preflight,reader,roster)
         }
         val first=Disk()
         assertEquals(NativeAuthoringSourceWrite.Committed(1),first.sourceStore.publish(owner,0,sourceForCycle))
@@ -2827,7 +2827,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         val assistance=NativeKotlinCoachAssistanceSettingsStore(
             temp.root.toPath(),fence,identity)
         val coach=NativeKotlinCustomNextWorkoutReview(
-            fence,identity,tx,signoff,sources,reader,issuer,assistance)
+            fence,identity,tx,signoff,sources,reader,assistance)
         val reps=NativeKotlinCustomNextRepApprovalFileStore(
             temp.root.toPath(),fence,identity,tx,coach,prepared,issuer)
         return LiveFutureCoachFixture(tx,signoff,prepared,issuer,history,
@@ -2896,7 +2896,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         // A fresh reader uses persisted facts, not the previous UI result.
         val reopened=NativeKotlinCustomNextWorkoutReview(
             NativeKotlinApprovalRevisionFence(temp.root.toPath()),identity,
-            f.activation,f.signoff,sources,f.reader,f.issuer,f.assistance)
+            f.activation,f.signoff,sources,f.reader,f.assistance)
         assertEquals(reviewed,reopened.review("owner-1",futureInputs(),4,0,
             "slot-0",CoachReadiness.NORMAL,false,n("5")))
     }
@@ -2943,7 +2943,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         return AuthoredCoachFixture(NativeKotlinCustomNextWorkoutReview(
             fence,identity,activation,
             NativeKotlinActivatedCycleSignoffFileStore(root,fence,identity,activation),
-            sources,reader,issuer,
+            sources,reader,
             NativeKotlinCoachAssistanceSettingsStore(root,fence,identity),preflight),
             reader,issuer,history,corrections,prepared)
     }
@@ -4443,7 +4443,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             fence,identity,drafts,sources,store(),permissionStore,
             NativeKotlinCoachAssistanceSettingsStore(temp.root.toPath(),
                 fence,identity),
-            preflight,f.reader,f.issuer,f.coach,
+            preflight,f.reader,f.coach,
             NativeKotlinCustomOutstandingWorkoutInventory(f.prepared,f.issuer))
         return proposal
     }

@@ -9,8 +9,8 @@ data class ProgressionEffort(val rir: Int?, val source: ProgressionEffortSource)
 
 object ProgressionEffortDomain {
     fun forCompletedSet(actualRir: Int?, issuedGoalRir: Int?): ProgressionEffort {
-        require(actualRir == null || actualRir in 0..10)
-        require(issuedGoalRir == null || issuedGoalRir in 0..10)
+        require(KotlinSetNumberAuthorityDomain.validRir(actualRir))
+        require(KotlinSetNumberAuthorityDomain.validRir(issuedGoalRir))
         return when {
             actualRir != null -> ProgressionEffort(actualRir, ProgressionEffortSource.REPORTED)
             issuedGoalRir != null -> ProgressionEffort(issuedGoalRir, ProgressionEffortSource.ASSUMED_GOAL)

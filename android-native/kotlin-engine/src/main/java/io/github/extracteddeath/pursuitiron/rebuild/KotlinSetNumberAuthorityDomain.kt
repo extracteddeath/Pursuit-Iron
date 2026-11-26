@@ -68,8 +68,17 @@ object KotlinSetNumberAuthorityDomain {
      * A submitted load of zero remains an allowed factual observation,
      * whereas a future positive increment must separately exceed zero. */
     fun validPhysicalLoadValue(value:BigDecimal):Boolean =
-        value>=zero && value<=maxLoad &&
-            value.stripTrailingZeros().scale()<=3
+        validPhysicalLoadRange(value) && value.stripTrailingZeros().scale()<=3
+
+    /** Display-only measurements may have greater precision after conversion. */
+    internal fun validPhysicalLoadRange(value:BigDecimal):Boolean =
+        value>=zero && value<=maxLoad
+
+    /** Bounds for a factual completed set, not a prescribed rep target. */
+    fun validCompletedReps(reps:Int?):Boolean = reps!=null && reps in 1..100
+
+    /** Null is genuinely unreported; callers requiring effort must check it. */
+    fun validRir(rir:Int?):Boolean = rir==null || rir in 0..10
 
     /** A prescribed zero means an unloaded implement only for a basis that supports it. */
     fun validPrescribedLoad(value:BigDecimal,basis:LoadBasis):Boolean =
@@ -132,10 +141,10 @@ object KotlinSetNumberAuthorityDomain {
         if(performed.machineInstanceId!=null &&
             !KotlinMachineAlternativesDomain.validInstanceId(performed.machineInstanceId))
             return rejected(KotlinSetNumberRefusal.INVALID_MACHINE_ID)
-        if(performed.actualRir!=null && performed.actualRir !in 0..10)
+        if(!validRir(performed.actualRir))
             return rejected(KotlinSetNumberRefusal.INVALID_ACTUAL_RIR)
         if(outcome==KotlinJournalSetOutcome.COMPLETED &&
-            performed.reps !in 1..100)
+            !validCompletedReps(performed.reps))
             return rejected(KotlinSetNumberRefusal.INVALID_COMPLETED_REPS)
         if(outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT &&
             (performed.reps!=0 || performed.actualRir!=null))

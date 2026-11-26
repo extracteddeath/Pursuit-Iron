@@ -79,6 +79,42 @@ class BasicProgressionPolicyDomainTest {
         }
     }
 
+    @Test fun repeatedPhysicalLoadReviewDoesNotRebuildPairedStockForEveryOrdinal() {
+        val backing=linkedMapOf(n("25") to 1,n("5") to 1,n("2.5") to 1)
+        var enumerations=0
+        val counting=object:Map<BigDecimal,Int> by backing {
+            override val entries:Set<Map.Entry<BigDecimal,Int>>
+                get() { enumerations++;return backing.entries }
+        }
+        val bar=VerifiedLoadStock.Barbell(LoadUnit.LB,n("45"),counting)
+        val scope=scope.copy(basis=LoadBasis.BARBELL_TOTAL,machineInstanceId=null)
+        val uniform=request(BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,
+            reps=List(4){10},loads=listOf("100","100.0","100.00","100.000"),
+            nextScope=scope,previousScope=scope,verifiedStock=bar)
+        val earned=candidate(uniform)
+        assertEquals(List(4){n("105")},earned.proposedWorkingLoads)
+        assertEquals(setOf(0,1,2,3),earned.increasedOrdinals)
+        assertEquals(earned.increasedOrdinals,earned.approvedFutureLoadFacts.keys)
+        assertEquals(1,earned.approvedFutureLoadFacts.values.toSet().size)
+        // One initial inspection and two independent authority inspections.
+        // This counts real stock enumerations, not elapsed CI time.
+        assertEquals(3,enumerations)
+        enumerations=0
+        val partial=candidate(uniform.copy(strategy=BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION,
+            previous=workout(listOf(10,9,10,9),listOf("100","100.0","100.00","100.000"))))
+        assertEquals(listOf(n("105"),n("100.0"),n("105"),n("100.000")),
+            partial.proposedWorkingLoads)
+        assertEquals(setOf(0,2),partial.increasedOrdinals)
+        assertEquals(setOf(0,2),partial.approvedFutureLoadFacts.keys)
+        assertEquals(3,enumerations)
+        // No stale cross-request cache. Changed inventory cannot approve a
+        // formerly attainable load or inherit its previously earned step.
+        backing.remove(n("2.5"))
+        assertEquals(BasicProgressionResult.Refused(BasicProgressionRefusal.STOCK_NOT_VERIFIED),
+            BasicProgressionPolicyDomain.review(uniform))
+        assertEquals(List(4){n("105")},earned.proposedWorkingLoads)
+    }
+
     @Test fun manualLoggingKeepsApprovedNumbersWithoutHistoryStockOrCoaching() {
         val r=candidate(request(BasicProgressionStrategy.MANUAL_LOGGING,
             previous=null,previousScope=null,verifiedStock=null,

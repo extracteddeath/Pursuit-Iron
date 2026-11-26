@@ -62,14 +62,14 @@ object KotlinWorkoutEntryDomain {
                 return KotlinSetEntryResult.Rejected(KotlinSetEntryRefusal.INVALID_REPS)
             val result=raw.toIntOrNull()
                 ?:return KotlinSetEntryResult.Rejected(KotlinSetEntryRefusal.INVALID_REPS)
-            if(result !in 1..100)
+            if(!KotlinSetNumberAuthorityDomain.validCompletedReps(result))
                 return KotlinSetEntryResult.Rejected(KotlinSetEntryRefusal.INVALID_REPS)
             result
         }
         val rir=if(failed || actualRirText.isBlank())null else {
             val raw=actualRirText.trim()
             val value=raw.toIntOrNull()
-            if(!numeric.matches(raw) || value==null || value !in 0..10)
+            if(!numeric.matches(raw) || value==null || !KotlinSetNumberAuthorityDomain.validRir(value))
                 return KotlinSetEntryResult.Rejected(KotlinSetEntryRefusal.INVALID_RIR)
             value
         }

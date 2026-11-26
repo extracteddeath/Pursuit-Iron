@@ -112,6 +112,25 @@ class NativeKotlinMixedHistoryFactsReadTest {
                 java.math.BigDecimal("5"),CoachReadiness.NORMAL,false))
     }
 
+    @Test fun customCoachingProjectionCannotLeakPartialOrForeignHistory() {
+        fun refused(reason:NativeKotlinMixedHistoryRefusal) {
+            val (read,sessions)=reader.readForCustomCoaching("owner-1","athlete-1")
+            assertEquals(NativeKotlinMixedHistoryReadResult.Rejected(reason),read)
+            assertTrue(sessions.isEmpty())
+        }
+        refused(NativeKotlinMixedHistoryRefusal.NOT_ENROLLED)
+        assertTrue(history.enroll("owner-1","athlete-1"){owner,athlete->
+            current==NativeKotlinOwnerIdentity(owner,athlete)
+        } is NativeHistoryLedgerResult.Durable)
+        val (read,sessions)=reader.readForCustomCoaching("owner-1","athlete-1")
+        assertEquals(reader.read("owner-1","athlete-1"),read)
+        assertTrue(sessions.isEmpty())
+        current=NativeKotlinOwnerIdentity("owner-1","another-athlete")
+        refused(NativeKotlinMixedHistoryRefusal.NOT_AUTHORIZED)
+        current=null
+        refused(NativeKotlinMixedHistoryRefusal.NOT_AUTHORIZED)
+    }
+
     @Test fun malformedScopeCannotReadEvenPreviouslyEnrolledHistory() {
         assertEquals(NativeKotlinMixedFactsReadResult.HistoryRejected(
             NativeKotlinMixedHistoryRefusal.INVALID_SCOPE),

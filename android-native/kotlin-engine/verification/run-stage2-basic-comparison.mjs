@@ -20,16 +20,16 @@ const allRows=bytes.toString('utf8').split(/\r?\n/).filter(l=>l&&!l.startsWith('
   const f=l.split('|');assert.equal(f.length,10);return f;
 });
 assert.equal(new Set(allRows.map(f=>f[0])).size,allRows.length);
-const isSelection=f=>['select','select-v13'].includes(f[1].split(':')[0]);
+const isSelection=f=>['select','select-v13','select-saved-auto'].includes(f[1].split(':')[0]);
 const selectionRows=allRows.filter(isSelection).map(f=>{
   const [id,mode,exerciseId,phase,experience,role,band,expectedWeb,expectedKotlin,classification]=f;
-  const manualStyle=mode.split(':')[1];
+  const manualStyle=mode.split(':')[1]; // saved-auto is automatic on both sides
   assert.ok(['matched','catalog-trait-gap','unloaded-rep-route','advanced-auto-gap','explicit-source-gate'].includes(classification));
-  return {id,exerciseId,phase,experience,role,band:band.split(',').map(Number),manualStyle,selectionPolicy:mode.startsWith('select-v13')?'v13':'v12',expectedWeb,expectedKotlin,classification};
+  return {id,exerciseId,phase,experience,role,band:band.split(',').map(Number),manualStyle,selectionPolicy:mode==='select-saved-auto'?'saved-auto':mode.startsWith('select-v13')?'v13':'v12',expectedWeb,expectedKotlin,classification};
 });
 const rows=allRows.filter(f=>!isSelection(f)).map(f=>{
   const [id,style,loads,reps,rir,stock,expectedWeb,expectedKotlin,estimates,classification]=f;
-  assert.ok(['double','dynamic','linear','e1rm'].includes(style));
+  assert.ok(['double','dynamic','linear','e1rm','wave-gate'].includes(style));
   assert.ok(['matched','basic-effort-policy','basic-linear-floor','original-goal-assumption'].includes(classification));
   const numbers=s=>s.split(',').map(Number);
   return {id,style,loads:numbers(loads),reps:numbers(reps),
@@ -47,8 +47,10 @@ const nativeById=new Map(native.map(r=>[r[0],r]));
 const {evaluateWorkoutProgression}=await import(pathToFileURL(resolve(webRoot,'modules/next-engine/performance.js')));
 const results=rows.map(row=>{
   const exerciseId='machine_press';
+  const waveGate=row.style==='wave-gate';
   const exercise={exerciseId,name:'Machine Chest Press',role:'primary',
-    sets:row.loads.length,progressionStyle:row.style,prescription:{reps:[5,8],rir:[2,2]}};
+    sets:row.loads.length,progressionStyle:waveGate?'wave':row.style,
+    prescription:{reps:waveGate?[3,5]:[5,8],rir:[2,2]}};
   const performed=row.loads.map((load,setIndex)=>({exerciseId,setIndex,load,reps:row.reps[setIndex],rir:row.rir[setIndex]}));
   const observed=evaluateWorkoutProgression({exercises:[exercise]},performed,{
     loadingInventory:{unit:'lb',exerciseOverrides:{[exerciseId]:{availableLoads:row.stock}}},
@@ -61,6 +63,7 @@ const results=rows.map(row=>{
   const webPass=web===row.expectedWeb&&webEstimate===expectedEstimates[0];
   const kotlinPass=kotlin===row.expectedKotlin&&kotlinEstimate===expectedEstimates[1];
   return {id:row.id,style:row.style,classification:row.classification,
+    ...(waveGate?{comparisonScope:'same-prescription earned-load gate only',nativeRoute:'existing effort-qualified straight-set gate'}:{}),
     expectedWeb:row.expectedWeb,expectedKotlin:row.expectedKotlin,
     web,kotlin,webEstimate,kotlinEstimate,expectedEstimates,
     webAction:observed.action,webReason:observed.reasonCode,webPass,kotlinPass,
@@ -80,7 +83,7 @@ const selectionResults=selectionRows.map(row=>{
   return {...row,web,kotlin,webSource:observed.source,webReason:observed.reason,
     webPass:web===row.expectedWeb,kotlinPass:kotlin===row.expectedKotlin,matched:web===kotlin};
 });
-const report={schemaVersion:1,scope:'Same-prescription ordinary working sets, explicit e1RM estimates, and separate real-catalog selection probes. Not durable issuance, full phase generation, changed-phase calibration, or release certification.',
+const report={schemaVersion:1,scope:'Same-prescription ordinary working sets, explicit e1RM estimates, shared Wave earned-load gate (not native Wave execution), and separate real-catalog selection probes. Not durable issuance, full phase generation, changed-phase calibration, or release certification.',
   webCommit:webPin,kotlinCommit:git(root,'rev-parse','HEAD'),
   fixtureSha256:createHash('sha256').update(bytes).digest('hex'),results,selectionResults};
 writeFileSync(output,JSON.stringify(report,null,2)+'\n');

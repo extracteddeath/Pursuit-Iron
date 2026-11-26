@@ -264,8 +264,16 @@ try {
         // Regression: four finished sets must look like the ORIGINAL faded set rows,
         // not collapsed to summaries, even when the exercise itself is complete.
         for (let si = 0; si < 4; si++) {
-            await page.click(`[data-testid="set-0-${si}"] button[aria-label="Mark set done"]`);
-            await settle();
+            const row = `[data-testid="set-0-${si}"]`;
+            // The earlier rest regression deliberately re-logged set 2.
+            // Preserve that receipt rather than toggling it off or trying
+            // to complete a row which is already complete.
+            assert.equal(await page.$eval(row, n => n.dataset.done), si === 1 ? '1' : '0');
+            if (si !== 1) {
+                await page.click(row + ' button[aria-label="Mark set done"]');
+                await settle();
+            }
+            assert.equal(await page.$eval(row, n => n.dataset.done), '1');
         }
         const completed = await page.$$eval('[data-testid^="set-0-"][data-done="1"]', rows => rows.map(row => {
             const weight = row.querySelector('input[aria-label="weight"]');

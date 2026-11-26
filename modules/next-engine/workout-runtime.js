@@ -144,6 +144,14 @@ export function refreshPendingSetTargets(sets, fresh) {
             || s.target?.prefillReps == null
             || String(s.weight) !== String(s.target?.w)
             || String(s.reps) !== String(s.target.prefillReps)) return s;
+        // A recorded issuance trace establishes an immutable session target,
+        // not permission to regenerate it from a newly calculated recommendation.
+        // Leave legacy or inconsistent rows to the existing recovery path.
+        const issued = s.target?.decisionTrace;
+        if (issued?.schemaVersion === 1 && issued.ownership === 'prescription'
+            && Number.isFinite(issued.target?.load) && Number.isFinite(issued.target?.reps)
+            && Number(s.weight) === issued.target.load && Number(s.reps) === issued.target.reps)
+            return s;
         // A legacy snapshot with no original rep prefill cannot establish that
         // its current reps were not typed by the user. Fail closed instead of
         // regenerating unprovable values during resume.

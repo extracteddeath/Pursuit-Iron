@@ -31,8 +31,35 @@ class NativeKotlinExerciseExclusionJourneyTest {
             catalog=StarterExerciseTranche.movements().filter{it.exerciseId in setOf("meadows-row","landmine-press","lm-squat")})
     }
 
-    @Test fun issuedWorkoutKeepsLoggingAndHistoryWhileNewIssuanceRequiresReviewAfterExclusionAndUndo() {
-        val source=source()
+    @Test fun issuedWorkoutKeepsLoggingAndHistoryWhileNewIssuanceRequiresReviewAfterExclusionAndUndo() =
+        runExclusionJourney(false)
+
+    @Test fun athleteCreatedExerciseIssuesLogsCorrectsFinishesAndRetiresWithExactHistory() =
+        runExclusionJourney(true)
+
+    private fun runExclusionJourney(userExercise:Boolean) {
+        val initial=source()
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),sources().publish(owner.ownerKey,0,initial))
+        val exerciseId=if(userExercise)"user-my-landmine-press" else "landmine-press"
+        val source=if(userExercise) {
+            val original=initial.catalog.single{it.exerciseId=="landmine-press"}
+            val intent=NativeUserExerciseDraft(owner.ownerKey,owner.athleteId,1,
+                "My Landmine Press",original.pattern,original.role,original.permittedFocus,
+                false,original.equipmentId,original.attachmentId,original.requiredFacilityIds,
+                setOf(TrainingMuscle.FRONT_DELTS),checkNotNull(original.sourcePracticalReps),true)
+            val next=(NativeKotlinGymCatalogEditingDomain.addUserExercise(initial,intent)
+                as NativeGymCatalogEdit.Proposed).source
+            assertEquals(NativeAuthoringSourceWrite.Committed(2),
+                sources().publish(owner.ownerKey,1,next))
+            (sources().read(owner.ownerKey) as NativeAuthoringSourceRead.Found).source
+                .also{assertEquals(next,it)}
+        } else initial
+        val movements=initial.catalog.map{old->
+            if(old.exerciseId=="landmine-press")source.catalog.single{it.exerciseId==exerciseId}
+            else old
+        }
+        assertTrue(CustomExerciseAuthoringDomain.picker(source.setup,source.catalog)
+            .any{it.exerciseId==exerciseId})
         val drafts=NativeCustomCycleDraftFileStore(root,fence(),identity)
         val consent=NativeKotlinCustomCycleSignoffFileStore(root,fence(),identity,drafts,sources())
         val preflight=NativeKotlinCustomWorkoutPreflight(fence(),identity,drafts,sources(),consent)
@@ -43,7 +70,7 @@ class NativeKotlinExerciseExclusionJourneyTest {
         val cycle=CustomTrainingCycle("landmine-cycle",1,owner.athleteId,AthleteTrainingGoal.HYPERTROPHY,
             "Landmine program",listOf(CustomTrainingBlock("base","Base",TrainingPhase.HYPERTROPHY,
                 CustomBlockPurpose.TRAINING,3,CustomSplitIdentity.Freeform("Three days"),listOf(0,2,4).map{day->
-                    CustomTrainingDay(day,"Landmine $day",ComposerSessionPurpose.HYPERTROPHY,source.catalog.map {movement->
+                    CustomTrainingDay(day,"Landmine $day",ComposerSessionPurpose.HYPERTROPHY,movements.map {movement->
                         val reps=checkNotNull(movement.sourcePracticalReps)
                         val work=CustomAuthoredSet(DraftSetType.WORKING,
                             DraftSetLoad.Verified(LoadUnit.KG,LoadBasis.LANDMINE_ADDED_PLATES,n("10")),reps,2,40,90)
@@ -66,9 +93,8 @@ class NativeKotlinExerciseExclusionJourneyTest {
         assertTrue(CustomCycleCoachAuditDomain.review(cycle,limited,source.catalog,inputs).issues.any {
             it.kind==CustomCoachIssueKind.BARBELL_LIMIT
         })
-        assertEquals(NativeAuthoringSourceWrite.Committed(1),sources().publish(owner.ownerKey,0,source))
         assertEquals(NativeCustomDraftWriteResult.Committed(1),drafts.save(owner.ownerKey,"landmine-cycle",0,cycle))
-        val signoff=consent.confirm(owner.ownerKey,"landmine-cycle",1,1,0,inputs,true)
+        val signoff=consent.confirm(owner.ownerKey,"landmine-cycle",1,source.revision,0,inputs,true)
         assertTrue(signoff.toString(),signoff is NativeCustomSignoffWrite.Committed)
         val prepare=prepared.prepare(owner.ownerKey,"landmine-workout","landmine-cycle",1,0,inputs)
         assertTrue(prepare.toString(),prepare is NativeCustomPrepareResult.Prepared)
@@ -76,12 +102,12 @@ class NativeKotlinExerciseExclusionJourneyTest {
         assertTrue(prepared.prepare(owner.ownerKey,"library-future","landmine-cycle",2,0,inputs) is NativeCustomPrepareResult.Prepared)
         var journal=(issued().issue(owner.ownerKey,"landmine-workout","landmine-cycle",1,0,inputs) as NativeCustomJournalResult.Durable).issued.journal
         val snapshot=journal.snapshot
-        val intent=NativeGymExerciseExclusionChange(owner.ownerKey,owner.athleteId,1,
-            checkNotNull(source.setup.reviewed).excludedExerciseIds,setOf("landmine-press"))
+        val intent=NativeGymExerciseExclusionChange(owner.ownerKey,owner.athleteId,source.revision,
+            checkNotNull(source.setup.reviewed).excludedExerciseIds,setOf(exerciseId))
         val excluded=(NativeKotlinGymCatalogEditingDomain.setExerciseExclusions(source,intent) as NativeGymCatalogEdit.Proposed).source
-        assertEquals(NativeAuthoringSourceWrite.Committed(2),sources().publish(owner.ownerKey,1,excluded))
+        assertEquals(NativeAuthoringSourceWrite.Committed(source.revision+1),sources().publish(owner.ownerKey,source.revision,excluded))
         val coldSource=(sources().read(owner.ownerKey) as NativeAuthoringSourceRead.Found).source
-        assertTrue(CustomExerciseAuthoringDomain.picker(coldSource.setup,coldSource.catalog).none{it.exerciseId=="landmine-press"})
+        assertTrue(CustomExerciseAuthoringDomain.picker(coldSource.setup,coldSource.catalog).none{it.exerciseId==exerciseId})
         assertTrue(CustomCycleCoachAuditDomain.review(cycle,coldSource.setup,coldSource.catalog,inputs).issues.any{
             it.kind==CustomCoachIssueKind.EXCLUDED_EXERCISE})
         assertTrue(issued().issue(owner.ownerKey,"library-future","landmine-cycle",2,0,inputs) is NativeCustomJournalResult.Rejected)
@@ -93,7 +119,7 @@ class NativeKotlinExerciseExclusionJourneyTest {
             assertEquals(LoadBasis.LANDMINE_ADDED_PLATES,target.basis)
             assertEquals(LoadUnit.KG,target.unit)
             val actual=if(set.ordinalInSlot==3) {
-                when(slot.exerciseId) { "meadows-row"->n("15");"landmine-press"->n("0");else->n("20") }
+                when(slot.exerciseId) { "meadows-row"->n("15");exerciseId->n("0");else->n("20") }
             } else target.value
             val record=CustomWorkoutJournalOperation.Record("landmine-set-${count++}",journal.revision,
                 CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN),KotlinJournalSetOutcome.COMPLETED,
@@ -130,12 +156,17 @@ class NativeKotlinExerciseExclusionJourneyTest {
         assertEquals(1,cold.timeline.completions.size)
         val csv=NativeKotlinVerifiedHistoryCsvExport.prepare(cold.timeline) as NativeKotlinHistoryCsvResult.Ready
         assertTrue(csv.csv.contains("LANDMINE_ADDED_PLATES"))
-        for(id in listOf("meadows-row","landmine-press","lm-squat"))assertTrue(csv.csv.contains(id))
+        for(id in listOf("meadows-row",exerciseId,"lm-squat"))assertTrue(csv.csv.contains(id))
+        if(userExercise) {
+            assertEquals(3,snapshot.slots.single{it.exerciseId==exerciseId}.sets.size)
+            assertTrue(csv.csv.contains("user-my-landmine-press"))
+            assertEquals(source.catalog,coldSource.catalog)
+        }
         assertEquals(9,csv.rowCount)
-        val reverse=intent.copy(sourceRevision=2,previous=intent.next,next=intent.previous)
+        val reverse=intent.copy(sourceRevision=source.revision+1,previous=intent.next,next=intent.previous)
         val restored=(NativeKotlinGymCatalogEditingDomain.setExerciseExclusions(coldSource,reverse) as NativeGymCatalogEdit.Proposed).source
-        assertEquals(NativeAuthoringSourceWrite.Committed(3),sources().publish(owner.ownerKey,2,restored))
-        assertEquals(source.copy(revision=3),(sources().read(owner.ownerKey) as NativeAuthoringSourceRead.Found).source)
+        assertEquals(NativeAuthoringSourceWrite.Committed(source.revision+2),sources().publish(owner.ownerKey,source.revision+1,restored))
+        assertEquals(source.copy(revision=source.revision+2),(sources().read(owner.ownerKey) as NativeAuthoringSourceRead.Found).source)
         assertTrue(issued().issue(owner.ownerKey,"library-future","landmine-cycle",2,0,inputs) is NativeCustomJournalResult.Rejected)
 
         assertEquals(snapshot,(issued().open(owner.ownerKey,"landmine-workout") as NativeCustomJournalResult.Durable).issued.journal.snapshot)

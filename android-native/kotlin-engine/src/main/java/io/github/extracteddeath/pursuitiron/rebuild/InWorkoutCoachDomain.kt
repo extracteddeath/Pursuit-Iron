@@ -163,9 +163,13 @@ object InWorkoutCoachDomain {
         }
         if(lastReps<request.repBand.minimum) {
             val smaller=planned.nextEasier
+            // Match the web live-coaching ceiling: a verified absolute step is
+            // not sufficient when the same step would remove >10% of this load.
+            // This governs optional advice only, never authored or manual loads.
             if(smaller!=null &&
                 KotlinSetNumberAuthorityDomain.validPrescribedLoad(smaller,planned.basis) &&
-                actual.subtract(smaller).abs()<=request.maximumApprovedReviewStep)
+                actual.subtract(smaller).abs()<=request.maximumApprovedReviewStep &&
+                smaller>=kept.multiply(BigDecimal("0.90")))
                 return result(InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD,
                     "You completed $lastReps of ${request.repBand.minimum} minimum reps. "+
                     "Consider ${smaller.toPlainString()} ${request.unit.name.lowercase()} for this next set only; nothing changes until you choose.",
@@ -173,7 +177,7 @@ object InWorkoutCoachDomain {
                     else CoachConfidence.LIMITED,smaller)
             return result(InWorkoutDirection.NO_SAFE_SMALLER_LOAD,
                 "You completed $lastReps of ${request.repBand.minimum} minimum reps, "+
-                "but no smaller verified weight fits your approved step. Review rest and technique before continuing.")
+                "but no smaller verified weight fits both your approved step and the 10% review limit. Review rest and technique before continuing.")
         }
         if(previous.actualRir!=null && previous.actualRir<=1)
             return result(InWorkoutDirection.REVIEW_MORE_RECOVERY,

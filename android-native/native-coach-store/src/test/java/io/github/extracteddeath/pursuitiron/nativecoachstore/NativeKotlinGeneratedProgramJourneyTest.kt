@@ -974,8 +974,15 @@ class NativeKotlinGeneratedProgramJourneyTest {
         fun look()=Disk().liveCoach.review(owner,id,next.setKey,
             CoachReadiness.NORMAL,false,n("5"))
         val advice=look() as LiveSetCoachResult.Reviewed
-        assertEquals(InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD,advice.coaching.direction)
-        assertEquals(load.value-n("5"),advice.coaching.weightForHumanReview)
+        // This fixture uses verified 5-lb dumbbell steps. A light generated
+        // load may legitimately refuse a step that exceeds 10%, but must
+        // still produce a read-only review from the cold recorded evidence.
+        val allowedStep = load.value >= n("50")
+        val expectedDirection = if (allowedStep) InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD
+            else InWorkoutDirection.NO_SAFE_SMALLER_LOAD
+        assertEquals(expectedDirection,advice.coaching.direction)
+        assertEquals(if (allowedStep) load.value-n("5") else null,advice.coaching.weightForHumanReview)
+        assertEquals(0,load.value.compareTo(advice.coaching.issuedTargetUnchanged))
         assertEquals(journal.revision,advice.journalRevision)
         assertFalse(advice.canModifyWorkout)
         // Introducing physical A/B stations after an unassigned set must
@@ -1005,11 +1012,11 @@ class NativeKotlinGeneratedProgramJourneyTest {
             is NativeMachineRosterResult.Saved)
         // An empty alternatives draft must not take generic equipment
         // inventory away from a lift that has no physical A/B station.
-        assertEquals(InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD,
+        assertEquals(expectedDirection,
             (look() as LiveSetCoachResult.Reviewed).coaching.direction)
         assertTrue(Disk().machines.save(owner,2,emptyList())
             is NativeMachineRosterResult.Saved)
-        assertEquals(InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD,
+        assertEquals(expectedDirection,
             (look() as LiveSetCoachResult.Reviewed).coaching.direction)
         val corrected=hard.copy(eventId="live-correction",expectedRevision=journal.revision,
             performed=hard.performed!!.copy(reps=first.prescription.reps.minimum,
@@ -1110,8 +1117,12 @@ class NativeKotlinGeneratedProgramJourneyTest {
                     futureWorking.setKey, CoachReadiness.NORMAL, false, n("5"))
                 assertTrue(review.toString(), review is LiveSetCoachResult.Reviewed)
                 val suggested = review as LiveSetCoachResult.Reviewed
-                assertEquals(InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD,
-                    suggested.coaching.direction)
+                val load = (futureWorking.prescription.load as DraftSetLoad.Verified).value
+                val allowedStep = load >= n("50")
+                assertEquals(if (allowedStep) InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD
+                    else InWorkoutDirection.NO_SAFE_SMALLER_LOAD,suggested.coaching.direction)
+                assertEquals(if (allowedStep) load-n("5") else null,suggested.coaching.weightForHumanReview)
+                assertEquals(0,load.compareTo(suggested.coaching.issuedTargetUnchanged))
                 assertFalse(suggested.canModifyWorkout)
                 assertEquals(issued, (Disk().journals.open(owner, workoutId)
                     as NativeCustomJournalResult.Durable).issued.journal.snapshot)

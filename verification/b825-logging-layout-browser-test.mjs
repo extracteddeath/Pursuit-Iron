@@ -133,7 +133,10 @@ try {
             'IME navigation leaves the typed reps unchanged');
         assert.equal(await page.$eval('[data-testid="set-0-0"]', n=>n.dataset.done),'0',
             'IME Done does not log or complete the set');
-        await page.click('[data-testid="set-0-0"] button[aria-label="weight up"]');
+        await page.tap(weightField);
+        await page.tap('[data-testid="set-0-0"] button[aria-label="weight up"]');
+        assert.equal(await page.$eval(weightField, input => document.activeElement === input),false,
+            'A stepper tap dismisses the active numeric selection instead of keeping Android editing mode open');
         assert.ok(Number(await page.$eval(weightField, input => input.value)) > 205.5, 'steppers continue from the typed decimal');
         await page.focus('[data-testid="set-0-0"] button[aria-label="weight down"]');
         await page.keyboard.press('Tab');
@@ -247,7 +250,11 @@ try {
             await page.keyboard.type(replacement);
             assert.equal(await page.$eval(selector, input => input.value), replacement);
         }
-        await page.click('button[aria-label="Exit focused mode"]');
+        await page.tap('.wpb-focus-value-input[aria-label="reps"]');
+        await page.tap('button[aria-label="Exit focused mode"]');
+        await settle();
+        assert.equal(await page.evaluate(() => document.activeElement?.matches('.wpb-focus-value-input')),false,
+            'Leaving Focus dismisses pending touch selection; deferred callbacks cannot restore the old field');
         await page.waitForSelector('[data-testid="set-0-0"]');
         assert.equal(await page.$eval(weightField, input => input.value), '195');
         assert.equal(await page.$eval(repsField, input => input.value), '6');

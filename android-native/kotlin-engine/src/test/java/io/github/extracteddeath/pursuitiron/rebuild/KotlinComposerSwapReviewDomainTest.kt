@@ -146,9 +146,10 @@ class KotlinComposerSwapReviewDomainTest {
         val previous=java.util.Locale.getDefault()
         try {
             java.util.Locale.setDefault(java.util.Locale.forLanguageTag("tr-TR"))
+            assertEquals(ranked,KotlinComposerSwapRankingDomain.filterRanked(
+                ranked,"PRIMARY",displayLabels=labels))
             assertEquals(listOf("chest-machine"),KotlinComposerSwapRankingDomain.filterRanked(
-                ranked,"PRIMARY",displayLabels=labels).map{it.option.exerciseId}
-                .filter{it=="chest-machine"})
+                ranked,"PRIMARY SEATED",displayLabels=labels).map{it.option.exerciseId})
         } finally {java.util.Locale.setDefault(previous)}
         assertEquals(listOf("chest-machine"),
             KotlinComposerSwapRankingDomain.rank(

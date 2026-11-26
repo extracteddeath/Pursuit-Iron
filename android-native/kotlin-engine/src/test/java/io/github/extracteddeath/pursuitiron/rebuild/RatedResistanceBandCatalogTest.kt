@@ -32,13 +32,13 @@ class RatedResistanceBandCatalogTest {
         r.issues.any{it.exerciseId==id && it.kind==kind}
 
     @Test fun allSixteenWebBandIdentitiesKeepDistinctReviewAndPracticalRepBands() {
-        assertEquals(369,entries.size)
+        assertEquals(370,entries.size)
         val ids=RatedResistanceBandDomain.reviewedExerciseIds()
         assertEquals(16,ids.size)
-        assertEquals("spanish-squat",entries.dropLast(7).last().legacyCuratedId)
+        assertEquals("spanish-squat",entries[361].legacyCuratedId)
         assertEquals(listOf("assisted-dip","assisted-chinup","assisted-pullup"),
-            entries.dropLast(4).takeLast(3).map{it.legacyCuratedId})
-        assertEquals(ids,entries.dropLast(8).takeLast(16)
+            entries.drop(362).take(3).map{it.legacyCuratedId})
+        assertEquals(ids,entries.drop(345).take(16)
             .map{it.legacyCuratedId}.toSet())
         assertEquals(RepBand(10,40),byId.getValue("band_lateral_raise").practicalRepBand)
         assertEquals(RepBand(15,25),byId.getValue("banded-tib-raise").practicalRepBand)

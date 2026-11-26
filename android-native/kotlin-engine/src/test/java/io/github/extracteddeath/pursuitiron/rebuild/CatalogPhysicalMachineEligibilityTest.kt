@@ -13,7 +13,7 @@ class CatalogPhysicalMachineEligibilityTest {
         val overrides=catalog.filter {
             it.expectedLoadBasis==LoadBasis.EXERCISE_OVERRIDE
         }
-        assertEquals(68,overrides.size) // 42 physical machines + 6 portable + 16 nominal bands + 4 physical neck implements
+        assertEquals(69,overrides.size) // 42 machines + 7 portable + 16 nominal bands + 4 neck implements
         val qualified=overrides.filter(CatalogPhysicalMachineEligibility::eligible)
         assertEquals(42,qualified.size)
         assertTrue(qualified.all{it.equipmentId!=null})
@@ -27,7 +27,7 @@ class CatalogPhysicalMachineEligibilityTest {
         }
         for(id in listOf("hammer-radial-dev","hammer-ulnar-dev",
             "wrist-roller","plate-front-raise",
-            "svend-press","gripper")) {
+            "svend-press","gripper","weighted-pullup")) {
             assertFalse("Portable equipment must not create A/B: "+id,
                 CatalogPhysicalMachineEligibility.eligible(byId.getValue(id)))
         }

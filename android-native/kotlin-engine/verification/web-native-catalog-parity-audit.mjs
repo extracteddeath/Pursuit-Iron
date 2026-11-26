@@ -118,6 +118,7 @@ export function reviewCatalogCoverage(legacyExercises,nativeStarter) {
     // Never call exact matches approved/independently reviewed.
     independentlyCertifiedMappings:0,
     sourceMatchedIds:sourceMatched.map(x=>x.id),
+    nativeOnlyIds:nativeStarter.filter(id=>!oldIds.includes(id)),
     missingByMovementFamily:families,
     missingByMeasurementSemantics:Object.entries(pendingMeasurementSemantics)
       .map(([reason,ids])=>({
@@ -216,6 +217,10 @@ function selfTest() {
     'All three reviewed assisted machine identities must be source matched');
   for(const id of pendingMeasurementSemantics.ASSISTED_COUNTERWEIGHT)
     assert.ok(nativeStarterIds.includes(id),'Missing reviewed assisted machine: '+id);
+  assert.deepEqual(completeAudit.nativeOnlyIds,['weighted-pullup'],
+    'Historical weighted pull-up is a separate native identity, not a current-web exact match');
+  assert.equal(completeAudit.exactIdMatches,369,
+    'The frozen current-web source denominator is unchanged');
   assert.equal(completeAudit.webBuiltinsNotInStarter,14,
     'The current reconciled web catalog must have exactly 14 remaining time/distance/hybrid gaps');
   for(const id of ['neck-extension','neck-curl','neck-harness','neck-lateral'])

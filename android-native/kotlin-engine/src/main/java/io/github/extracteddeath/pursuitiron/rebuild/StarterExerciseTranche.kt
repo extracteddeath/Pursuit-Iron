@@ -7,7 +7,9 @@ import java.util.Collections
  * First source-linked, ENGINEERING-REVIEWED-PROVISIONAL starter tranche.
  * It is not a medically or independently science-validated exercise library.
  *
- * Each ID below is an exact canonical legacy curated/extended source ID, not a newly minted alias.
+ * Current canonical source IDs remain append-stable. A separately documented
+ * historical shell identity may require a distinct native-only ID when its
+ * physical loading semantics conflict with a current canonical ID.
  * Facilities and weight conventions are explicit, and no user load is set
  * here. Numeric loads must be provided and verified against a real gym.
  *
@@ -2352,10 +2354,21 @@ object StarterExerciseTranche {
             setOf("supported-neck-lateral"),12..20,
             "Lateral neck raising requires its own individually confirmed resistance and controlled supported position. Track lateral neck function independently; neither left/right loading equivalence nor neck curl/extension resistance is inferred.",
             direct(TrainingMuscle.NECK_LATERAL_FLEXORS))
+    ) + listOf(
+        // Historical shell catalog.js:79 uses pullup for Weighted Pull-Up.
+        // The effective curated pullup ID is explicitly unweighted.
+        // Append a distinct identity; never change the existing ID or its history.
+        entry("weighted-pullup","vertical_pull","added-load-overhand",
+            ComposerPattern.VERTICAL_PULL,ComposerRole.PRIMARY,pull,
+            "weighted-pullup-resistance",LoadBasis.EXERCISE_OVERRIDE,
+            setOf("pullup-bar","weighted-pullup-setup"),6..12,
+            "Pinned shell Weighted Pull-Up uses independently confirmed added external resistance and a secure loading setup. Log the added mass only, not total body mass or assistance. The active unweighted pullup and assisted-pullup histories never transfer.",
+            direct(TrainingMuscle.LATS),
+            indirect(TrainingMuscle.BICEPS,"0.5"))
     )
 
     init {
-        require(definitions.size==369)
+        require(definitions.size==370)
         require(definitions.map {it.legacyCuratedId}.distinct().size==
             definitions.size)
         require(definitions.all {

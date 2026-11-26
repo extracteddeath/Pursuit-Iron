@@ -25,8 +25,23 @@ const activeIds=new Set([
   ...EXERCISES.map(ex=>ex.id),
   ...reviewedRequestFixture.records.map(ex=>ex.id)
 ]);
+// A historical shell collision is not a current-web exact ID. Require
+// the frozen source row and its independent native added-load identity.
+const historicalShell=JSON.parse(readFileSync(
+  'android-native/STAGE1_WEB_SHELL_INVENTORY.json','utf8'));
+const weighted=historicalShell.shellRows.find(row=>row.id==='SHELL-pullup');
+assert.equal(weighted?.name,'Weighted Pull-Up');
+assert.equal(weighted?.candidateWebId,'pullup');
+assert.equal(EXERCISES.find(ex=>ex.id==='pullup')?.name,'Pull-Up');
+assert.match(source,/entry\("weighted-pullup","vertical_pull","added-load-overhand",\s*ComposerPattern\.VERTICAL_PULL,ComposerRole\.PRIMARY,pull,\s*"weighted-pullup-resistance",LoadBasis\.EXERCISE_OVERRIDE/);
+assert.match(labels,/"weighted-pullup" to "Weighted Pull-Up \(added load\)"/);
+assert.match(labels,/"pullup" to "Pull-Up"/);
+const historicalNativeIds=new Set(['weighted-pullup']);
+assert.ok([...historicalNativeIds].every(id=>!activeIds.has(id)),
+  'Separate native identity must not inflate current-web exact matches');
 for(const [id,label] of mappings.map(m=>[m[1],m[2]])) {
-  assert.ok(activeIds.has(id),'label must match an active source ID: '+id);
+  assert.ok(activeIds.has(id)||historicalNativeIds.has(id),
+    'label must match a reviewed current or historical source identity: '+id);
   assert.ok(label.length>=4 && !label.includes('${') && !label.startsWith('"'),
     'label must be a usable human-readable static Kotlin display name: '+id);
 }
@@ -65,8 +80,9 @@ const gymEditor=readFileSync(
   'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGymSourceCandidateScreen.kt','utf8');
 const stockLabels=readFileSync(
   'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinPhysicalStockDraft.kt','utf8');
+assert.match(fixtureUi,/"weighted-pullup-setup" to "Secure added-weight pull-up setup"/);
 for(const id of ['neck-extension-device','neck-flexion-device',
-  'neck-harness-device','neck-lateral-device']) {
+  'neck-harness-device','neck-lateral-device','weighted-pullup-resistance']) {
   assert.ok(gymEditor.includes('"'+id+'"'),
     'Loaded neck movement must choose athlete-verified exact stock: '+id);
   assert.ok(stockLabels.includes('"'+id+'" -> "'),

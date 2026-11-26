@@ -9816,3 +9816,14 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-profile-edit-heading{margin:0;font-size:.875rem;line-height:1.43;font-weight:700;letter-spacing:.006em;color:var(--wpb-theme-accent-ink);}
 #root .wpb .wpb-profile-edit-label{margin:4px 0 -8px;font-size:.75rem;font-weight:700;letter-spacing:.03em;color:var(--wpb-theme-muted);}
 #root .wpb .wpb-profile-edit-section .wpb-profile-chip-row{display:flex;flex-wrap:wrap;gap:8px;}
+
+
+/* Plan progression: the two-week controls and column labels stay together
+   while the exercise list scrolls. Clip disclosure animation without making
+   the disclosure itself a competing scroll container. */
+#root .wpb .wpb-plan-view .wpb-info-card:has(.wpb-progression),
+#root .wpb .wpb-plan-view .wpb-motion-reveal:has(.wpb-progression){overflow:clip}
+#root .wpb .wpb-plan-view .wpb-progression-week-header{
+  position:sticky;top:0;z-index:3;background:var(--wpb-theme-card);
+  padding-block:var(--pi-space-2);border-bottom:1px solid var(--wpb-theme-border-soft);
+}

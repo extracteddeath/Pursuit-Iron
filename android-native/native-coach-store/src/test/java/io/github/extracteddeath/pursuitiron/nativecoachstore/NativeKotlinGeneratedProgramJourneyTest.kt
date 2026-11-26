@@ -457,6 +457,14 @@ class NativeKotlinGeneratedProgramJourneyTest {
             assertEquals(base,CoachFirstProgramDraftConversionDomain.propose(replay,
                 setup(phase=TrainingPhase.STRENGTH),catalog,cycleId,seed.title,seed.blockWeeks).cycle)
             assertEquals(base,(cold.drafts.read(owner,cycleId) as NativeCustomDraftReadResult.Found).draft)
+            val v13=CoachFirstProgramStartDomain.review(request(phase=TrainingPhase.STRENGTH).copy(
+                policyVersion=CoachFirstProgramStartDomain.V13_POLICY_VERSION))
+            val older=checkNotNull(CoachFirstProgramDraftConversionDomain.propose(v13,
+                setup(phase=TrainingPhase.STRENGTH),catalog,cycleId,seed.title,seed.blockWeeks).cycle)
+            val olderSlot=older.blocks.single().days.single{it.weekday==day.weekday}
+                .slots.single{it.slotId==slot.slotId}
+            assertEquals(SavedProgressionMethod.DOUBLE,olderSlot.progressionMethod)
+            assertEquals(olderSlot.sets,slot.sets)
             base
         } else base.copy(revision=base.revision+1,blocks=listOf(block.copy(
             days=block.days.map{d->if(d.weekday!=day.weekday)d else d.copy(

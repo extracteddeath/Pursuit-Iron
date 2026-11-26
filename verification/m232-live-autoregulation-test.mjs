@@ -269,7 +269,8 @@ assert.equal(repairedCap[1].suggested, undefined, 'Retired tuning cannot leave a
     const legacy = structuredClone(adjusted.sets);
     const row = legacy[2];
     row.weight = '95';
-    row.target.w = 95;
+    // Legacy applied target is a separate object from its rollback snapshot.
+    row.target = { ...row.target, w: 95 };
     row.liveAdjustment.action = 'reduce_pending_load';
     const original = structuredClone(legacy);
     const recovered = reconcileRestoredLiveAdjustments(legacy);

@@ -201,6 +201,81 @@ class CustomBasicHistoryProgressionDomainTest {
             CustomBasicHistoryProgressionDomain.review(request.copy(experience=AthleteExperience.BEGINNER)))
     }
 
+    @Test fun savedAutoWaveUsesOriginalEffortAndKeepsAuthoredWeeksAndExplicitMethods() {
+        val band=RepBand(3,6)
+        val weight=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.BARBELL_TOTAL,n(100))
+        fun prescription(s:CustomAuthoredSet)=s.copy(load=weight,reps=band)
+        fun program(method:SavedProgressionMethod):CustomTrainingCycle {
+            val base=cycle(method)
+            return base.copy(blocks=base.blocks.map{block->
+                block.copy(phase=TrainingPhase.STRENGTH,weeks=6,days=block.days.map{day->
+                    day.copy(purpose=ComposerSessionPurpose.STRENGTH_SKILL,
+                        slots=day.slots.map{slot->slot.copy(exerciseId="barbell_bench",
+                            role=ComposerRole.PRIMARY,sets=slot.sets.map(::prescription))})
+                })
+            })
+        }
+        fun strength(s:CustomWorkoutDaySnapshot)=s.copy(phase=TrainingPhase.STRENGTH,
+            sessionPurpose=ComposerSessionPurpose.STRENGTH_SKILL,
+            slots=s.slots.map{slot->slot.copy(exerciseId="barbell_bench",
+                role=ComposerRole.PRIMARY,sets=slot.sets.map{set->
+                    set.copy(prescription=prescription(set.prescription))
+                })})
+        val oldBase=completed(1,week=2,reps=listOf(6,6))
+        val oldSnapshot=strength(oldBase.snapshot)
+        val old=oldBase.copy(snapshot=oldSnapshot,evidence=oldBase.evidence.copy(
+            visits=oldSnapshot.slots.single().sets.mapIndexed{i,set->
+                CustomHistoricalVisitFact("main","barbell_bench",set.setKey,
+                    CustomWorkoutVisitPart.MAIN,DraftSetType.WORKING,weight,band,2,null,
+                    KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(n(100),LoadUnit.LB,6,null),
+                    "record-1-"+i)
+            }))
+        val catalog=StarterExerciseTranche.movements().associateBy{it.exerciseId}
+        val verified=VerifiedLoadStock.Barbell(LoadUnit.LB,n(45),
+            mapOf(n(25) to 1,BigDecimal("2.5") to 1,n(5) to 1))
+        val request=CustomBasicHistoryRequest(program(SavedProgressionMethod.AUTO),
+            strength(snapshot(week=3)),"future","main",listOf(old),null,verified,n(5),
+            reviewedCatalog=catalog,experience=AthleteExperience.ADVANCED)
+        val earned=CustomBasicHistoryProgressionDomain.review(request)
+            as CustomBasicHistoryResult.Reviewed
+        assertEquals(listOf(n(105),n(105)),earned.candidate.proposedWorkingLoads)
+        assertEquals(true,earned.candidate.waveGoalEffortMet)
+        assertEquals(2,earned.candidate.waveAssumedGoalRirSetCount)
+        assertNull(earned.candidate.e1rmEvidence)
+        assertFalse(earned.maySaveProgram)
+        assertFalse(earned.mayIssueWorkout)
+        assertFalse(earned.mayModifyHistory)
+        val first=old.evidence.visits.first()
+        val corrected=old.copy(evidence=old.evidence.copy(visits=listOf(
+            first.copy(actual=checkNotNull(first.actual).copy(actualRir=0)))+
+            old.evidence.visits.drop(1)))
+        val held=CustomBasicHistoryProgressionDomain.review(request.copy(completed=listOf(corrected)))
+            as CustomBasicHistoryResult.Reviewed
+        assertEquals(listOf(n(100),n(100)),held.candidate.proposedWorkingLoads)
+        assertEquals(false,held.candidate.waveGoalEffortMet)
+        assertTrue(held.candidate.increasedOrdinals.isEmpty())
+        val explicit=CustomBasicHistoryProgressionDomain.review(request.copy(
+            cycle=program(SavedProgressionMethod.DOUBLE),completed=listOf(corrected)))
+            as CustomBasicHistoryResult.Reviewed
+        assertEquals(listOf(n(105),n(105)),explicit.candidate.proposedWorkingLoads)
+        assertNull(explicit.candidate.waveGoalEffortMet)
+        val before=request.next.slots.single().sets.map{it.prescription}
+        val edit=checkNotNull(CustomBasicProgressionDraftDomain.forWeekEdit("main",before,earned))
+        val authored=request.cycle.copy(weekOverrides=mapOf("base" to listOf(
+            CustomWeekSlotOverride(3,0,"main",edit))))
+        val signedWeek=request.next.copy(slots=request.next.slots.map{slot->
+            slot.copy(sets=slot.sets.mapIndexed{i,set->set.copy(prescription=edit[i])})
+        })
+        assertEquals(CustomBasicHistoryResult.Rejected(CustomBasicHistoryRefusal.AUTHORED_OR_SPECIALIST_OWNS_LOAD),
+            CustomBasicHistoryProgressionDomain.review(request.copy(cycle=authored,next=signedWeek)))
+        val late=CustomBasicHistoryProgressionDomain.review(request.copy(
+            next=strength(snapshot(week=5)))) as CustomBasicHistoryResult.Reviewed
+        assertNotNull(late.candidate.e1rmEvidence)
+        assertNull(late.candidate.waveGoalEffortMet)
+        assertEquals(listOf(n(100),n(100)),before.map{(it.load as DraftSetLoad.Verified).value})
+        assertEquals(SavedProgressionMethod.AUTO,authored.blocks.first().days.first().slots.first().progressionMethod)
+    }
+
     @Test fun progressionMatchesPhysicalWeightNumericallyAndVerifiesTheIssuedReceipt() {
         val prior = completed(1)
         fun from(first: CustomHistoricalVisitFact) = review(sessions = listOf(prior.copy(

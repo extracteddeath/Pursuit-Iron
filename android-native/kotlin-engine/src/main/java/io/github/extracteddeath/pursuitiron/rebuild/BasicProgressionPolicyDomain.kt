@@ -64,7 +64,9 @@ data class BasicProgressionRequest(
     /** Approved exact set targets, required for REP_TARGET_PROGRESSION only. */
     val issuedRepTargets: List<Int>? = null,
     /** Explicit saved e1RM intent, never an inferred coaching overlay. */
-    val effortAdjustedE1rm:Boolean=false
+    val effortAdjustedE1rm:Boolean=false,
+    /** Same-prescription Auto Wave requires goal effort but no estimated max. */
+    val requireGoalEffort:Boolean=false
 )
 
 enum class BasicProgressionRefusal {
@@ -115,7 +117,9 @@ sealed interface BasicProgressionResult {
          * number authority. A hold, refusal, rep-only mode, or atomic
          * rollback must not retain a speculative approval. */
         val approvedFutureLoadFacts: Map<Int,KotlinFutureLoadFact> = emptyMap(),
-        val e1rmEvidence:BasicE1rmEvidence?=null
+        val e1rmEvidence:BasicE1rmEvidence?=null,
+        val waveGoalEffortMet:Boolean?=null,
+        val waveAssumedGoalRirSetCount:Int=0
     ): BasicProgressionResult {
         val mayModifyLoggedSets: Boolean get() = false
         val mayModifyIssuedWorkout: Boolean get() = false
@@ -140,10 +144,12 @@ object BasicProgressionPolicyDomain {
             })
             return reject(BasicProgressionRefusal.INVALID_SOURCE_OR_LOAD)
 
-        if(request.effortAdjustedE1rm &&
+        if((request.effortAdjustedE1rm || request.requireGoalEffort) &&
             request.strategy!=BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION)
             return reject(BasicProgressionRefusal.INVALID_SOURCE_OR_LOAD)
         var e1rmEvidence:BasicE1rmEvidence?=null
+        var goalEffortMet:Boolean?=null
+        var assumedGoalCount=0
         fun candidate(values: List<BigDecimal>, changed: Set<Int>,
             decision: BasicProgressionDecision, workoutId: String? = null,
             repTargets: List<Int>? = null, changedReps: Set<Int> = emptySet(),
@@ -157,7 +163,9 @@ object BasicProgressionPolicyDomain {
                 Collections.unmodifiableSet(changedReps.toSet()),
                 Collections.unmodifiableList(dynamicDecisions.toList()),
                 request.nextScope,
-                Collections.unmodifiableMap(approved.toSortedMap()),e1rmEvidence)
+                Collections.unmodifiableMap(approved.toSortedMap()),e1rmEvidence,
+                goalEffortMet.takeIf{request.requireGoalEffort},
+                if(request.requireGoalEffort)assumedGoalCount else 0)
 
         // Basic logging deliberately neither requires a history or a gym
         // inventory, nor invokes progression or adaptive coaching.
@@ -217,22 +225,25 @@ object BasicProgressionPolicyDomain {
         if (uniformStrategy && loads.any { it.compareTo(loads.first()) != 0 })
             return reject(BasicProgressionRefusal.UNSUPPORTED_STRAIGHT_SET_SCHEME)
 
-        if(request.effortAdjustedE1rm) {
-            // This is the current same-prescription web e1RM gate: an
-            // effort-adjusted estimate is informative, not permission to
-            // skip the complete top-range exposure or invent a load.
+        if(request.effortAdjustedE1rm || request.requireGoalEffort) {
+            // Same-prescription Wave and e1RM share the same effort gate.
+            // Only e1RM computes an estimate; neither grants a load.
             if(facts.any{it.issuedRir !in 0..10})
                 return reject(BasicProgressionRefusal.HISTORY_NOT_COMPARABLE)
             val effort=facts.map(ProgressionEffortDomain::resolve)
-            val estimates=facts.zip(effort).map{(fact,reserve)->
+            assumedGoalCount=effort.count{it.assumed}
+            goalEffortMet=facts.zip(effort).all{(fact,reserve)->
+                checkNotNull(reserve.rir)>=checkNotNull(fact.issuedRir)}
+            if(request.effortAdjustedE1rm) {
+                val estimates=facts.zip(effort).map{(fact,reserve)->
                 StrengthStandardsMeasurementDomain.effortAdjustedEpley(
                     checkNotNull(fact.actualLoad),checkNotNull(fact.actualReps),
                     reserve.rir?:return reject(BasicProgressionRefusal.HISTORY_NOT_COMPARABLE))
                     ?:return reject(BasicProgressionRefusal.HISTORY_NOT_COMPARABLE)
             }
-            e1rmEvidence=BasicE1rmEvidence(estimates.maxOrNull()!!,
-                effort.count{it.assumed},facts.zip(effort).all{(fact,reserve)->
-                    checkNotNull(reserve.rir)>=checkNotNull(fact.issuedRir)})
+                e1rmEvidence=BasicE1rmEvidence(estimates.maxOrNull()!!,
+                    assumedGoalCount,checkNotNull(goalEffortMet))
+            }
         }
 
         val assistance = !request.nextScope.basis.higherSettingIncreasesDifficulty
@@ -281,7 +292,7 @@ object BasicProgressionPolicyDomain {
 
         val ceilingOrdinals = facts.indices.filter {
             facts[it].actualReps!! >= request.repBand.maximum &&
-                e1rmEvidence?.everySetMeetsGoal!=false
+                goalEffortMet!=false
         }
         val floorOrdinals = facts.indices.filter {
             facts[it].actualReps!! >= request.repBand.minimum

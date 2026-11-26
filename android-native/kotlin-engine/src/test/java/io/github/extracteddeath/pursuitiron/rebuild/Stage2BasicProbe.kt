@@ -15,7 +15,7 @@ object Stage2BasicProbe {
             val f=line.split('|')
             require(f.size==10)
             val style=f[1]
-            if(style.substringBefore(':') in setOf("select","select-v13","select-saved-auto"))
+            if(style.substringBefore(':') in setOf("select","select-v13","select-saved-auto","select-week"))
                 return@map selection(f)
             val waveGate=style=="wave-gate"
             val band=if(waveGate)RepBand(3,5) else RepBand(5,8)
@@ -38,14 +38,14 @@ object Stage2BasicProbe {
                 band,loads.size,facts,scope.trainingDayId)
             val result=BasicProgressionPolicyDomain.review(BasicProgressionRequest(
                 mode,"next",scope,scope,history,band,loads,stock,BigDecimal("5"),
-                effortAdjustedE1rm=style=="e1rm" || waveGate)) as BasicProgressionResult.Candidate
+                effortAdjustedE1rm=style=="e1rm",requireGoalEffort=waveGate)) as BasicProgressionResult.Candidate
             require(!result.mayModifyIssuedWorkout&&!result.mayModifyLoggedSets&&!result.maySaveFutureProgram)
             require(result.approvedFutureLoadFacts.keys==result.increasedOrdinals)
             require(history.observations==facts)
             val weights=result.proposedWorkingLoads.joinToString(","){it.stripTrailingZeros().toPlainString()}
             // A Wave gate probe compares only the shared weight decision, not a
             // fabricated native Wave method or an estimate that Wave does not use.
-            if(waveGate)require(result.e1rmEvidence!=null)
+            if(waveGate)require(result.e1rmEvidence==null && result.waveGoalEffortMet!=null)
             val estimate=if(waveGate)"-" else
                 result.e1rmEvidence?.estimatedOneRepMax?.stripTrailingZeros()?.toPlainString()?:"-"
             f[0]+"|"+weights+"|"+estimate
@@ -59,6 +59,9 @@ object Stage2BasicProbe {
     // This is a source recommendation comparison, not a generated program
     // or approval grant; no new runtime policy is embedded in the probe.
     private fun selection(f:List<String>):String {
+        val weekly=f[1].startsWith("select-week:")
+        val week=if(weekly)f[1].split(':')[1].toInt() else null
+        val weeks=if(weekly)f[1].split(':')[2].toInt() else 6
         val movement=StarterExerciseTranche.movements().single{it.exerciseId==f[2]}
         val phase=when(f[3]) {
             "hypertrophy_accumulation" -> TrainingPhase.HYPERTROPHY
@@ -87,26 +90,31 @@ object Stage2BasicProbe {
         val set=CustomAuthoredSet(DraftSetType.WORKING,load,band,2,45,90,
             exactRepTarget=band.minimum)
         val slot=CustomExerciseSlot("slot",movement.exerciseId,role,listOf(set,set),
-            progressionMethod=if(f[1]=="select-saved-auto")SavedProgressionMethod.AUTO else null)
-        val block=CustomTrainingBlock("block","Block",phase,CustomBlockPurpose.TRAINING,6,
+            progressionMethod=if(weekly || f[1]=="select-saved-auto")SavedProgressionMethod.AUTO else null)
+        val block=CustomTrainingBlock("block","Block",phase,CustomBlockPurpose.TRAINING,weeks,
             CustomSplitIdentity.Named(ComposerSplit.FULL_BODY),
-            listOf(CustomTrainingDay(0,"Day",ComposerSessionPurpose.UNSPECIFIED,listOf(slot))))
+            listOf(CustomTrainingDay(0,"Day",if(weekly)ComposerSessionPurpose.STRENGTH_SKILL
+                else ComposerSessionPurpose.UNSPECIFIED,listOf(slot))))
         val cycle=CustomTrainingCycle("cycle",1,"athlete",AthleteTrainingGoal.POWERBUILDING,
             "Selection fixture",listOf(block))
         val key=ProgramProgressionSlotKey("block",0,"slot")
-        val selected=f[1].substringAfter(':',"").takeIf{it.isNotEmpty()}?.let{
+        val selected=f[1].substringAfter(':',"").takeIf{!weekly && it.isNotEmpty()}?.let{
             mapOf(key to NativeProgressionStyle.valueOf(it.uppercase()))
         }.orEmpty()
         val outcome=BasicProgramProgressionPlanDomain.review(cycle,
             selectedStyles=selected,reviewedCatalog=mapOf(movement.exerciseId to movement),
-            experience=experience,reviewedAuto=f[1].substringBefore(':')=="select-v13")
+            experience=experience,reviewedAuto=f[1].substringBefore(':')=="select-v13",
+            previewWeek=week?.let{ProgramProgressionWeek("block",it)})
         val method=when(outcome) {
             is ProgramProgressionPlan.Refused -> "refused"
             is ProgramProgressionPlan.Ready -> {
                 require(!outcome.mayIssueWorkout && !outcome.maySaveProgram)
                 val assignment=outcome.assignments.single()
                 require(assignment.key==key && assignment.exerciseId==movement.exerciseId)
-                BasicProgramProgressionPlanDomain.savedChoice(assignment)?.name?.lowercase()
+                if(weekly && assignment.selectedStyle==NativeProgressionStyle.WAVE) {
+                    require(BasicProgramProgressionPlanDomain.savedChoice(assignment)==SavedProgressionMethod.AUTO)
+                    "wave"
+                } else BasicProgramProgressionPlanDomain.savedChoice(assignment)?.name?.lowercase()
                     ?: assignment.route.name.lowercase()
             }
         }

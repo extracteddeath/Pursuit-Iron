@@ -49,7 +49,9 @@ data class ProgramProgressionAssignment(
     val authoredWeekNumbers:Set<Int>,
     val explanation:String,
     val selectedStyle:NativeProgressionStyle?=null,
-    val savedMethod:SavedProgressionMethod?=null
+    val savedMethod:SavedProgressionMethod?=null,
+    /** Same eligibility proof used by the actual weekly selector and new generator. */
+    val weeklyAutoEligible:Boolean=false
 ) {
     val mayChangeSavedProgram:Boolean get()=false
     val mayModifyIssuedSet:Boolean get()=false
@@ -86,7 +88,9 @@ object BasicProgramProgressionPlanDomain {
                 else SavedProgressionMethod.BODYWEIGHT_REPS
             ProgramProgressionRoute.MANUAL -> SavedProgressionMethod.MANUAL
             ProgramProgressionRoute.BASIC_WEIGHTED ->
-                when(assignment.basicStrategy) {
+                if(assignment.selectedStyle==NativeProgressionStyle.WAVE)
+                    SavedProgressionMethod.AUTO // weekly Auto, not an authored Wave grant
+                else when(assignment.basicStrategy) {
                     BasicProgressionStrategy.MANUAL_LOGGING ->
                         SavedProgressionMethod.MANUAL
                     BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION ->
@@ -249,6 +253,28 @@ object BasicProgramProgressionPlanDomain {
                 explicitStyle==NativeProgressionStyle.AUTO) &&
                 savedBasic==null && saved!=SavedProgressionMethod.BODYWEIGHT_REPS &&
                 key !in selectedStrategies && key !in selectedPerSetDynamic
+            // A concrete saved method is not Auto. Use the actual reviewed
+            // week, not a phase label or a guessed future load. Scope this
+            // to identifiable primary free-bar strength-skill work until
+            // secondary strength role and phase provenance are available.
+            val autoWeek=previewWeek?.takeIf{it.blockId==block.blockId}?.weekInBlock
+            val weeklyAutoEligible=automatic && reviewedBarbell &&
+                experience in setOf(AthleteExperience.INTERMEDIATE,AthleteExperience.ADVANCED) &&
+                block.phase==TrainingPhase.STRENGTH && block.purpose==CustomBlockPurpose.TRAINING &&
+                day.purpose==ComposerSessionPurpose.STRENGTH_SKILL &&
+                slot.role==ComposerRole.PRIMARY && sameWeights && bands.size==1 &&
+                bands.single().maximum<=6 && !amplifier &&
+                working.all{it.targetRir!=null}
+            val scheduledAuto=weeklyAutoEligible && explicitStyle==NativeProgressionStyle.AUTO &&
+                autoWeek!=null && autoWeek !in authored
+            // Compare integer positions to the pinned weekly style boundaries
+            // (35%, 75%, or halfway for short blocks); no float rounding.
+            val position=if(block.weeks==1)50 else (autoWeek?.minus(1)?:0)*100
+            val span=maxOf(1,block.weeks-1)
+            val autoWave=scheduledAuto && block.weeks>=5 &&
+                position>=35*span && position<75*span
+            val autoLateE1rm=scheduledAuto &&
+                position>=(if(block.weeks<=4)50 else 75)*span
             val autoPeakE1rm=automatic && reviewedBarbell &&
                 experience in setOf(AthleteExperience.INTERMEDIATE,AthleteExperience.ADVANCED) &&
                 block.phase==TrainingPhase.PEAK && block.purpose==CustomBlockPurpose.TRAINING &&
@@ -257,7 +283,11 @@ object BasicProgramProgressionPlanDomain {
                 (authored.isEmpty() || saved==SavedProgressionMethod.AUTO) && !amplifier
             // This is the same existing e1RM review route, not a new load
             // prescriber. It can only advance from comparable recorded work.
-            val style=if(autoPeakE1rm)NativeProgressionStyle.E1RM else explicitStyle
+            val style=when {
+                autoPeakE1rm || autoLateE1rm -> NativeProgressionStyle.E1RM
+                autoWave -> NativeProgressionStyle.WAVE
+                else -> explicitStyle
+            }
             val styledBasic=when(style) {
                 NativeProgressionStyle.DOUBLE ->
                     BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION
@@ -290,7 +320,7 @@ object BasicProgramProgressionPlanDomain {
             // the block a Wave. A single week-2 override is NOT a wave:
             // silently repeating week 1 on weeks 3/4 would fabricate its
             // numerical periodization. A separate week-1 override is allowed.
-            if(style==NativeProgressionStyle.WAVE &&
+            if(style==NativeProgressionStyle.WAVE && !autoWave &&
                 (block.weeks<2 || sourceWeekOverrides.size!=authored.size ||
                     authored.any { it !in 1..block.weeks } ||
                     (2..block.weeks).any { it !in authored }))
@@ -305,7 +335,7 @@ object BasicProgramProgressionPlanDomain {
                     block.phase==TrainingPhase.HYPERTROPHY ||
                     !loaded || assistance || !sameWeights ||
                     bands.size!=1 ||
-                    (authored.isNotEmpty() && saved!=SavedProgressionMethod.E1RM && !autoPeakE1rm) || amplifier))
+                    (authored.isNotEmpty() && saved!=SavedProgressionMethod.E1RM && !autoPeakE1rm && !autoLateE1rm) || amplifier))
                 return no("e1RM progression requires a straight weighted primary strength or peak exercise with no conflicting authored week or amplifier.")
             val selectedDynamic=requested==
                 BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION
@@ -355,10 +385,15 @@ object BasicProgramProgressionPlanDomain {
                 }
                 authored.isNotEmpty() && (previewWeek == null ||
                     previewWeek.blockId != block.blockId || previewWeek.weekInBlock in authored ||
-                    saved == null || style == NativeProgressionStyle.WAVE) -> {
+                    saved == null || (style == NativeProgressionStyle.WAVE && !autoWave)) -> {
                     route=ProgramProgressionRoute.AUTHORED_WEEKLY_PERIODIZATION
                     strategy=null
                     note="Exact source-authored weekly sets own the changing loads and reps."
+                }
+                autoWave -> {
+                    route=ProgramProgressionRoute.BASIC_WEIGHTED
+                    strategy=BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION
+                    note="Auto Wave: review matching completed straight sets and original effort for one verified next stock step. An authored week still owns its exact targets."
                 }
                 style==NativeProgressionStyle.E1RM -> {
                     route=ProgramProgressionRoute.E1RM_COACH_REVIEW
@@ -416,7 +451,7 @@ object BasicProgramProgressionPlanDomain {
             }
             assignments+=ProgramProgressionAssignment(
                 key,slot.exerciseId,route,strategy,working.size,amplifier,
-                Collections.unmodifiableSet(authored),note,style,saved)
+                Collections.unmodifiableSet(authored),note,style,saved,weeklyAutoEligible)
         }
         return ProgramProgressionPlan.Ready(
             Collections.unmodifiableList(assignments))

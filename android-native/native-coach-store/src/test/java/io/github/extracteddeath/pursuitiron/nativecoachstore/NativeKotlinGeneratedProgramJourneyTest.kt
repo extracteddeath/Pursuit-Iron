@@ -125,7 +125,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
         split:ComposerSplit=ComposerSplit.UPPER_LOWER,
         phase:TrainingPhase=TrainingPhase.HYPERTROPHY,
         includeHipMachines:Boolean=false,includeTrapBar:Boolean=false,
-        includeNewTargets:Boolean=false
+        includeNewTargets:Boolean=false,blockWeeks:Int=4
     ):Pair<CustomTrainingCycle,CustomCoachAuditInputs> {
         val input=request(split,phase,includeHipMachines,includeTrapBar,includeNewTargets).copy(policyVersion=policyVersion)
         assertEquals(AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW,input.setup.status)
@@ -138,7 +138,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
             "; explanation="+draft?.explanations,
             FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,generated.status)
         val proposed=CoachFirstProgramDraftConversionDomain.propose(
-            generated,input.setup,catalog,cycleId,"Four day first program",4)
+            generated,input.setup,catalog,cycleId,"Four day first program",blockWeeks)
         assertEquals(proposed.reason,FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT,
             proposed.status)
         val cycle=checkNotNull(proposed.cycle)
@@ -153,7 +153,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(NativeFirstProgramSeedWrite.Committed,
             NativeKotlinFirstProgramSeedFileStore(disk.root,disk.fence,identity)
                 .create(owner,NativeFirstProgramSeed(
-                    cycleId,cycle.title,4,1,input.policyVersion,
+                    cycleId,cycle.title,blockWeeks,1,input.policyVersion,
                     phase,input.startingLoads,input.selectedBodyweightExerciseIds,emptyList(),900)))
         assertTrue(disk.consent.confirm(owner,cycleId,1,1,0,inputs,true)
             is NativeCustomSignoffWrite.Committed)
@@ -426,8 +426,16 @@ class NativeKotlinGeneratedProgramJourneyTest {
             as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
     }
 
-    @Test fun generatedE1rmMethodUsesCorrectedEffortAndExplicitNextWeekConsent() {
-        val (base,inputs)=saveGenerated(phase=TrainingPhase.STRENGTH)
+    @Test fun generatedE1rmMethodUsesCorrectedEffortAndExplicitNextWeekConsent() =
+        completeGeneratedEffortReview(false)
+
+    @Test fun generatedWeeklyAutoWaveSurvivesColdSeedAndRequiresNextWeekConsent() =
+        completeGeneratedEffortReview(true)
+
+    private fun completeGeneratedEffortReview(autoWave:Boolean) {
+        val previousWeek=if(autoWave)2 else 1
+        val nextWeek=previousWeek+1
+        val (base,inputs)=saveGenerated(phase=TrainingPhase.STRENGTH,blockWeeks=if(autoWave)6 else 4)
         val block=base.blocks.single()
         val day=block.days.first{d->d.slots.any{
             it.exerciseId=="barbell_bench" && it.role==ComposerRole.PRIMARY}}
@@ -436,22 +444,46 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertTrue(working.isNotEmpty())
         assertTrue(working.all{it.amplifier==null && it.targetRir!=null &&
             (it.load as? DraftSetLoad.Verified)?.value?.compareTo(n("135"))==0})
-        val cycle=base.copy(revision=base.revision+1,blocks=listOf(block.copy(
+        val cycle=if(autoWave) {
+            assertEquals(SavedProgressionMethod.AUTO,slot.progressionMethod)
+            val cold=Disk()
+            val seed=(NativeKotlinFirstProgramSeedFileStore(cold.root,cold.fence,identity)
+                .read(owner,cycleId) as NativeFirstProgramSeedRead.Found).seed
+            assertEquals(6,seed.blockWeeks)
+            assertEquals(CoachFirstProgramStartDomain.POLICY_VERSION,seed.policyVersion)
+            val replay=CoachFirstProgramStartDomain.review(request(phase=TrainingPhase.STRENGTH).copy(
+                startingLoads=seed.startingLoads,selectedBodyweightExerciseIds=seed.bodyweightExercises,
+                nonSetSecondsPerDay=seed.nonSetSeconds,policyVersion=seed.policyVersion))
+            assertEquals(base,CoachFirstProgramDraftConversionDomain.propose(replay,
+                setup(phase=TrainingPhase.STRENGTH),catalog,cycleId,seed.title,seed.blockWeeks).cycle)
+            assertEquals(base,(cold.drafts.read(owner,cycleId) as NativeCustomDraftReadResult.Found).draft)
+            val v13=CoachFirstProgramStartDomain.review(request(phase=TrainingPhase.STRENGTH).copy(
+                policyVersion=CoachFirstProgramStartDomain.V13_POLICY_VERSION))
+            val older=checkNotNull(CoachFirstProgramDraftConversionDomain.propose(v13,
+                setup(phase=TrainingPhase.STRENGTH),catalog,cycleId,seed.title,seed.blockWeeks).cycle)
+            val olderSlot=older.blocks.single().days.single{it.weekday==day.weekday}
+                .slots.single{it.slotId==slot.slotId}
+            assertEquals(SavedProgressionMethod.DOUBLE,olderSlot.progressionMethod)
+            assertEquals(olderSlot.sets,slot.sets)
+            base
+        } else base.copy(revision=base.revision+1,blocks=listOf(block.copy(
             days=block.days.map{d->if(d.weekday!=day.weekday)d else d.copy(
                 slots=d.slots.map{s->if(s.slotId==slot.slotId)s.copy(
                     progressionMethod=SavedProgressionMethod.E1RM) else s})})))
-        assertTrue(Disk().drafts.save(owner,cycleId,base.revision,cycle)
-            is NativeCustomDraftWriteResult.Committed)
-        assertTrue(Disk().consent.confirm(owner,cycleId,cycle.revision,1,1,inputs,true)
-            is NativeCustomSignoffWrite.Committed)
+        if(!autoWave) {
+            assertTrue(Disk().drafts.save(owner,cycleId,base.revision,cycle)
+                is NativeCustomDraftWriteResult.Committed)
+            assertTrue(Disk().consent.confirm(owner,cycleId,cycle.revision,1,1,inputs,true)
+                is NativeCustomSignoffWrite.Committed)
+        }
         // The explicitly saved method is available without optional fatigue
         // coaching; it does not silently enable coach assistance.
         assertTrue(Disk().settings.save(owner,0,CoachAssistancePolicy.MANUAL)
             is NativeCoachSettingsWrite.Saved)
         val id="generated-e1rm-first"
-        assertTrue(Disk().prepared.prepare(owner,id,cycleId,1,day.weekday,inputs)
+        assertTrue(Disk().prepared.prepare(owner,id,cycleId,previousWeek,day.weekday,inputs)
             is NativeCustomPrepareResult.Prepared)
-        var journal=(Disk().journals.issue(owner,id,cycleId,1,day.weekday,inputs)
+        var journal=(Disk().journals.issue(owner,id,cycleId,previousWeek,day.weekday,inputs)
             as NativeCustomJournalResult.Durable).issued.journal
         val original=journal.originalSnapshot
         for((index,set) in original.slots.flatMap{it.sets}.withIndex()){
@@ -476,13 +508,19 @@ class NativeKotlinGeneratedProgramJourneyTest {
             val cold=Disk()
             return NativeKotlinCustomBasicNextReview(cold.fence,identity,cold.drafts,cold.sources,
                 cold.preflight,cold.timeline,cold.journals,cold.machines)
-                .reviewAuthored(owner,cycleId,inputs,2,day.weekday,slot.slotId,"e1rm-future",n("10"))
+                .reviewAuthored(owner,cycleId,inputs,nextWeek,day.weekday,slot.slotId,"e1rm-future",n("10"))
                 as NativeCustomBasicNextReadResult.Reviewed
         }
         val earned=review()
         val projection=earned.projection as CustomBasicHistoryResult.Reviewed
-        assertEquals(working.size,checkNotNull(projection.candidate.e1rmEvidence).assumedGoalRirSetCount)
-        assertTrue(projection.candidate.e1rmEvidence!!.everySetMeetsGoal)
+        if(autoWave) {
+            assertEquals(working.size,projection.candidate.waveAssumedGoalRirSetCount)
+            assertEquals(true,projection.candidate.waveGoalEffortMet)
+            assertNull(projection.candidate.e1rmEvidence)
+        } else {
+            assertEquals(working.size,checkNotNull(projection.candidate.e1rmEvidence).assumedGoalRirSetCount)
+            assertTrue(projection.candidate.e1rmEvidence!!.everySetMeetsGoal)
+        }
         // 45 lb bar, two 45 lb plates and then a real pair of 5s.
         assertEquals(List(working.size){n("145")},projection.candidate.proposedWorkingLoads)
         val target=original.slots.single{it.slotId==slot.slotId}.sets.first{
@@ -503,7 +541,8 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertTrue(held.historyRevision>earned.historyRevision)
         val heldCandidate=(held.projection as CustomBasicHistoryResult.Reviewed).candidate
         assertEquals(List(working.size){n("135")},heldCandidate.proposedWorkingLoads)
-        assertFalse(checkNotNull(heldCandidate.e1rmEvidence).everySetMeetsGoal)
+        if(autoWave)assertEquals(false,heldCandidate.waveGoalEffortMet)
+        else assertFalse(checkNotNull(heldCandidate.e1rmEvidence).everySetMeetsGoal)
         assertTrue(heldCandidate.increasedOrdinals.isEmpty())
         assertEquals(earned.next,held.next)
         assertEquals(cycle,(Disk().drafts.read(owner,cycleId) as NativeCustomDraftReadResult.Found).draft)
@@ -514,19 +553,19 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(projection.candidate,freshProjection.candidate)
         val before=fresh.next.slots.single{it.slotId==slot.slotId}.sets.map{it.prescription}
         val edits=checkNotNull(CustomBasicProgressionDraftDomain.forWeekEdit(slot.slotId,before,freshProjection))
-        val proposal=CustomCoachWeekEditDomain.review(cycle,cycle.revision,2,day.weekday,slot.slotId,
+        val proposal=CustomCoachWeekEditDomain.review(cycle,cycle.revision,nextWeek,day.weekday,slot.slotId,
             edits,setup(phase=TrainingPhase.STRENGTH),catalog,inputs)
         assertTrue(proposal.toString(),proposal is CustomCoachWeekEditResult.Reviewed)
         val changed=(proposal as CustomCoachWeekEditResult.Reviewed).review.proposal.draft
         assertTrue(Disk().drafts.save(owner,cycleId,cycle.revision,changed)
             is NativeCustomDraftWriteResult.Committed)
-        assertTrue(Disk().prepared.prepare(owner,"unapproved-e1rm-next",cycleId,2,day.weekday,inputs)
+        assertTrue(Disk().prepared.prepare(owner,"unapproved-e1rm-next",cycleId,nextWeek,day.weekday,inputs)
             is NativeCustomPrepareResult.Rejected)
-        assertTrue(Disk().consent.confirm(owner,cycleId,changed.revision,1,2,inputs,true)
+        assertTrue(Disk().consent.confirm(owner,cycleId,changed.revision,1,if(autoWave)1 else 2,inputs,true)
             is NativeCustomSignoffWrite.Committed)
-        assertTrue(Disk().prepared.prepare(owner,"e1rm-next",cycleId,2,day.weekday,inputs)
+        assertTrue(Disk().prepared.prepare(owner,"e1rm-next",cycleId,nextWeek,day.weekday,inputs)
             is NativeCustomPrepareResult.Prepared)
-        val issued=(Disk().journals.issue(owner,"e1rm-next",cycleId,2,day.weekday,inputs)
+        val issued=(Disk().journals.issue(owner,"e1rm-next",cycleId,nextWeek,day.weekday,inputs)
             as NativeCustomJournalResult.Durable).issued.journal
         assertEquals(edits,issued.originalSnapshot.slots.single{it.slotId==slot.slotId}.sets.map{it.prescription})
         assertEquals(original,(Disk().journals.open(owner,id) as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
@@ -1667,6 +1706,10 @@ class NativeKotlinGeneratedProgramJourneyTest {
         verifySavedTimedProgram(CoachFirstProgramStartDomain.V12_POLICY_VERSION)
     }
 
+    @Test fun savedV13ProgramRetainsItsConcreteChoicesAfterV14Arrives() {
+        verifySavedTimedProgram(CoachFirstProgramStartDomain.V13_POLICY_VERSION)
+    }
+
     private fun verifySavedTimedProgram(version:String) {
         val (cycle,inputs)=saveGenerated(version)
         val disk=Disk()
@@ -1734,7 +1777,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
             "one_arm_db_row","db_rdl")))
         if(includeNewTargets) {
             assertTrue(selected.containsAll(setOf("serratus-pushup","tibialis-raise")))
-            assertEquals("v13",inputs.policiesByPhase.getValue(phase).revision)
+            assertEquals("v14",inputs.policiesByPhase.getValue(phase).revision)
             assertEquals(TrainingMuscleCoverage.legacyV4,inputs.policiesByPhase.getValue(phase).selectedBounds.map{it.muscle})
             for(slot in days.flatMap{it.slots}.filter{it.exerciseId in setOf("serratus-pushup","tibialis-raise")})
                 assertTrue(slot.sets.all{it.load==DraftSetLoad.ExplicitBodyweight && it.type==DraftSetType.WORKING})

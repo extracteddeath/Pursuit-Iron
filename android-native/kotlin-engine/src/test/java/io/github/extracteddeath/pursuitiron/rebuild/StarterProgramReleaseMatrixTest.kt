@@ -212,7 +212,7 @@ class StarterProgramReleaseMatrixTest {
         assertEquals(FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,archived.status)
         assertEquals(FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,current.status)
         assertEquals("v12",archived.policy?.revision)
-        assertEquals("v13",current.policy?.revision)
+        assertEquals("v14",current.policy?.revision)
         for((review,band) in listOf(archived to RepBand(3,6),current to RepBand(3,5))) {
             val generation=checkNotNull(review.generation)
             val sessions=checkNotNull(review.prescription).sessions
@@ -303,6 +303,8 @@ class StarterProgramReleaseMatrixTest {
         assertEquals("first-program-reference-v11",
             CoachFirstProgramStartDomain.V11_POLICY_VERSION)
         assertEquals("first-program-reference-v13",
+            CoachFirstProgramStartDomain.V13_POLICY_VERSION)
+        assertEquals("first-program-reference-v14",
             CoachFirstProgramStartDomain.POLICY_VERSION)
         for(split in ComposerSplit.entries)
             for(phase in TrainingPhase.entries) {

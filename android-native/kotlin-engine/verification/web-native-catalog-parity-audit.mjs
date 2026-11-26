@@ -175,6 +175,56 @@ const reviewedFallbackContexts=new Map([
     attachment:null,requiredContext:'Original unweighted bodyweight performance, not weighted or assisted pull-up'}]
 ]);
 
+// Equipment-token changes do not establish mechanical equivalence. The
+// following reviewed source exceptions pin the old and current physical
+// conventions and keep every candidate conditional on original receipts.
+const historicalEquipmentReview=new Map([
+  ['inc-db-press',[['dumbbell','inclinebench'],['dumbbell','bench'],'DBS,LoadBasis.DUMBBELL_PER_HAND,setOf("incline-bench")','INCLINE_SUPPORT_REQUIRED']],
+  ['machine-press',[['machinepress'],['machine'],'"chest-press-machine",LoadBasis.EXERCISE_OVERRIDE','STATION_CONTEXT_REQUIRED']],
+  ['machine-shoulder',[['machineshoulder'],['machine'],'"shoulder-press-machine",LoadBasis.EXERCISE_OVERRIDE','STATION_CONTEXT_REQUIRED']],
+  ['reverse-pec',[['pecdeck'],['machine'],'"reverse-pec-deck-machine",LoadBasis.EXERCISE_OVERRIDE','STATION_CONTEXT_REQUIRED']],
+  ['hack-squat',[['hacksquat'],['machine'],'"hack-squat-machine",LoadBasis.EXERCISE_OVERRIDE','STATION_CONTEXT_REQUIRED']],
+  ['leg-press',[['legpress'],['leg_press'],'"leg-press-machine",LoadBasis.EXERCISE_OVERRIDE','STATION_CONTEXT_REQUIRED']],
+  ['leg-ext',[['legext'],['machine'],'LEG_EXTENSION,LoadBasis.EXERCISE_OVERRIDE','STATION_CONTEXT_REQUIRED']],
+  ['seated-curl',[['legcurl'],['machine'],'SEATED_LEG_CURL,LoadBasis.EXERCISE_OVERRIDE','STATION_CONTEXT_REQUIRED']],
+  ['standing-calf',[['calfmachine'],['machine'],'"standing-calf-machine",LoadBasis.EXERCISE_OVERRIDE','STATION_CONTEXT_REQUIRED']],
+  ['pullup',[['pullup'],['pullup_bar','bodyweight'],'"weighted-pullup-resistance",LoadBasis.EXERCISE_OVERRIDE','DISTINCT_EXTERNAL_RESISTANCE']],
+  ['chest-row',[['machinerow'],['dumbbell','bench'],'"chest-supported-row-machine",LoadBasis.EXERCISE_OVERRIDE','DISTINCT_EXTERNAL_RESISTANCE']],
+  ['preacher',[['ezbar','preacher'],['machine'],'"ez-curl-bar",LoadBasis.BARBELL_TOTAL,setOf("preacher-bench")','DISTINCT_EXTERNAL_RESISTANCE']],
+  ['bw-pullup',[['pullup'],['pullup_bar','bodyweight'],'null,null,setOf("pullup-bar")','UNWEIGHTED_CONTEXT_REQUIRED']]
+]);
+const legacyMissingResistance=new Map([
+  ['wrist-roller','wrist-roller-handle'],['hammer-radial-dev','wrist-lever-hammer'],
+  ['hammer-ulnar-dev','wrist-lever-hammer'],['neck-extension','neck-extension-device'],
+  ['neck-curl','neck-flexion-device'],['neck-harness','neck-harness-device'],
+  ['neck-lateral','neck-lateral-device'],['svend-press','single-weight-plate'],
+  ['gripper','hand-gripper-device']
+]);
+function reviewEquipmentDifference(id,oldEquipment,newEquipment,nativeEntry,measurement) {
+  const exact=historicalEquipmentReview.get(id);
+  if(exact) {
+    assert.deepEqual(oldEquipment,exact[0],'Historical equipment drift: '+id);
+    assert.deepEqual(newEquipment,exact[1],'Canonical equipment drift: '+id);
+    assert.ok(nativeEntry?.includes(exact[2]),'Native physical equipment drift: '+id);
+    return exact[3];
+  }
+  assert.deepEqual(oldEquipment,[],'Unreviewed historical equipment difference: '+id);
+  assert.deepEqual(newEquipment,['bodyweight'],'Unreviewed canonical equipment difference: '+id);
+  const resistance=legacyMissingResistance.get(id);
+  if(resistance) {
+    assert.ok(nativeEntry?.includes('"'+resistance+'",LoadBasis.EXERCISE_OVERRIDE'),
+      'Legacy missing-resistance convention drift: '+id);
+    return 'EXPLICIT_IMPLEMENT_AND_LOAD_REQUIRED';
+  }
+  if(measurement) {
+    assert.equal(measurement.kind,'HOLD_SECONDS','Historical bodyweight measurement drift: '+id);
+    assert.equal(measurement.loadKind,'UNWEIGHTED','Historical hold load drift: '+id);
+    return 'ORIGINAL_DURATION_AND_SETUP_REQUIRED';
+  }
+  assert.ok(nativeEntry?.includes('null,null,'),'Unreviewed bodyweight load convention: '+id);
+  return 'UNWEIGHTED_CONTEXT_REQUIRED';
+}
+
 export function reviewHistoricalShellCoverage(shell,rawSource,projection,
   frozenMissing,canonical,nativeIds,measured,nativeSource) {
   assert.equal(frozenMissing.webCommit,shell.webCommit);
@@ -238,11 +288,12 @@ export function reviewHistoricalShellCoverage(shell,rawSource,projection,
       fallbackContext=expected.requiredContext;
     }
     const equipmentTokensDiffer=JSON.stringify(raw[4])!==JSON.stringify(active.equipment);
+    const equipmentReview=equipmentTokensDiffer?reviewEquipmentDifference(row.shellId,raw[4],active.equipment,nativeEntry,measured.find(x=>x.id===nativeId)):null;
     return {shellId:row.shellId,shellName:raw[1],pinnedSourceLine:row.line,
       shellEquipment:raw[4],shellRepBand:raw.slice(5,7),
       canonicalCandidateId:row.candidateWebId,canonicalEquipment:active.equipment,
       nativeCandidateId:nativeId,match:row.match,equipmentTokensDiffer,
-      nativeAttachment:attachment,fallbackContext,
+      nativeAttachment:attachment,fallbackContext,equipmentReview,
       measurement:measuredSet.has(nativeId)?'TYPED':'STANDARD_REPS',
       review:historicalPhysicalVariants.has(row.shellId)?'DISTINCT_PHYSICAL_VARIANT':
         fallbackContext?'PHYSICAL_CONTEXT_REQUIRED':
@@ -259,7 +310,17 @@ export function reviewHistoricalShellCoverage(shell,rawSource,projection,
     assert.ok(nativeSet.has(nativeId)&&!currentById.has(nativeId),
       'Distinct historical candidate cannot collapse into canonical current-web ID');
   }
-  return {total:candidates.length,distinctPhysicalVariants:historicalPhysicalVariants.size,
+  const equipmentReviewCounts={};
+  for(const item of candidates.filter(x=>x.equipmentTokensDiffer)) {
+    assert.ok(item.equipmentReview,'Missing equipment review: '+item.shellId);
+    equipmentReviewCounts[item.equipmentReview]=(equipmentReviewCounts[item.equipmentReview]??0)+1;
+  }
+  assert.equal(equipmentReviewCounts.EXPLICIT_IMPLEMENT_AND_LOAD_REQUIRED,legacyMissingResistance.size);
+  assert.equal(equipmentReviewCounts.STATION_CONTEXT_REQUIRED,8);
+  assert.equal(equipmentReviewCounts.DISTINCT_EXTERNAL_RESISTANCE,3);
+  assert.equal(equipmentReviewCounts.INCLINE_SUPPORT_REQUIRED,1);
+  assert.equal(equipmentReviewCounts.ORIGINAL_DURATION_AND_SETUP_REQUIRED,7);
+  return {total:candidates.length,equipmentReviewCounts,distinctPhysicalVariants:historicalPhysicalVariants.size,
     equipmentTokenDifferences:candidates.filter(x=>x.equipmentTokensDiffer).length,
     nameFallbacks:candidates.filter(x=>x.match==='web-name-fallback-review').length,
     independentlyAccepted:0,automaticHistoryTransfers:0,candidates};
@@ -319,6 +380,12 @@ function selfTest() {
   assert.equal(historical.nameFallbacks,4);
   assert.ok(historical.candidates.every(x=>!x.mayTransferHistory&&!x.independentlyAccepted));
   const byShell=new Map(historical.candidates.map(x=>[x.shellId,x]));
+  assert.equal(byShell.get('wrist-roller').equipmentReview,'EXPLICIT_IMPLEMENT_AND_LOAD_REQUIRED');
+  assert.equal(byShell.get('leg-ext').equipmentReview,'STATION_CONTEXT_REQUIRED');
+  assert.equal(byShell.get('side-plank').equipmentReview,'ORIGINAL_DURATION_AND_SETUP_REQUIRED');
+  assert.throws(()=>reviewEquipmentDifference('gripper',[],['bodyweight'],'null,null,emptySet()',null),/missing-resistance convention drift/);
+  assert.throws(()=>reviewEquipmentDifference('leg-ext',['legext'],['machine'],'null,null,emptySet()',null),/Native physical equipment drift/);
+  assert.throws(()=>reviewEquipmentDifference('plank',[],['bodyweight'],null,{kind:'HOLD_SECONDS',loadKind:'VERIFIED_ADDED_LOAD'}),/Historical hold load drift/);
   assert.equal(byShell.get('pullup').nativeCandidateId,'weighted-pullup');
   assert.equal(byShell.get('bw-pullup').nativeCandidateId,'pullup');
   assert.equal(byShell.get('chest-row').nativeCandidateId,'chest-supported-machine-row');
@@ -446,6 +513,7 @@ else {
       distinctPhysicalVariants:report.historicalShellReview.distinctPhysicalVariants,
       equipmentTokenDifferences:report.historicalShellReview.equipmentTokenDifferences,
       nameFallbacks:report.historicalShellReview.nameFallbacks,
+      equipmentReviewCounts:report.historicalShellReview.equipmentReviewCounts,
       independentlyAccepted:report.historicalShellReview.independentlyAccepted
     },
     missingByMeasurementSemantics:report.missingByMeasurementSemantics

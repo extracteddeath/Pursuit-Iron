@@ -114,3 +114,25 @@ assert.deepEqual(projected.sets.filter(s=>!s.warm&&!s.sub&&s.done!==false).map(s
     'Filtering station B must not compress A working-set positions');
 assert.equal(projected.weight,90,'warmups, technique extensions and pending rows cannot set the working-load summary');
 assert.deepEqual(mixedOrdinals,beforeMixed,'projection cannot rewrite historical receipts');
+
+/* Independent working positions and programs: machine references cannot flatten
+ * mixed historical loads or transfer a matching day id across different plans. */
+{
+    const scopedHistory=[
+        row('station-reference',20,'gymX','upper',[set(90,20,'A'),set(85,19,'A'),set(80,16,'A'),set(75,17,'A')]),
+        {...row('foreign-program',21,'gymX','upper',[set(200,20,'A')]),programId:'p2'}
+    ];
+    const scope={gymId:'gymX',exerciseId:'chest_press',machineInstanceId:'A',dayId:'upper',programId:'p1',gym:x};
+    const reference=machineStartingReference(scopedHistory,scope);
+    assert.equal(reference.workoutId,'station-reference');
+    assert.deepEqual(reference.workingSets.map(s=>s.weight),[90,85,80,75]);
+    assert.equal(machineStartingReference(scopedHistory,{...scope,programId:'p3'}).referenceOnly,true);
+    const {seedMachineReferenceRows}=await import('../modules/workout-machine-runtime.js');
+    const original=[{done:true,weight:'95',reps:'20',machineInstanceId:'B'},
+        ...[1,2,3].map(()=>({weight:'999',reps:'18',target:{w:'999',decisionTrace:{},estimate:{},nextAction:'increase_load'},loadAdvice:{},hint:'up'}))];
+    const seeded=seedMachineReferenceRows(original,reference,'A','lb');
+    assert.equal(seeded[0],original[0],'completed set stays on its original machine');
+    assert.deepEqual(seeded.slice(1).map(s=>s.weight),['85','80','75']);
+    assert.ok(seeded.slice(1).every(s=>s.valueOwner==='user'&&s.machineInstanceId==='A'&&!s.target.decisionTrace&&!s.loadAdvice));
+    assert.equal(original[1].weight,'999','reference projection never mutates source rows');
+}

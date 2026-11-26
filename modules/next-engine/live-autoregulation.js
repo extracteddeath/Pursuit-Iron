@@ -37,7 +37,13 @@ export function reconcileRestoredLiveAdjustments(sets) {
     const out = sets.map((row, index) => {
         if (!untouched(row) || authoredIntent(row) || !row.retuneFrom || !row.liveAdjustment) return row;
         const adjustment = row.liveAdjustment;
-        const count = ['reduce_pending_load', 'suggest_pending_load_reduction'].includes(adjustment.action) ? 2
+        // Legacy automatic reductions are not consent, even with intact source evidence.
+        // Restore only untouched prescription-owned rows; explicit user edits remain protected.
+        if (adjustment.action === 'reduce_pending_load') {
+            changed = true;
+            return restorePendingAdjustment(row);
+        }
+        const count = adjustment.action === 'suggest_pending_load_reduction' ? 2
             : adjustment.action === 'cap_pending_reps' ? 1 : null;
         if (count === null) return row; // Unknown protocols are not ours to rewrite.
         const sources = adjustment.sourceIndices;

@@ -250,6 +250,7 @@ const planNavigator=read('android-native/app/src/main/java/io/github/extractedde
 const planWorkspace=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinPlanWorkspace.kt');
 const authoringSheet=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomExerciseSheet.kt');
 const swapRank=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomExerciseSwapRankingDomain.kt');
+const sharedExerciseSearch=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CoachExerciseChoiceSearchDomain.kt');
 const customAuthoring=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomExerciseAuthoringDomain.kt');
 const customBuilder=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomCycleBuilderDomain.kt');
 const cycleController=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleController.kt');
@@ -553,8 +554,11 @@ assert.ok(
   swapRank.includes('sharedMusclesOnly:Boolean=false') &&
   swapRank.includes('sameRoleOnly:Boolean=false') &&
   swapRank.includes('sameFamilyOnly:Boolean=false') &&
-  swapRank.includes('matchesName(it.attachmentId,needle)') &&
-  swapRank.includes("name.replace('_',' ').replace('-',' ')") &&
+  swapRank.includes('choice.variantId,choice.attachmentId,displayLabel(choice.exerciseId)') &&
+  swapRank.includes('CoachExerciseChoiceSearchDomain.tokens(search)') &&
+  swapRank.includes('CoachExerciseChoiceSearchDomain.matches(terms)') &&
+  sharedExerciseSearch.includes("value.replace('_',' ').replace('-',' ')") &&
+  sharedExerciseSearch.includes('tokens.all{searchable.contains(it)}') &&
   swapRank.includes('thenByDescending {it.sameRole}') &&
   swapRank.includes('Same reviewed training role') &&
   swapRank.includes('otherDayExerciseIds:List<String>?=null') &&
@@ -569,11 +573,11 @@ assert.ok(
   authoringSheet.includes('replacing: CustomExerciseSlot? = null') &&
   authoringSheet.includes('CustomExerciseSwapRankingDomain.rank(') &&
   authoringSheet.includes('Search exercise, family, pattern, attachment or muscle') &&
-  authoringSheet.includes('choice.attachmentId,') &&
-  authoringSheet.includes('terms.all { searchable.contains(it) }') &&
-  authoringSheet.includes('val matchedChoices=labeled.toSet()') &&
+  authoringSheet.includes('available,replacing?.exerciseId,search=search') &&
+  authoringSheet.includes('displayLabel=::kotlinExerciseLabel') &&
+  !authoringSheet.includes('val matchedChoices=') &&
+  !authoringSheet.includes('val searchable=') &&
   authoringSheet.includes('val searched=ranked.filter { rankedChoice ->') &&
-  authoringSheet.includes('choice in matchedChoices') &&
   authoringSheet.includes('verifiedAngleFor(choice.exerciseId)==selectedAngle') &&
   authoringSheet.includes('nativeReviewedChoiceAngle(exerciseId,reviewedVariantById)') &&
   authoringSheet.includes('choice.attachmentId==attachmentId') &&

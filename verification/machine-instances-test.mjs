@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { addMachineVariant, editMachineVariant, setDefaultMachineVariant, resolveMachineVariant,
-    stampMachineSet, machineHistory, latestMachineSet, comparableMachineScope,
+    stampMachineSet, machineHistory, latestMachineSet, machineStartingReference, comparableMachineScope,
     historyForMachineRecommendation, assignLegacyMachineHistory, sanitizeMachineVariants,
     LEGACY_MACHINE_ID } from '../modules/next-engine/machine-instances.js';
 
@@ -89,3 +89,17 @@ assert.equal(JSON.stringify(history),rawHistory,'A/B assignment cannot mutate sa
 console.log('PASS original-machine history assignment: no A/B load transfer, cross-gym leak or old receipt rewrite.');
 
 console.log('Machine-instance web engine: 18 invariants pass.');
+
+// The workout may use another day on the same station as a starting reference,
+// without granting it progression authority or borrowing a different machine.
+const referenceScope={gymId:'gymX',exerciseId:'chest_press',machineInstanceId:'A',gym:x};
+assert.equal(machineStartingReference(history,{...referenceScope,dayId:'upper'}).weight,190);
+assert.equal(machineStartingReference(history,{...referenceScope,dayId:'upper'}).referenceOnly,false);
+const otherDayReference=machineStartingReference(history,{...referenceScope,dayId:'new-day'});
+assert.equal(otherDayReference.weight,190);
+assert.equal(otherDayReference.referenceOnly,true);
+assert.equal(machineStartingReference(history,{...referenceScope,machineInstanceId:'C',dayId:'new-day'}),null);
+assert.equal(machineStartingReference(history,{...referenceScope,gymId:'gymY',dayId:'new-day'}),null);
+const foreignSummary={...history[4],perf:{chest_press:{weight:100,reps:8,sets:[set(100,8,'B')]}}};
+assert.equal(historyForMachineRecommendation([foreignSummary],'chest_press','A','gymX',x)[0].perf.chest_press.weight,null);
+console.log('PASS same-machine starting references and cross-gym summary isolation');

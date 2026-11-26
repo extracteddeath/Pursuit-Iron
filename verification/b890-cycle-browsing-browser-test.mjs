@@ -196,12 +196,12 @@ try{
       const b=header.querySelector('[aria-label="Later weeks"]'),r=b.getBoundingClientRect(),v=root.getBoundingClientRect();
       const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
       return {rowTop:row.getBoundingClientRect().top,scroll:root.scrollTop,headerTop:header.getBoundingClientRect().top,
-        viewportTop:v.top,visible:r.top>=v.top-2&&r.bottom<=v.bottom+2,hit:b.contains(hit),
+        viewportTop:v.top,topInset:root.clientTop+parseFloat(getComputedStyle(root).paddingTop),visible:r.top>=v.top-2&&r.bottom<=v.bottom+2,hit:b.contains(hit),
         week:row.querySelector('[data-progression-week]').dataset.progressionWeek,
         x:r.left+r.width/2,y:r.top+r.height/2};
     },before);
     const a=await geometry();
-    assert.ok(a.scroll>0&&a.visible&&a.hit&&Math.abs(a.headerTop-a.viewportTop)<3,
+    assert.ok(a.scroll>0&&a.visible&&a.hit&&a.headerTop>=a.viewportTop-2&&a.headerTop<=a.viewportTop+a.topInset+2,
       'Progression controls remain usable at a deeply scrolled exercise: '+JSON.stringify(a));
     await page.mouse.click(a.x,a.y);
     await page.waitForFunction((id,w)=>[...document.querySelectorAll('[data-progression-row]')].find(n=>n.dataset.progressionRow===id)

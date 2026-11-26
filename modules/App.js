@@ -11803,10 +11803,12 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
             flashSnack("Reordered", snap.data, snap.exIdx);
     };
     const toggleDone = (ei, si) => {
-        setFocusPin(p => (p[data[ei]?.id] == null ? p : { ...p, [data[ei].id]: null })); // logging resumes auto-follow
         const ex = EX_BY_ID[data[ei].id];
         const set = data[ei].sets[si];
         const wasDone = set.done;
+        // Explicit undo selects that row, even when a later set is logged.
+        // A new completion resumes forward auto-follow.
+        setFocusPin(p => ({ ...p, [data[ei].id]: wasDone ? si : null }));
         // React may replay state updaters; PR effects belong to one real
         // not-done → done gesture, with an actual previous record to beat.
         const machineId=set.machineInstanceId ?? data[ei].machineInstanceId;

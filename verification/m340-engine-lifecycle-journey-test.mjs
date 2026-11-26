@@ -7,6 +7,7 @@ import {
 import { generateNextCycleForShell, advanceNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { analyzeShellHistoryForNextEngine, nextWorkoutSuggestionForShell } from '../modules/next-engine/workout-history-adapter.js';
 import { refreshPendingSetTargets } from '../modules/next-engine/workout-runtime.js';
+import { captureShellVolumeSnapshot, reconcileShellWeekDose } from '../modules/next-engine/volume-repair.js';
 import { auditSetDecisionTraces, loadableAtOrBelow } from '../modules/training-domain/prescriptions.js';
 import { config, ids } from './m265-generation-fixture.mjs';
 
@@ -37,6 +38,41 @@ const original = generateNextCycleForShell({
 });
 assert.equal(original.blocks.length, 2);
 assert.ok(original.blocks.every(p => p.nextEngine?.program?.audit?.result === 'pass'));
+// Explicit exercise-level caps must survive the final repair of a low-dose week.
+// This is a deliberately under-dosed generated fixture, not a recommendation.
+const cappedWeek = clone(original.blocks[0]);
+const strengthRoles = new Set(['primary_strength', 'secondary_strength', 'strength_support']);
+for (const session of cappedWeek.nextEngine.program.sessions) {
+    for (const exercise of session.exercises) {
+        if (!strengthRoles.has(exercise.role)) exercise.workingSetCap = 1;
+    }
+}
+for (const cells of Object.values(cappedWeek.nextWeekPrescriptions)) {
+    for (const cell of Object.values(cells)) {
+        if (!strengthRoles.has(cell.role)) cell.sets = 1;
+    }
+}
+const cappedBefore = JSON.stringify(cappedWeek);
+const cappedResult = reconcileShellWeekDose(cappedWeek, EXERCISES);
+assert.ok(cappedResult.after.issues.some(issue => issue.status === 'under'),
+    'Cap regression must exercise an actual volume shortfall');
+assert.equal(cappedResult.changed, false,
+    'Volume repair must report an unmet floor rather than inflate individually capped sets');
+assert.equal(JSON.stringify(cappedWeek), cappedBefore, 'Volume repair mutated source');
+const cappedSnapshot = captureShellVolumeSnapshot(cappedResult.program, 1, EXERCISES);
+for (const session of cappedSnapshot.sessions) for (const exercise of session.exercises) {
+    if (!strengthRoles.has(exercise.role)) {
+        assert.equal(exercise.workingSetCap, 1);
+        assert.equal(exercise.sets, 1, 'Final executable cell breached its individual working-set cap');
+    }
+}
+const uncappedWeek = clone(cappedWeek);
+for (const session of uncappedWeek.nextEngine.program.sessions)
+    for (const exercise of session.exercises) delete exercise.workingSetCap;
+const uncappedResult = reconcileShellWeekDose(uncappedWeek, EXERCISES);
+assert.ok(uncappedResult.changes.some(change => change.sets.some(op => op.delta > 0)),
+    'Control fixture must have a useful feasible repair when individual caps are absent');
+
 let { cycle } = original;
 let program = original.blocks[0];
 let history = [];

@@ -91,8 +91,8 @@ class AssistedCounterweightProgressionDomainTest {
     @Test fun catalogPreservesThreeDistinctAssistedMovementsAndExactMachineStock() {
         val byId=StarterExerciseTranche.entries().associateBy{it.legacyCuratedId}
         val ids=listOf("assisted-dip","assisted-chinup","assisted-pullup")
-        assertEquals(369,byId.size)
-        assertEquals(ids,StarterExerciseTranche.entries().dropLast(4).takeLast(3)
+        assertEquals(370,byId.size)
+        assertEquals(ids,StarterExerciseTranche.entries().drop(362).take(3)
             .map{it.legacyCuratedId})
         for(id in ids) {
             val movement=byId.getValue(id).movement

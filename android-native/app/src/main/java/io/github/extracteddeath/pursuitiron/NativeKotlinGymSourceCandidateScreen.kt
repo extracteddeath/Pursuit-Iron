@@ -303,6 +303,7 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                                                     "neck-flexion-device",
                                                     "neck-harness-device",
                                                     "neck-lateral-device",
+                                                    "weighted-pullup-resistance",
                                                     RatedResistanceBandDomain.EQUIPMENT_ID))
                                                     PhysicalStockEditorKind.EXACT_LOADS
                                                 else PhysicalStockEditorKind.VERIFIED_STACK

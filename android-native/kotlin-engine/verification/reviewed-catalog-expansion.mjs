@@ -317,8 +317,10 @@ export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) 
  assert.deepEqual(declarations.slice(beforeWaveNine+waveNineIds.length),
    [...ratedBandRequiredIds,'spanish-squat',
      'assisted-dip','assisted-chinup','assisted-pullup',
-     'neck-extension','neck-curl','neck-harness','neck-lateral'],
-   'only verified Spanish squat, assisted-machine and physically loaded neck IDs may follow the rated bands');
+     'neck-extension','neck-curl','neck-harness','neck-lateral','weighted-pullup'],
+   'only reviewed canonical additions and the distinct historical weighted pull-up may follow the rated bands');
+ assert.match(source,/entry\("weighted-pullup","vertical_pull","added-load-overhand",\s*ComposerPattern\.VERTICAL_PULL,ComposerRole\.PRIMARY,pull,\s*"weighted-pullup-resistance",LoadBasis\.EXERCISE_OVERRIDE,\s*setOf\("pullup-bar","weighted-pullup-setup"\),6\.\.12,/,
+   'Historical weighted pull-up requires separate verified added-load identity and setup');
  const liveById=new Map(web.map(ex=>[ex.id,ex]));
  const spanish=liveById.get('spanish-squat');
  assert.ok(spanish,'supported Spanish squat missing from web source');
@@ -437,7 +439,7 @@ export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) 
      'wave-nine source must not reclassify the loaded implement as bodyweight');
  }
  const total=49+count+requestedIds.length+waveEightIds.length+
-   waveNineIds.length+ratedBandRequiredIds.length+8;
+   waveNineIds.length+ratedBandRequiredIds.length+9;
  assert.ok(source.includes('require(definitions.size=='+total+')'),
    'Kotlin exact source count must include independently reviewed additions');
  assert.ok(source.includes(') + listOf(\\n') || source.includes(') + listOf('),
@@ -445,7 +447,7 @@ export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) 
  assert.ok(source.includes('mayTransferPreviousLoad:Boolean=false')&&
    !expected.includes('mayTransferPreviousLoad'),
    'reviewed IDs may never implicitly transfer historical loading');
- return {originalStablePrefixCount:49,additions:count+requestedIds.length+waveEightIds.length+waveNineIds.length+8,total};
+ return {originalStablePrefixCount:49,additions:count+requestedIds.length+waveEightIds.length+waveNineIds.length+9,total};
 }
 
 export function writeReviewedCatalogExpansion(manifest,source,web=EXERCISES) {
@@ -454,10 +456,10 @@ export function writeReviewedCatalogExpansion(manifest,source,web=EXERCISES) {
  assert.ok(from>=0&&to>from,'review markers missing');
  const replacement=BEGIN+'\n'+manifest.records.map(renderEntry).join(',\n')+'\n'+END;
  const previous=requireCount(source);
+ const previousGenerated=[...source.slice(from,to).matchAll(/\bentry\("/g)].length;
  return source.slice(0,from)+replacement+source.slice(to+END.length)
    .replace('require(definitions.size=='+previous+')',
-     'require(definitions.size=='+(49+count+requestedIds.length+waveEightIds.length+
-       waveNineIds.length+ratedBandRequiredIds.length+4)+')');
+     'require(definitions.size=='+(previous-previousGenerated+count)+')');
 }
 function requireCount(source) {
  const m=source.match(/require\(definitions\.size==(\d+)\)/);
@@ -467,7 +469,7 @@ function requireCount(source) {
 function selfTest() {
  const m=JSON.parse(readFileSync(manifestPath,'utf8'));
  const src=readFileSync(nativePath,'utf8');
- assert.equal(validateReviewedCatalogExpansion(m,src).total,369);
+ assert.equal(validateReviewedCatalogExpansion(m,src).total,370);
  const unverifiedSupport=src.replace(
    'null,null,setOf("spanish-squat-support"),12..20',
    'null,null,emptySet(),12..20');

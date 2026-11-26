@@ -99,6 +99,7 @@ internal data class KotlinGymStockChoice(
         "neck-flexion-device" -> "Neck curl resistance (actual settings)"
         "neck-harness-device" -> "Neck harness resistance (actual settings)"
         "neck-lateral-device" -> "Lateral neck resistance (actual settings)"
+        "weighted-pullup-resistance" -> "Weighted pull-up · verified added load"
         "assisted-pullup-dip-counterweight" -> "Assisted pull-up/dip machine · COUNTERWEIGHT (more = easier)"
         else -> equipmentId.replace('-', ' ').replace('_',' ')
             .replaceFirstChar{it.uppercase()}

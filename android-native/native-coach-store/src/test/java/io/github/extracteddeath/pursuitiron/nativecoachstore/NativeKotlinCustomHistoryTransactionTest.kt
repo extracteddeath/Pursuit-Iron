@@ -57,8 +57,10 @@ class NativeKotlinCustomHistoryTransactionTest {
         assertTrue(ready.toString(),ready is NativeHistoryLedgerResult.Durable)
     }
     private fun prepareWeek() {
-        assertTrue(prepared.prepare("owner-1","workout-2",
-            "cycle-1",2,0,input()) is NativeCustomPrepareResult.Prepared)
+        val reviewed=preflight.inspect("owner-1","cycle-1",2,0,input())
+        assertTrue(reviewed.toString(),reviewed is NativeCustomPreflightResult.ReviewedPreview)
+        val result=prepared.prepare("owner-1","workout-2","cycle-1",2,0,input())
+        assertTrue(result.toString(),result is NativeCustomPrepareResult.Prepared)
     }
     private fun issueWeek():NativeCustomJournalResult.Durable {
         val result=issued.issue("owner-1","workout-2",
@@ -116,6 +118,7 @@ class NativeKotlinCustomHistoryTransactionTest {
                         ComposerRole.ACCESSORY,
                         if(supersetFixture)listOf(set(10),set(10)) else listOf(set(10)),
                         supersetGroup=if(supersetFixture)"pair" else null,pinned=true,
+                        attachmentId=if(stagedLoadedTechnique==null)null else "rope",
                         coachNote="My exact prescription"))+
                         if(supersetFixture)listOf(CustomExerciseSlot("partner-$day",
                             if(partnerIdeasFixture)"bw-calf" else "bodyweight_crunch",ComposerRole.ACCESSORY,

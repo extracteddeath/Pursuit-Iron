@@ -140,6 +140,101 @@ export function reviewCatalogCoverage(legacyExercises,nativeStarter) {
   };
 }
 
+// Historical source reconciliation is CI-only. This produces a complete
+// review queue, NOT a runtime alias table or permission to transfer old loads.
+const shellInventory=JSON.parse(readFileSync(join(root,
+  'android-native/STAGE1_WEB_SHELL_INVENTORY.json'),'utf8'));
+const pinnedShell=JSON.parse(readFileSync(join(here,
+  'pinned-shell-variant-rows.json'),'utf8'));
+const shellSource=readFileSync(join(root,'modules/training-domain/catalog.js'),'utf8');
+const projectionSource=readFileSync(join(root,'modules/next-engine/shell-projection.js'),'utf8');
+const historicalPhysicalVariants=new Map([
+  ['pullup','weighted-pullup'],
+  ['chest-row','chest-supported-machine-row'],
+  ['preacher','ez-bar-preacher-curl']
+]);
+const normalizeName=name=>name.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+
+export function reviewHistoricalShellCoverage(shell,rawSource,projection,
+  frozenMissing,canonical,nativeIds,measured,nativeSource) {
+  assert.equal(frozenMissing.webCommit,shell.webCommit);
+  assert.equal(frozenMissing.sourceBlobSha,
+    shell.sourceFiles.find(x=>x.path==='modules/training-domain/catalog.js').blobSha);
+  assert.equal(frozenMissing.rows.length,7);
+  const rawBlock=rawSource.split('const RAW = [')[1]?.split('\n];')[0];
+  assert.ok(rawBlock,'Missing historical shell RAW source');
+  const currentRows=rawBlock.split('\n').filter(line=>/^\s*\["/.test(line))
+    .map(line=>JSON.parse(line.trim().replace(/,$/,'')));
+  const allRows=[...currentRows];
+  for(const row of frozenMissing.rows) {
+    assert.ok(pinned.records.some(x=>x.id===row[0]),
+      'Only the seven independently pinned source variants may be supplemented');
+    const current=currentRows.find(x=>x[0]===row[0]);
+    if(current)assert.deepEqual(current,row,'Pinned shell variant drift: '+row[0]);
+    else allRows.push(row);
+  }
+  const rawById=new Map(allRows.map(row=>[row[0],row]));
+  assert.equal(rawById.size,allRows.length,'Duplicate historical source row');
+  const aliasBlock=projection.match(/const EXPLICIT_EXERCISE_ALIASES = \{([\s\S]*?)\};/)?.[1];
+  assert.ok(aliasBlock,'Explicit web alias provenance unavailable');
+  const aliases=new Map([...aliasBlock.matchAll(/([a-z0-9_]+):\s*'([a-z0-9_-]+)'/g)]
+    .map(m=>[m[1],m[2]]));
+  const currentById=new Map(canonical.map(x=>[x.id,x]));
+  const nativeSet=new Set(nativeIds),measuredSet=new Set(measured.map(x=>x.id));
+  const declarations=[...nativeSource.matchAll(/\bentry\("([a-z0-9_-]+)"/g)];
+  const nativeById=new Map(declarations.map((m,i)=>[m[1],
+    nativeSource.slice(m.index,declarations[i+1]?.index??nativeSource.length)]));
+  assert.equal(shell.shellRows.length,372);
+  assert.equal(new Set(shell.shellRows.map(x=>x.shellId)).size,372);
+  const candidates=shell.shellRows.map(row=>{
+    const raw=rawById.get(row.shellId),active=currentById.get(row.candidateWebId);
+    assert.ok(raw&&active,'Unresolved historical source or canonical candidate: '+row.shellId);
+    assert.equal(raw[1],row.name,'Historical shell name drift: '+row.shellId);
+    if(row.match==='exact-id')assert.equal(row.shellId,row.candidateWebId);
+    else if(row.match==='explicit-web-alias')
+      assert.equal(aliases.get(row.candidateWebId),row.shellId,
+        'Explicit alias source drift: '+row.shellId);
+    else {
+      assert.equal(row.match,'web-name-fallback-review');
+      assert.equal(normalizeName(raw[1]),normalizeName(active.name),
+        'Name fallback no longer matches: '+row.shellId);
+    }
+    const nativeId=historicalPhysicalVariants.get(row.shellId)??row.candidateWebId;
+    assert.ok(nativeSet.has(nativeId)||measuredSet.has(nativeId),
+      'No supported native identity candidate: '+row.shellId);
+    const nativeEntry=nativeById.get(nativeId);
+    const attachment=nativeEntry?.match(/attachmentId="([^"]+)"/)?.[1]??null;
+    const equipmentTokensDiffer=JSON.stringify(raw[4])!==JSON.stringify(active.equipment);
+    return {shellId:row.shellId,shellName:raw[1],pinnedSourceLine:row.line,
+      shellEquipment:raw[4],shellRepBand:raw.slice(5,7),
+      canonicalCandidateId:row.candidateWebId,canonicalEquipment:active.equipment,
+      nativeCandidateId:nativeId,match:row.match,equipmentTokensDiffer,
+      nativeAttachment:attachment,
+      measurement:measuredSet.has(nativeId)?'TYPED':'STANDARD_REPS',
+      review:historicalPhysicalVariants.has(row.shellId)?'DISTINCT_PHYSICAL_VARIANT':
+        row.match==='web-name-fallback-review'?'EXPLICIT_IDENTITY_REVIEW_REQUIRED':
+        attachment?'ATTACHMENT_AND_LOAD_CONTEXT_REQUIRED':
+        equipmentTokensDiffer?'EQUIPMENT_SEMANTICS_REVIEW_REQUIRED':'IDENTITY_CANDIDATE_ONLY',
+      mayTransferHistory:false,independentlyAccepted:false};
+  });
+  for(const [id,nativeId] of historicalPhysicalVariants) {
+    const item=candidates.find(x=>x.shellId===id);
+    assert.equal(item.nativeCandidateId,nativeId);
+    assert.notEqual(item.canonicalCandidateId,nativeId);
+    assert.ok(nativeSet.has(nativeId)&&!currentById.has(nativeId),
+      'Distinct historical candidate cannot collapse into canonical current-web ID');
+  }
+  return {total:candidates.length,distinctPhysicalVariants:historicalPhysicalVariants.size,
+    equipmentTokenDifferences:candidates.filter(x=>x.equipmentTokensDiffer).length,
+    nameFallbacks:candidates.filter(x=>x.match==='web-name-fallback-review').length,
+    independentlyAccepted:0,automaticHistoryTransfers:0,candidates};
+}
+
+function historicalReview() {
+  return reviewHistoricalShellCoverage(shellInventory,shellSource,projectionSource,
+    pinnedShell,reviewedWebBaseline,nativeStarterIds,measuredCandidates,native);
+}
+
 function assertMeasuredCandidateSourceIntegrity() {
   const expected=Object.values(pendingMeasurementSemantics).flat().filter(
     id=>!nativeStarterIds.includes(id));
@@ -182,6 +277,28 @@ function assertMeasuredCandidateSourceIntegrity() {
 
 function selfTest() {
   assertMeasuredCandidateSourceIntegrity();
+  const historical=historicalReview();
+  assert.equal(historical.total,372);
+  assert.equal(historical.distinctPhysicalVariants,3);
+  assert.equal(historical.equipmentTokenDifferences,71);
+  assert.equal(historical.nameFallbacks,4);
+  assert.ok(historical.candidates.every(x=>!x.mayTransferHistory&&!x.independentlyAccepted));
+  const byShell=new Map(historical.candidates.map(x=>[x.shellId,x]));
+  assert.equal(byShell.get('pullup').nativeCandidateId,'weighted-pullup');
+  assert.equal(byShell.get('bw-pullup').nativeCandidateId,'pullup');
+  assert.equal(byShell.get('chest-row').nativeCandidateId,'chest-supported-machine-row');
+  assert.equal(byShell.get('preacher').nativeCandidateId,'ez-bar-preacher-curl');
+  assert.equal(byShell.get('cable-curl').nativeAttachment,'straight-bar');
+  assert.equal(byShell.get('cable-crunch').nativeAttachment,'rope');
+  assert.equal(byShell.get('plank').measurement,'TYPED');
+  assert.throws(()=>reviewHistoricalShellCoverage(shellInventory,shellSource,
+    projectionSource.replace("chest_supported_row: 'chest-row'","chest_supported_row: 'machine-row'"),
+    pinnedShell,reviewedWebBaseline,nativeStarterIds,measuredCandidates,native),
+    /Explicit alias source drift/);
+  assert.throws(()=>reviewHistoricalShellCoverage(shellInventory,shellSource,
+    projectionSource,pinnedShell,reviewedWebBaseline,
+    nativeStarterIds.filter(x=>x!=='weighted-pullup'),measuredCandidates,native),
+    /No supported native identity candidate/);
   assert.deepEqual(parseNativeStarterIds(
     'entry("bench","family",...)\nentry("wrist-curl","family",...)\nentry("reverse-wrist-curl","family",...)'
   ),['bench','wrist-curl','reverse-wrist-curl'],
@@ -258,6 +375,7 @@ else {
     nativeStarterSha256:sha256(native)
   };
   report.measuredCandidateContracts=assertMeasuredCandidateSourceIntegrity();
+  report.historicalShellReview=historicalReview();
   report.scope='Catalog source coverage only. Not program, cycle, progression or Android feature parity.';
   // Never print hundreds of rows into CI logs; full rows remain in artifact.
   console.log(JSON.stringify({
@@ -269,6 +387,13 @@ else {
     independentlyCertifiedMappings:report.independentlyCertifiedMappings,
     topUnmappedFamilies:report.missingByMovementFamily.slice(0,12),
     measuredCandidateContracts:report.measuredCandidateContracts,
+    historicalShellReview:{
+      total:report.historicalShellReview.total,
+      distinctPhysicalVariants:report.historicalShellReview.distinctPhysicalVariants,
+      equipmentTokenDifferences:report.historicalShellReview.equipmentTokenDifferences,
+      nameFallbacks:report.historicalShellReview.nameFallbacks,
+      independentlyAccepted:report.historicalShellReview.independentlyAccepted
+    },
     missingByMeasurementSemantics:report.missingByMeasurementSemantics
   },null,2));
   if(args.has('--write-report')) {

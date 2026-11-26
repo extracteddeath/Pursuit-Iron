@@ -1,3 +1,5 @@
+import { completedHistorySets, historyNumber } from './history-contract.js';
+
 /**
  * Gym-scoped physical machine identities for one logical exercise.
  * Movement identity drives programming and volume; physical identity drives load
@@ -193,12 +195,24 @@ export function historyForMachineRecommendation(history, exerciseId, machineInst
             return entry?.perf?.[exerciseId]
                 ? { ...entry, perf: { ...entry.perf, [exerciseId]: { ...performance, sets: [], weight: null, reps: null } } }
                 : entry;
-        const sets = performance.sets.filter(set =>
-            effectiveMachineHistoryId(set, performance,
-                gym?.id === gymId ? gym : null, exerciseId) === machineInstanceId);
+        // Preserve original working ordinals BEFORE filtering by machine.
+        // A mixed A/B session must not turn A's set 3 into A's set 2.
+        let ordinal = 0;
+        const sets = performance.sets.flatMap(set => {
+            if (!set) return [];
+            const index = !set.warm && !set.sub ? ordinal++ : null;
+            if (effectiveMachineHistoryId(set, performance,
+                gym?.id === gymId ? gym : null, exerciseId) !== machineInstanceId) return [];
+            return [{ ...set, machineInstanceId,
+                ...(index !== null && !Number.isInteger(set.workingSetIndex)
+                    ? { workingSetIndex: index } : {}) }];
+        });
+        const completed = completedHistorySets({sets});
+        const loads = completed.map(set => historyNumber(set.w)).filter(w => w !== null && w >= 0);
         return { ...entry, perf: { ...entry.perf,
             [exerciseId]: { ...performance, sets,
-                weight: sets.length ? Math.max(...sets.map(s => Number(s.w)).filter(Number.isFinite)) : null,
+                weight: loads.length ? Math.max(...loads) : null,
+                reps: completed.length ? historyNumber(completed.at(-1).r) : null,
                 machineInstanceId } } };
     });
 }

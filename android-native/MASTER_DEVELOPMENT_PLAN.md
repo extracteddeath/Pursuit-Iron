@@ -16,6 +16,10 @@
 - The checked-in engine superiority audit reports NOT_PROVEN_BETTER, 5 of 55 required pairs completed, 50 missing, and outdated provenance. These are recorded historical figures, not a live percentage of the rebuild. Fresh evidence is required. Catalog inventory is not behavior parity.
 - UI and device acceptance, complete generated amplifier coverage and production restore remain open. Existing working native routes need verification, not wholesale rebuilding.
 
+## Shared implementation discipline
+
+The [shared UI authority contract](PRODUCT_UI_DESIGN_CONTRACT.md#shared-ui-authority--binding-cross-stage-requirement-2026-11-26) is binding for S3–S6 and S8. The same rule as S2 applies: one numerical/data owner, one implementation of a repeated athlete interaction, semantic Material tokens, existing components first, typed contextual differences, and all affected consumers verified. S6 exits must include the shared-owner inventory, concrete duplication removal and paired-screen behavioral evidence; no separate UI calculation/recording authority or new acceptance denominator. Retain S9 physical-device checks and APK freeze.
+
 ## Stages and gates — execution revision 2
 
 The destination and release contract are unchanged. The v1 stage labels in the frozen Stage 1 inventories, findings and their CI verifier are historical provenance, not current task ownership. The authoritative current assignment is [EXECUTION_MILESTONES_V2.json](EXECUTION_MILESTONES_V2.json); its complete mapping preserves every stable ID, source pin and original acceptance assertion. [EXECUTION_STATUS_V2.md](EXECUTION_STATUS_V2.md) records the active milestone, evidence, blockers and next work. No stage is restarted or certified merely by moving its owner.

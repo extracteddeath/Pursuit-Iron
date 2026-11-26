@@ -1797,7 +1797,9 @@ assert.ok(
   numberAuthority.includes('KotlinSetLoadRelation.COMPLETED_DIFFERENT_ACTUAL') &&
   numberAuthority.includes('load.compareTo(issuedLoad.value)==0') &&
   numberAuthority.includes('KotlinMachineAlternativesDomain.validInstanceId') &&
-  numberAuthority.includes('performed.actualRir !in 0..10') &&
+  numberAuthority.includes('fun validRir(rir:Int?):Boolean = rir==null || rir in 0..10') &&
+  numberAuthority.includes('if(!validRir(performed.actualRir))') &&
+  numberAuthority.includes('!validCompletedReps(performed.reps)') &&
   numberGenerated.includes('KotlinSetNumberAuthorityDomain.valid(target.load,outcome,performed)') &&
   numberCustom.includes('KotlinSetNumberAuthorityDomain.valid(target,outcome,performed)') &&
   numberEditor.includes('KotlinSetNumberAuthorityDomain.valid(load,') &&

@@ -39,6 +39,10 @@ interfaces. Any engine change that alters user decisions requires explicit
 UI treatment (explanation, approval/rejection, error recovery), not a raw
 data-class string or an implied automatic update.
 
+## Shared UI ownership
+
+The binding [shared UI authority contract](PRODUCT_UI_DESIGN_CONTRACT.md#shared-ui-authority--binding-cross-stage-requirement-2026-11-26) applies to each phase below. Extend the existing shared state, typed projections, action owners, Compose components and semantic tokens. Every changed shared interaction must be verified at all applicable entry points. No alternate presentation-only engine or duplicate workout/session state.
+
 ## Recommended implementation phases
 
 1. **Foundation now:** exact original theme tokens, Amethyst default, live

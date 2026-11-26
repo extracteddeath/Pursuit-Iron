@@ -192,22 +192,15 @@ class NativeKotlinGeneratedProgramJourneyTest {
         val (base,inputs)=saveGenerated()
         val block=base.blocks.single()
         val days=block.days.sortedBy{it.weekday}
-        val day=days.first{d->d.slots.any{slot->
-            slot.sets.isNotEmpty() && slot.sets.all{set->
+        fun eligible(slot:CustomExerciseSlot)=slot.sets.isNotEmpty() &&
+            slot.sets.all{set->
                 val load=set.load as? DraftSetLoad.Verified
                 set.type==DraftSetType.WORKING && set.amplifier==null &&
-                    set.percentageIntent==null && load?.basis==LoadBasis.DUMBBELL_PER_HAND &&
-                    load.value<=n("45")
+                    set.percentageIntent==null && load!=null &&
+                    load.basis==LoadBasis.DUMBBELL_PER_HAND && load.value<=n("45")
             } && slot.sets.map{it.load}.distinct().size==1
-        }}
-        val slot=day.slots.first{s->
-            s.sets.isNotEmpty() && s.sets.all{set->
-                val load=set.load as? DraftSetLoad.Verified
-                set.type==DraftSetType.WORKING && set.amplifier==null &&
-                    set.percentageIntent==null && load?.basis==LoadBasis.DUMBBELL_PER_HAND &&
-                    load.value<=n("45")
-            } && s.sets.map{it.load}.distinct().size==1
-        }
+        val day=days.first{it.slots.any(::eligible)}
+        val slot=day.slots.first(::eligible)
         val initial=(slot.sets.first().load as DraftSetLoad.Verified).value
         val expected=mapOf(1 to initial,2 to initial.add(n("5")),
             3 to initial,4 to initial.add(n("5")))

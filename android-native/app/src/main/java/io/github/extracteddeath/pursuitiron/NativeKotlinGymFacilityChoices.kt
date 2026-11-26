@@ -69,6 +69,7 @@ internal val kotlinGymFacilityGroups=listOf(
     // These physical fixtures are needed by reviewed squat/step and
     // bodyweight variants; selecting them never invents working load stock.
     KotlinGymFacilityGroup("Workout accessories",listOf(
+        "weighted-pullup-setup" to "Secure added-weight pull-up setup",
         "wall-support" to "Stable wall for tibialis raises",
         "squat-box" to "Squat box",
         "heel-wedge" to "Heel-elevation wedge",

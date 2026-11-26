@@ -784,10 +784,59 @@ class StarterExerciseTrancheTest {
         assertFalse(crunch.mayOverwriteAuthoredProgram)
     }
 
+    @Test fun historicalWeightedPullupHasSeparateConfirmedAddedResistance() {
+        val byId=data.associateBy{it.legacyCuratedId}
+        val body=byId.getValue("pullup").movement
+        val assisted=byId.getValue("assisted-pullup").movement
+        val entry=byId.getValue("weighted-pullup")
+        val weighted=entry.movement
+        assertEquals("vertical_pull",weighted.familyId)
+        assertEquals(RepBand(6,12),weighted.sourcePracticalReps)
+        assertNull(body.expectedLoadBasis)
+        assertEquals(LoadBasis.ASSISTANCE_COUNTERWEIGHT,assisted.expectedLoadBasis)
+        assertEquals(LoadBasis.EXERCISE_OVERRIDE,weighted.expectedLoadBasis)
+        assertEquals(3,listOf(body,assisted,weighted).map{it.variantId}.distinct().size)
+        assertFalse(entry.mayTransferPreviousLoad)
+        assertFalse(CatalogPhysicalMachineEligibility.eligible(weighted))
+        val stock=VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.EXERCISE_OVERRIDE,
+            listOf(n("10"),n("15"),n("25")))
+        val complete=CatalogGym(mapOf("weighted-pullup-resistance" to stock),
+            emptySet(),setOf("pullup-bar","weighted-pullup-setup"))
+        fun review(id:String,load:BigDecimal?,gym:CatalogGym)=
+            CoachExerciseCatalogDomain.review(StarterExerciseTranche.forGym(
+                template(),listOf(choice(id,load)),gym))
+        val valid=review("weighted-pullup",n("25"),complete)
+        assertTrue(valid.issues.toString(),valid.issues.isEmpty())
+        val target=checkNotNull(valid.composedRequest).exercises.single().equipment
+            as ComposerEquipment.Verified
+        assertEquals(n("25"),target.plannedLoad)
+        assertEquals(stock,target.inventory)
+        assertTrue(review("weighted-pullup",n("25"),
+            complete.copy(availableFacilityIds=setOf("pullup-bar"))).issues.any{
+                it.kind==CatalogIssueType.FACILITY_UNAVAILABLE})
+        assertTrue(review("weighted-pullup",n("25"),
+            complete.copy(confirmedStock=emptyMap())).issues.any{
+                it.kind==CatalogIssueType.EQUIPMENT_UNAVAILABLE})
+        assertTrue(review("weighted-pullup",n("20"),complete).issues.any{
+            it.kind==CatalogIssueType.LOAD_UNVERIFIED})
+        assertTrue(review("weighted-pullup",null,complete).issues.any{
+            it.kind==CatalogIssueType.LOAD_UNVERIFIED})
+        val unweighted=review("pullup",null,complete)
+        assertEquals(ComposerEquipment.Bodyweight,
+            checkNotNull(unweighted.composedRequest).exercises.single().equipment)
+        assertTrue(review("pullup",n("25"),complete).issues.any{
+            it.kind==CatalogIssueType.INCOMPATIBLE_EXERCISE_IDENTITY})
+        val counterweight=VerifiedLoadStock.Stack(LoadUnit.LB,
+            LoadBasis.ASSISTANCE_COUNTERWEIGHT,n("5"),n("5"),n("50"))
+        assertTrue(review("weighted-pullup",n("25"),complete.copy(
+            confirmedStock=mapOf("weighted-pullup-resistance" to counterweight))).issues.any{
+                it.kind==CatalogIssueType.EQUIPMENT_BASIS_MISMATCH})
+    }
+
     @Test fun newlyReviewedBenchAccessoriesRequireSpecificFixturesAndNoPhantomLoading() {
         val byId=StarterExerciseTranche.entries().associateBy{it.legacyCuratedId}
         val ids=listOf("decline-situp","back-ext-45","prone-y-raise")
-        assertEquals(369,byId.size)
+        assertEquals(370,byId.size)
         assertTrue(ids.all{it in byId})
         assertEquals(listOf(RepBand(12,20),RepBand(12,20),RepBand(12,20)),
             ids.map{byId.getValue(it).practicalRepBand})

@@ -1,22 +1,22 @@
 # Pursuit Iron — execution status v2
-**As of:** 2026-11-26. **Target:** architecture/kotlin-engine-rebuild. **Latest observed integrated SHA:** `72254d39090851c264338d47cabbcc4ebb467f6d` (#1151).
+**As of:** 2026-11-26. **Target:** architecture/kotlin-engine-rebuild. **Latest observed integrated SHA:** `39d26e8cb4d9e6107ab9cbb3588493084c9151be` (#1152).
 Authority: [MASTER_DEVELOPMENT_PLAN.md](MASTER_DEVELOPMENT_PLAN.md) and [EXECUTION_MILESTONES_V2.json](EXECUTION_MILESTONES_V2.json). Original inventories are immutable v1 provenance, not current stage assignments.
 
 ## Honest baseline
 - S0 and S1 completed: required integrated engine/Compose baseline checks (S0 merge `05c02ff2362736439ca1fcabfd7d477bfb2fa366`, runs 45482709594 and 45482709540) and versioned Stage 1 inventory (#1041). These are not training acceptance.
 - Canonical denominator: 965 items; 41 inherited rollups; 120 mandatory supplementary checks and five optional review candidates. Do not sum rollups or checks into 965. Original inventory records zero formally accepted supplementary checks. New execution ledger starts with zero **certified** canonical/required supplementary rows until the relevant assertions and layers are reviewed. This is a documentation and verification baseline, not an implementation estimate. Existing passing tests and integrated features are credited as evidence, not thrown away.
 - Separate source-certified, device-verified and fully accepted counts. Never require a device result to finish a source-only gate; never claim final acceptance before S9. All applicable device checks remain required. Do not treat percentages of PRs, test cases, or lines of code as percent parity.
-- Current lane: finite Stage 2 source acceptance review. Current Stage 2 source decisions: 34/36 canonical and 12/13 supplementary (46/49); device/fully accepted still zero. Exact ID and run evidence in the latest exit matrix; these are not an implementation percentage or release approval. Minimum specialist handoff is integrated (#1106, #1114–#1130); remaining work is evidence and concrete unresolved mapped requirements, not another specialist architecture. See [current Stage 2 exit matrix](S2_EXIT_MATRIX.md) for latest run IDs, integration, comparison results and bounded gaps. S2A prerequisites still apply; no dependency is waived.
+- Current lane: finite Stage 2 source acceptance review. Current Stage 2 source decisions: 35/36 canonical and 13/13 supplementary; device/fully accepted still zero. Exact ID and run evidence in the latest exit matrix; these are not an implementation percentage or release approval. Minimum specialist handoff is integrated (#1106, #1114–#1130); remaining work is evidence and concrete unresolved mapped requirements, not another specialist architecture. See [current Stage 2 exit matrix](S2_EXIT_MATRIX.md) for latest run IDs, integration, comparison results and bounded gaps. S2A prerequisites still apply; no dependency is waived.
 
 | Milestone | Work package | Canonical IDs | Supplementary checks | Current gate status |
 | --- | --- | ---: | ---: | --- |
 | S0 | Integration baseline | 0 | 0 | Historical gate complete |
 | S1 | Inventory | 0 | 0 | Historical gate complete |
 | S2A | Physical load authority | 6 | 5 | Source-certified 6/6 + 5/5; device pending |
-| S2B | Standard/manual progression | 14 | 4 | Source-certified 13/14 + 4/4; Auto pending |
-| S2C | Specialist progression | 11 | 1 | Source-certified 11/11; CHECK-GEN-RECOMMEND open |
+| S2B | Standard/manual progression | 14 | 4 | Source-certified 14/14 + 4/4; device pending |
+| S2C | Specialist progression | 11 | 1 | Source-certified 11/11 + 1/1; device pending |
 | S2D | Factual history and correction | 4 | 3 | Source-certified 4/4 + 3/3; device pending |
-| S2E | Integrated numerical certification | 1 | 0 | Pending S2B/C and final consent requalification |
+| S2E | Integrated numerical certification | 1 | 0 | Final consent/integrated audit requalification pending #1153 |
 | S3A | Workout execution lifecycle | 3 | 3 | Not source-certified; inspect existing implementation |
 | S3B | Exercise catalog and swap | 759 | 8 | Not source-certified; inspect existing implementation |
 | S3C | Techniques and supersets | 10 | 13 | Not source-certified; inspect existing implementation |

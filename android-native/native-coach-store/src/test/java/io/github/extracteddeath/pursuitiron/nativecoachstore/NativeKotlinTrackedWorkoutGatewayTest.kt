@@ -803,6 +803,52 @@ class NativeKotlinTrackedWorkoutGatewayTest {
         assertArrayEquals(after,java.nio.file.Files.readAllBytes(file))
     }
 
+    @Test fun affectedReductionCountsOutOfOrderAttemptsButNeverCountsPriorSkipsAsEffort() {
+        enroll()
+        val targets=(0..5).map{ordinal->
+            KotlinWorkoutTarget("bench",ComposerRole.PRIMARY,
+                ComposerSessionPurpose.HYPERTROPHY,"dose-$ordinal",
+                DraftSetType.WORKING,ordinal,
+                DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.SMITH_TOTAL,BigDecimal("200")),
+                RepBand(5,8),2,60,90)
+        }
+        val snapshot=KotlinStagedWorkout(source,"grant-dose","dose-workout",0,0,
+            ComposerSessionPurpose.HYPERTROPHY,40,targets)
+        val identity=KotlinStoredWorkoutIdentity("storage-dose","dose-workout",source,1)
+        var saved=(journal().issue("owner-1",snapshot,identity) as NativeJournalFileResult.Durable).journal
+        val operations=listOf(
+            KotlinJournalOperation.RecordSet("done-late",0,"dose-5",
+                KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(BigDecimal("200"),LoadUnit.LB,6,0)),
+            KotlinJournalOperation.RecordSet("failed-late",1,"dose-4",
+                KotlinJournalSetOutcome.FAILED_ATTEMPT,KotlinPerformedSet(BigDecimal("200"),LoadUnit.LB,0,0)),
+            KotlinJournalOperation.RecordSet("prior-skip",2,"dose-0",
+                KotlinJournalSetOutcome.SKIPPED,null))
+        for(op in operations)saved=(gateway().append("owner-1","athlete-1","dose-workout",op)
+            as NativeJournalFileResult.Durable).journal
+        val credits=mapOf("bench" to listOf(DeclaredMuscleCredit(TrainingMuscle.CHEST,
+            MuscleCreditRole.DIRECT,BigDecimal.ONE)))
+        fun review(j:KotlinWorkoutJournalState)=WorkoutRemainingExerciseDomain.generatedConcerns(j,credits)
+            .singleOrNull{it.muscle==TrainingMuscle.CHEST && it.action==WorkoutConcernAction.REDUCE}
+        val shown=checkNotNull(review(saved))
+        // Half of six = three attempts. Two late attempts consume two;
+        // prior skip consumes none. Keep dose-1, skip dose-2 and dose-3.
+        assertEquals(listOf("dose-2","dose-3"),shown.entries)
+        val reduced=(journal().applyConcernStored("owner-1","dose-workout",shown,credits,::allow)
+            as NativeJournalFileResult.Durable).journal
+        assertEquals(snapshot,reduced.snapshot)
+        saved.effectiveSets.forEach{(key,receipt)->assertEquals(receipt,reduced.effectiveSets[key])}
+        assertEquals(listOf("dose-1"),targets.map{it.setKey}.filter{it !in reduced.effectiveSets})
+        val reopened=(journal().openStored("owner-1","dose-workout",::allow)
+            as NativeJournalFileResult.Durable).journal
+        assertEquals(reduced,reopened)
+        assertNull(review(reopened))
+        assertTrue(journal().applyConcernStored("owner-1","dose-workout",shown,credits,::allow)
+            is NativeJournalFileResult.Rejected)
+        assertEquals(reopened,(journal().openStored("owner-1","dose-workout",::allow)
+            as NativeJournalFileResult.Durable).journal)
+        assertTrue(WorkoutRemainingExerciseDomain.generatedConcerns(reopened,emptyMap()).isEmpty())
+    }
+
     @Test fun multiEntrySkipAppendsOnlySkipsAndLeavesFinishExplicit() {
         enroll();val initial=issue()
         val saved=gateway().skipRemainingExercise("owner-1","athlete-1","workout-1",0,"bench") as NativeJournalFileResult.Durable

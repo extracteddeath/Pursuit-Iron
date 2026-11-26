@@ -219,7 +219,7 @@ internal fun <K> NativeKotlinMuscleConcernDialog(
                             " entries to skip · "+group.recordedCount+" recorded retained")
                     }
                     Text(if(action==WorkoutConcernAction.REDUCE)
-                        "Keeps the first half of issued working sets (rounded up), preserves recorded entries, and skips unresolved tail work and unlocked affected technique extensions."
+                        "Caps working-set attempts at half the original issued count (rounded up), counts completed and failed attempts even if logged out of order, and skips extra pending work and unlocked affected technique extensions. Already recorded entries stay unchanged."
                         else "Skips the unresolved affected entries only.")
                     Text("No future program, issued target or existing actual will change.")
                 }

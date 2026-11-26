@@ -24,9 +24,11 @@ internal fun NativeKotlinExerciseLibraryAccess(
     onReviewPlan:(()->Unit)?,
     historyHost:NativeKotlinCandidateHost?,
     onSave:(NativeGymExerciseExclusionChange)->Unit,
-    onUndo:(NativeKotlinExerciseExclusionCommit)->Unit
+    onUndo:(NativeKotlinExerciseExclusionCommit)->Unit,
+    onCreate:(NativeUserExerciseDraft)->Unit
 ) {
     var open by rememberSaveable(source.ownerKey,source.athleteId) { mutableStateOf(false) }
+    var creating by rememberSaveable(source.ownerKey,source.athleteId) {mutableStateOf(false)}
     PursuitCard {
         PursuitSectionHeading("Exercise library",
             "${source.catalog.size+MeasuredExerciseCatalogDomain.all.size} exercises · ${source.setup.reviewed?.excludedExerciseIds?.size ?: 0} excluded")
@@ -35,6 +37,9 @@ internal fun NativeKotlinExerciseLibraryAccess(
             color=MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedButton(onClick={open=true},enabled=!busy,modifier=Modifier.fillMaxWidth()) {
             Text("Browse exercises")
+        }
+        TextButton(onClick={creating=true},enabled=!busy,modifier=Modifier.fillMaxWidth()) {
+            Text("Create custom exercise")
         }
         lastEdit?.takeIf{it.matches(source)}?.let { edit ->
             TextButton(onClick={onUndo(edit)},enabled=!busy,modifier=Modifier.fillMaxWidth()) {
@@ -48,6 +53,7 @@ internal fun NativeKotlinExerciseLibraryAccess(
         }
     }
     if(open) NativeKotlinExerciseLibrarySheet(source,busy,feedback,lastEdit,historyHost,onSave) {open=false}
+    if(creating) NativeUserExerciseSheet(source,busy,feedback,onCreate) {creating=false}
 }
 
 @Composable
@@ -272,8 +278,13 @@ private fun NativeKotlinExerciseLibrarySheet(
             OutlinedButton(onClick={draft=if(excluded)draft-id else draft+id},
                 enabled=!busy && !stale && (excluded || draft.size<CoachAthleteSetupDomain.MAX_EXCLUDED_EXERCISES),
                 modifier=Modifier.fillMaxWidth()) {
-                Text(if(excluded)"Include in future exercise choices" else "Exclude from future exercise choices")
+                Text(if(move?.creditReviewReference=="athlete-declared-v1")
+                    if(excluded)"Restore custom exercise" else "Retire custom exercise"
+                    else if(excluded)"Include in future exercise choices" else "Exclude from future exercise choices")
             }
+            if(move?.creditReviewReference=="athlete-declared-v1")
+                Text("Retiring keeps this exact exercise and all recorded history. Save exclusions to apply the change.",
+                    style=MaterialTheme.typography.bodySmall)
             Text(if((id in draft)!=(id in original))"Change pending · use Save exclusions in the library."
                 else if(excluded)"Excluded in saved preferences." else "Included in saved preferences.",
                 style=MaterialTheme.typography.bodySmall)
@@ -339,4 +350,139 @@ private fun NativeKotlinExerciseLibrarySheet(
         text={Text("Your saved preferences stay as they are. Search and browsing have not changed your program.")},
         confirmButton={TextButton(onClick={discard=false;onDismiss()}) {Text("Discard changes")}},
         dismissButton={TextButton(onClick={discard=false}) {Text("Keep editing")}})
+}
+
+
+/** One source-owned editor. Explicit choices only; no guessed stock, muscle
+ * credit, training role, or exercise prescription from a typed name. */
+@Composable
+private fun NativeUserExerciseSheet(
+    source:NativeCustomAuthoringSnapshot,busy:Boolean,feedback:String?,
+    onSave:(NativeUserExerciseDraft)->Unit,onDismiss:()->Unit
+) {
+    val athlete=source.setup.reviewed ?:return
+    val gym=athlete.gym
+    val revision=rememberSaveable(source.ownerKey,source.athleteId){source.revision}
+    var name by rememberSaveable{mutableStateOf("")}
+    var pattern by rememberSaveable{mutableStateOf<String?>(null)}
+    var role by rememberSaveable{mutableStateOf<String?>(null)}
+    var equipment by rememberSaveable{mutableStateOf<String?>(null)}
+    var attachment by rememberSaveable{mutableStateOf<String?>(null)}
+    var facilities by rememberSaveable{mutableStateOf(emptyList<String>())}
+    var muscles by rememberSaveable{mutableStateOf(emptyList<String>())}
+    var focus by rememberSaveable{mutableStateOf(emptyList<String>())}
+    var low by rememberSaveable{mutableStateOf("")}
+    var high by rememberSaveable{mutableStateOf("")}
+    var confirmed by remember{mutableStateOf(false)}
+    var picker by remember{mutableStateOf<String?>(null)}
+    var submitted by rememberSaveable{mutableStateOf<String?>(null)}
+    val stableId=NativeKotlinGymCatalogEditingDomain.userExerciseId(name)
+    val min=low.toIntOrNull()
+    val max=high.toIntOrNull()
+    val stale=revision!=source.revision
+    val unique=stableId!=null && source.catalog.none{it.exerciseId==stableId}
+    val valid=unique && pattern!=null && role!=null && equipment!=null &&
+        muscles.isNotEmpty() && focus.isNotEmpty() &&
+        min!=null && max!=null && min in 1..100 && max in min..100
+    LaunchedEffect(source.revision,submitted) {
+        if(submitted!=null && source.revision>revision &&
+            source.catalog.any{it.exerciseId==submitted &&
+                it.creditReviewReference=="athlete-declared-v1"})onDismiss()
+    }
+    LaunchedEffect(name,pattern,role,equipment,attachment,facilities,muscles,focus,low,high) {
+        confirmed=false
+    }
+    NativeEditSheet(busy,onDismiss=onDismiss) {
+        PursuitSectionHeading("Create custom exercise",
+            "Choose the real movement, equipment and primary muscle targets.")
+        OutlinedTextField(name,{name=it.take(50)},label={Text("Exercise name")},
+            singleLine=true,modifier=Modifier.fillMaxWidth(),enabled=!busy&&!stale)
+        stableId?.let{Text("Saved name: "+kotlinExerciseLabel(it),
+            style=MaterialTheme.typography.bodySmall)}
+        if(stableId!=null&&!unique)Text("That custom exercise already exists. Restore it in the library instead.",
+            color=MaterialTheme.colorScheme.error)
+        for((kind,label) in listOf(
+            "pattern" to (pattern?.let(::nativeLibraryWords) ?: "Choose movement pattern"),
+            "role" to (role?.let(::nativeLibraryWords) ?: "Choose program role"),
+            "equipment" to (equipment?.let{
+                if(it==nativeLibraryBodyweight)"Bodyweight" else
+                    nativeLibraryWords(it)+" · "+kotlinLoadBasisLabel(gym.confirmedStock[it]?.basis)
+            } ?: "Choose confirmed equipment"),
+            "attachment" to (attachment?.let(::kotlinGymAttachmentLabel) ?: "Attachment · none"),
+            "facilities" to ("Required fixtures · "+facilities.size),
+            "muscles" to ("Primary muscles · "+muscles.size),
+            "focus" to ("Training-day roles · "+focus.size))) {
+            OutlinedButton(onClick={picker=kind},enabled=!busy&&!stale,
+                modifier=Modifier.fillMaxWidth()){Text(label)}
+        }
+        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(low,{low=it.filter(Char::isDigit).take(3)},
+                label={Text("Min reps")},singleLine=true,modifier=Modifier.weight(1f))
+            OutlinedTextField(high,{high=it.filter(Char::isDigit).take(3)},
+                label={Text("Max reps")},singleLine=true,modifier=Modifier.weight(1f))
+        }
+        Text("Primary muscles receive provisional direct-set credit. Your review supplies the movement metadata; no work sets or loads are created.",
+            style=MaterialTheme.typography.bodySmall)
+        Row(verticalAlignment=Alignment.CenterVertically) {
+            Checkbox(confirmed,{confirmed=it},enabled=valid&&!busy&&!stale)
+            Text("I confirm these movement and equipment details.")
+        }
+        if(stale)Text("Gym or catalog changed. Close and review the current setup before saving.",
+            color=MaterialTheme.colorScheme.error)
+        feedback?.let{Text(it,style=MaterialTheme.typography.bodySmall)}
+        Button(onClick={
+            val id=checkNotNull(stableId)
+            submitted=id
+            onSave(NativeUserExerciseDraft(source.ownerKey,source.athleteId,revision,
+                name,ComposerPattern.valueOf(checkNotNull(pattern)),
+                ComposerRole.valueOf(checkNotNull(role)),focus.map{ComposerFocus.valueOf(it)}.toSet(),
+                equipment==nativeLibraryBodyweight,equipment?.takeUnless{it==nativeLibraryBodyweight},
+                attachment,facilities.toSet(),muscles.map{TrainingMuscle.valueOf(it)}.toSet(),
+                RepBand(checkNotNull(min),checkNotNull(max)),confirmed))
+        },enabled=valid&&confirmed&&!busy&&!stale,modifier=Modifier.fillMaxWidth()){
+            Text("Save custom exercise")
+        }
+        TextButton(onClick=onDismiss,enabled=!busy,modifier=Modifier.fillMaxWidth()){Text("Cancel")}
+    }
+    picker?.let { kind ->
+        val options:List<Pair<String?,String>> = when(kind) {
+            "pattern"->ComposerPattern.entries.map{it.name to nativeLibraryWords(it.name)}
+            "role"->ComposerRole.entries.map{it.name to nativeLibraryWords(it.name)}
+            "equipment"->(if(athlete.allowBodyweight)listOf(nativeLibraryBodyweight to "Bodyweight")
+                else emptyList())+gym.confirmedStock.toSortedMap().map{(id,stock)->
+                    id to (nativeLibraryWords(id)+" · "+kotlinLoadBasisLabel(stock.basis))}
+            "attachment"->listOf(null to "None")+gym.availableAttachments.sorted().map{it to kotlinGymAttachmentLabel(it)}
+            "facilities"->gym.availableFacilities.sorted().map{it to kotlinGymFacilityLabel(it)}
+            "muscles"->TrainingMuscle.entries.map{it.name to nativeLibraryWords(it.name)}
+            else->ComposerFocus.entries.map{it.name to nativeLibraryWords(it.name)}
+        }
+        val multi=kind in setOf("facilities","muscles","focus")
+        AlertDialog(onDismissRequest={picker=null},title={Text(nativeLibraryWords(kind))},
+            text={Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState())) {
+                options.forEach{(id,label)->
+                    val checked=when(kind){
+                        "pattern"->pattern==id;"role"->role==id;"equipment"->equipment==id
+                        "attachment"->attachment==id;"facilities"->id in facilities
+                        "muscles"->id in muscles;else->id in focus
+                    }
+                    Row(Modifier.fillMaxWidth().heightIn(min=48.dp)
+                        .selectable(checked,role=if(multi)Role.Checkbox else Role.RadioButton,onClick={
+                            fun toggle(values:List<String>):List<String>{
+                                val item=checkNotNull(id)
+                                return if(item in values)values-item else values+item
+                            }
+                            when(kind){
+                                "pattern"->pattern=id;"role"->role=id;"equipment"->equipment=id
+                                "attachment"->attachment=id;"facilities"->facilities=toggle(facilities)
+                                "muscles"->muscles=toggle(muscles);else->focus=toggle(focus)
+                            }
+                            if(!multi)picker=null
+                        }).padding(PursuitSpace.xs),verticalAlignment=Alignment.CenterVertically) {
+                        if(multi)Checkbox(checked,onCheckedChange=null)
+                        else RadioButton(checked,onClick=null)
+                        Text(label,modifier=Modifier.weight(1f))
+                    }
+                }
+            }},confirmButton={TextButton(onClick={picker=null}){Text("Done")}})
+    }
 }

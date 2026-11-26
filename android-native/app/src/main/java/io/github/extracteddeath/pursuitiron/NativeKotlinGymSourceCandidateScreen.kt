@@ -155,7 +155,8 @@ internal fun NativeKotlinGymSourceCandidateScreen(
             NativeKotlinExerciseLibraryAccess(source,state.busy,state.message,state.lastExclusionEdit,
                 onReviewPlan=onReviewPlan,
                 historyHost=historyHost,
-                onSave=controller::saveExerciseExclusions,onUndo=controller::undoExerciseExclusions)
+                onSave=controller::saveExerciseExclusions,onUndo=controller::undoExerciseExclusions,
+                onCreate=controller::addUserExercise)
         }
         gym.confirmedStock.toSortedMap().forEach { (id, stock) ->
             key(id) {

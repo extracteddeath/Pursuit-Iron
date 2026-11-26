@@ -227,6 +227,23 @@ internal class NativeKotlinGymSourceController(
         }
     }
 
+    fun addUserExercise(intent:NativeUserExerciseDraft) {
+        val captured=intent.copy(permittedFocus=intent.permittedFocus.toSet(),
+            requiredFacilities=intent.requiredFacilities.toSet(),
+            directMuscles=intent.directMuscles.toSet())
+        run {
+            when(val result=host.addNativeUserExercise(captured)) {
+                is NativeAuthoringSourceWrite.Committed ->
+                    load("Custom exercise saved. Review your plan before issuing a new workout; existing history and targets are unchanged.")
+                is NativeAuthoringSourceWrite.Rejected -> {
+                    load()
+                    current.value=current.value.copy(refusal=result.reason,
+                        message="Custom exercise not saved. Check its name, equipment, metadata and current gym before retrying.")
+                }
+            }
+        }
+    }
+
     /** Catalog is curated elsewhere with explicit provisional review facts. */
     fun publishReviewedCatalog(catalog:List<CatalogMovement>)=
         change {host.publishNativeCuratedCatalog(it,catalog)}

@@ -121,6 +121,50 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
             store().publish("owner-1",1,changed))
     }
 
+    @Test fun athleteCreatedExerciseColdRestoresVerifiedMetadataAndCanRetireWithoutDeletingIdentity() {
+        val initial=source()
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),store().publish("owner-1",0,initial))
+        val intent=NativeUserExerciseDraft("owner-1","athlete-1",1,"My Cable Extension",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,setOf(ComposerFocus.UPPER),
+            false,"cable-1","rope",setOf("cable-station"),setOf(TrainingMuscle.TRICEPS),
+            RepBand(10,15),true)
+        fun proposed(input:NativeUserExerciseDraft)=NativeKotlinGymCatalogEditingDomain.addUserExercise(initial,input)
+        assertTrue(proposed(intent.copy(confirmed=false)) is NativeGymCatalogEdit.Rejected)
+        assertTrue(proposed(intent.copy(ownerKey="other")) is NativeGymCatalogEdit.Rejected)
+        assertTrue(proposed(intent.copy(equipmentId="missing")) is NativeGymCatalogEdit.Rejected)
+        assertTrue(proposed(intent.copy(attachmentId="missing")) is NativeGymCatalogEdit.Rejected)
+        val next=(proposed(intent) as NativeGymCatalogEdit.Proposed).source
+        assertEquals(initial.catalog,next.catalog.dropLast(1))
+        assertEquals(initial.setup,next.setup)
+        val id="user-my-cable-extension"
+        val move=next.catalog.last()
+        assertEquals(id,move.exerciseId)
+        assertEquals(LoadBasis.CABLE_STACK,move.expectedLoadBasis)
+        assertEquals("athlete-declared-v1",move.creditReviewReference)
+        assertEquals(NativeAuthoringSourceWrite.Committed(2),store().publish("owner-1",1,next))
+        val reopened=(store().read("owner-1") as NativeAuthoringSourceRead.Found).source
+        assertEquals(next,reopened)
+        val choice=CustomExerciseAuthoringDomain.picker(reopened.setup,reopened.catalog).single{it.exerciseId==id}
+        assertEquals(stock,choice.availability.stock)
+        assertEquals("rope",choice.attachmentId)
+        assertTrue(NativeKotlinGymCatalogEditingDomain.addUserExercise(reopened,
+            intent.copy(sourceRevision=2)) is NativeGymCatalogEdit.Rejected)
+        val retire=NativeGymExerciseExclusionChange("owner-1","athlete-1",2,emptySet(),setOf(id))
+        val retired=(NativeKotlinGymCatalogEditingDomain.setExerciseExclusions(reopened,retire)
+            as NativeGymCatalogEdit.Proposed).source
+        assertEquals(NativeAuthoringSourceWrite.Committed(3),store().publish("owner-1",2,retired))
+        val cold=(store().read("owner-1") as NativeAuthoringSourceRead.Found).source
+        assertEquals(reopened.catalog,cold.catalog)
+        assertFalse(CustomExerciseAuthoringDomain.picker(cold.setup,cold.catalog).any{it.exerciseId==id})
+        val restore=(NativeKotlinGymCatalogEditingDomain.setExerciseExclusions(cold,
+            retire.copy(sourceRevision=3,previous=setOf(id),next=emptySet()))
+            as NativeGymCatalogEdit.Proposed).source
+        assertEquals(NativeAuthoringSourceWrite.Committed(4),store().publish("owner-1",3,restore))
+        val final=(store().read("owner-1") as NativeAuthoringSourceRead.Found).source
+        assertEquals(move,final.catalog.single{it.exerciseId==id})
+        assertTrue(CustomExerciseAuthoringDomain.picker(final.setup,final.catalog).any{it.exerciseId==id})
+    }
+
     @Test fun switchingSavedGymsColdRestoresExactIndependentStockWithoutChangingAthleteOrCatalog() {
         val initial=source()
         val original=checkNotNull(initial.setup.reviewed)

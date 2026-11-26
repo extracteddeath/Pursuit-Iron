@@ -3,6 +3,7 @@ package io.github.extracteddeath.pursuitiron.nativecoachstore
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import java.math.BigDecimal
 import java.util.Collections
+import java.util.Locale
 
 /**
  * Native gym/catalog authoring, independent of the legacy program inventory.
@@ -22,6 +23,18 @@ data class NativeGymExerciseExclusionChange(
     val ownerKey:String,val athleteId:String,val sourceRevision:Long,
     val previous:Set<String>,val next:Set<String>
 )
+/** Explicit athlete metadata. The stable user namespace is never reused or
+ * inferred from a built-in label; future exclusion retires it without
+ * deleting its identity or historical receipts. */
+data class NativeUserExerciseDraft(
+    val ownerKey:String,val athleteId:String,val sourceRevision:Long,
+    val name:String,val pattern:ComposerPattern,val role:ComposerRole,
+    val permittedFocus:Set<ComposerFocus>,val bodyweight:Boolean,
+    val equipmentId:String?,val attachmentId:String?,
+    val requiredFacilities:Set<String>,val directMuscles:Set<TrainingMuscle>,
+    val reps:RepBand,val confirmed:Boolean
+)
+
 sealed interface NativeGymCatalogEdit {
     data class Proposed(
         val source: NativeCustomAuthoringSnapshot,
@@ -201,6 +214,53 @@ object NativeKotlinGymCatalogEditingDomain {
                 availableFacilities=facilities,
                 availableAttachments=attachments)
         }
+    }
+
+    /** A bounded, visible normalized name doubles as the existing stable ID.
+     * No new persistence schema or separate display/history authority. */
+    fun userExerciseId(name:String):String? {
+        val slug=name.trim().lowercase(Locale.ROOT)
+            .replace(Regex("[ -]+"),"-")
+        return if(slug.length in 1..50 &&
+            Regex("[a-z0-9]+(?:-[a-z0-9]+)*").matches(slug))"user-"+slug
+            else null
+    }
+
+    fun addUserExercise(
+        source:NativeCustomAuthoringSnapshot,intent:NativeUserExerciseDraft
+    ):NativeGymCatalogEdit {
+        check(source,intent.sourceRevision)?.let {return NativeGymCatalogEdit.Rejected(it)}
+        if(source.ownerKey!=intent.ownerKey || source.athleteId!=intent.athleteId)
+            return NativeGymCatalogEdit.Rejected(NativeGymCatalogEditRefusal.ATHLETE_CONFLICT)
+        val exerciseId=userExerciseId(intent.name)
+            ?:return NativeGymCatalogEdit.Rejected(NativeGymCatalogEditRefusal.INVALID_CATALOG)
+        val athlete=checkNotNull(source.setup.reviewed)
+        val gym=athlete.gym
+        if(!intent.confirmed || intent.directMuscles.isEmpty() ||
+            intent.permittedFocus.isEmpty() ||
+            intent.reps.minimum !in 1..100 || intent.reps.maximum !in intent.reps.minimum..100 ||
+            source.catalog.any{it.exerciseId==exerciseId || it.familyId==exerciseId} ||
+            intent.bodyweight!=(intent.equipmentId==null) ||
+            !gym.availableFacilities.containsAll(intent.requiredFacilities) ||
+            intent.attachmentId?.let{it !in gym.availableAttachments}==true)
+            return NativeGymCatalogEdit.Rejected(NativeGymCatalogEditRefusal.INVALID_CATALOG)
+        val stock=intent.equipmentId?.let{gym.confirmedStock[it]}
+        if(!intent.bodyweight && stock==null)
+            return NativeGymCatalogEdit.Rejected(NativeGymCatalogEditRefusal.INVALID_EQUIPMENT)
+        val movement=CatalogMovement(exerciseId,exerciseId,"user-authored",
+            intent.attachmentId,intent.pattern,intent.role,intent.permittedFocus.toSet(),
+            intent.equipmentId,stock?.basis,intent.directMuscles.sortedBy{it.name}.map{
+                DeclaredMuscleCredit(it,MuscleCreditRole.DIRECT,BigDecimal.ONE)
+            },CatalogCreditStatus.AUTHOR_REVIEWED_PROVISIONAL,"athlete-declared-v1",
+            intent.requiredFacilities.toSet(),intent.reps)
+        // Existing catalog and stock owners enforce every identity, facility,
+        // attachment, unit, load-basis, bodyweight and physical-stock gate.
+        val proposal=replaceCuratedCatalog(source,intent.sourceRevision,source.catalog+movement)
+        if(proposal !is NativeGymCatalogEdit.Proposed)return proposal
+        if(CustomExerciseAuthoringDomain.picker(source.setup,proposal.source.catalog)
+            .none{it.exerciseId==exerciseId})
+            return NativeGymCatalogEdit.Rejected(NativeGymCatalogEditRefusal.INVALID_EQUIPMENT)
+        return proposal
     }
 
     /**

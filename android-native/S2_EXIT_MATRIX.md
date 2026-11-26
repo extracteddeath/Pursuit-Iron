@@ -1,6 +1,6 @@
 # Stage 2 finite exit evidence (2026-11-25 US Eastern)
 
-Target: `architecture/kotlin-engine-rebuild`. Latest observed integrated base `9141e2a5c8335423c164d65eded6a185f5922d48` (#1138). Frozen scope remains 36 canonical IDs and 13 mandatory supplementary checks. All device-required cases remain queued for S9. Do not infer a source-certified row merely from passing CI or a named test.
+Target: `architecture/kotlin-engine-rebuild`. Latest observed integrated base `808d5bec1df938bce66258562f8d6f610493bdee` (#1139). Frozen scope remains 36 canonical IDs and 13 mandatory supplementary checks. All device-required cases remain queued for S9. Do not infer a source-certified row merely from passing CI or a named test.
 
 ## Verified integrated evidence
 
@@ -40,6 +40,17 @@ Failed #1136/#1137 heads 72858043a94a4f4e50112da1e60110460bad6daf and 451e5f84b8
 ## Comparison results, not a superiority verdict
 
 Frozen Stage 1 web pin `29faa204212a4d54088b4870341350e605939185`. The five relevant ordinary progression web modules (performance, loading, history, history-contract, exercise-db) were checked byte-identical to web main `32e3f2bd7cb12107814123d677d5d43d70df97f4` on 2026-11-25. Observed #1134 job 139568422262: 12/12 expected outcomes, nine exact matches and three declared differences (basic effort rules, linear floor versus web ceiling, original-goal RIR assumption for e1RM estimate). Neither floor nor effort difference is evidence of superiority. Latest combined run 45723626188 artifacts: ordinary 15074345379, fixed percentage 15072889747, tiered 15072579035. Previously verified 19 fixed numeric matches and 13 tiered expected cases (nine matches, four safety refusals). Total 44 scoped expected numeric cases, not 44 certified acceptance rows. Overall engine superiority remains NOT_PROVEN_BETTER.
+
+## Combined candidate verification (not yet integrated)
+
+#1139 tested head ed891605db6e19f4d922a942a899b1e310b1b8e4 passed engine [45754973713](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/45754973713), Compose [45754973766](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/45754973766), and merged at 808d5bec1df938bce66258562f8d6f610493bdee.
+
+#1140 exact head 98e24df450a8806b6759715b08d62b3728e651ab passed engine [45755654981](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/45755654981), Compose [45755654998](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/45755654998). #1141 exact head cd42d0b212f82802cd34d93692f099d737ab426c passed engine [45756047913](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/45756047913), Compose [45756047873](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/45756047873). Actual engine job logs 139693543224 and 139694788384 show unfiltered Kotlin and native-store unit tasks executed and succeeded, not per-test XML. Both candidates were tested against #1138; a fresh combined candidate preserves #1139's bodyweight assertion, integrates the exact #1140 test blob and inserts only the #1141 Wave test and its reviewed evidence. Require both combined exact-head CI workflows before merge and verify integration. No whole-row certification from these individual passes.
+
+- #1140 physicalStationProgressionKeepsIndependentEarnedStepsThroughColdIssue and basicAssistedProgressionUsesLessCounterweightThroughColdIssue: actual bound A/B day records, 5/10 stock steps in opposite difficulty directions, B missed ceiling holds, B-only correction earns its own step, A candidate unchanged, explicit review and fresh cycle consent, cold A issue, unchanged B and original snapshots. Addresses the stated station/assisted real-store gap; does not claim all equipment modes or coached two-session assistance parity.
+- #1141 authoredWaveUsesExactWeeklyTargetsThroughApprovalColdIssueAndFinish: complete four-week authored loads, missing-week refusal, fresh consent, ordinary basic overlay rejected, real calendar issue/log/Finish and cold preservation.
+- S2C-4 exact fixture assertions and source UI paths: [review](S2C_SOURCE_ASSERTION_REVIEW.md).
+- Fixed protocols: inspected current NativeKotlinCustomCycleSignoffFileStoreTest.fixedNamedJourney (nine week-one journeys, including all three Texas roles): wrong reference refusal, real signoff/recovery, issue-before-prepare refusal, explicit expected load/reps/rep-out, above-target actuals and null corrected RIR, cold immutable journal, independent week-two numeric assertions, consent revocation blocks issuance. Beginner, Rippler, JT positive second-week issue/Finish also exercised. 5/3/1 separately covers exact rep-out, immutable issue, correction and next preparation. These are representative real-store journeys and existing pinned numeric probes, not automatic certification of all protocol boundary requirements.
 
 ## Finite outstanding source acceptance review
 

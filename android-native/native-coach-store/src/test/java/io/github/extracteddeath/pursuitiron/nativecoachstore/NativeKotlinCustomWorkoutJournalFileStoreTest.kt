@@ -345,9 +345,22 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
                 athleteConfirmed=true))
         assertEquals(short,(prepared.open("owner-1","undo-time-2")
             as NativeCustomPreparedRead.Found).workout)
-        // A separate unissued preparation must refuse changed cycle/gym
-        // consent rather than "undo" against an obsolete authored source.
-        createShortForUndo("undo-time-3")
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.DIFFERENT_WORKOUT_ALREADY_PREPARED),
+            prepared.prepareShorter("owner-1","undo-time-3","cycle-1",
+                2,0,input(),signedShortReview(),true))
+        assertEquals(NativeCustomPreparedRead.Missing,
+            prepared.open("owner-1","undo-time-3"))
+    }
+
+    @Test fun unissuedTimeUndoRefusesChangedSourceConsent() {
+        // Independent fixture: stale source must be tested without creating
+        // another ID for a slot that already has an issued workout.
+        initializeShortenedCycle();enroll()
+        val short=createShortForUndo("undo-time-3")
+        val preview=prepared.previewTimeUndo(
+            "owner-1","undo-time-3","cycle-1",2,0,input(),issued)
+            as NativeCustomTimeUndoPreview.Ready
         assertEquals(NativeAuthoringSourceWrite.Committed(2),
             sources.publish("owner-1",1,source(2)))
         assertEquals(NativeCustomTimeUndoPreview.Rejected(
@@ -356,9 +369,10 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
                 "owner-1","undo-time-3","cycle-1",2,0,input(),issued))
         assertEquals(NativeCustomTimeUndoWrite.Rejected(
             NativeCustomTimeUndoRefusal.CONSENT_CHANGED),
-            prepared.acceptTimeUndo(preview.copy(
-                shortened=short.copy(workoutId="undo-time-3")),
+            prepared.acceptTimeUndo(preview,
                 input(),issued,athleteConfirmed=true))
+        assertEquals(NativeCustomPreparedRead.Found(short),
+            prepared.open("owner-1","undo-time-3"))
     }
 
     @Test fun authoredAdvancedSetActiveTimeSurvivesConsentShortIssueLoggingAndFinish() {

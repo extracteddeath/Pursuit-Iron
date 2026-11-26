@@ -19,8 +19,8 @@ for(const phrase of [
 ]) assert.ok(ui.includes(phrase),'Swap UI failed label and verified-target contract: '+phrase);
 for(const phrase of [
     'displayLabels:Map<String,String> = emptyMap()',
-    'matchesSearch(it.option,search,displayLabels[it.option.exerciseId])',
-    'matchesSearch(it,search,displayLabels[it.exerciseId])',
+    'matchesSearch(it.option,terms,displayLabels[it.option.exerciseId])',
+    'matchesSearch(it,terms,displayLabels[it.exerciseId])',
     'it.role==source.role',
     'it.exerciseId !in currentExerciseIds'
 ]) assert.ok(engine.includes(phrase),'Kotlin swap matching/ranking contract missing: '+phrase);
@@ -54,4 +54,18 @@ assert.ok(!workout.includes('var swapChoices by rememberSaveable('),
 assert.ok(!ui.includes('sourceTargets.map { target -> target.load }'),
     'Source exercise load may never prepopulate a replacement exercise');
 
-console.log('PASS native swap searches displayed names without replacing verified option ownership');
+const custom=readFileSync(
+    'android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomExerciseSwapRankingDomain.kt','utf8');
+const customUi=readFileSync(
+    'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomExerciseSheet.kt','utf8');
+for(const domain of [engine,custom]) {
+    assert.ok(domain.includes('CoachExerciseChoiceSearchDomain.tokens(search)'));
+    assert.ok(domain.includes('CoachExerciseChoiceSearchDomain.matches(terms)'));
+}
+assert.ok(customUi.includes('available,replacing?.exerciseId,search=search'));
+assert.ok(customUi.includes('displayLabel=::kotlinExerciseLabel'));
+assert.ok(customUi.includes('verifiedAngleFor(choice.exerciseId)==selectedAngle'));
+assert.ok(customUi.includes('choice.attachmentId==attachmentId'));
+assert.ok(!customUi.includes('val searchable='));
+assert.ok(!custom.includes('private fun matchesName'));
+console.log('PASS native swap searches share Kotlin matching without replacing verified option ownership');

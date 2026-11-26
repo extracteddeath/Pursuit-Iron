@@ -38,13 +38,6 @@ data class CustomSwapRankedOption(
     val mayApplyWithoutReview:Boolean get()=false
 }
 object CustomExerciseSwapRankingDomain {
-    private fun matchesName(value:String?,query:String):Boolean =
-        value?.let {name->
-            name.contains(query,ignoreCase=true) ||
-            name.replace('_',' ').replace('-',' ')
-                .contains(query,ignoreCase=true)
-        } ?: false
-
     private fun credits(option:CustomExercisePickerOption):Set<TrainingMuscle> =
         option.muscleCredits.filter {
             it.fractionalSet.signum()>0
@@ -72,7 +65,8 @@ object CustomExerciseSwapRankingDomain {
         /** Each entry contains working-set exercises on ONE OTHER weekday
          * in an unchanged, source-reviewed program block. Null means unknown.
          * Never infer a missing training day from a changed-week override. */
-        otherWeekdayExerciseIds:List<List<String>>?=null
+        otherWeekdayExerciseIds:List<List<String>>?=null,
+        displayLabel:(String)->String={it}
     ):List<CustomSwapRankedOption> {
         // Fail closed on duplicate catalog identities. Do not build a
         // shortlist from invented or unresolved source metadata.
@@ -107,19 +101,16 @@ object CustomExerciseSwapRankingDomain {
                 }
             }
         } else emptyMap()
-        val needle=search.trim().take(80)
+        val terms=CoachExerciseChoiceSearchDomain.tokens(search)
         val sorted=available.asSequence()
             .filter{it.exerciseId!=sourceExerciseId}
-            .filter {
-                needle.isBlank() ||
-                    matchesName(it.exerciseId,needle) ||
-                    matchesName(it.familyId,needle) ||
-                    matchesName(it.variantId,needle) ||
-                    matchesName(it.attachmentId,needle) ||
-                    matchesName(it.pattern?.name,needle) ||
-                    credits(it).any{muscle->
-                        matchesName(muscle.name,needle)
-                    }
+            .filter {choice->
+                CoachExerciseChoiceSearchDomain.matches(terms){
+                    listOfNotNull(choice.exerciseId,choice.familyId,
+                        choice.variantId,choice.attachmentId,displayLabel(choice.exerciseId),
+                        choice.pattern?.name,choice.role?.name) +
+                        credits(choice).map{it.name}
+                }
             }
             .map { candidate ->
                 val samePattern=source?.pattern!=null &&

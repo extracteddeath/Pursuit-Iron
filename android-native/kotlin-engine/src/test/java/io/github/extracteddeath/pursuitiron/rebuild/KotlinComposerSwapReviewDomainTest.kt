@@ -140,6 +140,16 @@ class KotlinComposerSwapReviewDomainTest {
         assertTrue(KotlinComposerSwapRankingDomain.filterRanked(
             ranked,"standing",samePatternOnly=true,displayLabels=labels)
             .isEmpty())
+        assertEquals(listOf("chest-machine"),KotlinComposerSwapRankingDomain.filterRanked(
+            ranked,"primary horizontal seated",displayLabels=labels).map{it.option.exerciseId})
+        assertEquals(ranked,KotlinComposerSwapRankingDomain.filterRanked(ranked," _- "))
+        val previous=java.util.Locale.getDefault()
+        try {
+            java.util.Locale.setDefault(java.util.Locale.forLanguageTag("tr-TR"))
+            assertEquals(listOf("chest-machine"),KotlinComposerSwapRankingDomain.filterRanked(
+                ranked,"PRIMARY",displayLabels=labels).map{it.option.exerciseId}
+                .filter{it=="chest-machine"})
+        } finally {java.util.Locale.setDefault(previous)}
         assertEquals(listOf("chest-machine"),
             KotlinComposerSwapRankingDomain.rank(
                 first,listOf(different,same),setOf("db-press"),

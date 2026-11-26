@@ -518,6 +518,47 @@ class BasicProgramProgressionPlanDomainTest {
         assertNull(BasicProgramProgressionPlanDomain.savedChoice(selected))
     }
 
+    @Test fun reviewedAutoUsesPhysicalSignalAndKeepsExplicitChoiceAndOldPolicy() {
+        val catalog=StarterExerciseTranche.movements().associateBy{it.exerciseId}
+        fun program(id:String,basis:LoadBasis,phase:TrainingPhase,band:RepBand,
+            saved:SavedProgressionMethod?=null,machine:String?=null)=cycle(block(
+                phase=phase,slots=listOf(slot(role=ComposerRole.PRIMARY,
+                    exerciseId=id,sets=List(2){working(band=band).copy(
+                        load=DraftSetLoad.Verified(LoadUnit.LB,basis,n("100")))})
+                    .copy(progressionMethod=saved,machineInstanceId=machine))))
+        fun method(c:CustomTrainingCycle,experience:AthleteExperience,
+            modern:Boolean=true):SavedProgressionMethod? {
+            val r=BasicProgramProgressionPlanDomain.review(c,reviewedCatalog=catalog,
+                experience=experience,reviewedAuto=modern) as ProgramProgressionPlan.Ready
+            assertFalse(r.maySaveProgram)
+            assertFalse(r.mayIssueWorkout)
+            return BasicProgramProgressionPlanDomain.savedChoice(r.assignments.single())
+        }
+        val row=program("one_arm_db_row",LoadBasis.DUMBBELL_PER_HAND,
+            TrainingPhase.HYPERTROPHY,RepBand(8,15))
+        assertEquals(SavedProgressionMethod.LINEAR,method(row,AthleteExperience.BEGINNER,false))
+        assertEquals(SavedProgressionMethod.DYNAMIC,method(row,AthleteExperience.BEGINNER))
+        assertEquals(SavedProgressionMethod.LINEAR,method(program("one_arm_db_row",
+            LoadBasis.DUMBBELL_PER_HAND,TrainingPhase.HYPERTROPHY,RepBand(8,15),
+            SavedProgressionMethod.LINEAR),AthleteExperience.BEGINNER))
+        val peak=program("barbell_bench",LoadBasis.BARBELL_TOTAL,TrainingPhase.PEAK,RepBand(1,3))
+        assertNull(method(peak,AthleteExperience.ADVANCED,false))
+        assertEquals(SavedProgressionMethod.E1RM,method(peak,AthleteExperience.ADVANCED))
+        assertNull(method(peak,AthleteExperience.BEGINNER))
+        assertNull(method(program("barbell_bench",LoadBasis.BARBELL_TOTAL,
+            TrainingPhase.PEAK,RepBand(6,8)),AthleteExperience.ADVANCED))
+        assertNull(method(program("barbell_bench",LoadBasis.BARBELL_TOTAL,
+            TrainingPhase.PEAK,RepBand(1,3),machine="A"),AthleteExperience.ADVANCED))
+        assertEquals(SavedProgressionMethod.MANUAL,method(program("barbell_bench",
+            LoadBasis.BARBELL_TOTAL,TrainingPhase.PEAK,RepBand(1,3),
+            SavedProgressionMethod.MANUAL),AthleteExperience.ADVANCED))
+        val frozen=program("barbell_bench",LoadBasis.BARBELL_TOTAL,TrainingPhase.PEAK,
+            RepBand(1,3),SavedProgressionMethod.E1RM)
+        assertEquals(SavedProgressionMethod.E1RM,method(frozen,AthleteExperience.ADVANCED,false))
+        assertEquals(peak.blocks.single().days.single().slots.single().sets,
+            frozen.blocks.single().days.single().slots.single().sets)
+    }
+
     @Test fun everyGeneratedSlotGetsOneTypedRouteWithStableDayBlockIdentity() {
         val a=block(slots=listOf(slot("a"),slot("b",
             sets=List(2){CustomAuthoredSet(

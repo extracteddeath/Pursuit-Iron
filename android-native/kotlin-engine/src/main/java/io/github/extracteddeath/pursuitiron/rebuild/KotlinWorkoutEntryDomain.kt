@@ -36,7 +36,6 @@ object KotlinWorkoutEntryDomain {
         else KotlinSetEntryResult.Rejected(KotlinSetEntryRefusal.INVALID_WEIGHT)
 
     private val weightFormat=Regex("^(?:0|[1-9][0-9]{0,5})(?:\\.[0-9]{1,3})?$")
-    private val maxWeight=BigDecimal("100000")
     private val numeric=Regex("^[0-9]{1,3}$")
 
     fun parse(
@@ -86,8 +85,8 @@ object KotlinWorkoutEntryDomain {
                 val amount=runCatching{BigDecimal(text)}.getOrNull()
                     ?:return KotlinSetEntryResult.Rejected(
                         KotlinSetEntryRefusal.INVALID_WEIGHT)
-                if(amount<BigDecimal.ZERO || amount>maxWeight)
-                    return KotlinSetEntryResult.Rejected(KotlinSetEntryRefusal.INVALID_WEIGHT)
+                // The parser owns text syntax only. The shared receipt
+                // authority below owns the physical numeric envelope.
                 accepted(load,KotlinPerformedSet(amount,planned.unit,reps,rir),failed)
             }
         }

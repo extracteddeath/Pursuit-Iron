@@ -96,6 +96,38 @@ class CustomExerciseAuthoringDomainTest {
         assertFalse(excluded.any{it.exerciseId=="rope-pushdown"})
     }
 
+    @Test fun pickerRequiresAtLeastOnePhysicallyAttainableWorkingLoad() {
+        val base=setup()
+        val profile=checkNotNull(base.reviewed)
+        fun reviewed(stock:VerifiedLoadStock)=base.copy(reviewed=profile.copy(
+            gym=profile.gym.copy(confirmedStock=mapOf("cable-1" to stock))))
+        fun available(stock:VerifiedLoadStock):Boolean =
+            CustomExerciseAuthoringDomain.picker(reviewed(stock),listOf(
+                movement("tested").copy(expectedLoadBasis=stock.basis))).isNotEmpty()
+        for(basis in listOf(LoadBasis.CABLE_STACK,LoadBasis.MACHINE_STACK,
+            LoadBasis.EXERCISE_OVERRIDE,LoadBasis.ASSISTANCE_COUNTERWEIGHT)) {
+            assertFalse(basis.name,available(VerifiedLoadStock.Totals(
+                LoadUnit.LB,basis,listOf(n("0")))))
+            assertFalse(basis.name,available(VerifiedLoadStock.Stack(
+                LoadUnit.LB,basis,n("0"),n("5"),n("0"))))
+            assertTrue(basis.name,available(VerifiedLoadStock.Totals(
+                LoadUnit.LB,basis,listOf(n("10"),n("0"),n("5")))))
+            assertTrue(basis.name,available(VerifiedLoadStock.Stack(
+                LoadUnit.LB,basis,n("0"),n("5"),n("10"))))
+        }
+        assertTrue(available(VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.LANDMINE_ADDED_PLATES,listOf(n("0")))))
+        assertFalse(available(VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.CABLE_STACK,listOf(n("0"),n("0.0"),n("5")))))
+        val zeroCable=VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.CABLE_STACK,
+            listOf(n("0"),n("5")))
+        assertEquals(CustomAuthoringRefusal.INATTAINABLE_LOAD,
+            CustomExerciseAuthoringDomain.reviewFreshSets(reviewed(zeroCable),
+                listOf(movement("tested")),"tested",listOf(working("0"))))
+        assertNull(CustomExerciseAuthoringDomain.reviewFreshSets(reviewed(zeroCable),
+            listOf(movement("tested")),"tested",listOf(working("5"))))
+    }
+
     @Test fun invalidOrUnreviewedCatalogNeverCreatesAnExerciseChoice() {
         val unreviewed=movement("unreviewed",
             creditStatus=CatalogCreditStatus.UNREVIEWED)

@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "webCommit": "29faa204212a4d54088b4870341350e605939185",
+  "sourceBlobSha": "c53a5ca940beb4f4896a25ad31c842aa0bc4dfea",
+  "description": "Seven pinned historical RAW rows absent from the frozen Kotlin branch. CI evidence only; retain original source rep band independently from current engine recommendations.",
+  "rows": [
+    [
+      "high-inc-db-press",
+      "High-Incline Dumbbell Press",
+      "chest",
+      "compound",
+      [
+        "dumbbell",
+        "inclinebench"
+      ],
+      8,
+      12,
+      null,
+      "incline-push"
+    ],
+    [
+      "bottom-half-db-fly",
+      "Bottom-Half Dumbbell Fly",
+      "chest",
+      "isolation",
+      [
+        "dumbbell",
+        "bench"
+      ],
+      12,
+      18,
+      null,
+      "shoulder-horizontal-adduction"
+    ],
+    [
+      "deficit-pendlay-row",
+      "Deficit Pendlay Row",
+      "upper_back",
+      "compound",
+      [
+        "barbell"
+      ],
+      6,
+      10,
+      null,
+      "horizontal-pull"
+    ],
+    [
+      "low-to-high-face-pull",
+      "Low-to-High Face Pull",
+      "shoulders",
+      "isolation",
+      [
+        "cable"
+      ],
+      12,
+      20,
+      "rear_delts",
+      "shoulder-horizontal-abduction"
+    ],
+    [
+      "leaning-cable-ohext",
+      "Leaning Cable Overhead Triceps Extension",
+      "triceps",
+      "isolation",
+      [
+        "cable"
+      ],
+      10,
+      15,
+      null,
+      "elbow-extension-overhead"
+    ],
+    [
+      "ad-press-barbell",
+      "AD Press (Barbell)",
+      "shoulders",
+      "compound",
+      [
+        "barbell",
+        "inclinebench",
+        "rack"
+      ],
+      6,
+      12,
+      "front_delts",
+      "vertical-push"
+    ],
+    [
+      "ad-press-smith",
+      "AD Press (Smith Machine)",
+      "shoulders",
+      "compound",
+      [
+        "smith",
+        "inclinebench"
+      ],
+      6,
+      12,
+      "front_delts",
+      "vertical-push"
+    ]
+  ]
+}

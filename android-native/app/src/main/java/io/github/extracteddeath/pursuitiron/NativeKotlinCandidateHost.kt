@@ -3501,6 +3501,11 @@ internal class NativeKotlinCandidateHost(context:Context) {
         }
     }
 
+    fun addNativeUserExercise(intent:NativeUserExerciseDraft):NativeAuthoringSourceWrite =
+        editCustomAuthoringSource(intent.sourceRevision) {
+            NativeKotlinGymCatalogEditingDomain.addUserExercise(it,intent)
+        }
+
     /** Catalog metadata requires a human-reviewed provisional credit source. */
     fun publishNativeCuratedCatalog(
         expectedRevision:Long,catalog:List<CatalogMovement>

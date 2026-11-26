@@ -377,7 +377,7 @@ private val kotlinExerciseNames=mapOf(
 )
 
 internal fun kotlinExerciseLabel(id:String):String=kotlinExerciseNames[id]
-    ?:id.replace('_',' ').replace('-',' ').split(' ')
+    ?:id.removePrefix("user-").replace('_',' ').replace('-',' ').split(' ')
         .filter{it.isNotBlank()}.joinToString(" "){word->
             word.replaceFirstChar{it.uppercase()}
         }

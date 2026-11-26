@@ -2299,22 +2299,24 @@ internal class NativeKotlinCustomCycleController(
 
     fun addBlock(
         label: String, phase: TrainingPhase,
-        weeks: Int, split: String
+        weeks: Int, split: String, purpose:CustomBlockPurpose=CustomBlockPurpose.TRAINING,
+        strengthIntensification:Boolean=false
     ) = edit { draft ->
         val newId = "phase-" + UUID.randomUUID().toString().replace("-", "")
         val block = CustomTrainingBlock(newId, label, phase,
-            CustomBlockPurpose.TRAINING, weeks,
-            CustomSplitIdentity.Freeform(split), emptyList())
+            purpose, weeks,
+            CustomSplitIdentity.Freeform(split), emptyList(),strengthIntensification)
         CustomCycleBuilderDomain.insertBlock(draft, draft.revision, block)
     }
 
     fun editBlock(
         blockId: String, label: String, phase: TrainingPhase,
-        purpose: CustomBlockPurpose, weeks: Int, split: String
+        purpose: CustomBlockPurpose, weeks: Int, split: String,
+        strengthIntensification:Boolean?=null
     ) = edit { draft ->
         CustomCycleBuilderDomain.editBlockMetadata(
             draft, draft.revision, blockId, label, phase,
-            purpose, weeks, CustomSplitIdentity.Freeform(split))
+            purpose, weeks, CustomSplitIdentity.Freeform(split),strengthIntensification)
     }
 
     fun duplicateBlock(blockId: String) = edit { draft ->

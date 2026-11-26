@@ -141,7 +141,7 @@ object BasicProgramProgressionPlanDomain {
     ):ProgramProgressionPlan {
         fun no(why:String)=ProgramProgressionPlan.Refused(why)
         if(cycle.athleteId.isBlank() || cycle.cycleId.isBlank() ||
-            cycle.blocks.isEmpty())
+            cycle.blocks.isEmpty() || cycle.blocks.any{!it.validStrengthProgressionPhase})
             return no("An authenticated full cycle is required.")
         if (previewWeek != null) {
             val block = cycle.blocks.singleOrNull { it.blockId == previewWeek.blockId }
@@ -253,33 +253,40 @@ object BasicProgramProgressionPlanDomain {
                 explicitStyle==NativeProgressionStyle.AUTO) &&
                 savedBasic==null && saved!=SavedProgressionMethod.BODYWEIGHT_REPS &&
                 key !in selectedStrategies && key !in selectedPerSetDynamic
-            // A concrete saved method is not Auto. Use the actual reviewed
-            // week, not a phase label or a guessed future load. Scope this
-            // to identifiable primary free-bar strength-skill work until
-            // secondary strength role and phase provenance are available.
+            // A concrete saved method is not Auto. Use exact reviewed strength
+            // skill roles and phase intent, never a display label or guessed load.
             val autoWeek=previewWeek?.takeIf{it.blockId==block.blockId}?.weekInBlock
-            val weeklyAutoEligible=automatic && reviewedBarbell &&
+            val strengthAutoSignal=automatic && reviewedBarbell &&
                 experience in setOf(AthleteExperience.INTERMEDIATE,AthleteExperience.ADVANCED) &&
                 block.phase==TrainingPhase.STRENGTH && block.purpose==CustomBlockPurpose.TRAINING &&
                 day.purpose==ComposerSessionPurpose.STRENGTH_SKILL &&
-                slot.role==ComposerRole.PRIMARY && sameWeights && bands.size==1 &&
+                slot.role in setOf(ComposerRole.PRIMARY,ComposerRole.SECONDARY) &&
+                sameWeights && bands.size==1 &&
                 bands.single().maximum<=6 && !amplifier &&
                 working.all{it.targetRir!=null}
-            val scheduledAuto=weeklyAutoEligible && explicitStyle==NativeProgressionStyle.AUTO &&
-                autoWeek!=null && autoWeek !in authored
+            // Keep v14 generated seed choices frozen; explicit Auto can now
+            // also use a reviewed secondary strength role. No role inference.
+            val weeklyAutoEligible=strengthAutoSignal && slot.role==ComposerRole.PRIMARY
+            val scheduledAuto=strengthAutoSignal && explicitStyle==NativeProgressionStyle.AUTO &&
+                autoWeek!=null && autoWeek !in authored && !block.strengthIntensification
+            val phaseAuto=strengthAutoSignal && explicitStyle==NativeProgressionStyle.AUTO &&
+                block.strengthIntensification &&
+                (if(autoWeek==null)authored.isEmpty() else autoWeek !in authored)
+            val primary=slot.role==ComposerRole.PRIMARY
             // Compare integer positions to the pinned weekly style boundaries
             // (35%, 75%, or halfway for short blocks); no float rounding.
             val position=if(block.weeks==1)50 else (autoWeek?.minus(1)?:0)*100
             val span=maxOf(1,block.weeks-1)
-            val autoWave=scheduledAuto && block.weeks>=5 &&
-                position>=35*span && position<75*span
-            val autoLateE1rm=scheduledAuto &&
-                position>=(if(block.weeks<=4)50 else 75)*span
+            val autoWave=primary && block.weeks>=5 &&
+                (phaseAuto || (scheduledAuto && position>=35*span && position<75*span))
+            val autoLateE1rm=(phaseAuto && !autoWave && bands.single().maximum<=5) ||
+                (scheduledAuto && position >= (if(!primary)65 else if(block.weeks<=4)50 else 75)*span)
             val autoPeakE1rm=automatic && reviewedBarbell &&
                 experience in setOf(AthleteExperience.INTERMEDIATE,AthleteExperience.ADVANCED) &&
                 block.phase==TrainingPhase.PEAK && block.purpose==CustomBlockPurpose.TRAINING &&
-                slot.role==ComposerRole.PRIMARY && sameWeights && bands.size==1 &&
-                bands.single().maximum<=5 &&
+                (primary || (explicitStyle==NativeProgressionStyle.AUTO &&
+                    slot.role==ComposerRole.SECONDARY && day.purpose==ComposerSessionPurpose.STRENGTH_SKILL)) &&
+                sameWeights && bands.size==1 && bands.single().maximum<=5 &&
                 (authored.isEmpty() || saved==SavedProgressionMethod.AUTO) && !amplifier
             // This is the same existing e1RM review route, not a new load
             // prescriber. It can only advance from comparable recorded work.
@@ -330,7 +337,8 @@ object BasicProgramProgressionPlanDomain {
             // mixed-load scheme, technique extension or a week already
             // prescribed by the athlete. No fallback to guessed maxes.
             if(style==NativeProgressionStyle.E1RM &&
-                (slot.role!=ComposerRole.PRIMARY ||
+                ((!primary && !(explicitStyle==NativeProgressionStyle.AUTO &&
+                    (autoPeakE1rm || autoLateE1rm))) ||
                     block.purpose!=CustomBlockPurpose.TRAINING ||
                     block.phase==TrainingPhase.HYPERTROPHY ||
                     !loaded || assistance || !sameWeights ||

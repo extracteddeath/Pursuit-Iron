@@ -587,6 +587,7 @@ object CustomCycleBuilderDomain {
         index: Int = current.blocks.size
     ): CustomCycleBuilderResult {
         if (!id.matches(block.blockId) ||
+            !block.validStrengthProgressionPhase ||
             current.blocks.any { it.blockId == block.blockId } ||
             current.weekOverrides.containsKey(block.blockId) ||
             block.label.isBlank() || block.label.length > 120 ||
@@ -736,11 +737,16 @@ object CustomCycleBuilderDomain {
         phase: TrainingPhase,
         purpose: CustomBlockPurpose,
         weeks: Int,
-        split: CustomSplitIdentity
+        split: CustomSplitIdentity,
+        strengthIntensification:Boolean?=null
     ): CustomCycleBuilderResult {
         val block = current.blocks.firstOrNull { it.blockId == blockId }
             ?: return CustomCycleBuilderResult.Rejected(
                 CustomCycleBuilderRefusal.MISSING_BLOCK)
+        val intensification=strengthIntensification ?: (block.strengthIntensification &&
+            phase==TrainingPhase.STRENGTH && purpose==CustomBlockPurpose.TRAINING)
+        if(intensification && (phase!=TrainingPhase.STRENGTH || purpose!=CustomBlockPurpose.TRAINING))
+            return CustomCycleBuilderResult.Rejected(CustomCycleBuilderRefusal.INVALID_INPUT)
         val otherWeeks = current.blocks.filterNot { it.blockId == blockId }
             .sumOf { it.weeks }
         if (label.isBlank() || label.length > 120 ||
@@ -754,7 +760,7 @@ object CustomCycleBuilderDomain {
             current.copy(blocks = current.blocks.map {
                 if (it.blockId != blockId) it else block.copy(
                     label = label, phase = phase, purpose = purpose,
-                    weeks = weeks, split = split)
+                    weeks = weeks, split = split, strengthIntensification=intensification)
             })
         }
     }

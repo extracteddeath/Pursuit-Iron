@@ -2091,6 +2091,11 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
             var purposeSelected by remember(editingBlock, addingBlock) {
                 mutableStateOf(existing?.purpose ?: CustomBlockPurpose.TRAINING)
             }
+            var intensification by remember(editingBlock, addingBlock) {
+                mutableStateOf(existing?.strengthIntensification==true)
+            }
+            val strengthTraining=phaseSelected==TrainingPhase.STRENGTH &&
+                purposeSelected==CustomBlockPurpose.TRAINING
             var numWeeks by remember(editingBlock, addingBlock) {
                 mutableStateOf(existing?.weeks?.toString() ?: "4")
             }
@@ -2109,6 +2114,14 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                             phaseSelected, ::pretty) { phaseSelected = it }
                         CycleChoiceRow("Block purpose", CustomBlockPurpose.entries,
                             purposeSelected, ::pretty) { purposeSelected = it }
+                        if(strengthTraining) {
+                            CycleChoiceRow("Strength progression phase", listOf(false,true),
+                                intensification, { if(it)"Intensification" else "Accumulation" }) {
+                                intensification=it
+                            }
+                            Text("Select the phase for Auto recommendations. This does not change prescribed sets, reps or weights.",
+                                style=MaterialTheme.typography.bodySmall)
+                        }
                         OutlinedTextField(numWeeks, { numWeeks = it },
                             label = { Text("Weeks") },
                             keyboardOptions = KeyboardOptions(
@@ -2122,10 +2135,10 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         if (existing != null) controller.editBlock(
                             existing.blockId, blockName.trim(), phaseSelected,
                             purposeSelected, numWeeks.toIntOrNull() ?: 0,
-                            customSplit.trim())
+                            customSplit.trim(), strengthTraining && intensification)
                         else controller.addBlock(blockName.trim(),
                             phaseSelected, numWeeks.toIntOrNull() ?: 0,
-                            customSplit.trim())
+                            customSplit.trim(), purposeSelected, strengthTraining && intensification)
                         editingBlock = null
                         addingBlock = false
                     }, enabled = !busy && blockName.isNotBlank() &&

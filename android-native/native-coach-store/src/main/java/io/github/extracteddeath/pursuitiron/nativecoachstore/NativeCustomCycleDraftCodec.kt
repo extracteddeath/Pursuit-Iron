@@ -17,7 +17,7 @@ import java.util.Collections
  */
 internal object NativeCustomCycleDraftCodec {
     private const val MAGIC = 0x50494344 // PICD
-    private const val VERSION = 9
+    private const val VERSION = 10
     const val MAX_BYTES = 2_500_000
     private val id = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
@@ -98,10 +98,12 @@ internal object NativeCustomCycleDraftCodec {
         writeInt(value.weeks)
         split(value.split)
         items(value.days) { day(it,version) }
+        if(version>=10)writeBoolean(value.strengthIntensification)
     }
     private fun DataInputStream.block(version:Int): CustomTrainingBlock =
         CustomTrainingBlock(readUTF(), readUTF(), enum<TrainingPhase>(),
-            enum<CustomBlockPurpose>(), readInt(), split(), items(7) { day(version) })
+            enum<CustomBlockPurpose>(), readInt(), split(), items(7) { day(version) },
+            if(version>=10)readBoolean() else false)
 
     private fun DataOutputStream.writeOverride(value: CustomWeekSlotOverride,version:Int) {
         writeInt(value.weekInBlock)
@@ -125,7 +127,7 @@ internal object NativeCustomCycleDraftCodec {
         require(value.blocks.sumOf { it.weeks } in 1..104)
         require(value.blocks.map { it.blockId }.distinct().size == value.blocks.size)
         require(value.blocks.all { block ->
-            id.matches(block.blockId) &&
+            block.validStrengthProgressionPhase && id.matches(block.blockId) &&
                 block.label.isNotBlank() && block.label.length <= 120 &&
                 block.weeks in 1..52 && block.days.size <= 7 &&
                 block.days.map { it.weekday }.distinct().size == block.days.size &&
@@ -169,9 +171,10 @@ internal object NativeCustomCycleDraftCodec {
 
     fun encode(value: CustomTrainingCycle): ByteArray {
         validate(value)
-        val version=if(value.blocks.any{block->block.days.any{day->day.slots.any{slot->
+        val version=if(value.blocks.any{it.strengthIntensification})10
+        else if(value.blocks.any{block->block.days.any{day->day.slots.any{slot->
             slot.sets.any{it.percentageIntent!=null}}}} || value.weekOverrides.values.any{edits->
-            edits.any{edit->edit.sets.any{it.percentageIntent!=null}}}) VERSION else 8
+            edits.any{edit->edit.sets.any{it.percentageIntent!=null}}}) 9 else 8
         val buffer = ByteArrayOutputStream()
         DataOutputStream(buffer).use { output ->
             with(output) {

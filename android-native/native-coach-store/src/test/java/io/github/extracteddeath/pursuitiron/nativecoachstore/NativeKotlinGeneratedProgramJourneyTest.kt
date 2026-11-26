@@ -432,8 +432,11 @@ class NativeKotlinGeneratedProgramJourneyTest {
     @Test fun generatedWeeklyAutoWaveSurvivesColdSeedAndRequiresNextWeekConsent() =
         completeGeneratedEffortReview(true)
 
-    private fun completeGeneratedEffortReview(autoWave:Boolean) {
-        val previousWeek=if(autoWave)2 else 1
+    @Test fun reviewedIntensificationOfGeneratedStrengthUsesWaveWithoutWeeklyDoubleCounting() =
+        completeGeneratedEffortReview(true,true)
+
+    private fun completeGeneratedEffortReview(autoWave:Boolean,intensification:Boolean=false) {
+        val previousWeek=if(autoWave && !intensification)2 else 1
         val nextWeek=previousWeek+1
         val (base,inputs)=saveGenerated(phase=TrainingPhase.STRENGTH,blockWeeks=if(autoWave)6 else 4)
         val block=base.blocks.single()
@@ -465,16 +468,20 @@ class NativeKotlinGeneratedProgramJourneyTest {
                 .slots.single{it.slotId==slot.slotId}
             assertEquals(SavedProgressionMethod.DOUBLE,olderSlot.progressionMethod)
             assertEquals(olderSlot.sets,slot.sets)
-            base
+            if(intensification)base.copy(revision=base.revision+1,
+                blocks=listOf(block.copy(strengthIntensification=true))) else base
         } else base.copy(revision=base.revision+1,blocks=listOf(block.copy(
             days=block.days.map{d->if(d.weekday!=day.weekday)d else d.copy(
                 slots=d.slots.map{s->if(s.slotId==slot.slotId)s.copy(
                     progressionMethod=SavedProgressionMethod.E1RM) else s})})))
-        if(!autoWave) {
+        if(!autoWave || intensification) {
             assertTrue(Disk().drafts.save(owner,cycleId,base.revision,cycle)
                 is NativeCustomDraftWriteResult.Committed)
+            assertTrue(Disk().prepared.prepare(owner,"unsigned-effort-phase",cycleId,
+                previousWeek,day.weekday,inputs) is NativeCustomPrepareResult.Rejected)
             assertTrue(Disk().consent.confirm(owner,cycleId,cycle.revision,1,1,inputs,true)
                 is NativeCustomSignoffWrite.Committed)
+            assertEquals(cycle,(Disk().drafts.read(owner,cycleId) as NativeCustomDraftReadResult.Found).draft)
         }
         // The explicitly saved method is available without optional fatigue
         // coaching; it does not silently enable coach assistance.
@@ -561,7 +568,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
             is NativeCustomDraftWriteResult.Committed)
         assertTrue(Disk().prepared.prepare(owner,"unapproved-e1rm-next",cycleId,nextWeek,day.weekday,inputs)
             is NativeCustomPrepareResult.Rejected)
-        assertTrue(Disk().consent.confirm(owner,cycleId,changed.revision,1,if(autoWave)1 else 2,inputs,true)
+        assertTrue(Disk().consent.confirm(owner,cycleId,changed.revision,1,if(autoWave && !intensification)1 else 2,inputs,true)
             is NativeCustomSignoffWrite.Committed)
         assertTrue(Disk().prepared.prepare(owner,"e1rm-next",cycleId,nextWeek,day.weekday,inputs)
             is NativeCustomPrepareResult.Prepared)

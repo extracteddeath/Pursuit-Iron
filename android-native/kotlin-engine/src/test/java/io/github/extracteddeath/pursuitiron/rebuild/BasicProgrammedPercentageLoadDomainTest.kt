@@ -24,6 +24,24 @@ class BasicProgrammedPercentageLoadDomainTest {
     )=BasicProgrammedLoadRequest(
         scope,n(tm),confirmed,weeks.size,weeks,stock)
 
+    @Test fun addedPullupResistanceCannotDriveTotalMassPercentages() {
+        val added=scope.copy(exerciseId="weighted-pullup",machineInstanceId=null,
+            basis=LoadBasis.EXERCISE_OVERRIDE)
+        val weights=VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.EXERCISE_OVERRIDE,
+            listOf(n("10"),n("15"),n("20"),n("25")))
+        val weeks=listOf(BasicProgrammedWeek(1,n("80"),3,RepBand(4,6)))
+        assertEquals(BasicProgrammedLoadResult.Refused(
+            BasicProgrammedLoadRefusal.INCOMPATIBLE_ASSISTANCE_OR_LOAD_BASIS),
+            BasicProgrammedPercentageLoadDomain.review(request(weeks=weeks,tm="25",
+                stock=weights,scope=added)))
+        assertEquals(ProgrammedPhysicalLoadReview.Refused(
+            BasicProgrammedLoadRefusal.INCOMPATIBLE_ASSISTANCE_OR_LOAD_BASIS),
+            BasicProgrammedPercentageLoadDomain.verifiedPhysicalLoad(added,weights,n("20")))
+        assertEquals(ProgrammedPhysicalLoadReview.Confirmed(n("20")),
+            BasicProgrammedPercentageLoadDomain.verifiedPhysicalLoad(
+                added.copy(exerciseId="machine-press"),weights,n("20")))
+    }
+
     @Test fun genericWaveRefusesMachineTaggedFreeBarButAllowsVerifiedFreeBar() {
         val bar=VerifiedLoadStock.Barbell(LoadUnit.LB,n("45"),mapOf(
             n("25") to 2,n("5") to 2,n("2.5") to 2))

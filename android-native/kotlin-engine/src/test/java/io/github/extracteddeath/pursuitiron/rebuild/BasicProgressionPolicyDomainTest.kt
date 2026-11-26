@@ -53,6 +53,23 @@ class BasicProgressionPolicyDomainTest {
     private fun candidate(request:BasicProgressionRequest)=
         BasicProgressionPolicyDomain.review(request) as BasicProgressionResult.Candidate
 
+    @Test fun weightedPullupRetainsEarnedAddedLoadButNeverInfersTotalMassE1rm() {
+        val added=scope.copy(exerciseId="weighted-pullup",machineInstanceId=null,
+            basis=LoadBasis.EXERCISE_OVERRIDE)
+        val weights=VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.EXERCISE_OVERRIDE,
+            listOf(n("20"),n("25"),n("30")))
+        val values=List(3){"25"}
+        val facts=workout(listOf(10,10,10),values).copy(exerciseId=added.exerciseId)
+        val req=request(BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,
+            reps=listOf(10,10,10),loads=values,previous=facts,
+            nextScope=added,previousScope=added,verifiedStock=weights)
+        assertEquals(BasicProgressionResult.Refused(BasicProgressionRefusal.INVALID_SOURCE_OR_LOAD),
+            BasicProgressionPolicyDomain.review(req.copy(effortAdjustedE1rm=true)))
+        val earned=candidate(req)
+        assertEquals(List(3){n("30")},earned.proposedWorkingLoads)
+        assertNull(earned.e1rmEvidence)
+    }
+
     @Test fun basicProgressionNeverEarnsFromMachineTaggedFreeBarButManualRepeatRemainsNonwriting() {
         val freeBar=VerifiedLoadStock.Barbell(LoadUnit.LB,n("45"),mapOf(
             n("25") to 1,n("5") to 1,n("2.5") to 1))

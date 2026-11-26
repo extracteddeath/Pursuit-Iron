@@ -147,6 +147,10 @@ object BasicProgressionPolicyDomain {
         if((request.effortAdjustedE1rm || request.requireGoalEffort) &&
             request.strategy!=BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION)
             return reject(BasicProgressionRefusal.INVALID_SOURCE_OR_LOAD)
+        if(request.effortAdjustedE1rm &&
+            !StrengthStandardsMeasurementDomain.supportsMaxBasedPrescription(
+                request.nextScope.exerciseId,request.nextScope.basis))
+            return reject(BasicProgressionRefusal.INVALID_SOURCE_OR_LOAD)
         var e1rmEvidence:BasicE1rmEvidence?=null
         var goalEffortMet:Boolean?=null
         var assumedGoalCount=0

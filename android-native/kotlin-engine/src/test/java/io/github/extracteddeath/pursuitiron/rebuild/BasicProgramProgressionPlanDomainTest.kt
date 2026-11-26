@@ -35,6 +35,22 @@ class BasicProgramProgressionPlanDomainTest {
         (BasicProgramProgressionPlanDomain.review(cycle,selected)
             as ProgramProgressionPlan.Ready).assignments.single()
 
+    @Test fun addedPullupLoadCannotBecomeAMaxBasedPrescription() {
+        val key=ProgramProgressionSlotKey("block",0,"slot")
+        val sets=List(2){working("25",RepBand(3,5)).copy(
+            load=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.EXERCISE_OVERRIDE,n("25")))}
+        val weighted=cycle(block(phase=TrainingPhase.STRENGTH,
+            slots=listOf(slot(role=ComposerRole.PRIMARY,sets=sets,exerciseId="weighted-pullup"))))
+        assertTrue(BasicProgramProgressionPlanDomain.review(weighted,
+            selectedStyles=mapOf(key to NativeProgressionStyle.E1RM)) is ProgramProgressionPlan.Refused)
+        assertTrue(BasicProgramProgressionPlanDomain.review(weighted,
+            selectedStyles=mapOf(key to NativeProgressionStyle.DOUBLE)) is ProgramProgressionPlan.Ready)
+        val ordinary=cycle(block(phase=TrainingPhase.STRENGTH,
+            slots=listOf(slot(role=ComposerRole.PRIMARY,sets=sets,exerciseId="machine-press"))))
+        assertTrue(BasicProgramProgressionPlanDomain.review(ordinary,
+            selectedStyles=mapOf(key to NativeProgressionStyle.E1RM)) is ProgramProgressionPlan.Ready)
+    }
+
     @Test fun progressionAssignmentRespectsWhatZeroPhysicallyMeans() {
         for (basis in LoadBasis.entries) {
             val set=working().copy(load=DraftSetLoad.Verified(LoadUnit.KG,basis,n("0.000")))

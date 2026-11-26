@@ -341,7 +341,8 @@ object BasicProgramProgressionPlanDomain {
                     (autoPeakE1rm || autoLateE1rm))) ||
                     block.purpose!=CustomBlockPurpose.TRAINING ||
                     block.phase==TrainingPhase.HYPERTROPHY ||
-                    !loaded || assistance || !sameWeights ||
+                    !loaded || !StrengthStandardsMeasurementDomain.supportsMaxBasedPrescription(
+                        slot.exerciseId,unitBasis.single().second) || !sameWeights ||
                     bands.size!=1 ||
                     (authored.isNotEmpty() && saved!=SavedProgressionMethod.E1RM && !autoPeakE1rm && !autoLateE1rm) || amplifier))
                 return no("e1RM progression requires a straight weighted primary strength or peak exercise with no conflicting authored week or amplifier.")

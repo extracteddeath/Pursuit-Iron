@@ -96,23 +96,26 @@ class NativeKotlinBlockCalibrationConsentStore(
     private fun path(key:String,w:String)=root.resolve(stem(key,w)+".bin")
     private fun pending(key:String,w:String)=root.resolve(stem(key,w)+".pending")
     private fun norm(v:BigDecimal)=BigDecimal(v.stripTrailingZeros().toPlainString())
-    private fun validLoad(v:BigDecimal)=v>BigDecimal.ZERO&&v<=BigDecimal("100000")&&
-        v.stripTrailingZeros().scale()<=3
+    private fun validIncrease(v:BigDecimal)=v>BigDecimal.ZERO &&
+        v<=BigDecimal("10000") &&
+        KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(v)
     private fun encode(r:NativeBlockCalibrationReceipt):ByteArray {
         require(listOf(r.ownerKey,r.athleteId,r.workoutId,r.cycleId,r.slotId).all(id::matches))
         require(hex.matches(r.fingerprint)&&r.absoluteWeek in 2..104&&r.weekday in 0..6)
         require(listOf(r.historyRevision,r.consentRevision,r.permissionRevision,
             r.sourceRevision).all{it in 1..9_007_199_254_740_991L}&&
             r.settingsRevision in 0..9_007_199_254_740_991L)
-        require(validLoad(r.maximumIncrease)&&r.maximumIncrease<=BigDecimal("10000"))
+        require(validIncrease(r.maximumIncrease))
         require(r.setKeys.size in 1..32&&r.setKeys.distinct().size==r.setKeys.size&&
             r.setKeys.all{it.length in 1..240}&&
             r.authoredLoads.size==r.setKeys.size&&r.proposedLoads.size==r.setKeys.size&&
-            (r.authoredLoads+r.proposedLoads).all(::validLoad)&&
+            (r.authoredLoads+r.proposedLoads).all{
+                KotlinSetNumberAuthorityDomain.validPrescribedLoad(it,r.basis)}&&
             r.proposedLoads.zip(r.authoredLoads).all{it.first<=it.second})
         val earned=r.kind==NativeBlockLoadConsentKind.EARNED_BASELINE_INCREASE
         if(earned)require(r.baselineLoads.size==r.setKeys.size&&
-            r.baselineLoads.all(::validLoad)&&
+            r.baselineLoads.all{
+                KotlinSetNumberAuthorityDomain.validPrescribedLoad(it,r.basis)}&&
             r.baselineLoads.zip(r.proposedLoads).all{(base,next)->
                 next>base&&next.subtract(base)<=r.maximumIncrease}&&
             r.comparedWorkoutIds.size==2&&r.comparedWorkoutIds.distinct().size==2&&
@@ -238,7 +241,7 @@ class NativeKotlinBlockCalibrationConsentStore(
         kind:NativeBlockLoadConsentKind):NativeBlockCalibrationPreview {
         fun no(r:NativeCalibrationRefusal)=NativeBlockCalibrationPreview.Rejected(r)
         if(!listOf(key,w,cycle,slot).all(id::matches)||week !in 2..104||day !in 0..6||
-            !validLoad(increase)||increase>BigDecimal("10000"))return no(NativeCalibrationRefusal.INVALID_SELECTION)
+            !validIncrease(increase))return no(NativeCalibrationRefusal.INVALID_SELECTION)
         val signed=owner(key)?:return no(NativeCalibrationRefusal.NOT_AUTHORIZED)
         val reviewed=reviewer.reviewAuthored(key,cycle,inputs,week,day,slot,readiness,restricted,increase)
             as? NativeCustomNextCoachResult.Reviewed ?:return no(NativeCalibrationRefusal.REVIEW_NOT_READY)

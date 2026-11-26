@@ -54,15 +54,7 @@ class NativeKotlinLandmineJourneyTest {
         assertTrue(CustomExerciseAuthoringDomain.picker(wrong,value.catalog).isEmpty())
     }
 
-    @Test fun fullNativeLandmineWorkoutKeepsActualsAndTargetsThroughRetryColdReopenFinishAndCsv() {
-        val source=source()
-        val drafts=NativeCustomCycleDraftFileStore(root,fence(),identity)
-        val consent=NativeKotlinCustomCycleSignoffFileStore(root,fence(),identity,drafts,sources())
-        val preflight=NativeKotlinCustomWorkoutPreflight(fence(),identity,drafts,sources(),consent)
-        val prepared=NativeKotlinCustomWorkoutPreparedStore(root,fence(),identity,preflight)
-        val history=NativeKotlinHistoryManifestFileStore(root)
-        val generated=KotlinNativeJournalFileStore(root)
-        fun issued()=NativeKotlinCustomWorkoutJournalFileStore(root,fence(),identity,prepared,preflight,history,generated)
+    private fun program(source:NativeCustomAuthoringSnapshot):Pair<CustomTrainingCycle,CustomCoachAuditInputs> {
         val cycle=CustomTrainingCycle("landmine-cycle",1,owner.athleteId,AthleteTrainingGoal.HYPERTROPHY,
             "Landmine program",listOf(CustomTrainingBlock("base","Base",TrainingPhase.HYPERTROPHY,
                 CustomBlockPurpose.TRAINING,3,CustomSplitIdentity.Freeform("Three days"),listOf(0,2,4).map{day->
@@ -83,6 +75,19 @@ class NativeKotlinLandmineJourneyTest {
             AthleteTrainingGoal.HYPERTROPHY,AthleteExperience.ADVANCED,ComposerSplit.FULL_BODY,TrainingPhase.HYPERTROPHY,
             3,bounds,bounds,mapOf(ComposerSessionPurpose.HYPERTROPHY to 3))
         val inputs=CustomCoachAuditInputs(mapOf(TrainingPhase.HYPERTROPHY to policy),mapOf(0 to 200,2 to 200,4 to 200))
+        return cycle to inputs
+    }
+
+    @Test fun fullNativeLandmineWorkoutKeepsActualsAndTargetsThroughRetryColdReopenFinishAndCsv() {
+        val source=source()
+        val drafts=NativeCustomCycleDraftFileStore(root,fence(),identity)
+        val consent=NativeKotlinCustomCycleSignoffFileStore(root,fence(),identity,drafts,sources())
+        val preflight=NativeKotlinCustomWorkoutPreflight(fence(),identity,drafts,sources(),consent)
+        val prepared=NativeKotlinCustomWorkoutPreparedStore(root,fence(),identity,preflight)
+        val history=NativeKotlinHistoryManifestFileStore(root)
+        val generated=KotlinNativeJournalFileStore(root)
+        fun issued()=NativeKotlinCustomWorkoutJournalFileStore(root,fence(),identity,prepared,preflight,history,generated)
+        val (cycle,inputs)=program(source)
         val reviewed=CustomCycleCoachAuditDomain.review(cycle,source.setup,source.catalog,inputs)
         assertEquals(reviewed.issues.toString(),CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,reviewed.status)
         val limited=source.setup.copy(reviewed=checkNotNull(source.setup.reviewed).copy(maxBarbellExercisesPerDay=2))
@@ -145,5 +150,104 @@ class NativeKotlinLandmineJourneyTest {
         assertEquals(9,csv.rowCount)
         assertEquals(source,(sources().read(owner.ownerKey) as NativeAuthoringSourceRead.Found).source)
         assertEquals(snapshot,(issued().open(owner.ownerKey,"landmine-workout") as NativeCustomJournalResult.Durable).issued.journal.snapshot)
+    }
+
+    @Test fun newBlockCalibrationCanExplicitlyRetainZeroAddedLandminePlates() {
+        val source=source()
+        val (base,initialInputs)=program(source)
+        val inputs=initialInputs.copy(continuityPolicy=CustomCoachVolumeContinuityPolicy(
+            n("0.50"),n("0.50"),n("0.50"),n("0.50")))
+        val original=base.blocks.single()
+        val first=original.copy(days=original.days.map{day->
+            day.copy(slots=day.slots.map{slot->
+                if(slot.exerciseId!="landmine-press")slot else slot.copy(
+                    sets=slot.sets.map{set->set.copy(load=(set.load as DraftSetLoad.Verified).copy(value=n("0")))})
+            })})
+        val second=original.copy(blockId="build",label="Build")
+        val cycle=base.copy(blocks=listOf(first,second))
+        val draft=NativeCustomCycleDraftFileStore(root,fence(),identity)
+        val consent=NativeKotlinCustomCycleSignoffFileStore(root,fence(),identity,draft,sources())
+        val preflight=NativeKotlinCustomWorkoutPreflight(fence(),identity,draft,sources(),consent)
+        val prepared=NativeKotlinCustomWorkoutPreparedStore(root,fence(),identity,preflight)
+        val history=NativeKotlinHistoryManifestFileStore(root)
+        val composer=KotlinNativeJournalFileStore(root)
+        fun journalStore()=NativeKotlinCustomWorkoutJournalFileStore(root,fence(),identity,
+            prepared,preflight,history,composer)
+        val permissions=NativeKotlinAdaptiveCyclePermissionFileStore(root,fence(),identity)
+        val key=owner.ownerKey
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),sources().publish(key,0,source))
+        assertEquals(NativeCustomDraftWriteResult.Committed(1),draft.save(key,cycle.cycleId,0,cycle))
+        val audit=CustomCycleCoachAuditDomain.review(cycle,source.setup,source.catalog,inputs)
+        assertEquals(audit.issues.toString(),CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,audit.status)
+        assertTrue(consent.confirm(key,cycle.cycleId,1,1,0,inputs,true) is NativeCustomSignoffWrite.Committed)
+        assertTrue(history.enroll(key,owner.athleteId){o,a->owner==NativeKotlinOwnerIdentity(o,a)}
+            is NativeHistoryLedgerResult.Durable)
+        assertTrue(permissions.confirm(key,cycle.cycleId,0,
+            setOf(CustomCycleChangeKind.LOADS,CustomCycleChangeKind.WEEK_OVERRIDES),true)
+            is NativeAdaptivePermissionWrite.Committed)
+        // Complete the adjacent block's actual scheduled exposures.
+        for(week in 1..3)for(day in listOf(0,2,4)){
+            val id="landmine-w$week-d$day"
+            assertTrue(prepared.prepare(key,id,cycle.cycleId,week,day,inputs)
+                is NativeCustomPrepareResult.Prepared)
+            var journal=(journalStore().issue(key,id,cycle.cycleId,week,day,inputs)
+                as NativeCustomJournalResult.Durable).issued.journal
+            for((index,set) in journal.originalSnapshot.slots.flatMap{it.sets}.withIndex()){
+                val p=set.prescription
+                val load=p.load as DraftSetLoad.Verified
+                journal=(journalStore().record(key,id,CustomWorkoutJournalOperation.Record(
+                    "landmine-log-$index",journal.revision,
+                    CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN),
+                    KotlinJournalSetOutcome.COMPLETED,
+                    KotlinPerformedSet(load.value,load.unit,p.reps.minimum,p.targetRir)))
+                    as NativeCustomJournalResult.Durable).issued.journal
+            }
+            assertTrue(NativeKotlinCustomHistoryTransaction(history,journalStore(),fence(),identity)
+                .complete(key,owner.athleteId,id,CustomWorkoutJournalOperation.Finish("finish",journal.revision))
+                is NativeCustomFinishResult.Committed)
+        }
+        fun calibration():NativeKotlinBlockCalibrationConsentStore {
+            val journals=journalStore()
+            val reader=NativeKotlinMixedHistoryReadCoordinator(history,composer,
+                KotlinNativeSavedCorrectionFileStore(root,composer),journals,
+                NativeKotlinApprovalFileAuthority(root,fence(),identity),identity,fence(),
+                NativeKotlinCustomSavedCorrectionFileStore(root,fence(),identity,journals,history))
+            val reviewer=NativeKotlinCustomNextWorkoutReview(fence(),identity,null,null,sources(),
+                reader,journals,NativeKotlinCoachAssistanceSettingsStore(root,fence(),identity),preflight)
+            return NativeKotlinBlockCalibrationConsentStore(root,fence(),identity,reviewer,draft,sources(),
+                permissions,reader,NativeKotlinCustomOutstandingWorkoutInventory(prepared,journals),
+                composer,prepared)
+        }
+        val id="landmine-calibrated"
+        val slot="landmine-press-0"
+        fun preview(step:BigDecimal)=calibration().preview(key,id,cycle.cycleId,inputs,4,0,slot,
+            CoachReadiness.NORMAL,false,step)
+        assertEquals(NativeBlockCalibrationPreview.Rejected(NativeCalibrationRefusal.INVALID_SELECTION),
+            preview(BigDecimal.ZERO))
+        val result=preview(n("5"))
+        assertTrue(result.toString(),result is NativeBlockCalibrationPreview.Ready)
+        val offer=result as NativeBlockCalibrationPreview.Ready
+        assertEquals(listOf(n("10"),n("10")),offer.receipt.authoredLoads)
+        assertEquals(listOf(n("0"),n("0")),offer.receipt.proposedLoads)
+        assertEquals(LoadBasis.LANDMINE_ADDED_PLATES,offer.receipt.basis)
+        assertEquals(NativeBlockCalibrationWrite.Rejected(NativeCalibrationRefusal.CONFIRMATION_REQUIRED),
+            calibration().accept(offer.receipt,inputs,false))
+        assertEquals(NativeBlockCalibrationWrite.Accepted(offer.receipt,false),
+            calibration().accept(offer.receipt,inputs,true))
+        assertEquals(NativeBlockCalibrationRead.Current(offer),
+            calibration().readCurrent(key,id,cycle.cycleId,4,0,inputs))
+        val prep=prepared.prepare(key,id,cycle.cycleId,4,0,inputs,calibration())
+            as NativeCustomPrepareResult.Prepared
+        assertEquals(offer.projected,prep.workout.snapshot)
+        val issued=journalStore().issue(key,id,cycle.cycleId,4,0,inputs,calibration())
+            as NativeCustomJournalResult.Durable
+        assertEquals(offer.projected,issued.issued.journal.originalSnapshot)
+        assertEquals(cycle,(draft.read(key,cycle.cycleId) as NativeCustomDraftReadResult.Found).draft)
+        val prior=(journalStore().open(key,"landmine-w3-d0") as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals(listOf(n("0"),n("0")),prior.originalSnapshot.slots.single{it.slotId==slot}
+            .sets.filter{it.prescription.type==DraftSetType.WORKING}
+            .map{(it.prescription.load as DraftSetLoad.Verified).value})
+        assertEquals(issued.issued.journal,(journalStore().open(key,id)
+            as NativeCustomJournalResult.Durable).issued.journal)
     }
 }

@@ -1101,7 +1101,16 @@ class NativeKotlinGeneratedProgramJourneyTest {
     @Test fun correctedGeneratedDoubleProgressionRevokesAnEarnedIncreaseWithoutChangingIssuedTargets() =
         completeBasicOrManualWeek(manual=false,correctBeforeApproval=true)
 
-    private fun completeBasicOrManualWeek(manual:Boolean,correctBeforeApproval:Boolean=false) {
+    @Test fun generatedExactRepTargetsEarnOnlyOneRepWithoutChangingWeights() =
+        completeBasicOrManualWeek(false,repMethod=SavedProgressionMethod.REP_TARGETS)
+
+    @Test fun generatedRepLadderEarnsAdjacentWeightAndResetsToItsActualRepFloor() =
+        completeBasicOrManualWeek(false,repMethod=SavedProgressionMethod.LADDER)
+
+    private fun completeBasicOrManualWeek(manual:Boolean,correctBeforeApproval:Boolean=false,
+        repMethod:SavedProgressionMethod?=null) {
+        require(repMethod==null || repMethod in setOf(SavedProgressionMethod.REP_TARGETS,
+            SavedProgressionMethod.LADDER) && !manual && !correctBeforeApproval)
         val (base, inputs) = saveGenerated()
         assertTrue(Disk().settings.save(owner,0,CoachAssistancePolicy.MANUAL)
             is NativeCoachSettingsWrite.Saved)
@@ -1116,18 +1125,25 @@ class NativeKotlinGeneratedProgramJourneyTest {
                         val load = it.load as? DraftSetLoad.Verified
                         load?.basis == LoadBasis.DUMBBELL_PER_HAND &&
                             it.amplifier == null &&
-                            (!correctBeforeApproval || it.reps.minimum<it.reps.maximum)
-                    } && (!correctBeforeApproval ||
-                        work.map{it.load}.distinct().size==1)
+                            (!(correctBeforeApproval || repMethod!=null) ||
+                                it.reps.minimum<it.reps.maximum)
+                    } && (!(correctBeforeApproval || repMethod!=null) ||
+                        work.map{it.load}.distinct().size==1 &&
+                        work.map{it.reps}.distinct().size==1)
                 }
         }
-        val cycle=if(!manual && !correctBeforeApproval)base else {
+        val cycle=if(!manual && !correctBeforeApproval && repMethod==null)base else {
             val block=base.blocks.single()
             val changed=base.copy(revision=base.revision+1,blocks=listOf(block.copy(
                 days=block.days.map{day->if(day.weekday!=firstDay.weekday)day else
                     day.copy(slots=day.slots.map{slot->if(slot.slotId!=selected.slotId)slot else
-                        slot.copy(progressionMethod=if(manual)SavedProgressionMethod.MANUAL
-                            else SavedProgressionMethod.DOUBLE)})})))
+                        slot.copy(progressionMethod=repMethod ?: if(manual)SavedProgressionMethod.MANUAL
+                            else SavedProgressionMethod.DOUBLE,
+                            sets=if(repMethod==null)slot.sets else slot.sets.map{set->
+                                if(set.type!=DraftSetType.WORKING)set else set.copy(
+                                    exactRepTarget=if(repMethod==SavedProgressionMethod.LADDER)
+                                        set.reps.maximum else set.reps.minimum)
+                            })})})))
             assertTrue(Disk().drafts.save(owner,cycleId,base.revision,changed)
                 is NativeCustomDraftWriteResult.Committed)
             assertTrue(Disk().prepared.prepare(owner,"unapproved-manual",cycleId,1,
@@ -1149,8 +1165,8 @@ class NativeKotlinGeneratedProgramJourneyTest {
                 val earned = day.weekday == firstDay.weekday &&
                     set.slotId == selected.slotId &&
                     prescription.type == DraftSetType.WORKING
-                val performedReps = if (earned) prescription.reps.maximum
-                    else prescription.reps.minimum
+                val performedReps = if (earned) prescription.exactRepTarget ?: prescription.reps.maximum
+                    else prescription.exactRepTarget ?: prescription.reps.minimum
                 val performed = when (val load = prescription.load) {
                     is DraftSetLoad.Verified ->
                         KotlinPerformedSet(load.value, load.unit, performedReps, null)
@@ -1237,8 +1253,29 @@ class NativeKotlinGeneratedProgramJourneyTest {
             return
         }
         assertEquals("earned-basic-w1-0", projection.historyWorkoutId)
-        assertTrue("Expected a verified physical next increment",
-            projection.candidate.increasedOrdinals.isNotEmpty())
+        if(repMethod==SavedProgressionMethod.REP_TARGETS) {
+            val work=review.next.slots.single{it.slotId==selected.slotId}.sets
+                .filter{it.prescription.type==DraftSetType.WORKING}.map{it.prescription}
+            assertEquals(BasicProgressionDecision.EARNED_REP_TARGET,projection.candidate.decision)
+            assertEquals(work.map{(it.load as DraftSetLoad.Verified).value},
+                projection.candidate.proposedWorkingLoads)
+            assertEquals(work.map{it.reps.minimum+1},projection.candidate.proposedRepTargets)
+            assertEquals(work.indices.toSet(),projection.candidate.changedRepOrdinals)
+            assertTrue(projection.candidate.increasedOrdinals.isEmpty())
+            assertTrue(projection.candidate.approvedFutureLoadFacts.isEmpty())
+        } else {
+            assertTrue("Expected a verified physical next increment",
+                projection.candidate.increasedOrdinals.isNotEmpty())
+            if(repMethod==SavedProgressionMethod.LADDER){
+                val work=review.next.slots.single{it.slotId==selected.slotId}.sets
+                    .filter{it.prescription.type==DraftSetType.WORKING}.map{it.prescription}
+                assertEquals(work.map{(it.load as DraftSetLoad.Verified).value+n("5")},
+                    projection.candidate.proposedWorkingLoads)
+                assertEquals(work.map{it.reps.minimum},projection.candidate.proposedRepTargets)
+                assertEquals(work.indices.toSet(),projection.candidate.increasedOrdinals)
+                assertEquals(work.indices.toSet(),projection.candidate.changedRepOrdinals)
+            }
+        }
         if(correctBeforeApproval) {
             val originalId="earned-basic-w1-0"
             val original=finishedWeekOne.getValue(originalId)

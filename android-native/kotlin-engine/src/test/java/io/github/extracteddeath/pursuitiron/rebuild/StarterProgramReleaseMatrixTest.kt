@@ -271,7 +271,7 @@ class StarterProgramReleaseMatrixTest {
             CoachFirstProgramStartDomain.V8_POLICY_VERSION)
         assertEquals("first-program-reference-v11",
             CoachFirstProgramStartDomain.V11_POLICY_VERSION)
-        assertEquals("first-program-reference-v12",
+        assertEquals("first-program-reference-v13",
             CoachFirstProgramStartDomain.POLICY_VERSION)
         for(split in ComposerSplit.entries)
             for(phase in TrainingPhase.entries) {

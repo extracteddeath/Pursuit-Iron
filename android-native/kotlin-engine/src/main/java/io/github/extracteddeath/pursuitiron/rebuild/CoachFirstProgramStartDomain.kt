@@ -537,6 +537,10 @@ object CoachFirstProgramStartDomain {
         ):ExercisePrescriptionPolicy? {
             val source=byId[exerciseId] ?:return null
             val desired=when {
+                // New peak primary prescriptions must actually be low-rep;
+                // preserve the older 3–6 source receipts on cold replay.
+                input.policyVersion==POLICY_VERSION && input.phase==TrainingPhase.PEAK &&
+                    source.role==ComposerRole.PRIMARY -> RepBand(3,5)
                 input.phase!=TrainingPhase.HYPERTROPHY &&
                     source.role==ComposerRole.PRIMARY -> RepBand(3,6)
                 source.role==ComposerRole.ACCESSORY -> RepBand(10,15)

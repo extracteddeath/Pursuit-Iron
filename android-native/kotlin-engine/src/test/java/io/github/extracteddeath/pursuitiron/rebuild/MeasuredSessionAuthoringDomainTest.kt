@@ -104,6 +104,29 @@ class MeasuredSessionAuthoringDomainTest {
         }
     }
 
+    @Test fun measuredPickerRequiresARealPrescribableWorkingSetting() {
+        val reviewed=profile()
+        val loadedIds=setOf("farmers","suitcase-carry","plate-pinch","weighted-plank")
+        fun choices(loads:List<BigDecimal>,unit:LoadUnit=LoadUnit.LB):Set<String> {
+            val gym=reviewed.gym.copy(confirmedStock=mapOf(
+                "dumbbell-rack" to VerifiedLoadStock.Totals(unit,
+                    LoadBasis.DUMBBELL_PER_HAND,loads),
+                "single-weight-plate" to VerifiedLoadStock.Totals(unit,
+                    LoadBasis.EXERCISE_OVERRIDE,loads)))
+            return MeasuredSessionAuthoringDomain.available(reviewed.copy(gym=gym))
+                .map{it.exerciseId}.toSet()
+        }
+        for(loads in listOf(emptyList(),listOf(n("0")),listOf(n("0"),n("0.0"),n("20")),
+            listOf(n("-5"),n("20")))) {
+            val ids=choices(loads)
+            assertTrue(loads.toString(),ids.intersect(loadedIds).isEmpty())
+            assertTrue(ids.containsAll(setOf("plank","band-pushup")))
+        }
+        assertTrue(choices(listOf(n("20")),LoadUnit.KG).intersect(loadedIds).isEmpty())
+        assertTrue(choices(listOf(n("20"),n("0"),n("10"))).containsAll(loadedIds))
+        assertTrue(choices(listOf(n("20"))).containsAll(loadedIds))
+    }
+
     @Test fun mixedWorkoutRecordsExactFactsAndCanColdReplayOneFinish() {
         val plan=checkNotNull(MeasuredSessionAuthoringDomain.compose(
             "measured-mixed-1",3,profile(),selections()))

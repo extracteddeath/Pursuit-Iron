@@ -105,22 +105,7 @@ object CustomExerciseAuthoringDomain {
                     (stock.basis.countsTowardBarbellLimit &&
                         athlete.maxBarbellExercisesPerDay == 0))
                     return@mapNotNull null
-                // Reject malformed stock; never turn an inventory exception
-                // into a load recommendation.
-                // A valid physical inventory is not necessarily capable of
-                // issuing any working load. In particular, a zero-only
-                // selector is not a usable exercise prescription. Inspect
-                // once at zero to obtain the first real positive setting;
-                // a legitimate unloaded landmine may still issue zero.
-                val inspection = EquipmentLoadDomain.inspect(
-                    stock, zero, gym.unit) as? LoadInspection.Confirmed
-                    ?: return@mapNotNull null
-                if (inspection.basis != stock.basis ||
-                    !(inspection.exact &&
-                        KotlinSetNumberAuthorityDomain.validPrescribedLoad(zero,stock.basis)) &&
-                    inspection.nextAbove?.let {
-                        KotlinSetNumberAuthorityDomain.validPrescribedLoad(it,stock.basis)
-                    } != true)
+                if (!EquipmentLoadDomain.hasPrescribableLoad(stock,gym.unit))
                     return@mapNotNull null
                 val availability = CustomExerciseAvailability(
                     move.exerciseId, stock, bodyweightApproved = false,

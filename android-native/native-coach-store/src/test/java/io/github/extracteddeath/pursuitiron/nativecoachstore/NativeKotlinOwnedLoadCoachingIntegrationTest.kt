@@ -1096,11 +1096,22 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         }
         // A previously earned review must be invalidated by the new
         // completion, not accepted using an older favorable pair.
-        assertFalse(accept(intent(earned).copy(expectedApprovalRevision=3,newWorkoutId="workout-4")) is NativeKotlinCoachAcceptanceResult.Committed)
+        val before=checkNotNull(approvals.currentOwnedApproval("owner-1"))
+        assertEquals(3L,before.storageRevision)
+        assertEquals(NativeKotlinCoachAcceptanceResult.Rejected(
+            NativeKotlinCoachAcceptanceRefusal.HISTORY_CHANGED),
+            accept(intent(earned).copy(expectedApprovalRevision=3,newWorkoutId="workout-4")))
         val approval=checkNotNull(approvals.currentOwnedApproval("owner-1"))
-        assertEquals(n("30"),approval.policies.single{
+        assertEquals(before,approval)
+        // Null purpose override means the confirmed program baseline owns
+        // the weight; it is not a missing or silently changed prescription.
+        assertNull(approval.policies.single{
             it.exerciseId=="db-press" && it.purpose==ComposerSessionPurpose.HYPERTROPHY
         }.purposeWorkingLoad)
+        assertEquals(n("30"),(approval.program.exercises.single{
+            it.exerciseId=="db-press"
+        }.equipment as ComposerEquipment.Verified).plannedLoad)
+        assertTrue(press.all{(it.load as DraftSetLoad.Verified).value.compareTo(n("30"))==0})
         assertEquals(restored,(cold.openStored("owner-1","workout-3",approvals::canAccessIssuedWorkout)
             as NativeJournalFileResult.Durable).journal)
     }

@@ -243,7 +243,9 @@ object BasicProgramProgressionPlanDomain {
                 catalog?.expectedLoadBasis==LoadBasis.BARBELL_TOTAL &&
                 unitBasis.single().second==LoadBasis.BARBELL_TOTAL &&
                 slot.machineInstanceId==null
-            val automatic=reviewedAuto && (explicitStyle==null ||
+            // Explicit Auto is a current source choice, not a historical
+            // generator default. v1–v12 null/default replay remains frozen.
+            val automatic=(reviewedAuto || explicitStyle==NativeProgressionStyle.AUTO) && (explicitStyle==null ||
                 explicitStyle==NativeProgressionStyle.AUTO) &&
                 savedBasic==null && saved!=SavedProgressionMethod.BODYWEIGHT_REPS &&
                 key !in selectedStrategies && key !in selectedPerSetDynamic
@@ -251,7 +253,8 @@ object BasicProgramProgressionPlanDomain {
                 experience in setOf(AthleteExperience.INTERMEDIATE,AthleteExperience.ADVANCED) &&
                 block.phase==TrainingPhase.PEAK && block.purpose==CustomBlockPurpose.TRAINING &&
                 slot.role==ComposerRole.PRIMARY && sameWeights && bands.size==1 &&
-                bands.single().maximum<=5 && authored.isEmpty() && !amplifier
+                bands.single().maximum<=5 &&
+                (authored.isEmpty() || saved==SavedProgressionMethod.AUTO) && !amplifier
             // This is the same existing e1RM review route, not a new load
             // prescriber. It can only advance from comparable recorded work.
             val style=if(autoPeakE1rm)NativeProgressionStyle.E1RM else explicitStyle
@@ -302,7 +305,7 @@ object BasicProgramProgressionPlanDomain {
                     block.phase==TrainingPhase.HYPERTROPHY ||
                     !loaded || assistance || !sameWeights ||
                     bands.size!=1 ||
-                    (authored.isNotEmpty() && saved!=SavedProgressionMethod.E1RM) || amplifier))
+                    (authored.isNotEmpty() && saved!=SavedProgressionMethod.E1RM && !autoPeakE1rm) || amplifier))
                 return no("e1RM progression requires a straight weighted primary strength or peak exercise with no conflicting authored week or amplifier.")
             val selectedDynamic=requested==
                 BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION

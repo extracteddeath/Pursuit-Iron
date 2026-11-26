@@ -133,7 +133,9 @@ object CustomBasicHistoryProgressionDomain {
             ?:return no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE)
         val unweighted=assignment.route==ProgramProgressionRoute.BASIC_BODYWEIGHT_REPS
         val e1rm=assignment.route==ProgramProgressionRoute.E1RM_COACH_REVIEW &&
-            saved.progressionMethod==SavedProgressionMethod.E1RM
+            (saved.progressionMethod==SavedProgressionMethod.E1RM ||
+                (saved.progressionMethod==SavedProgressionMethod.AUTO &&
+                    assignment.selectedStyle==NativeProgressionStyle.E1RM))
         val strategy=when(assignment.route) {
             ProgramProgressionRoute.MANUAL -> BasicProgressionStrategy.MANUAL_LOGGING
             ProgramProgressionRoute.BASIC_WEIGHTED -> assignment.basicStrategy

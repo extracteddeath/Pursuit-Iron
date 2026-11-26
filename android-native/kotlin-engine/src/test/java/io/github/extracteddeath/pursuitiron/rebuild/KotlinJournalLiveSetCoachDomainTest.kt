@@ -43,6 +43,27 @@ class KotlinJournalLiveSetCoachDomainTest {
     )=KotlinJournalLiveSetCoachDomain.review(
         j,set,gym,CoachReadiness.NORMAL,false,n("5"))
 
+    @Test fun repeatedGeneratedExerciseUsesOnlyItsCurrentOccurrence() {
+        val journal=started(listOf(target(0),target(1),
+            target(0,exerciseId="row"),
+            target(0,"205").copy(setKey="bench:second:s0"),
+            target(1,"205").copy(setKey="bench:second:s1")))
+        val first=record(journal,"bench:s0",2,0,"215")
+        assertEquals(InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD,
+            (look(first,"bench:s1") as LiveSetCoachResult.Reviewed).coaching.direction)
+        assertEquals(LiveSetCoachResult.Unavailable(
+            LiveSetCoachUnavailable.WARMUP_OR_FIRST_WORKING_SET),
+            look(first,"bench:second:s0"))
+        assertEquals(InWorkoutDirection.PRIOR_SET_UNRESOLVED,
+            (look(first,"bench:second:s1") as LiveSetCoachResult.Reviewed).coaching.direction)
+        val second=record(first,"bench:second:s0",6,3,"205")
+        val next=look(second,"bench:second:s1") as LiveSetCoachResult.Reviewed
+        assertEquals("bench:second:s0",next.previousSetKey)
+        assertEquals(InWorkoutDirection.BUILD_REPS_AS_PLANNED,next.coaching.direction)
+        assertEquals(n("205"),next.coaching.issuedTargetUnchanged)
+        assertEquals(journal.snapshot,second.snapshot)
+    }
+
     @Test fun mixedUnlabeledWorkingWeightsCannotMasqueradeAsPlannedBackoff() {
         // A mixed issued snapshot is immutable, but no straight-set
         // feedback may infer a named backoff without verified scheme intent.

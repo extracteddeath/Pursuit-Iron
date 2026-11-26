@@ -37,6 +37,18 @@ internal class NativeKotlinMovementSwapEligibilityTest {
         return CustomWorkoutJournalDomain.begin("workout-1",issued,"a".repeat(64))
     }
 
+    @Test fun generatedRepeatedMovementCannotOpenAmbiguousInjuryReplacement() {
+        val first=generated()
+        val target=first.snapshot.targets.single()
+        val repeated=first.snapshot.copy(targets=listOf(target,
+            target.copy(exerciseId="row",setKey="row:working-1"),
+            target.copy(setKey="db-press:working-2",ordinal=1)))
+        val journal=KotlinWorkoutJournalDomain.begin(repeated,first.storedIdentity)
+        assertFalse(NativeMovementSwapEligibility.generated(journal,"db-press"))
+        assertTrue(NativeMovementSwapEligibility.generated(journal,"row"))
+        assertNull(WorkoutRemainingExerciseDomain.generated(journal,"db-press"))
+    }
+
     @Test fun generatedRecordedOrCorrectedWorkNeverReopensReplacement() {
         val original=generated()
         assertTrue(NativeMovementSwapEligibility.generated(original,"db-press"))

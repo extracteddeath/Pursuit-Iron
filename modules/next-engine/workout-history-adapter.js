@@ -331,13 +331,15 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         const referenceLoad = convertLoad(representativeShellLoad(reference), referenceEntry?.unit, evaluationUnit);
         return reference && referenceLoad !== null ? { unit: evaluationUnit, weight: referenceLoad, dir: 'hold', reason: 'Use the other day only as a starting reference. This program day has no comparable completed history yet.', reps, last: reference, lastUnit: referenceEntry?.unit || evaluationUnit, action: 'initial', referenceOnly: true } : null;
     }
-    let decision;
-    for (let i = analysis.workouts.length - 1; i >= 0 && !decision; i--) {
-        const workout = analysis.workouts[i];
-        if (workout.dayId !== String(day.id))
-            continue;
-        decision = workout.progression.find(d => d.exerciseId === nextId);
-    }
+    // The decision and displayed Last must use the SAME exposure. A newer
+    // workout can have other completed lifts but no valid sets for this one.
+    // Its unobserved decision must not mask the last real working-set history.
+    const sourceHistoryId = lastEntry
+        ? String(lastEntry.id ?? `${lastEntry.date ?? 0}-${lastEntry.dayId ?? lastEntry.dayLabel ?? 'session'}`)
+        : null;
+    const decision = sourceHistoryId === null ? undefined : analysis.workouts
+        .find(workout => workout.historyId === sourceHistoryId && workout.dayId === String(day.id))
+        ?.progression.find(d => d.exerciseId === nextId && d.outcome !== 'unobserved');
     if (!decision) {
         if (last) return { unit: evaluationUnit, weight: lastLoad, dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last, lastUnit: lastEntry?.unit || evaluationUnit, action: 'initial' };
         const reference = referenceEntry?.perf?.[legacyId] ?? null;

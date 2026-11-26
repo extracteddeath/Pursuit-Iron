@@ -74,8 +74,9 @@ internal fun nativeExerciseLibraryRecords(
 internal data class NativeMeasuredLibraryRecord(
     val definition:MeasuredExerciseDefinition,override val equipmentLabel:String,
     override val eligible:Boolean,override val savedExcluded:Boolean,
-    override val gearIds:Set<String>,override val searchText:String
+    override val gearIds:Set<String>,private val searchFields:String
 ):NativeExerciseLibraryEntry {
+    override val searchText get()="$searchFields $variantDescription"
     override val exerciseId get()=definition.exerciseId
     override val label get()=definition.displayName
     override val variantDescription get()=when(definition.kind) {

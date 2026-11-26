@@ -223,7 +223,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val ownerFutureWeekProposals=NativeKotlinReviewedFutureWeekProposal(
         revisionFence,localAthlete,customDraftStore,authoringSourceStore,
         customCycleSignoffs,adaptiveCyclePermissions,coachSettings,
-        customWorkoutPreflight,mixedHistoryReader,customIssuedStore,
+        customWorkoutPreflight,mixedHistoryReader,
         customNextWorkoutCoach,outstandingCustomInventory,machineRosters)
     private val futureWeekDraftAcceptance=NativeKotlinFutureWeekDraftAcceptance(
         revisionFence,ownerFutureWeekProposals,customDraftStore)

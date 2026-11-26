@@ -71,7 +71,6 @@ class NativeKotlinReviewedFutureWeekProposal(
     private val assistance:NativeKotlinCoachAssistanceSettingsStore,
     private val preflight:NativeKotlinCustomWorkoutPreflight,
     private val history:NativeKotlinMixedHistoryReadCoordinator,
-    private val journals:NativeKotlinCustomWorkoutJournalFileStore,
     private val reviewer:NativeKotlinCustomNextWorkoutReview,
     private val outstanding:NativeKotlinCustomOutstandingWorkoutInventory,
     private val machineRosters:NativeKotlinMachineRosterFileStore?=null
@@ -172,8 +171,8 @@ class NativeKotlinReviewedFutureWeekProposal(
                     ?:return@withOwnerTransaction reject(
                         NativeFutureWeekProposalRefusal.COACH_NOT_VERIFIED)
 
-                val read=(history.read(ownerKey,owner.athleteId)
-                    as? NativeKotlinMixedHistoryReadResult.Review)
+                val (historyRead,completions)=history.readForCustomCoaching(ownerKey,owner.athleteId)
+                val read=(historyRead as? NativeKotlinMixedHistoryReadResult.Review)
                     ?:return@withOwnerTransaction reject(
                         NativeFutureWeekProposalRefusal.HISTORY_UNVERIFIED)
                 // A finished visit is immutable history; a prepared or
@@ -192,23 +191,6 @@ class NativeKotlinReviewedFutureWeekProposal(
                         inventory.sessions,cycleId,absoluteWeek))
                     return@withOwnerTransaction reject(
                         NativeFutureWeekProposalRefusal.FUTURE_WORKOUT_ALREADY_PREPARED)
-                val completions=ArrayList<CustomCoachingHistoricalSession>()
-                for(entry in read.timeline.completions) {
-                    if(entry !is NativeKotlinMixedHistoryCompletion.Custom)continue
-                    val stored=(journals.open(ownerKey,entry.manifest.workoutId)
-                        as? NativeCustomJournalResult.Durable)?.issued?.journal
-                        ?:return@withOwnerTransaction reject(
-                            NativeFutureWeekProposalRefusal.HISTORY_UNVERIFIED)
-                    val snapshot=stored.snapshot
-                    if(stored.workoutId!=entry.evidence.workoutId ||
-                        snapshot.stamp.athleteId!=owner.athleteId ||
-                        snapshot.stamp.cycleId!=entry.evidence.cycleId ||
-                        snapshot.stamp.cycleRevision!=entry.evidence.cycleRevision)
-                        return@withOwnerTransaction reject(
-                            NativeFutureWeekProposalRefusal.HISTORY_UNVERIFIED)
-                    completions+=CustomCoachingHistoricalSession(
-                        entry.manifest.completionOrder,snapshot,entry.evidence)
-                }
                 if(verified.historyRevision!=read.timeline.manifestRevision ||
                     verified.approvedConsentRevision!=current.receipt.recordRevision ||
                     verified.assistanceRevision!=settings.revision ||

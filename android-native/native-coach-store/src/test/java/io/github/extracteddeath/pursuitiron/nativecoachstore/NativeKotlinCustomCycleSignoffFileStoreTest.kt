@@ -4443,7 +4443,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             fence,identity,drafts,sources,store(),permissionStore,
             NativeKotlinCoachAssistanceSettingsStore(temp.root.toPath(),
                 fence,identity),
-            preflight,f.reader,f.issuer,f.coach,
+            preflight,f.reader,f.coach,
             NativeKotlinCustomOutstandingWorkoutInventory(f.prepared,f.issuer))
         return proposal
     }

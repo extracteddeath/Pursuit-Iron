@@ -1878,6 +1878,11 @@ assert.ok(optionalCustomCoach.includes('history.readForCustomCoaching(ownerKey,c
   customHistoryReader.includes('val result=readFenced(owner,athlete) { entry,journal,evidence ->') &&
   customHistoryReader.includes('result is NativeKotlinMixedHistoryReadResult.Rejected -> result to emptyList()'),
   'A coaching read must not replay each journal again or expose partial evidence after failed verification');
+const futureWeekCoachingHistory=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinReviewedFutureWeekProposal.kt');
+assert.ok(futureWeekCoachingHistory.includes('history.readForCustomCoaching(ownerKey,owner.athleteId)') &&
+  !futureWeekCoachingHistory.includes('journals.open(') &&
+  futureWeekCoachingHistory.includes('verified.historyRevision!=read.timeline.manifestRevision'),
+  'Reviewed future-week proposals must reuse the complete verified session projection and retain revision recheck');
 
 // Factual rep/RIR bounds and physical load precision are common to entry,
 // history evidence and the pure weighted/unweighted progression requests.

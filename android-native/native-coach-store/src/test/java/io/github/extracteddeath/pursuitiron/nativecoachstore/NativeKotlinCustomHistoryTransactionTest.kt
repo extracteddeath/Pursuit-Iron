@@ -11,6 +11,7 @@ class NativeKotlinCustomHistoryTransactionTest {
     @get:Rule val temp=TemporaryFolder()
     private var supersetFixture=false
     private var stagedMyoFixture=false
+    private var stagedLoadedTechnique:CustomAmplifierKind?=null
     private var partnerIdeasFixture=false
     private var current:NativeKotlinOwnerIdentity?=
         NativeKotlinOwnerIdentity("owner-1","athlete-1")
@@ -82,8 +83,11 @@ class NativeKotlinCustomHistoryTransactionTest {
         trainingWeekdays=setOf(0,2,4),timezoneId="America/New_York",
         sessionTimeBucket=SessionTimeBucket.FORTY_TO_SIXTY,
         hardSessionLimit=HardSessionLimit.Minutes(60),
-        gym=GymProfileDraft("gym-1",LoadUnit.LB,emptyMap(),
-            emptySet(),emptySet()),
+        gym=GymProfileDraft("gym-1",LoadUnit.LB,
+            if(stagedLoadedTechnique==null)emptyMap() else mapOf(
+                "cable-station" to VerifiedLoadStock.Totals(LoadUnit.LB,
+                    LoadBasis.CABLE_STACK,listOf(n("20"),n("25"),n("30")))),
+            emptySet(),if(stagedLoadedTechnique==null)emptySet() else setOf("rope")),
         allowBodyweight=true,allowSupersets=supersetFixture,
         allowTricepsOnLower=false,maxBarbellExercisesPerDay=0,
         focusedMuscles=emptySet(),reducedMuscles=emptySet(),
@@ -94,7 +98,9 @@ class NativeKotlinCustomHistoryTransactionTest {
     private fun source(rev:Long=1)=NativeCustomAuthoringSnapshot(
         "owner-1","athlete-1",rev,setup(),StarterExerciseTranche.movements())
     private fun set(reps:Int)=CustomAuthoredSet(
-        DraftSetType.WORKING,DraftSetLoad.ExplicitBodyweight,
+        DraftSetType.WORKING,if(stagedLoadedTechnique==null)
+            DraftSetLoad.ExplicitBodyweight else
+            DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.CABLE_STACK,n("25")),
         RepBand(reps,reps+2),2,55,75)
     private fun cycle(rev:Long=1)=CustomTrainingCycle(
         "cycle-1",rev,"athlete-1",AthleteTrainingGoal.HYPERTROPHY,
@@ -106,7 +112,8 @@ class NativeKotlinCustomHistoryTransactionTest {
                 CustomTrainingDay(day,"Core $day",
                     ComposerSessionPurpose.HYPERTROPHY,
                     listOf(CustomExerciseSlot("slot-$day",
-                        "bodyweight_crunch",ComposerRole.ACCESSORY,
+                        if(stagedLoadedTechnique==null)"bodyweight_crunch" else "cable_crunch",
+                        ComposerRole.ACCESSORY,
                         if(supersetFixture)listOf(set(10),set(10)) else listOf(set(10)),
                         supersetGroup=if(supersetFixture)"pair" else null,pinned=true,
                         coachNote="My exact prescription"))+
@@ -121,7 +128,12 @@ class NativeKotlinCustomHistoryTransactionTest {
                     followUpActiveSeconds=15)),set(16)) else if(stagedMyoFixture)
                 listOf(set(16).copy(amplifier=CustomSetAmplifier(
                     CustomAmplifierKind.MYO_REPS,4,20,followUpActiveSeconds=15,
-                    followUpRounds=3))) else listOf(set(16))))))
+                    followUpRounds=3))) else if(stagedLoadedTechnique!=null)
+                listOf(set(if(stagedLoadedTechnique==CustomAmplifierKind.CLUSTER)4 else 16)
+                    .copy(amplifier=CustomSetAmplifier(checkNotNull(stagedLoadedTechnique),
+                        if(stagedLoadedTechnique==CustomAmplifierKind.CLUSTER)2 else 4,
+                        20,followUpActiveSeconds=30,followUpRounds=3)))
+                else listOf(set(16))))))
     private fun bounds()=TrainingMuscle.entries.map { muscle ->
         DeclaredMuscleDoseBounds(muscle,
             if(partnerIdeasFixture && muscle in setOf(TrainingMuscle.ABS,TrainingMuscle.CALVES))n("6")
@@ -799,6 +811,81 @@ class NativeKotlinCustomHistoryTransactionTest {
         assertEquals(listOf(1,2,3),facts.filter{
             it.part==CustomWorkoutVisitPart.FOLLOW_UP}.map{it.stage})
         assertEquals(2L,ledger().completions.single().savedCorrectionRevision)
+    }
+
+    @Test fun authoredRestPauseStopsOnActualRepDropAndColdFinishes() =
+        loadedStagedTechniqueJourney(CustomAmplifierKind.REST_PAUSE)
+
+    @Test fun authoredClusterStopsOnDifferentQualityRepCountAndColdFinishes() =
+        loadedStagedTechniqueJourney(CustomAmplifierKind.CLUSTER)
+
+    private fun loadedStagedTechniqueJourney(kind:CustomAmplifierKind) {
+        stagedLoadedTechnique=kind
+        ready()
+        fun store()=NativeKotlinCustomWorkoutJournalFileStore(
+            temp.root.toPath(),NativeKotlinApprovalRevisionFence(temp.root.toPath()),
+            identity,prepared,preflight,history,composerJournal)
+        fun currentJournal()=(store().open("owner-1","workout-2")
+            as NativeCustomJournalResult.Durable).issued.journal
+        val original=currentJournal().originalSnapshot
+        val set=original.slots.single().sets.single()
+        val amp=checkNotNull(set.prescription.amplifier)
+        assertEquals(kind,amp.kind)
+        assertEquals(3,amp.followUpRounds)
+        fun key(stage:Int)=CustomWorkoutVisitKey(set.setKey,
+            if(stage==0)CustomWorkoutVisitPart.MAIN else CustomWorkoutVisitPart.FOLLOW_UP,
+            maxOf(1,stage))
+        fun record(stage:Int,reps:Int):CustomWorkoutJournalDraft {
+            val journal=currentJournal()
+            assertEquals(key(stage),CustomWorkoutJournalDomain.nextUnresolvedVisit(journal))
+            val op=CustomWorkoutJournalOperation.Record("stage-$stage",journal.revision,
+                key(stage),KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n("30"),LoadUnit.LB,reps,1))
+            if(stage>0) {
+                assertTrue(store().record("owner-1","workout-2",op.copy(
+                    eventId="wrong-stage-$stage",performed=op.performed!!.copy(load=n("25"))))
+                    is NativeCustomJournalResult.Rejected)
+                assertEquals(journal,currentJournal())
+            }
+            val saved=store().record("owner-1","workout-2",op)
+                as NativeCustomJournalResult.Durable
+            val retry=store().record("owner-1","workout-2",op)
+                as NativeCustomJournalResult.Durable
+            assertTrue(retry.replayed)
+            assertEquals(saved.issued,retry.issued)
+            val cold=currentJournal()
+            assertEquals(saved.issued.journal,cold)
+            assertEquals(original,cold.originalSnapshot)
+            return cold
+        }
+        val activation=record(0,set.prescription.reps.minimum)
+        assertEquals(20,KotlinWorkoutRestDomain.inspect(activation,key(1)).automaticCue?.seconds)
+        val first=record(1,amp.followUpReps)
+        assertEquals(20,KotlinWorkoutRestDomain.inspect(first,key(2)).automaticCue?.seconds)
+        val ended=record(2,amp.followUpReps-1)
+        assertNull(CustomWorkoutJournalDomain.nextUnresolvedVisit(ended))
+        assertEquals(0,ended.unresolvedVisitCount)
+        assertFalse(ended.effectiveVisits.containsKey(key(3)))
+        assertTrue(store().record("owner-1","workout-2",
+            CustomWorkoutJournalOperation.Record("phantom-stage",ended.revision,key(3),
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n("30"),LoadUnit.LB,amp.followUpReps,1)))
+            is NativeCustomJournalResult.Rejected)
+        val finish=CustomWorkoutJournalOperation.Finish("technique-finish",ended.revision)
+        val committed=NativeKotlinCustomHistoryTransaction(history,store(),fence,identity)
+            .complete("owner-1","athlete-1","workout-2",finish)
+            as NativeCustomFinishResult.Committed
+        val facts=committed.evidence.visits
+        assertEquals(listOf(CustomWorkoutVisitPart.MAIN,CustomWorkoutVisitPart.FOLLOW_UP,
+            CustomWorkoutVisitPart.FOLLOW_UP),facts.map{it.part})
+        assertEquals(listOf(set.prescription.reps.minimum,amp.followUpReps,amp.followUpReps-1),
+            facts.map{it.actual?.reps})
+        assertTrue(facts.all{it.actual?.load==n("30") && it.amplifierKind==kind})
+        assertEquals(1,facts.count{it.part==CustomWorkoutVisitPart.MAIN})
+        assertEquals(listOf(1,2),facts.filter{it.part==CustomWorkoutVisitPart.FOLLOW_UP}.map{it.stage})
+        assertEquals(committed.copy(replayed=true),NativeKotlinCustomHistoryTransaction(
+            history,store(),fence,identity).complete("owner-1","athlete-1","workout-2",finish))
+        assertEquals(original,currentJournal().originalSnapshot)
     }
 
     @Test fun customCorrectionEncodingPreflightChecksWholeEnvelopeWithoutWriting() {

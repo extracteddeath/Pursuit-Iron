@@ -189,3 +189,28 @@ assert.deepEqual(withEmptyProjection.rows.map(s=>[s.weight,s.reps]),fly.rows.map
     const held=sessionSuggestion(p,p.days[0],0,null,'lb',1,hs);
     assert.notEqual(held.action,'increase_load','explicit below-target effort does not qualify for a bump');
 }
+
+/* Machine Hip Thrust 3 vs 5: compare the exact working prescription,
+ * session review, issued rows, weekly total and muscle volume even after
+ * an in-place edit (the old volume cache could miss this change). */
+{
+    const {sessionPrescriptionRows,plannedWeek,weeklyVolume,weekMuscleBreakdown}=await import('../modules/engine-api.js');
+    const {buildSessionReview}=await import('../modules/session-tools.js');
+    const hip=EX_BY_ID['machine-hip-thrust'];
+    const p={...structuredClone(program),id:'hip-count-parity',
+        days:[{id:'lower',label:'Lower',primaryIndex:-1,exercises:[hip.id]}],
+        overrides:{'lower:0':{sets:3,reps:'8-12',rir:'2',techOverride:null}},ss:{}};
+    const d=p.days[0];
+    for(const count of [3,5,3]) {
+        p.overrides['lower:0'].sets=count;
+        const review=buildSessionReview(p,d,1,'lb');
+        const issued=prescribeSets(p,d,hip,0,1,'lb',null,{},{},[],true)
+            .filter(s=>!s.warm&&!s.sub);
+        assert.equal(sessionPrescriptionRows(p,d,1)[0].cell.sets,count);
+        assert.equal(review.exercises[0].effective.length,count);
+        assert.equal(issued.length,count);
+        assert.equal(plannedWeek(p,1).sets,count);
+        assert.equal(weeklyVolume(p,1).glutes,count);
+        assert.equal(weekMuscleBreakdown(p,1).find(v=>v.part==='glutes').sets,count);
+    }
+}

@@ -3868,20 +3868,41 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             NativeCustomJournalRefusal.NOT_ISSUED),
             after.issuer.open("owner-1","carry-week6"))
 
-        // Simulate an old caller that prepared the original heavier weight
-        // without injecting the guard. Even this cold-recoverable authored
-        // snapshot cannot become ISSUED through the guarded native path.
-        val oldPrepared=after.prepared.prepare("owner-1","old-unguarded-week6",
-            "cycle-1",6,0,futureInputs()) as NativeCustomPrepareResult.Prepared
+        // A second ID cannot bypass the stale prepared session, even
+        // when an old caller omits the optional calibration guard.
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.DIFFERENT_WORKOUT_ALREADY_PREPARED),
+            after.prepared.prepare("owner-1","old-unguarded-week6",
+                "cycle-1",6,0,futureInputs()))
+        assertEquals(NativeCustomPreparedRead.Missing,
+            after.prepared.open("owner-1","old-unguarded-week6"))
+        assertEquals(NativeCustomPreparedRead.Found(staged.workout),
+            after.prepared.open("owner-1","carry-week6"))
+        assertEquals(NativeCustomJournalResult.Rejected(
+            NativeCustomJournalRefusal.NOT_ISSUED),
+            after.issuer.open("owner-1","old-unguarded-week6"))
+    }
+
+    @Test fun firstUnguardedAuthoredPreparationCannotIssueHigherLoadWithoutReview() {
+        // Isolate the old-caller regression on a genuinely unclaimed slot.
+        // Keep the independent first-issuance guard exercised even when no
+        // duplicate preparation can be created.
+        finishedLowerWeekFour(nearFailure=true)
+        val cold=authoredCoachFixture(initializeHistory=false,phaseTransition=true)
+        val calibration=calibrationStore(cold)
+        val oldPrepared=cold.prepared.prepare("owner-1","old-unguarded-week5",
+            "cycle-1",5,0,futureInputs()) as NativeCustomPrepareResult.Prepared
         assertEquals(n("25"),((oldPrepared.workout.snapshot.slots.single()
             .sets.single().prescription.load) as DraftSetLoad.Verified).value)
         assertEquals(NativeCustomJournalResult.Rejected(
             NativeCustomJournalRefusal.CONSENT_CHANGED),
-            after.issuer.issue("owner-1","old-unguarded-week6","cycle-1",
-                6,0,futureInputs(),coldConsent))
+            cold.issuer.issue("owner-1","old-unguarded-week5","cycle-1",
+                5,0,futureInputs(),calibration))
         assertEquals(NativeCustomJournalResult.Rejected(
             NativeCustomJournalRefusal.NOT_ISSUED),
-            after.issuer.open("owner-1","old-unguarded-week6"))
+            cold.issuer.open("owner-1","old-unguarded-week5"))
+        assertEquals(NativeCustomPreparedRead.Found(oldPrepared.workout),
+            cold.prepared.open("owner-1","old-unguarded-week5"))
     }
 
     private fun finishedLowerWeekFour(nearFailure:Boolean=false,reps:Int=5,

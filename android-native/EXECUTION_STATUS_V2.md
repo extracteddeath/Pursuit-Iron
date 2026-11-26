@@ -1,12 +1,12 @@
 # Pursuit Iron — execution status v2
-**As of:** 2026-11-25. **Target:** architecture/kotlin-engine-rebuild. **Latest observed integrated SHA:** `bb472c943eb5dca98abc2542df22f11e0bc74e73` (#1104).
+**As of:** 2026-11-25. **Target:** architecture/kotlin-engine-rebuild. **Latest observed integrated SHA:** `c14dba9a3583f576420c270d054bc42a3d256fa2` (#1137).
 Authority: [MASTER_DEVELOPMENT_PLAN.md](MASTER_DEVELOPMENT_PLAN.md) and [EXECUTION_MILESTONES_V2.json](EXECUTION_MILESTONES_V2.json). Original inventories are immutable v1 provenance, not current stage assignments.
 
 ## Honest baseline
 - S0 and S1 completed: required integrated engine/Compose baseline checks (S0 merge `05c02ff2362736439ca1fcabfd7d477bfb2fa366`, runs 45482709594 and 45482709540) and versioned Stage 1 inventory (#1041). These are not training acceptance.
 - Canonical denominator: 965 items; 41 inherited rollups; 120 mandatory supplementary checks and five optional review candidates. Do not sum rollups or checks into 965. Original inventory records zero formally accepted supplementary checks. New execution ledger starts with zero **certified** canonical/required supplementary rows until the relevant assertions and layers are reviewed. This is a documentation and verification baseline, not an implementation estimate. Existing passing tests and integrated features are credited as evidence, not thrown away.
 - Separate source-certified, device-verified and fully accepted counts. Never require a device result to finish a source-only gate; never claim final acceptance before S9. All applicable device checks remain required. Do not treat percentages of PRs, test cases, or lines of code as percent parity.
-- Current implementation lane: S2C minimum native handoff. Independent verification lane: finite S2A/S2B/S2D evidence review, with S2A prerequisites enforced before downstream certification. Tests may be reviewed in advance; no dependency is waived. Do not open additional recipe-matrix work unless a specific mapped assertion fails.
+- Current lane: finite Stage 2 source acceptance review. Minimum specialist handoff is integrated (#1106, #1114–#1130); remaining work is evidence and concrete unresolved mapped requirements, not another specialist architecture. See [current Stage 2 exit matrix](S2_EXIT_MATRIX.md) for latest run IDs, integration, comparison results and bounded gaps. S2A prerequisites still apply; no dependency is waived.
 
 | Milestone | Work package | Canonical IDs | Supplementary checks | Current gate status |
 | --- | --- | ---: | ---: | --- |
@@ -14,7 +14,7 @@ Authority: [MASTER_DEVELOPMENT_PLAN.md](MASTER_DEVELOPMENT_PLAN.md) and [EXECUTI
 | S1 | Inventory | 0 | 0 | Historical gate complete |
 | S2A | Physical load authority | 6 | 5 | Next independent evidence lane |
 | S2B | Standard/manual progression | 14 | 4 | Not source-certified; inspect existing implementation |
-| S2C | Specialist progression | 11 | 1 | Active implementation / partial numeric evidence |
+| S2C | Specialist progression | 11 | 1 | Minimum handoff integrated; source certification pending |
 | S2D | Factual history and correction | 4 | 3 | Not source-certified; inspect existing implementation |
 | S2E | Integrated numerical certification | 1 | 0 | Not source-certified; inspect existing implementation |
 | S3A | Workout execution lifecycle | 3 | 3 | Not source-certified; inspect existing implementation |
@@ -81,7 +81,9 @@ All listed PRs passed both required workflows on their exact submitted heads. Th
 
 Web pin `29faa204212a4d54088b4870341350e605939185`. Numeric coverage = 32 expected cases passed, including four intentional safety divergences; not 32/965 completed work items, not 32 matched superiority cases. Existing superiority scorecard remains NOT_PROVEN_BETTER until comprehensive current evidence.
 
-## Bounded active queue: S2C
+## Historical S2C implementation checkpoint (through #1104)
+
+The table below preserves the earlier development evidence. Its remaining minimum handoff work has since been integrated; consult S2_EXIT_MATRIX.md for current remaining acceptance work.
 
 | ID | Deliverable / exact exit | Status |
 | --- | --- | --- |
@@ -94,7 +96,9 @@ Web pin `29faa204212a4d54088b4870341350e605939185`. Numeric coverage = 32 expect
 
 Stop S2C expansion once these deliverables are source-certified. General backup inventory/corruption and production restore belong to S7; broad UI polish belongs to S6; device-only checks belong to S9. If any is a concrete prerequisite for safe 2C execution, implement and test only the required boundary now, then record it as a dependency.
 
-## Next independent evidence lane
+## Historical independent evidence lane (through #1104)
+
+Later merged evidence is recorded in S2_EXIT_MATRIX.md; the old candidate status below must not supersede newer results.
 - S2A: merged #1061, #1067, #1068, #1074, #1101; see [physical-load evidence](S2A_PHYSICAL_LOAD_EVIDENCE.md) and [additional KG journeys](https://github.com/extracteddeath/Pursuit-Iron/pull/1061#issuecomment-7147665978). Source certification not yet granted; integrated SHA and remaining exact source paths required. Inspect exact methods and execution evidence for stock, bar/Smith, dumbbell/assistance/typed loads, units, rounding, plate layout, machine/gym isolation. Test all physical pathways; preserve verified implementation.
 - S2B: inspect existing BasicProgressionPolicyDomainTest (strict all-set, per-set, independent scope, failed/skipped and manual), BasicProgramProgressionPlanDomainTest (typed route assignment), CustomBasicHistoryProgressionDomainTest (authored wave, exact ladder/rep targets, bodyweight and station history), KotlinFourSetLoadInvarianceReleaseTest (issued immutability and corrected actuals). Candidate adds exact 200/205/210/215 × 3/3/2/2, 5–8 band, strict mixed refusal, dynamic hold, one earned set, mismatched issued baseline refusal, manual repeat and uniform near-failure hold. Pending CI. Review remaining e1RM/Leveling/coach-off real-store layers before source certification.
 - S2D: correction-driven next suggestion, exact original targets, independent day/station/gym, actual null vs goal RIR, failed/skipped distinction. No silent new weight from another session.

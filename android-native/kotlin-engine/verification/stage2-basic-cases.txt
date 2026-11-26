@@ -48,3 +48,14 @@ saved-auto-novice-row|select-saved-auto|one_arm_db_row|hypertrophy_accumulation|
 saved-auto-novice-bench|select-saved-auto|barbell_bench|strength_accumulation|novice|primary_strength|3,6|linear|linear|matched
 saved-auto-peak|select-saved-auto|barbell_bench|peak|advanced|primary_strength|1,3|e1rm|e1rm|matched
 saved-auto-wave-gap|select-saved-auto|barbell_bench|intensification|advanced|primary_strength|3,5|wave|double|advanced-auto-gap
+
+# Actual weekly selector for eligible saved Auto primary strength-skill free bar.
+# mode select-week:week:blockWeeks; ordinary block-level fixtures above remain unchanged.
+weekly-auto-w1|select-week:1:6|barbell_bench|strength_accumulation|advanced|primary_strength|3,6|double|double|matched
+weekly-auto-w2|select-week:2:6|barbell_bench|strength_accumulation|advanced|primary_strength|3,6|double|double|matched
+weekly-auto-w3|select-week:3:6|barbell_bench|strength_accumulation|advanced|primary_strength|3,6|wave|wave|matched
+weekly-auto-w4|select-week:4:6|barbell_bench|strength_accumulation|advanced|primary_strength|3,6|wave|wave|matched
+weekly-auto-w5|select-week:5:6|barbell_bench|strength_accumulation|advanced|primary_strength|3,6|e1rm|e1rm|matched
+weekly-auto-w6|select-week:6:6|barbell_bench|strength_accumulation|advanced|primary_strength|3,6|e1rm|e1rm|matched
+weekly-auto-short|select-week:3:4|barbell_bench|strength_accumulation|intermediate|primary_strength|3,6|e1rm|e1rm|matched
+weekly-auto-novice|select-week:4:6|barbell_bench|strength_accumulation|novice|primary_strength|3,6|linear|linear|matched

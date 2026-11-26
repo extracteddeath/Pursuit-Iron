@@ -206,6 +206,9 @@ try {
         assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[0].actualRIR), 2, 'older effort stays editable');
         await page.click('[data-testid="set-0-1"] button[aria-label="Mark set not done"]'); await settle();
         assert.equal(await page.$eval('[data-testid="set-0-1"] input[aria-label="weight"]', n => n.value), '190', 'Undo preserves the logged weight');
+        assert.equal(await page.$('[data-rest-card]'),null,'Undoing the countdown source cancels that invalid rest');
+        await page.click('[data-testid="set-0-1"] button[aria-label="Mark set done"]'); await settle();
+        assert.ok(await page.$('[data-rest-card]'),'Re-logging starts a new countdown');
         if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b827-after-log-phone.png') });
         await page.click('.wpb-workout-footer button[aria-label="Next exercise"]');
         await page.waitForSelector('[data-testid="set-1-0"]');

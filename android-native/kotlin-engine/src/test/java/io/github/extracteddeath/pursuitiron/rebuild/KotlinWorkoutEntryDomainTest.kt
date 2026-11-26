@@ -104,6 +104,40 @@ class KotlinWorkoutEntryDomainTest {
         }
     }
 
+    @Test fun typedActualWeightRemainsFactualEvenWhenNotInCurrentStock() {
+        for(unit in listOf(LoadUnit.LB,LoadUnit.KG)) {
+            val issued=DraftSetLoad.Verified(unit,LoadBasis.MACHINE_STACK,BigDecimal("40"))
+            val target=verified.copy(load=issued)
+            val stock=VerifiedLoadStock.Totals(unit,issued.basis,
+                listOf(BigDecimal("35"),BigDecimal("40"),BigDecimal("45")))
+            for(raw in listOf("0","38.5","159.5","100000","100000.000")) {
+                val actual=KotlinWorkoutEntryDomain.parse(target,raw,"8","")
+                    as KotlinSetEntryResult.Accepted
+                assertEquals(BigDecimal(raw),actual.performed.load)
+                assertEquals(unit,actual.performed.unit)
+                assertNull(actual.performed.actualRir)
+                assertEquals(actual,KotlinWorkoutEntryDomain.parse(issued,raw,"8",""))
+                assertTrue(KotlinWorkoutJournalDomain.validPerformed(target,
+                    KotlinJournalSetOutcome.COMPLETED,actual.performed))
+                assertTrue(CustomWorkoutJournalDomain.actualValid(issued,
+                    KotlinJournalSetOutcome.COMPLETED,actual.performed))
+                assertEquals(KotlinSetLoadRelation.COMPLETED_DIFFERENT_ACTUAL,
+                    (KotlinSetNumberAuthorityDomain.review(issued,
+                        KotlinJournalSetOutcome.COMPLETED,actual.performed)
+                        as KotlinSetNumberReview.Accepted).fact.relation)
+                val inspected=EquipmentLoadDomain.inspect(stock,BigDecimal(raw),unit)
+                    as? LoadInspection.Confirmed
+                assertFalse(inspected?.exact==true)
+            }
+            for(raw in listOf("100000.001","100001","38.5001","159.5001")) {
+                assertEquals(KotlinSetEntryResult.Rejected(KotlinSetEntryRefusal.INVALID_WEIGHT),
+                    KotlinWorkoutEntryDomain.parse(target,raw,"8",""))
+                assertFalse(KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(BigDecimal(raw)))
+            }
+            assertEquals(BigDecimal("40"),issued.value)
+        }
+    }
+
     @Test fun reviewingAFailedSetCannotPromoteItsFactualZeroToSuccessfulWork() {
         val failed=(KotlinWorkoutEntryDomain.parse(
             verified.load,"205","0","",failed=true) as KotlinSetEntryResult.Accepted)

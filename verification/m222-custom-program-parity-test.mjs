@@ -155,3 +155,10 @@ assert.equal(constrained.days,compatible.days);assert.equal(constrained.override
 assert.equal(constrained.config.noSupersets,true);
 
 console.log('PASS M222: Cable Fly row targets; DDP positional loads/reps; reduced-load floor; effort/incomplete/mixed-load gates; per-day custom history ownership; canonical-engine parity; immutable resume repair; authored roster/settings and late-week Myo/Drop techniques; strict target parsing and atomic weekly target edits.');
+
+// A newer empty scoped performance must not mask older real history.
+const emptyMachineProjection={...history[0],id:'newer-empty-machine',date:Number(history[0].date)+1000,
+    perf:{[ex.id]:{weight:null,reps:null,sets:[]}}};
+const withEmptyProjection=rowsFor(program,[emptyMachineProjection,...history]);
+assert.deepEqual(withEmptyProjection.rows.map(s=>[s.weight,s.reps]),fly.rows.map(s=>[s.weight,s.reps]),
+    'Newer empty machine performance cannot erase older comparable history');

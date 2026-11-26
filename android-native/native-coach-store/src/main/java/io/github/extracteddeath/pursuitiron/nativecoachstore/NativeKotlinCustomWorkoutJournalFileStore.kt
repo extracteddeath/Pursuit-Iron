@@ -825,7 +825,44 @@ class NativeKotlinCustomWorkoutJournalFileStore(
      * Individual atomic receipts survive partial writes or process death. */
     fun skipRemainingExercise(
         ownerKey:String,workoutId:String,expectedRevision:Long,slotId:String
-    ):NativeCustomJournalResult {
+    ):NativeCustomJournalResult = skipSelected(ownerKey,workoutId,expectedRevision){journal->
+        WorkoutRemainingExerciseDomain.custom(journal,slotId)?.entries
+    }
+
+    private fun concernCredits(ownerKey:String,journal:CustomWorkoutJournalDraft):
+        Map<String,List<DeclaredMuscleCredit>>? {
+        val source=(authoringSource?.read(ownerKey) as? NativeAuthoringSourceRead.Found)?.source
+            ?:return null
+        val stamp=journal.originalSnapshot.stamp
+        val athlete=source.setup.reviewed?:return null
+        if(source.athleteId!=stamp.athleteId || source.revision!=stamp.gymCatalogSourceRevision ||
+            athlete.gym.gymId!=stamp.gymId ||
+            source.catalog.map{it.exerciseId}.distinct().size!=source.catalog.size)return null
+        return source.catalog.associate{it.exerciseId to it.credits}
+    }
+
+    fun reviewMuscleConcerns(ownerKey:String,workoutId:String):
+        List<WorkoutConcernReview<CustomWorkoutVisitKey>> = runCatching {
+        fence.withOwnerTransaction(ownerKey) {
+            val current=owner(ownerKey)?:return@withOwnerTransaction emptyList()
+            val opened=read(ownerKey,workoutId,current) as? NativeCustomJournalResult.Durable
+                ?:return@withOwnerTransaction emptyList()
+            val journal=opened.issued.journal
+            val credits=concernCredits(ownerKey,journal)?:return@withOwnerTransaction emptyList()
+            WorkoutRemainingExerciseDomain.customConcerns(journal,credits)
+        }
+    }.getOrDefault(emptyList())
+
+    fun applyMuscleConcern(ownerKey:String,workoutId:String,
+        shown:WorkoutConcernReview<CustomWorkoutVisitKey>):NativeCustomJournalResult =
+        skipSelected(ownerKey,workoutId,shown.journalRevision){journal->
+            val credits=concernCredits(ownerKey,journal)
+            credits?.let{WorkoutRemainingExerciseDomain.customConcerns(journal,it)
+                .singleOrNull{it==shown}?.entries}
+        }
+
+    private fun skipSelected(ownerKey:String,workoutId:String,expectedRevision:Long,
+        select:(CustomWorkoutJournalDraft)->List<CustomWorkoutVisitKey>?):NativeCustomJournalResult {
         if(!id.matches(workoutId))return NativeCustomJournalResult.Rejected(
             NativeCustomJournalRefusal.INVALID_ID)
         return runCatching {
@@ -836,13 +873,14 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                 val opened=read(ownerKey,workoutId,current)
                 if(opened !is NativeCustomJournalResult.Durable)
                     return@withOwnerTransaction opened
-                val review=WorkoutRemainingExerciseDomain.custom(opened.issued.journal,slotId)
-                if(review==null || review.journalRevision!=expectedRevision)
+                if(opened.issued.journal.revision!=expectedRevision)
                     return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                         NativeCustomJournalRefusal.STALE_OR_INVALID_SET,
-                        if(review==null)CustomWorkoutJournalRefusal.UNKNOWN_VISIT
-                        else CustomWorkoutJournalRefusal.STALE_REVISION)
-                if(review.entries.isEmpty())return@withOwnerTransaction opened
+                        CustomWorkoutJournalRefusal.STALE_REVISION)
+                val entries=select(opened.issued.journal)
+                    ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.STALE_OR_INVALID_SET,CustomWorkoutJournalRefusal.UNKNOWN_VISIT)
+                if(entries.isEmpty())return@withOwnerTransaction opened
                 val ledger=history.open(ownerKey,current.athleteId)
                 if(ledger !is NativeHistoryLedgerResult.Durable ||
                     !ledger.ledger.readyForHistoryReads)
@@ -851,7 +889,7 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                 // Resolve every reviewed visit using the same ordinary receipt
                 // reducer, but do not publish a partially skipped exercise.
                 var draft=opened.issued.journal
-                for(visit in review.entries) {
+                for(visit in entries) {
                     val operation=CustomWorkoutJournalOperation.Record(
                         "skip-"+java.util.UUID.randomUUID(),draft.revision,visit,
                         KotlinJournalSetOutcome.SKIPPED,null)

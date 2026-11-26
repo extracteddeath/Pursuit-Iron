@@ -233,6 +233,15 @@ internal class NativeKotlinSessionController(
         },recoverOnReject=true)
     }
 
+    fun applyMuscleConcern(shown:WorkoutConcernReview<String>) {
+        val prior=mutable.value
+        val workoutId=prior.workoutId?:return
+        val journal=prior.journal?:return
+        if(prior.busy || journal.finishedByEventId!=null || workoutId!=shown.workoutId ||
+            journal.revision!=shown.journalRevision)return
+        run(workoutId,{host.applyGeneratedMuscleConcern(workoutId,shown)},recoverOnReject=true)
+    }
+
     /** A single confirmed Composer exercise replacement is workout-only;
      * future program edits remain a separately reviewed transaction. */
     fun swapExercise(

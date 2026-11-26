@@ -13,6 +13,42 @@ internal class NativeKotlinExerciseLibraryPresentationTest:NativeKotlinProgramFi
         pattern:ComposerPattern?=null,role:ComposerRole?=null)=
         filterNativeExerciseLibrary(records(),query,muscle,gear,mode,excluded,pattern,role)
 
+    @Test fun measuredEntriesShareSearchPagingAndExactSourceExclusionsWithoutFakeRepMetadata() {
+        val saved=seed()
+        val source=saved.source
+        fun all(value:NativeCustomAuthoringSnapshot)=nativeExerciseLibraryEntries(
+            value,::nativeLibraryWords,::nativeLibraryWords,::nativeLibraryWords)
+        val typed=MeasuredExerciseCatalogDomain.all.map{it.exerciseId}.toSet()
+        val entries=all(source)
+        assertEquals(source.catalog.size+14,entries.size)
+        assertEquals(typed,entries.filterIsInstance<NativeMeasuredLibraryRecord>().map{it.exerciseId}.toSet())
+        assertTrue(entries.filterIsInstance<NativeMeasuredLibraryRecord>().all{it.standard==null})
+        assertEquals(MeasuredSessionAuthoringDomain.available(checkNotNull(source.setup.reviewed))
+            .map{it.exerciseId}.toSet(),entries.filterIsInstance<NativeMeasuredLibraryRecord>()
+            .filter{it.eligible}.map{it.exerciseId}.toSet())
+        assertTrue(filterNativeExerciseLibrary(entries,"timed hold",null,null,
+            NativeLibraryAvailability.ALL,emptySet()).any{it.exerciseId=="plank"})
+        assertTrue(filterNativeExerciseLibrary(entries,"plank",TrainingMuscle.ABS,null,
+            NativeLibraryAvailability.ALL,emptySet()).none{it.exerciseId in typed})
+        assertTrue(all(source.copy(catalog=source.catalog+source.catalog.first().copy(
+            exerciseId="plank",variantId="reserved-typed-id"))).isEmpty())
+        val request=NativeGymExerciseExclusionChange(source.ownerKey,source.athleteId,
+            source.revision,source.setup.reviewed!!.excludedExerciseIds,
+            source.setup.reviewed!!.excludedExerciseIds+"plank")
+        val proposal=NativeKotlinGymCatalogEditingDomain.setExerciseExclusions(source,request)
+            as NativeGymCatalogEdit.Proposed
+        assertEquals(NativeAuthoringSourceWrite.Committed(2),sources().publish("owner-1",1,proposal.source))
+        val cold=(sources().read("owner-1") as NativeAuthoringSourceRead.Found).source
+        assertTrue(all(cold).single{it.exerciseId=="plank"}.savedExcluded)
+        assertFalse(all(cold).single{it.exerciseId=="plank"}.eligible)
+        val undo=NativeKotlinExerciseExclusionCommit(request,cold).undoRequest()
+        val restored=NativeKotlinGymCatalogEditingDomain.setExerciseExclusions(cold,undo)
+            as NativeGymCatalogEdit.Proposed
+        assertEquals(NativeAuthoringSourceWrite.Committed(3),sources().publish("owner-1",2,restored.source))
+        assertEquals(source.copy(revision=3),(sources().read("owner-1") as NativeAuthoringSourceRead.Found).source)
+        assertEquals(NativeCustomDraftReadResult.Found(saved.change.draft),drafts().read("owner-1","cycle-b"))
+    }
+
     @Test fun entireCatalogIsSearchableBeforePagingAndPhysicalEligibilityIsNotInferred() {
         val all=records()
         val expected=StarterExerciseTranche.entries().size

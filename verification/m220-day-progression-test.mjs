@@ -485,3 +485,22 @@ console.log('PASS B997 real backup replay: 3 completed of 4 prescribed cannot pr
     assert.deepEqual(rows.slice(1).map(r=>Number(r.weight)),[90,90,90]);
     assert.deepEqual(rows.map(r=>Number(r.reps)),[15,20,17,18]);
 }
+
+/* Phone report: planned machine hip thrust 3, stale live workout 5.
+ * Only untouched automatic surplus may be removed; actual and explicit work survives. */
+{
+    const id='machine-hip-thrust', d={id:'lower',label:'Lower',primaryIndex:-1,exercises:[id]};
+    const p={...structuredClone(program),days:[d],overrides:{'lower:0':{sets:3,reps:'10-15',rir:'2'}}};
+    const fresh=prescribeSets(p,d,EX_BY_ID[id],0,1,'lb',null,{}, {},[],false);
+    assert.equal(computeCell(p,d,id,0,1).sets,3);
+    assert.equal(fresh.filter(s=>!s.warm&&!s.sub).length,3);
+    const auto={weight:'90',reps:'12',auto:true,valueOwner:'prescription',target:{w:'90',prefillReps:'12'}};
+    const stale=Array.from({length:5},()=>structuredClone(auto));
+    assert.equal(refreshPendingSetTargets(stale,fresh).length,3);
+    const logged={...stale[3],done:true}, added={...stale[4],added:true};
+    const kept=refreshPendingSetTargets([...stale.slice(0,3),logged,added],fresh);
+    assert.equal(kept.length,5);
+    assert.equal(kept[3],logged);
+    assert.equal(kept[4],added);
+    assert.equal(stale.length,5);
+}

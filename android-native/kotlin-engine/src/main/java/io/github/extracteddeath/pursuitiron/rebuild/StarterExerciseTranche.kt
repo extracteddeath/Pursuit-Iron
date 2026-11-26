@@ -2364,11 +2364,24 @@ object StarterExerciseTranche {
             setOf("pullup-bar","weighted-pullup-setup"),6..12,
             "Pinned shell Weighted Pull-Up uses independently confirmed added external resistance and a secure loading setup. Log the added mass only, not total body mass or assistance. The active unweighted pullup and assisted-pullup histories never transfer.",
             direct(TrainingMuscle.LATS),
-            indirect(TrainingMuscle.BICEPS,"0.5"))
+            indirect(TrainingMuscle.BICEPS,"0.5")),
+        // Two explicit shell aliases had incompatible physical implements
+        // despite identical display names. Keep both native variants distinct.
+        entry("chest-supported-machine-row","chest_supported_row","supported-machine",
+            ComposerPattern.HORIZONTAL_PULL,ComposerRole.SECONDARY,pull,
+            "chest-supported-row-machine",LoadBasis.EXERCISE_OVERRIDE,emptySet(),8..12,
+            "Pinned shell chest-row (catalog.js:81) requires a chest-supported machine row, not the current curated incline-dumbbell variant. Confirm the distinct physical machine resistance; generic row and dumbbell histories cannot transfer.",
+            direct(TrainingMuscle.UPPER_BACK),indirect(TrainingMuscle.LATS,"0.5"),
+            indirect(TrainingMuscle.BICEPS,"0.5"),indirect(TrainingMuscle.REAR_DELTS,"0.5")),
+        entry("ez-bar-preacher-curl","elbow_flexion","preacher-ez-bar",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
+            "ez-curl-bar",LoadBasis.BARBELL_TOTAL,setOf("preacher-bench"),10..15,
+            "Pinned shell preacher (catalog.js:107) specifies an EZ bar and preacher bench. Confirm actual total EZ-bar and plate weight and support; never reuse the curated preacher machine's resistance or standing curl history.",
+            direct(TrainingMuscle.BICEPS))
     )
 
     init {
-        require(definitions.size==370)
+        require(definitions.size==372)
         require(definitions.map {it.legacyCuratedId}.distinct().size==
             definitions.size)
         require(definitions.all {

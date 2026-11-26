@@ -24,7 +24,7 @@ object CatalogPhysicalMachineEligibility {
         val implement:String
     )
 
-    // 42 active canonical machine identities, reviewed against
+    // 42 active canonical and one historical shell machine identity, reviewed against
     // StarterExerciseTranche. Physical wrist levers/rollers and a loose plate
     // use the same EXERCISE_OVERRIDE basis but are deliberately EXCLUDED.
     private val machineOverrides=mapOf(
@@ -69,7 +69,8 @@ object CatalogPhysicalMachineEligibility {
         "hip-abduction" to ReviewedStation("hip_abduction","machine-seated","hip-abduction-machine"),
         "adduction-machine" to ReviewedStation("hip_adduction","machine-seated","hip-adduction-machine"),
         "machine-shrug" to ReviewedStation("scapular_elevation","machine","shrug-machine"),
-        "kelso-shrug" to ReviewedStation("scapular_retraction","supported-machine-kelso","kelso-shrug-machine")
+        "kelso-shrug" to ReviewedStation("scapular_retraction","supported-machine-kelso","kelso-shrug-machine"),
+        "chest-supported-machine-row" to ReviewedStation("chest_supported_row","supported-machine","chest-supported-row-machine")
     )
 
     private val assistedSources=mapOf(

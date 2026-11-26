@@ -188,6 +188,120 @@ class NativeKotlinGeneratedProgramJourneyTest {
     // A real generated strength cycle owns its ordinary draft and consent.
     // Explicit specialist selection must go through the same revisioned
     // named authority as an authored cycle; a generated seed is not consent.
+    @Test fun authoredWaveUsesExactWeeklyTargetsThroughApprovalColdIssueAndFinish() {
+        val (base,inputs)=saveGenerated()
+        val block=base.blocks.single()
+        val days=block.days.sortedBy{it.weekday}
+        fun eligible(slot:CustomExerciseSlot)=slot.sets.isNotEmpty() &&
+            slot.sets.all{set->
+                val load=set.load as? DraftSetLoad.Verified
+                set.type==DraftSetType.WORKING && set.amplifier==null &&
+                    set.percentageIntent==null && load!=null &&
+                    load.basis==LoadBasis.DUMBBELL_PER_HAND && load.value<=n("45")
+            } && slot.sets.map{it.load}.distinct().size==1
+        val day=days.first{it.slots.any(::eligible)}
+        val slot=day.slots.first(::eligible)
+        val initial=(slot.sets.first().load as DraftSetLoad.Verified).value
+        val expected=mapOf(1 to initial,2 to initial.add(n("5")),
+            3 to initial,4 to initial.add(n("5")))
+        fun sets(week:Int)=slot.sets.map{set->
+            set.copy(load=(set.load as DraftSetLoad.Verified).copy(value=expected.getValue(week)))
+        }
+        val amendedBlock=block.copy(days=block.days.map{d->
+            if(d.weekday!=day.weekday)d else d.copy(slots=d.slots.map{s->
+                if(s.slotId!=slot.slotId)s else s.copy(progressionMethod=SavedProgressionMethod.WAVE)
+            })
+        })
+        val wave=base.copy(revision=base.revision+1,blocks=listOf(amendedBlock),
+            weekOverrides=base.weekOverrides+(block.blockId to
+                (base.weekOverrides[block.blockId].orEmpty()+(2..4).map{week->
+                    CustomWeekSlotOverride(week,day.weekday,slot.slotId,sets(week))
+                })))
+        val source=(Disk().sources.read(owner) as NativeAuthoringSourceRead.Found).source
+        val plan=BasicProgramProgressionPlanDomain.review(wave,
+            reviewedCatalog=source.catalog.associateBy{it.exerciseId},
+            experience=source.setup.reviewed?.experience)
+        assertTrue(plan.toString(),plan is ProgramProgressionPlan.Ready)
+        val assignment=(plan as ProgramProgressionPlan.Ready).assignments.single{
+            it.key==ProgramProgressionSlotKey(block.blockId,day.weekday,slot.slotId)
+        }
+        assertEquals(ProgramProgressionRoute.AUTHORED_WEEKLY_PERIODIZATION,assignment.route)
+        assertEquals(setOf(2,3,4),assignment.authoredWeekNumbers)
+        assertNull(assignment.basicStrategy)
+        val incomplete=wave.copy(weekOverrides=wave.weekOverrides+(block.blockId to
+            wave.weekOverrides.getValue(block.blockId).filterNot{
+                it.weekInBlock==3 && it.weekday==day.weekday && it.slotId==slot.slotId
+            }))
+        assertTrue(BasicProgramProgressionPlanDomain.review(incomplete,
+            reviewedCatalog=source.catalog.associateBy{it.exerciseId},
+            experience=source.setup.reviewed?.experience) is ProgramProgressionPlan.Refused)
+        assertTrue(Disk().drafts.save(owner,cycleId,base.revision,wave) is NativeCustomDraftWriteResult.Committed)
+        assertTrue(Disk().prepared.prepare(owner,"wave-unsigned",cycleId,1,day.weekday,inputs)
+            is NativeCustomPrepareResult.Rejected)
+        val previous=(Disk().consent.read(owner,cycleId,inputs) as NativeCustomSignoffRead.Found)
+        assertFalse(previous.isCurrent)
+        val signed=Disk().consent.confirm(owner,cycleId,wave.revision,source.revision,
+            previous.receipt.recordRevision,inputs,true)
+        assertTrue(signed.toString(),signed is NativeCustomSignoffWrite.Committed)
+        assertEquals(wave,(Disk().drafts.read(owner,cycleId) as NativeCustomDraftReadResult.Found).draft)
+        val snapshots=linkedMapOf<String,CustomWorkoutDaySnapshot>()
+        for(week in 1..4) {
+            for(d in days) {
+                val disk=Disk()
+                assertEquals(NativeCustomNextCycleSlot.Next(week,d.weekday,d.label),disk.next(inputs))
+                val id="wave-w$week-d${d.weekday}"
+                if(d.weekday==day.weekday && week>1) {
+                    val basic=NativeKotlinCustomBasicNextReview(disk.fence,identity,disk.drafts,
+                        disk.sources,disk.preflight,disk.timeline,disk.journals,disk.machines)
+                    val reviewed=basic.reviewAuthored(owner,cycleId,inputs,week,d.weekday,slot.slotId,
+                        "wave-basic-w$week",n("5"))
+                    assertTrue(reviewed.toString(),reviewed is NativeCustomBasicNextReadResult.Reviewed)
+                    assertEquals(CustomBasicHistoryResult.Rejected(
+                        CustomBasicHistoryRefusal.AUTHORED_OR_SPECIALIST_OWNS_LOAD),
+                        (reviewed as NativeCustomBasicNextReadResult.Reviewed).projection)
+                }
+                val prepared=disk.prepared.prepare(owner,id,cycleId,week,d.weekday,inputs)
+                assertTrue(prepared.toString(),prepared is NativeCustomPrepareResult.Prepared)
+                val issued=Disk().journals.issue(owner,id,cycleId,week,d.weekday,inputs)
+                assertTrue(issued.toString(),issued is NativeCustomJournalResult.Durable)
+                var journal=(issued as NativeCustomJournalResult.Durable).issued.journal
+                val snapshot=journal.originalSnapshot
+                assertEquals((prepared as NativeCustomPrepareResult.Prepared).workout.snapshot,snapshot)
+                if(d.weekday==day.weekday) {
+                    val exact=snapshot.slots.single{it.slotId==slot.slotId}.sets.map{it.prescription}
+                    assertEquals(sets(week),exact)
+                    assertTrue(exact.all{(it.load as DraftSetLoad.Verified).value.compareTo(
+                        expected.getValue(week))==0})
+                }
+                for((index,set) in snapshot.slots.flatMap{it.sets}.withIndex()) {
+                    val target=set.prescription
+                    val reps=target.exactRepTarget ?: target.reps.maximum
+                    val actual=when(val load=target.load) {
+                        is DraftSetLoad.Verified -> KotlinPerformedSet(load.value,load.unit,reps,2)
+                        DraftSetLoad.ExplicitBodyweight -> KotlinPerformedSet(null,null,reps,2)
+                    }
+                    val result=Disk().journals.record(owner,id,CustomWorkoutJournalOperation.Record(
+                        "wave-actual-$index",journal.revision,
+                        CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN),
+                        KotlinJournalSetOutcome.COMPLETED,actual))
+                    assertTrue(result.toString(),result is NativeCustomJournalResult.Durable)
+                    journal=(result as NativeCustomJournalResult.Durable).issued.journal
+                }
+                assertEquals(0,journal.unresolvedVisitCount)
+                val cold=Disk()
+                assertTrue(NativeKotlinCustomHistoryTransaction(cold.history,cold.journals,cold.fence,identity)
+                    .complete(owner,athlete,id,CustomWorkoutJournalOperation.Finish("wave-finish",journal.revision))
+                    is NativeCustomFinishResult.Committed)
+                snapshots[id]=snapshot
+            }
+        }
+        val history=(Disk().timeline.read(owner,athlete) as NativeKotlinMixedHistoryReadResult.Review).timeline
+        assertEquals(4*days.size,history.completions.size)
+        for((id,snapshot) in snapshots)assertEquals(snapshot,(Disk().journals.open(owner,id)
+            as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
+        assertEquals(wave,(Disk().drafts.read(owner,cycleId) as NativeCustomDraftReadResult.Found).draft)
+    }
+
     @Test fun generatedStrengthCycleRequiresFreshNamedConsentAndIssuesReviewedRecipe() {
         val (cycle,inputs)=saveGenerated(phase=TrainingPhase.STRENGTH)
         val day=cycle.blocks.single().days.first{d->d.slots.any{

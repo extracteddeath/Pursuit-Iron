@@ -240,3 +240,49 @@ assert.equal(repairedCap[1].weight, '100');assert.equal(repairedCap[1].reps, '11
 assert.equal(repairedCap[1].suggested, undefined, 'Retired tuning cannot leave a lower target in the UI');
 
 
+
+// Nov 26 phone report: Reverse Wrist Curl, 15 lb x 20 then 15 lb x 18.
+// A 5 lb grid must never make a successful first set silently lose 33% load.
+{
+    const wristCell = { ...cell, sets: 4, reps: [15, 20] };
+    const wristRows = [20, 18, 18, 12].map((r, i) => ({
+        ...pending(), weight: '15', reps: String(r), done: i === 0,
+        target: { ...pending().target, w: 15, reps: [15, 20], prefillReps: String(r) }
+    }));
+    const minis = [0, 1].map(() => ({ ...pending(), sub: true, weight: '15', reps: '5',
+        target: { ...pending().target, w: 15, prefillReps: '5' } }));
+    for (const actualRIR of [undefined, null, 0, 1, 2, 3, 4]) {
+        const rows = [{ ...wristRows[0], actualRIR }, ...wristRows.slice(1), ...minis];
+        const original = structuredClone(rows);
+        const result = applyLiveAutoregulation({ sets: rows, sourceIndex: 0, cell: wristCell, snapLoad });
+        assert.deepEqual(result.sets, original, 'First successful set cannot reduce 15 lb working or myo loads');
+        assert.deepEqual(reconcileRestoredLiveAdjustments(JSON.parse(JSON.stringify(result.sets))),
+            JSON.parse(JSON.stringify(original)), 'Cold resume preserves the original working and mini-set targets');
+    }
+    const misses = wristRows.map((r, i) => i < 2 ? { ...r, done: true, reps: '10', actualRIR: 0 } : r);
+    const result = applyLiveAutoregulation({ sets: misses, sourceIndex: 1, cell: wristCell, snapLoad });
+    assert.equal(result.sets[2].weight, '15');
+    assert.equal(result.sets[2].loadAdvice, undefined, '15 to 10 is too coarse even after two genuine misses');
+}
+// A valid old two-miss fingerprint is evidence, not permission to apply a load change.
+{
+    const legacy = structuredClone(adjusted.sets);
+    const row = legacy[2];
+    row.weight = '95';
+    row.target.w = 95;
+    row.liveAdjustment.action = 'reduce_pending_load';
+    const original = structuredClone(legacy);
+    const recovered = reconcileRestoredLiveAdjustments(legacy);
+    assert.equal(recovered[2].weight, '100', 'Retire unapproved legacy reduction even with valid observations');
+    assert.equal(recovered[2].target.w, 100);
+    assert.equal(recovered[2].liveAdjustment, undefined);
+    assert.deepEqual(legacy, original, 'Do not mutate the saved snapshot');
+    assert.equal(reconcileRestoredLiveAdjustments(recovered), recovered);
+    for (const patch of [{ valueOwner: 'user' }, { done: true }, { weight: '90' }]) {
+        const protectedRows = structuredClone(legacy);
+        Object.assign(protectedRows[2], patch);
+        assert.equal(reconcileRestoredLiveAdjustments(protectedRows), protectedRows,
+            'Preserve explicitly edited or completed legacy rows');
+    }
+}
+console.log('PASS Nov 26: light-load next-set stability, myo isolation and retirement of legacy automatic reductions.');

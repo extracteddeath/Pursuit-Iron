@@ -66,6 +66,14 @@ Source inspection of `modules/next-engine/progression-style.js` at the frozen pi
 - Explicit native MANUAL logging remains separately verified in generatedManualMethodAndCoachingOffPreserveCorrectedHistoryAndNextTargets; the web selector's explicit progression style is not the same as native coaching opt-out.
 - Adaptive method re-selection from longitudinal evidence belongs to S5B/S5C (CYCLE-ADAPT, CHECK-CYCLE-ADAPT, CHECK-CYCLE-LONG). Broader phase generation belongs to S4C; this does not waive the current S2 recommendation requirement. Minimum correct recommendation/authoring handoff must be addressed before CHECK-GEN-RECOMMEND is certified.
 
+### #1143 observed selector baseline and revised candidate
+
+Exact #1143 head 9dc1f93030885ff87c14e1ef39011e4e1ce8c04b passed [engine 45761342141](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/45761342141) and [Compose 45761342086](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/45761342086); merged a287d298f874fbacf9374d47acc65a64f55a5478. Actual job 139711818722 log: all 11 prior selection cases had both expected outcomes, six exact matches, five differences. Three unresolved selection differences (novice primary row, intensification Wave and peak e1RM), one unloaded representation difference and one deliberate missing-Wave-source refusal. No superiority verdict.
+
+Candidate v13 retains the historical v12 selector and source seed replay; the new policy opts into revised recommendations in the existing canonical selector. Source-matched free-barbell primary novice work remains linear; quick-change compound novice row now uses dynamic unless explicitly overridden. A straight low-rep primary free-barbell peak exercise for intermediate/advanced trainees can select the existing effort-reviewed E1RM route, not a new numerical prescriber or approval. Saved concrete methods, authored waves, recovery, mixed sets and explicit manual choices retain priority. A machine-tagged barbell cannot qualify through the new automatic branch. Broader stability/loadability metadata coverage, existing explicit AUTO source routing, changed-phase calibration and intensification Wave are not claimed complete. Native coarse STRENGTH is not sufficient proof of web intensification or an authenticated weekly wave reference. Preserve the missing-source refusal and resolve valid automatic Wave recommendation/authoring without fabricating loads.
+
+Retain all original paired baseline cases and append six v13 probes, including manual precedence and continued Wave gap. Real-store test candidate cold-replays v12 and exercises the new peak method in the existing generated full-week fixture. Actual CI pending; v13 is not yet integrated or verified.
+
 ## Finite outstanding source acceptance review
 
 | Milestone / exact IDs | Verified scope and exact fixtures | Remaining review before certification |

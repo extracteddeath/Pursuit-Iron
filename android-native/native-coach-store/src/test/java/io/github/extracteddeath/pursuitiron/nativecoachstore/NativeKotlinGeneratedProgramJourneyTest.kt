@@ -1613,6 +1613,10 @@ class NativeKotlinGeneratedProgramJourneyTest {
         verifySavedTimedProgram(CoachFirstProgramStartDomain.ALLOCATION_POLICY_VERSION)
     }
 
+    @Test fun savedV12ProgramRetainsItsConcreteChoicesAfterV13Arrives() {
+        verifySavedTimedProgram(CoachFirstProgramStartDomain.V12_POLICY_VERSION)
+    }
+
     private fun verifySavedTimedProgram(version:String) {
         val (cycle,inputs)=saveGenerated(version)
         val disk=Disk()
@@ -1662,12 +1666,25 @@ class NativeKotlinGeneratedProgramJourneyTest {
         val days=cycle.blocks.single().days.sortedBy{it.weekday}
         assertEquals(weekdays(split).sorted(),days.map{it.weekday})
         assertTrue(days.all{it.slots.size>=3})
+        if(phase==TrainingPhase.PEAK) {
+            val main=days.flatMap{it.slots}.filter{slot->
+                val work=slot.sets.filter{it.type==DraftSetType.WORKING}
+                slot.role==ComposerRole.PRIMARY && slot.machineInstanceId==null &&
+                    work.isNotEmpty() && work.all{set->
+                        (set.load as? DraftSetLoad.Verified)?.basis==LoadBasis.BARBELL_TOTAL &&
+                            set.reps.maximum<=5 && set.amplifier==null
+                    } && work.map{it.reps}.distinct().size==1 &&
+                    work.map{(it.load as DraftSetLoad.Verified).value.stripTrailingZeros()}.distinct().size==1
+            }
+            assertTrue("The calibrated peak fixture should contain a straight low-rep primary free bar",main.isNotEmpty())
+            assertTrue(main.all{it.progressionMethod==SavedProgressionMethod.E1RM})
+        }
         val selected=days.flatMap{it.slots}.map{it.exerciseId}.toSet()
         assertTrue(selected.containsAll(setOf("barbell_bench","back_squat",
             "one_arm_db_row","db_rdl")))
         if(includeNewTargets) {
             assertTrue(selected.containsAll(setOf("serratus-pushup","tibialis-raise")))
-            assertEquals("v12",inputs.policiesByPhase.getValue(phase).revision)
+            assertEquals("v13",inputs.policiesByPhase.getValue(phase).revision)
             assertEquals(TrainingMuscleCoverage.legacyV4,inputs.policiesByPhase.getValue(phase).selectedBounds.map{it.muscle})
             for(slot in days.flatMap{it.slots}.filter{it.exerciseId in setOf("serratus-pushup","tibialis-raise")})
                 assertTrue(slot.sets.all{it.load==DraftSetLoad.ExplicitBodyweight && it.type==DraftSetType.WORKING})

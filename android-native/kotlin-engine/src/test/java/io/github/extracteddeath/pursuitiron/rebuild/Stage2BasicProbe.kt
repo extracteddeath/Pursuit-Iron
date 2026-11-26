@@ -16,7 +16,7 @@ object Stage2BasicProbe {
             val f=line.split('|')
             require(f.size==10)
             val style=f[1]
-            if(style=="select" || style.startsWith("select:"))
+            if(style.substringBefore(':') in setOf("select","select-v13"))
                 return@map selection(f)
             val mode=when(style) {
                 "double","e1rm" -> BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION
@@ -93,7 +93,7 @@ object Stage2BasicProbe {
         }.orEmpty()
         val outcome=BasicProgramProgressionPlanDomain.review(cycle,
             selectedStyles=selected,reviewedCatalog=mapOf(movement.exerciseId to movement),
-            experience=experience)
+            experience=experience,reviewedAuto=f[1].substringBefore(':')=="select-v13")
         val method=when(outcome) {
             is ProgramProgressionPlan.Refused -> "refused"
             is ProgramProgressionPlan.Ready -> {

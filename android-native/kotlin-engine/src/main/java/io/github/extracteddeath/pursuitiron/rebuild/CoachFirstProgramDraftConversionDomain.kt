@@ -213,9 +213,10 @@ object CoachFirstProgramDraftConversionDomain {
         // A generator must account for the progression route of EVERY saved
         // slot. Do this only after the fully-authored cycle passed inventory
         // and source review; never guess a weight from an unreviewed draft.
+        val reviewedAuto=policy.policyId==CoachFirstProgramStartDomain.POLICY_VERSION
         val progressionPlan=BasicProgramProgressionPlanDomain.review(
             next,reviewedCatalog=curatedCatalog.associateBy{it.exerciseId},
-            experience=athlete.experience)
+            experience=athlete.experience,reviewedAuto=reviewedAuto)
             as? ProgramProgressionPlan.Ready
             ?:return reject(FirstProgramDraftStatus.CYCLE_REVIEW_FAILED,
                 "A complete source-bound progression plan could not be assigned.")
@@ -233,8 +234,8 @@ object CoachFirstProgramDraftConversionDomain {
         // Their authored custom-cycle bytes and approval fingerprints must
         // remain identical on cold replay. Only explicitly versioned v12+
         // generation persists methods into its actual saved slot records.
-        val persistChoices=policy.policyId==
-            CoachFirstProgramStartDomain.POLICY_VERSION
+        val persistChoices=reviewedAuto || policy.policyId==
+            CoachFirstProgramStartDomain.V12_POLICY_VERSION
         val selectedByKey=progressionPlan.assignments.associateBy{it.key}
         val persistedBlocks=next.blocks.map{block->
             val savedDays=block.days.map{day->
@@ -276,7 +277,7 @@ object CoachFirstProgramDraftConversionDomain {
         }.getOrNull()
         val replay=BasicProgramProgressionPlanDomain.review(
             persisted,reviewedCatalog=curatedCatalog.associateBy{it.exerciseId},
-            experience=athlete.experience) as? ProgramProgressionPlan.Ready
+            experience=athlete.experience,reviewedAuto=reviewedAuto) as? ProgramProgressionPlan.Ready
         if(persistedReview?.verifiedDraft==null || replay==null ||
             replay.assignments.size!=progressionPlan.assignments.size ||
             replay.assignments.zip(progressionPlan.assignments).any{(actual,planned)->

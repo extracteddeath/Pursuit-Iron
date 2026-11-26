@@ -59,7 +59,7 @@ class CoachFirstProgramDraftConversionDomainTest {
         assertEquals(candidate,reviewed())
     }
 
-    @Test fun v12PersistsChoicesWhileLegacyPolicyNeverRewritesExistingCycles() {
+    @Test fun currentPolicyPersistsChoicesWhileLegacyPolicyNeverRewritesExistingCycles() {
         val source=GeneratedAdaptiveBlockFixture.generation()
         val legacy=reviewed()
         val modern=legacy.copy(policy=checkNotNull(legacy.policy).copy(

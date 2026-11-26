@@ -131,7 +131,9 @@ object BasicProgramProgressionPlanDomain {
         /** Provisional catalog roles/patterns; never infer exercise traits from its name. */
         reviewedCatalog:Map<String,CatalogMovement> = emptyMap(),
         experience:AthleteExperience?=null,
-        previewWeek: ProgramProgressionWeek? = null
+        previewWeek: ProgramProgressionWeek? = null,
+        /** New generated plans opt in; historical generation replays its frozen policy. */
+        reviewedAuto:Boolean=false
     ):ProgramProgressionPlan {
         fun no(why:String)=ProgramProgressionPlan.Refused(why)
         if(cycle.athleteId.isBlank() || cycle.cycleId.isBlank() ||
@@ -233,7 +235,26 @@ object BasicProgramProgressionPlanDomain {
             }
             if(saved==SavedProgressionMethod.BODYWEIGHT_REPS && !bodyweight)
                 return no("Saved bodyweight rep progression cannot apply to a loaded station.")
-            val style=selectedStyles[key] ?: savedStyle
+            val explicitStyle=selectedStyles[key] ?: savedStyle
+            // A standardized, source-matched free bar is a reliable physical
+            // signal. A compound pattern alone does not establish novice
+            // linear suitability or a trustworthy strength estimate.
+            val reviewedBarbell=compound && loaded &&
+                catalog?.expectedLoadBasis==LoadBasis.BARBELL_TOTAL &&
+                unitBasis.single().second==LoadBasis.BARBELL_TOTAL &&
+                slot.machineInstanceId==null
+            val automatic=reviewedAuto && (explicitStyle==null ||
+                explicitStyle==NativeProgressionStyle.AUTO) &&
+                savedBasic==null && saved!=SavedProgressionMethod.BODYWEIGHT_REPS &&
+                key !in selectedStrategies && key !in selectedPerSetDynamic
+            val autoPeakE1rm=automatic && reviewedBarbell &&
+                experience in setOf(AthleteExperience.INTERMEDIATE,AthleteExperience.ADVANCED) &&
+                block.phase==TrainingPhase.PEAK && block.purpose==CustomBlockPurpose.TRAINING &&
+                slot.role==ComposerRole.PRIMARY && sameWeights && bands.size==1 &&
+                bands.single().maximum<=5 && authored.isEmpty() && !amplifier
+            // This is the same existing e1RM review route, not a new load
+            // prescriber. It can only advance from comparable recorded work.
+            val style=if(autoPeakE1rm)NativeProgressionStyle.E1RM else explicitStyle
             val styledBasic=when(style) {
                 NativeProgressionStyle.DOUBLE ->
                     BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION
@@ -373,7 +394,8 @@ object BasicProgramProgressionPlanDomain {
                     note="Earn one verified lower counterweight after all straight work reaches the upper rep bound."
                 }
                 experience==AthleteExperience.BEGINNER &&
-                    compound && slot.role==ComposerRole.PRIMARY -> {
+                    compound && slot.role==ComposerRole.PRIMARY &&
+                    (!automatic || reviewedBarbell) -> {
                     route=ProgramProgressionRoute.BASIC_WEIGHTED
                     strategy=BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION
                     note="A calibrated novice primary compound may earn a verified linear step after completing every set."

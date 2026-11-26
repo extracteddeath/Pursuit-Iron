@@ -1107,17 +1107,29 @@ class NativeKotlinGeneratedProgramJourneyTest {
     @Test fun generatedRepLadderEarnsAdjacentWeightAndResetsToItsActualRepFloor() =
         completeBasicOrManualWeek(false,repMethod=SavedProgressionMethod.LADDER)
 
+    @Test fun generatedBodyweightRepProgressionUsesNoLoadAndNoAuthorizedWeightStep() =
+        completeBasicOrManualWeek(false,repMethod=SavedProgressionMethod.BODYWEIGHT_REPS)
+
     private fun completeBasicOrManualWeek(manual:Boolean,correctBeforeApproval:Boolean=false,
         repMethod:SavedProgressionMethod?=null) {
         require(repMethod==null || repMethod in setOf(SavedProgressionMethod.REP_TARGETS,
-            SavedProgressionMethod.LADDER) && !manual && !correctBeforeApproval)
-        val (base, inputs) = saveGenerated()
+            SavedProgressionMethod.LADDER,SavedProgressionMethod.BODYWEIGHT_REPS) &&
+            !manual && !correctBeforeApproval)
+        val unloaded=repMethod==SavedProgressionMethod.BODYWEIGHT_REPS
+        val (base, inputs) = if(unloaded)saveGenerated(split=ComposerSplit.FULL_BODY,includeNewTargets=true)
+            else saveGenerated()
         assertTrue(Disk().settings.save(owner,0,CoachAssistancePolicy.MANUAL)
             is NativeCoachSettingsWrite.Saved)
         val days = base.blocks.single().days.sortedBy { it.weekday }
-        val firstDay = days.first()
+        fun unloadedEligible(slot:CustomExerciseSlot)=
+            slot.sets.isNotEmpty() && slot.sets.all{it.type==DraftSetType.WORKING &&
+                it.load==DraftSetLoad.ExplicitBodyweight && it.amplifier==null &&
+                it.reps.minimum<it.reps.maximum} &&
+                slot.sets.map{it.reps}.distinct().size==1
+        val firstDay = if(unloaded)days.first{day->day.slots.any(::unloadedEligible)}
+            else days.first()
         val selected = firstDay.slots.first { slot ->
-            slot.progressionMethod in setOf(SavedProgressionMethod.AUTO,
+            if(unloaded)unloadedEligible(slot) else slot.progressionMethod in setOf(SavedProgressionMethod.AUTO,
                 SavedProgressionMethod.DOUBLE, SavedProgressionMethod.DYNAMIC,
                 SavedProgressionMethod.LINEAR) &&
                 slot.sets.filter { it.type == DraftSetType.WORKING }.let { work ->
@@ -1191,8 +1203,8 @@ class NativeKotlinGeneratedProgramJourneyTest {
                 is NativeCustomFinishResult.Committed)
             finishedWeekOne[workoutId] = immutable
         }
-        assertEquals(NativeCustomNextCycleSlot.Next(2, firstDay.weekday,
-            firstDay.label), Disk().next(inputs))
+        assertEquals(NativeCustomNextCycleSlot.Next(2, days.first().weekday,
+            days.first().label), Disk().next(inputs))
 
         val signedReader = Disk()
         val basic = NativeKotlinCustomBasicNextReview(
@@ -1201,8 +1213,25 @@ class NativeKotlinGeneratedProgramJourneyTest {
             signedReader.journals, signedReader.machines)
         val review = basic.reviewAuthored(owner, cycleId, inputs,
             2, firstDay.weekday, selected.slotId, "earned-basic-future",
-            n("5")) as NativeCustomBasicNextReadResult.Reviewed
+            if(unloaded)BigDecimal.ZERO else n("5")) as NativeCustomBasicNextReadResult.Reviewed
         assertEquals(cycle.revision, review.next.stamp.cycleRevision)
+        if(unloaded){
+            val projection=review.projection as CustomBasicHistoryResult.UnloadedReviewed
+            assertEquals("earned-basic-w1-${days.indexOf(firstDay)}",projection.historyWorkoutId)
+            val work=review.next.slots.single{it.slotId==selected.slotId}.sets
+                .map{it.prescription}
+            assertTrue(work.all{it.load==DraftSetLoad.ExplicitBodyweight})
+            assertEquals(work.map{it.reps.minimum+1},projection.candidate.proposedExactReps)
+            assertEquals(work.indices.toSet(),projection.candidate.advancedOrdinals)
+            val old=(Disk().timeline.read(owner,athlete) as NativeKotlinMixedHistoryReadResult.Review)
+                .timeline.completions.filterIsInstance<NativeKotlinMixedHistoryCompletion.Custom>()
+                .single{it.manifest.workoutId==projection.historyWorkoutId}
+            val facts=old.evidence.visits.filter{it.slotId==selected.slotId}
+            assertEquals(work.size,facts.size)
+            assertTrue(facts.all{it.prescribedLoad==DraftSetLoad.ExplicitBodyweight &&
+                it.actual!=null && it.actual?.load==null && it.actual?.unit==null &&
+                it.actual?.actualRir==null && it.actual?.machineInstanceId==null})
+        } else {
         val projection = review.projection as CustomBasicHistoryResult.Reviewed
         if(manual) {
             val expected=selected.sets.filter{it.type==DraftSetType.WORKING}
@@ -1322,11 +1351,13 @@ class NativeKotlinGeneratedProgramJourneyTest {
                     as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
             return
         }
+        }
         val before = review.next.slots.single {
             it.slotId == selected.slotId
         }.sets.map { it.prescription }
         val offered = checkNotNull(CustomBasicProgressionDraftDomain.forWeekEdit(
-            selected.slotId, before, projection))
+            selected.slotId, before, review.projection))
+        if(unloaded)assertTrue(offered.all{it.load==DraftSetLoad.ExplicitBodyweight})
         assertEquals(before.size, offered.size)
         assertEquals(before.filter { it.type == DraftSetType.WARMUP },
             offered.filter { it.type == DraftSetType.WARMUP })
@@ -1335,7 +1366,8 @@ class NativeKotlinGeneratedProgramJourneyTest {
 
         val compared = CustomCoachWeekEditDomain.review(
             cycle, cycle.revision, 2, firstDay.weekday, selected.slotId,
-            offered, setup(), catalog, inputs)
+            offered, (Disk().sources.read(owner) as NativeAuthoringSourceRead.Found).source.setup,
+            catalog, inputs)
         assertTrue(compared.toString(),
             compared is CustomCoachWeekEditResult.Reviewed)
         val approvedDraft = (compared as CustomCoachWeekEditResult.Reviewed)

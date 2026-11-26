@@ -30,7 +30,7 @@ import { RoutinePickerSheet, routineList } from './routine-picker.js';
 import { encodeShareCode, decodeShareCode, isShareCode } from './program-code.js';
 import { READINESS_CHOICES, readinessLabel, adjustWorkoutReadiness } from './workout-readiness.js';
 import { WorkoutExerciseNav, WorkingSetCountControl, SessionNoteEditor, WorkoutMachineInfoActions, selectNumericInput } from './workout-session-controls.js';
-import { latestMachineSet, machineHistory, historyForMachineRecommendation, resolveMachineVariant, LEGACY_MACHINE_ID } from './next-engine/machine-instances.js';
+import { machineStartingReference, machineHistory, historyForMachineRecommendation, resolveMachineVariant, LEGACY_MACHINE_ID } from './next-engine/machine-instances.js';
 import { chooseWorkoutPhysicalMachine, createWorkoutPhysicalMachine, associateLegacyWorkoutMachine, withGymMachineConfig } from './workout-machine-runtime.js';
 import { useMachineChartScope, MachineChartScopePicker } from './machine-chart-scope.js';
 import { completedSetPR } from './workout-pr.js';
@@ -10948,7 +10948,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
             const configured=gymProfile?.id===sessionGymId &&
                 gymProfile?.machineVariants?.[id]?.instances?.length>0;
             const machineId=configured ? resolveMachineVariant(gymProfile,id).id : null;
-            const lastMachine=machineId ? latestMachineSet(history,{
+            const lastMachine=machineId ? machineStartingReference(history,{
                 gymId:sessionGymId,exerciseId:id,machineInstanceId:machineId,dayId:day.id,gym:gymProfile}) : null;
             const comparableWeight=lastMachine ?
                 toUnit(lastMachine.weight,lastMachine.unit||unit,unit) : null;
@@ -10991,7 +10991,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
        is an INVARIANT of the session state rather than a line somebody has to remember inside each of
        the ~15 handlers that can move a weight. Returns the original array untouched when nothing
        needed syncing, so this adds no re-renders. See syncSubSets. */
-    const runtimeSuggestions = data.map(row => workoutRowMatchesPrescription(program, day, row, weekIndex)
+    const runtimeSuggestions = data.map(row => !row.machineInstanceId && workoutRowMatchesPrescription(program, day, row, weekIndex)
         ? suggestions[row.slot] : null);
     const dataRef = useRef(data);
     dataRef.current = data;
@@ -12629,6 +12629,17 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                             // Per-set DDP: when each set has its own weight, the session-level banner would be
                             // misleading (it shows only the first set's weight). Show a different banner instead.
                             // The displayed advice is the same evaluated decision used to fill the rows.
+                            // A physical-machine row is seeded from its own history, not the generic movement suggestion.
+                            if (e.machineInstanceId) {
+                                const scope = { gymId:sessionGymId, exerciseId:e.id, machineInstanceId:e.machineInstanceId, dayId:day.id, gym:gymProfile };
+                                const reference = machineStartingReference(history,scope);
+                                const entered = workOnly(e).some(set => Number(set.weight)>0);
+                                if (reference || entered) return null;
+                                const unassigned = machineStartingReference(history,{...scope,machineInstanceId:LEGACY_MACHINE_ID});
+                                return (_jsxs("div", { className: "wpb-workout-starting-hint", children: [_jsx(Info, { size: 13 }), unassigned
+                                    ? "Older machine history is unassigned. Choose its original machine in Exercise Info, or enter a load for this machine."
+                                    : "Choose a load for this physical machine. Other machines have independent histories."] }));
+                            }
                             const estimatedTarget = e.sets.find(set => !set.warm && set.target?.estimate)?.target;
                             if (!sug || estimatedTarget) {
                                 // A session can have a real previous lift (shown in the Last chips)

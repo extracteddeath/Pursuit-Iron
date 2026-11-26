@@ -116,16 +116,16 @@ class NativeKotlinWorkoutCoordinatorTest {
         }
         assertTrue(working.size>=2)
         val warmup=initial.snapshot.targets.first{it.exerciseId=="db-press" && it.type==DraftSetType.WARMUP}
-        val last=working.last()
-        // Record a late working set first; reduction cannot overwrite it.
-        val late=KotlinJournalOperation.RecordSet("late",0,last.setKey,
+        val recorded=working.first()
+        // Record an actual in the retained half; the tail must still be skipped.
+        val late=KotlinJournalOperation.RecordSet("late",0,recorded.setKey,
             KotlinJournalSetOutcome.COMPLETED,
-            KotlinPerformedSet((last.load as DraftSetLoad.Verified).value,LoadUnit.LB,3,0))
+            KotlinPerformedSet((recorded.load as DraftSetLoad.Verified).value,LoadUnit.LB,3,0))
         val saved=durable(gateway().append("owner-1","athlete-1","session-1",late)).journal
         val shown=gateway().reviewMuscleConcerns("owner-1","athlete-1","session-1")
             .single{it.muscle==TrainingMuscle.CHEST && it.action==WorkoutConcernAction.SKIP}
         assertEquals(initial.snapshot.targets.filter{it.exerciseId=="db-press" &&
-            it.setKey!=last.setKey}.map{it.setKey},shown.entries)
+            it.setKey!=recorded.setKey}.map{it.setKey},shown.entries)
         assertTrue(shown.entries.contains(warmup.setKey))
         assertEquals(1,shown.groups.single().recordedCount)
         assertTrue(gateway().applyMuscleConcern("owner-1","athlete-1","session-1",
@@ -138,24 +138,25 @@ class NativeKotlinWorkoutCoordinatorTest {
         auth.approved=approval()
         assertEquals(saved,cold())
         val kept=working.take((working.size+1)/2)
-        val expectedTail=working.drop(kept.size).filter{it.setKey!=last.setKey}.map{it.setKey}
+        val expectedTail=(if(kept.size==1)listOf(warmup.setKey) else emptyList())+
+            working.drop(kept.size).map{it.setKey}
+        assertTrue(expectedTail.isNotEmpty())
         val reduce=gateway().reviewMuscleConcerns("owner-1","athlete-1","session-1")
-            .singleOrNull{it.muscle==TrainingMuscle.CHEST && it.action==WorkoutConcernAction.REDUCE}
-        var current=saved
-        if(expectedTail.isNotEmpty()) {
-            assertEquals(expectedTail,checkNotNull(reduce).entries)
-            current=durable(gateway().applyMuscleConcern("owner-1","athlete-1","session-1",reduce)).journal
-            assertEquals(current,cold())
-            assertTrue(gateway().applyMuscleConcern("owner-1","athlete-1","session-1",reduce)
-                is NativeJournalFileResult.Rejected)
-        } else assertNull(reduce)
+            .single{it.muscle==TrainingMuscle.CHEST && it.action==WorkoutConcernAction.REDUCE}
+        assertEquals(expectedTail,reduce.entries)
+        var current=durable(gateway().applyMuscleConcern("owner-1","athlete-1","session-1",reduce)).journal
+        assertEquals(current,cold())
+        assertEquals(expectedTail.toSet()+recorded.setKey,current.effectiveSets.keys)
+        assertTrue(gateway().applyMuscleConcern("owner-1","athlete-1","session-1",reduce)
+            is NativeJournalFileResult.Rejected)
         assertTrue(gateway().reviewMuscleConcerns("owner-1","athlete-1","session-1").none{
             it.muscle==TrainingMuscle.CHEST && it.action==WorkoutConcernAction.REDUCE
         })
         val latest=gateway().reviewMuscleConcerns("owner-1","athlete-1","session-1")
-            .single{it.muscle==TrainingMuscle.CHEST && it.action==WorkoutConcernAction.SKIP}
-        current=durable(gateway().applyMuscleConcern("owner-1","athlete-1","session-1",latest)).journal
-        assertEquals(saved.effectiveSets[last.setKey],current.effectiveSets[last.setKey])
+            .singleOrNull{it.muscle==TrainingMuscle.CHEST && it.action==WorkoutConcernAction.SKIP}
+        if(latest!=null)current=durable(gateway().applyMuscleConcern("owner-1","athlete-1","session-1",latest)).journal
+        assertTrue(initial.snapshot.targets.filter{it.exerciseId=="db-press"}.all{it.setKey in current.effectiveSets})
+        assertEquals(saved.effectiveSets[recorded.setKey],current.effectiveSets[recorded.setKey])
         assertEquals(initial.snapshot,current.snapshot)
         assertEquals(initial.snapshot,current.originalSnapshot)
         assertTrue(current.effectiveSets.keys.all{key->

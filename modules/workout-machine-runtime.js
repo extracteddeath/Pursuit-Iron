@@ -6,7 +6,7 @@
  * Pure functions: Gym remains the shared store's owner, and WorkoutSession
  * remains the only writer of the current session's actual sets.
  */
-import { addMachineVariant, assignLegacyMachineHistory, latestMachineSet, resolveMachineVariant } from './next-engine/machine-instances.js';
+import { addMachineVariant, assignLegacyMachineHistory, machineStartingReference, resolveMachineVariant } from './next-engine/machine-instances.js';
 import { EX_BY_ID, isMachineLike, toUnit } from './engine-api.js';
 
 const fail=message=>({ok:false,message});
@@ -25,7 +25,7 @@ export function chooseWorkoutPhysicalMachine(row,{
     if(selected.missing||selected.active===false)
         return fail('This machine is no longer active at this gym.');
     if(row.machineInstanceId===nextId)return {ok:true,row};
-    const last=latestMachineSet(history,{
+    const last=machineStartingReference(history,{
         gymId:sessionGymId,exerciseId:row.id,
         machineInstanceId:nextId,dayId,gym
     });

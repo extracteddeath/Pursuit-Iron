@@ -552,6 +552,34 @@ class BasicProgramProgressionPlanDomainTest {
         assertEquals(SavedProgressionMethod.MANUAL,method(program("barbell_bench",
             LoadBasis.BARBELL_TOTAL,TrainingPhase.PEAK,RepBand(1,3),
             SavedProgressionMethod.MANUAL),AthleteExperience.ADVANCED))
+        // An explicitly saved Auto choice is reviewed by the same current
+        // selector even outside the versioned first-program generator.
+        val autoRow=program("one_arm_db_row",LoadBasis.DUMBBELL_PER_HAND,
+            TrainingPhase.HYPERTROPHY,RepBand(8,15),SavedProgressionMethod.AUTO)
+        assertEquals(SavedProgressionMethod.DYNAMIC,method(autoRow,AthleteExperience.BEGINNER,false))
+        val autoPeak=program("barbell_bench",LoadBasis.BARBELL_TOTAL,TrainingPhase.PEAK,
+            RepBand(1,3),SavedProgressionMethod.AUTO)
+        assertEquals(SavedProgressionMethod.E1RM,method(autoPeak,AthleteExperience.ADVANCED,false))
+        assertNull(method(autoPeak,AthleteExperience.BEGINNER,false))
+        val tagged=program("barbell_bench",LoadBasis.BARBELL_TOTAL,TrainingPhase.PEAK,
+            RepBand(1,3),SavedProgressionMethod.AUTO,"A")
+        assertNull(method(tagged,AthleteExperience.ADVANCED,false))
+        val key=ProgramProgressionSlotKey("block",0,"slot")
+        val explicitAuto=BasicProgramProgressionPlanDomain.review(row,
+            selectedStyles=mapOf(key to NativeProgressionStyle.AUTO),
+            reviewedCatalog=catalog,experience=AthleteExperience.BEGINNER) as ProgramProgressionPlan.Ready
+        assertEquals(SavedProgressionMethod.DYNAMIC,
+            BasicProgramProgressionPlanDomain.savedChoice(explicitAuto.assignments.single()))
+        val baseSets=autoPeak.blocks.single().days.single().slots.single().sets
+        val edited=autoPeak.copy(weekOverrides=mapOf("block" to listOf(
+            CustomWeekSlotOverride(2,0,"slot",baseSets))))
+        fun preview(week:Int)= (BasicProgramProgressionPlanDomain.review(edited,
+            reviewedCatalog=catalog,experience=AthleteExperience.ADVANCED,
+            previewWeek=ProgramProgressionWeek("block",week)) as ProgramProgressionPlan.Ready)
+            .assignments.single()
+        assertEquals(ProgramProgressionRoute.AUTHORED_WEEKLY_PERIODIZATION,preview(2).route)
+        assertEquals(SavedProgressionMethod.AUTO,BasicProgramProgressionPlanDomain.savedChoice(preview(2)))
+        assertEquals(ProgramProgressionRoute.E1RM_COACH_REVIEW,preview(3).route)
         val frozen=program("barbell_bench",LoadBasis.BARBELL_TOTAL,TrainingPhase.PEAK,
             RepBand(1,3),SavedProgressionMethod.E1RM)
         assertEquals(SavedProgressionMethod.E1RM,method(frozen,AthleteExperience.ADVANCED,false))

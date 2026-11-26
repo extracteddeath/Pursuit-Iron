@@ -154,6 +154,26 @@ const historicalPhysicalVariants=new Map([
   ['preacher','ez-bar-preacher-curl']
 ]);
 const normalizeName=name=>name.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+// These are the four frozen name-only matches, not runtime aliases. An
+// identical name is insufficient to identify the original implement or load.
+const reviewedFallbackContexts=new Map([
+  ['cable-curl',{nativeId:'cable_curl',shellEquipment:['cable'],shellMuscle:'biceps',
+    nativeDeclaration:'entry("cable_curl","elbow_flexion","cable-straight-bar",',
+    nativePhysical:'"cable-station",LoadBasis.CABLE_STACK',
+    attachment:'straight-bar',requiredContext:'Original straight-bar attachment and cable-stack load convention'}],
+  ['cable-crunch',{nativeId:'cable_crunch',shellEquipment:['cable'],shellMuscle:'abs',
+    nativeDeclaration:'entry("cable_crunch","trunk_flexion","cable-rope",',
+    nativePhysical:'"cable-station",LoadBasis.CABLE_STACK',
+    attachment:'rope',requiredContext:'Original rope attachment and cable-stack load convention'}],
+  ['dumbbell-crunch',{nativeId:'dumbbell_crunch',shellEquipment:['dumbbell'],shellMuscle:'abs',
+    nativeDeclaration:'entry("dumbbell_crunch","trunk_flexion","single-dumbbell-crunch",',
+    nativePhysical:'DBS,LoadBasis.DUMBBELL_PER_HAND',
+    attachment:null,requiredContext:'Original single-dumbbell load, not combined dumbbell weight'}],
+  ['bw-pullup',{nativeId:'pullup',shellEquipment:['pullup'],shellMuscle:'lats',
+    nativeDeclaration:'entry("pullup","vertical_pull","unweighted-overhand",',
+    nativePhysical:'null,null,setOf("pullup-bar")',
+    attachment:null,requiredContext:'Original unweighted bodyweight performance, not weighted or assisted pull-up'}]
+]);
 
 export function reviewHistoricalShellCoverage(shell,rawSource,projection,
   frozenMissing,canonical,nativeIds,measured,nativeSource) {
@@ -204,19 +224,34 @@ export function reviewHistoricalShellCoverage(shell,rawSource,projection,
       'No supported native identity candidate: '+row.shellId);
     const nativeEntry=nativeById.get(nativeId);
     const attachment=nativeEntry?.match(/attachmentId="([^"]+)"/)?.[1]??null;
+    let fallbackContext=null;
+    if(row.match==='web-name-fallback-review') {
+      const expected=reviewedFallbackContexts.get(row.shellId);
+      assert.ok(expected,'Unreviewed name fallback: '+row.shellId);
+      assert.equal(nativeId,expected.nativeId,'Name fallback native identity drift: '+row.shellId);
+      assert.deepEqual(raw[4],expected.shellEquipment,'Name fallback original equipment drift: '+row.shellId);
+      assert.equal(raw[2],expected.shellMuscle,'Name fallback original muscle drift: '+row.shellId);
+      assert.ok(nativeEntry?.startsWith(expected.nativeDeclaration) &&
+        nativeEntry.includes(expected.nativePhysical),
+        'Name fallback physical convention drift: '+row.shellId);
+      assert.equal(attachment,expected.attachment,'Name fallback attachment drift: '+row.shellId);
+      fallbackContext=expected.requiredContext;
+    }
     const equipmentTokensDiffer=JSON.stringify(raw[4])!==JSON.stringify(active.equipment);
     return {shellId:row.shellId,shellName:raw[1],pinnedSourceLine:row.line,
       shellEquipment:raw[4],shellRepBand:raw.slice(5,7),
       canonicalCandidateId:row.candidateWebId,canonicalEquipment:active.equipment,
       nativeCandidateId:nativeId,match:row.match,equipmentTokensDiffer,
-      nativeAttachment:attachment,
+      nativeAttachment:attachment,fallbackContext,
       measurement:measuredSet.has(nativeId)?'TYPED':'STANDARD_REPS',
       review:historicalPhysicalVariants.has(row.shellId)?'DISTINCT_PHYSICAL_VARIANT':
-        row.match==='web-name-fallback-review'?'EXPLICIT_IDENTITY_REVIEW_REQUIRED':
+        fallbackContext?'PHYSICAL_CONTEXT_REQUIRED':
         attachment?'ATTACHMENT_AND_LOAD_CONTEXT_REQUIRED':
         equipmentTokensDiffer?'EQUIPMENT_SEMANTICS_REVIEW_REQUIRED':'IDENTITY_CANDIDATE_ONLY',
       mayTransferHistory:false,independentlyAccepted:false};
   });
+  assert.deepEqual(new Set(candidates.filter(x=>x.fallbackContext).map(x=>x.shellId)),
+    new Set(reviewedFallbackContexts.keys()),'Frozen name fallback coverage drift');
   for(const [id,nativeId] of historicalPhysicalVariants) {
     const item=candidates.find(x=>x.shellId===id);
     assert.equal(item.nativeCandidateId,nativeId);
@@ -291,6 +326,25 @@ function selfTest() {
   assert.equal(byShell.get('cable-curl').nativeAttachment,'straight-bar');
   assert.equal(byShell.get('cable-crunch').nativeAttachment,'rope');
   assert.equal(byShell.get('plank').measurement,'TYPED');
+  for(const [id,expected] of reviewedFallbackContexts) {
+    const item=byShell.get(id);
+    assert.equal(item.review,'PHYSICAL_CONTEXT_REQUIRED');
+    assert.equal(item.fallbackContext,expected.requiredContext);
+    assert.equal(item.mayTransferHistory,false);
+    assert.equal(item.independentlyAccepted,false);
+  }
+  assert.throws(()=>reviewHistoricalShellCoverage(shellInventory,shellSource,
+    projectionSource,pinnedShell,reviewedWebBaseline,nativeStarterIds,
+    measuredCandidates,native.replace(
+      'entry("dumbbell_crunch","trunk_flexion","single-dumbbell-crunch",',
+      'entry("dumbbell_crunch","trunk_flexion","two-dumbbell-crunch",')),
+    /Name fallback physical convention drift/);
+  assert.throws(()=>reviewHistoricalShellCoverage(shellInventory,shellSource,
+    projectionSource,pinnedShell,reviewedWebBaseline,nativeStarterIds,
+    measuredCandidates,native.replace(
+      /("Curated cable curl represented[^\n]*\n\s*direct\(TrainingMuscle\.BICEPS\),attachmentId=)"straight-bar"/,
+      '$1"rope"')),
+    /Name fallback attachment drift/);
   assert.throws(()=>reviewHistoricalShellCoverage(shellInventory,shellSource,
     projectionSource.replace("chest_supported_row: 'chest-row'","chest_supported_row: 'machine-row'"),
     pinnedShell,reviewedWebBaseline,nativeStarterIds,measuredCandidates,native),

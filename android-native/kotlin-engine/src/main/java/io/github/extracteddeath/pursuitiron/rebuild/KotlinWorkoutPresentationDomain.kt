@@ -65,6 +65,18 @@ object KotlinWorkoutPresentationDomain {
         return -1
     }
 
+    /** Exact contiguous occurrence for next-set coaching, even when the
+     * same movement appears again elsewhere in the workout. */
+    internal fun occurrenceTargets(targets:List<KotlinWorkoutTarget>,setKey:String):List<KotlinWorkoutTarget> {
+        val index=targets.indexOfFirst{it.setKey==setKey}
+        if(index<0)return emptyList()
+        var start=index
+        var end=index+1
+        while(start>0 && sameOccurrence(targets[start-1],targets[index]))start--
+        while(end<targets.size && sameOccurrence(targets[end],targets[index]))end++
+        return targets.subList(start,end)
+    }
+
     /** Bulk exercise-ID actions can only be interpreted unambiguously when
      * that ID occupies ONE contiguous issued occurrence. Multi-occurrence
      * swaps/skips need a future exact set-key action, never a guessed ID-wide

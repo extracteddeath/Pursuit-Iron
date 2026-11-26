@@ -163,8 +163,9 @@ object KotlinJournalLiveSetCoachDomain {
             return unavailable(LiveSetCoachUnavailable.UNKNOWN_OR_COMPLETED_SET)
         if(next.type!=DraftSetType.WORKING)
             return unavailable(LiveSetCoachUnavailable.WARMUP_OR_FIRST_WORKING_SET)
-        val working=journal.snapshot.targets.filter{
-            it.exerciseId==next.exerciseId && it.type==DraftSetType.WORKING
+        val working=KotlinWorkoutPresentationDomain.occurrenceTargets(
+            journal.snapshot.targets,nextSetKey).filter{
+            it.type==DraftSetType.WORKING
         }.map{target->
             val recorded=journal.effectiveSets[target.setKey]?.operation
                 as? KotlinJournalOperation.RecordSet

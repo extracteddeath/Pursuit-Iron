@@ -43,7 +43,7 @@ internal class NativeKotlinMovementSwapEligibilityTest {
         val repeated=first.snapshot.copy(targets=listOf(target,
             target.copy(exerciseId="row",setKey="row:working-1"),
             target.copy(setKey="db-press:working-2",ordinal=1)))
-        val journal=KotlinWorkoutJournalDomain.begin(repeated,first.identity)
+        val journal=KotlinWorkoutJournalDomain.begin(repeated,first.storedIdentity)
         assertFalse(NativeMovementSwapEligibility.generated(journal,"db-press"))
         assertTrue(NativeMovementSwapEligibility.generated(journal,"row"))
         assertNull(WorkoutRemainingExerciseDomain.generated(journal,"db-press"))

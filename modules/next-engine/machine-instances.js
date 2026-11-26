@@ -149,22 +149,26 @@ export function effectiveMachineHistoryId(set, performance, gym, exerciseId) {
  * Returns only observed completed working sets in one truly comparable scope.
  * Intra-workout A/B switches survive as separate rows, without dropping history.
  */
-export function machineHistory(history, { gymId, exerciseId, machineInstanceId, dayId = null, gym = null }) {
+export function machineHistory(history, { gymId, exerciseId, machineInstanceId, dayId = null, programId = null, gym = null }) {
     if (!validId(exerciseId) || !gymId ||
         !machineInstanceId || (dayId !== null && !String(dayId))) return [];
     const records = [];
     for (const entry of Array.isArray(history) ? history : []) {
         if ((entry.gymId ?? UNKNOWN_GYM_ID) !== gymId ||
-            dayId !== null && entry.dayId !== dayId) continue;
+            dayId !== null && entry.dayId !== dayId ||
+            programId !== null && entry.programId !== programId) continue;
         const performance = entry.perf?.[exerciseId];
         if (!performance) continue;
-        for (const [index, set] of (Array.isArray(performance.sets) ? performance.sets : []).entries()) {
-            const weight = Number(set?.w), reps = Number(set?.r);
+        let ordinal = 0;
+        for (const set of (Array.isArray(performance.sets) ? performance.sets : [])) {
+            if (!set || set.warm || set.sub) continue;
+            const index = ordinal++;
+            const weight = historyNumber(set.w), reps = historyNumber(set.r);
             if (!set || set.warm || set.sub || set.done === false ||
-                !(reps > 0) || !(weight >= 0) || !Number.isFinite(weight) ||
+                !(reps > 0) || weight === null || !(weight >= 0) ||
                 effectiveMachineHistoryId(set, performance,
                     gym?.id === gymId ? gym : null, exerciseId) !== machineInstanceId) continue;
-            records.push({ date:entry.date, workoutId:entry.id ?? null, dayId:entry.dayId,
+            records.push({ date:entry.date, workoutId:entry.id ?? null, dayId:entry.dayId, programId:entry.programId ?? null,
                 gymId, exerciseId, machineInstanceId,
                 setIndex:Number.isInteger(set.workingSetIndex) ? set.workingSetIndex : index,
                 weight, reps, rir:set.rir ?? null, unit: entry.unit ?? null,
@@ -180,12 +184,19 @@ export function latestMachineSet(history, scope) {
  * not comparable progression evidence. Never borrow another gym or station.
  */
 export function machineStartingReference(history, scope) {
-    const latestPositive = requested => machineHistory(history, requested)
-        .filter(row => row.weight > 0).at(-1) ?? null;
-    const sameDay = scope.dayId != null ? latestPositive(scope) : null;
-    if (sameDay) return { ...sameDay, referenceOnly: false };
-    const otherDay = latestPositive({ ...scope, dayId: null });
-    return otherDay ? { ...otherDay, referenceOnly: true } : null;
+    const positives = requested => machineHistory(history, requested).filter(row => row.weight > 0);
+    const sameDayRows = scope.dayId != null ? positives(scope) : [];
+    const sameDay = sameDayRows.at(-1);
+    if (sameDay) {
+        // Only authenticated workout identity can establish per-position references.
+        // Never combine sets from different sessions, even if their timestamps match.
+        const workingSets = sameDay.workoutId == null ? [] : sameDayRows.filter(row =>
+            row.workoutId === sameDay.workoutId && row.date === sameDay.date &&
+            row.programId === sameDay.programId && row.dayId === sameDay.dayId);
+        return { ...sameDay, referenceOnly: false, workingSets };
+    }
+    const otherDay = positives({ ...scope, dayId: null, programId: null }).at(-1);
+    return otherDay ? { ...otherDay, referenceOnly: true, workingSets: [] } : null;
 }
 /** Filter a targeted exercise without stripping other exercises or their muscle dose. */
 export function historyForMachineRecommendation(history, exerciseId, machineInstanceId, gymId, gym = null) {

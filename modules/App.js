@@ -31,7 +31,7 @@ import { encodeShareCode, decodeShareCode, isShareCode } from './program-code.js
 import { READINESS_CHOICES, readinessLabel, adjustWorkoutReadiness } from './workout-readiness.js';
 import { WorkoutExerciseNav, WorkingSetCountControl, SessionNoteEditor, WorkoutMachineInfoActions, selectNumericInput, dismissWorkoutNumericSelection } from './workout-session-controls.js';
 import { machineStartingReference, machineHistory, historyForMachineRecommendation, resolveMachineVariant, LEGACY_MACHINE_ID } from './next-engine/machine-instances.js';
-import { chooseWorkoutPhysicalMachine, createWorkoutPhysicalMachine, associateLegacyWorkoutMachine, withGymMachineConfig } from './workout-machine-runtime.js';
+import { chooseWorkoutPhysicalMachine, seedMachineReferenceRows, createWorkoutPhysicalMachine, associateLegacyWorkoutMachine, withGymMachineConfig } from './workout-machine-runtime.js';
 import { useMachineChartScope, MachineChartScopePicker } from './machine-chart-scope.js';
 import { completedSetPR } from './workout-pr.js';
 import { captureWorkoutProgressionReplay } from './next-engine/workout-replay.js';
@@ -10955,19 +10955,10 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                 gymProfile?.machineVariants?.[id]?.instances?.length>0;
             const machineId=configured ? resolveMachineVariant(gymProfile,id).id : null;
             const lastMachine=machineId ? machineStartingReference(history,{
-                gymId:sessionGymId,exerciseId:id,machineInstanceId:machineId,dayId:day.id,gym:gymProfile}) : null;
-            const comparableWeight=lastMachine ?
-                toUnit(lastMachine.weight,lastMachine.unit||unit,unit) : null;
-            const machineSets=buildSets(EX_BY_ID[id],slot,suggestions[slot],true);
-            // A new physical stack cannot inherit another machine's target.
-            // Existing pending weights become explicitly reviewable baselines.
-            const safeSets=machineId ? machineSets.map(set=>{
-                const weight=set.warm||set.sub ? '' :
-                    comparableWeight!=null ? String(Math.round(comparableWeight*1000)/1000) : '';
-                return {...set,machineInstanceId:machineId,weight,auto:false,
-                    valueOwner:'user',suggested:undefined,hint:undefined,
-                    target:{...set.target,w:weight}};
-            }) : machineSets;
+                gymId:sessionGymId,exerciseId:id,machineInstanceId:machineId,dayId:day.id,programId:program.id,gym:gymProfile}) : null;
+            const machineSets=buildSets(EX_BY_ID[id],slot,machineId ? null : suggestions[slot],true);
+            // Physical station reference is distinct from the generic movement suggestion.
+            const safeSets=machineId ? seedMachineReferenceRows(machineSets,lastMachine,machineId,unit) : machineSets;
             return ({ id, slot, ...(machineId ? {machineInstanceId:machineId} : {}),
                 sets:safeSets, ...(() => { const last = history.find(h => h.programId === program.id && h.dayId === day.id && h.perf?.[id]);
                 const n = repeatedNote(last?.perf?.[id]?.note, last?.perf?.[id]?.noteRepeat); return { note: n.text, noteRepeat: n.repeat }; })(), superset: !program.config?.noSupersets && !!program.ss?.[`${day.id}:${slot}`],
@@ -11022,7 +11013,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         return changed ? out : next;
     });
     const switchPhysicalMachine=(ei,nextId,sourceGym=gymProfile)=>{
-        const scope={gym:sourceGym,sessionGymId,nextId,history,dayId:day.id,unit};
+        const scope={gym:sourceGym,sessionGymId,nextId,history,dayId:day.id,programId:program.id,unit};
         const check=chooseWorkoutPhysicalMachine(dataRef.current[ei],scope);
         if(!check.ok)return check;
         setData(rows=>rows.map((row,i)=>i!==ei?row:
@@ -12637,7 +12628,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                             // The displayed advice is the same evaluated decision used to fill the rows.
                             // A physical-machine row is seeded from its own history, not the generic movement suggestion.
                             if (e.machineInstanceId) {
-                                const scope = { gymId:sessionGymId, exerciseId:e.id, machineInstanceId:e.machineInstanceId, dayId:day.id, gym:gymProfile };
+                                const scope = { gymId:sessionGymId, exerciseId:e.id, machineInstanceId:e.machineInstanceId, dayId:day.id, programId:program.id, gym:gymProfile };
                                 const reference = machineStartingReference(history,scope);
                                 const entered = workOnly(e).some(set => Number(set.weight)>0);
                                 if (reference || entered) return null;

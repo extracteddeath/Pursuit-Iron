@@ -181,4 +181,53 @@ class InWorkoutCoachDomainTest {
         assertEquals(n(215),review.issuedTargetUnchanged)
     }
 
+
+    // Shared web M232 phone regression: Reverse Wrist Curl, 15 x 20 -> 15 x 18.
+    @Test fun successfulLightSetNeverChangesIssuedLoadOrOffersReduction() {
+        val stock=VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.MACHINE_STACK,
+            listOf(n(5),n(10),n(15),n(20)))
+        for(rir in listOf(null,0,1,2,3,4)) {
+            val result=assess(ask(observations=listOf(fact(0,15,20,rir)),
+                nextLoad=15,stock=stock).copy(repBand=RepBand(15,20)))
+            assertNull(result.weightForHumanReview)
+            assertEquals(n(15),result.issuedTargetUnchanged)
+            assertFalse(result.canApplyAutomatically)
+        }
+    }
+
+    @Test fun coarseLightWeightStepIsNotAnOptionalFatigueRecommendation() {
+        val stock=VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.MACHINE_STACK,
+            listOf(n(5),n(10),n(15),n(20)))
+        for(rir in listOf(null,0,1,2)) {
+            val result=assess(ask(observations=listOf(fact(0,15,10,rir),fact(1,15,10,rir)),
+                nextOrdinal=2,nextLoad=15,stock=stock).copy(repBand=RepBand(15,20)))
+            assertEquals(InWorkoutDirection.NO_SAFE_SMALLER_LOAD,result.direction)
+            assertNull(result.weightForHumanReview)
+            assertEquals(n(15),result.issuedTargetUnchanged)
+            assertFalse(result.canApplyAutomatically)
+        }
+    }
+
+    @Test fun relativeLimitIncludesExactTenPercentAndKeepsAbsoluteLimit() {
+        val stock=VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.MACHINE_STACK,
+            listOf(n(40),n(45),n(50),n(55)))
+        fun review(load:Int,limit:Int=5)=assess(ask(
+            observations=listOf(fact(0,load,2,0)),nextLoad=load,stock=stock,limit=limit))
+        assertEquals(n(45),review(50).weightForHumanReview)
+        assertEquals(n(50),review(50).issuedTargetUnchanged)
+        assertNull(review(45).weightForHumanReview)
+        assertNull(review(50,4).weightForHumanReview)
+        assertFalse(review(50).canApplyAutomatically)
+    }
+
+    @Test fun relativeLimitDoesNotRewriteAnAuthoredBackoff() {
+        val stock=VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.MACHINE_STACK,
+            listOf(n(10),n(15)))
+        val result=assess(ask(observations=listOf(fact(0,15,20,2)),
+            nextLoad=10,stock=stock).copy(repBand=RepBand(15,20)))
+        assertEquals(InWorkoutDirection.FOLLOW_PLANNED_BACKOFF,result.direction)
+        assertEquals(n(10),result.issuedTargetUnchanged)
+        assertNull(result.weightForHumanReview)
+        assertFalse(result.canApplyAutomatically)
+    }
 }

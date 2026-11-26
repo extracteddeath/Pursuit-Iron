@@ -207,7 +207,7 @@ private fun NativeKotlinExerciseLibrarySheet(
                 Text("Load · "+nativeLibraryWords(definition.loadKind.name))
                 Text("Sides · "+nativeLibraryWords(definition.sideRule.name))
                 definition.requiredFixtures.sorted().forEach{Text("Required · "+kotlinGymFacilityLabel(it))}
-                Text("Measured sessions use typed targets and actuals. Recorded results are available in workout History; no repetition-based load or muscle credits are inferred.",
+                Text("Measured sessions use typed targets and actuals. No repetition-based load or muscle credits are inferred.",
                     style=MaterialTheme.typography.bodySmall)
                 if(!record.eligible && !record.savedExcluded)Text("Review gym stock, fixtures and preferences before choosing this exercise.")
             } else if(move!=null) {
@@ -277,12 +277,12 @@ private fun NativeKotlinExerciseLibrarySheet(
             Text(if((id in draft)!=(id in original))"Change pending · use Save exclusions in the library."
                 else if(excluded)"Excluded in saved preferences." else "Included in saved preferences.",
                 style=MaterialTheme.typography.bodySmall)
-            if(historyHost!=null && move!=null)OutlinedButton(onClick={historyId=id},enabled=!busy,
+            if(historyHost!=null)OutlinedButton(onClick={historyId=id},enabled=!busy,
                 modifier=Modifier.fillMaxWidth()) {Text("View recorded exercise history")}
             TextButton(onClick={selectedId=null},enabled=!busy,modifier=Modifier.fillMaxWidth()) {Text("Back to library")}
         }
     }}
-    if(historyHost!=null)historyId?.takeIf{MeasuredExerciseCatalogDomain.find(it)==null}?.let { id ->
+    if(historyHost!=null)historyId?.let { id ->
         NativeKotlinExerciseHistorySheet(historyHost,id,onDismiss={historyId=null})
     }
     filterPicker?.let { kind ->

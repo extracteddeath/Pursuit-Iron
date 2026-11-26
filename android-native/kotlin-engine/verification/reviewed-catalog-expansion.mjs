@@ -317,8 +317,11 @@ export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) 
  assert.deepEqual(declarations.slice(beforeWaveNine+waveNineIds.length),
    [...ratedBandRequiredIds,'spanish-squat',
      'assisted-dip','assisted-chinup','assisted-pullup',
-     'neck-extension','neck-curl','neck-harness','neck-lateral','weighted-pullup'],
-   'only reviewed canonical additions and the distinct historical weighted pull-up may follow the rated bands');
+     'neck-extension','neck-curl','neck-harness','neck-lateral','weighted-pullup',
+     'chest-supported-machine-row','ez-bar-preacher-curl'],
+   'only reviewed canonical additions and distinct historical variants may follow the rated bands');
+ assert.match(source,/entry\("chest-supported-machine-row","chest_supported_row","supported-machine",\s*ComposerPattern\.HORIZONTAL_PULL,ComposerRole\.SECONDARY,pull,\s*"chest-supported-row-machine",LoadBasis\.EXERCISE_OVERRIDE,emptySet\(\),8\.\.12,/);
+ assert.match(source,/entry\("ez-bar-preacher-curl","elbow_flexion","preacher-ez-bar",\s*ComposerPattern\.ISOLATION,ComposerRole\.ACCESSORY,pull,\s*"ez-curl-bar",LoadBasis\.BARBELL_TOTAL,setOf\("preacher-bench"\),10\.\.15,/);
  assert.match(source,/entry\("weighted-pullup","vertical_pull","added-load-overhand",\s*ComposerPattern\.VERTICAL_PULL,ComposerRole\.PRIMARY,pull,\s*"weighted-pullup-resistance",LoadBasis\.EXERCISE_OVERRIDE,\s*setOf\("pullup-bar","weighted-pullup-setup"\),6\.\.12,/,
    'Historical weighted pull-up requires separate verified added-load identity and setup');
  const liveById=new Map(web.map(ex=>[ex.id,ex]));
@@ -439,7 +442,7 @@ export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) 
      'wave-nine source must not reclassify the loaded implement as bodyweight');
  }
  const total=49+count+requestedIds.length+waveEightIds.length+
-   waveNineIds.length+ratedBandRequiredIds.length+9;
+   waveNineIds.length+ratedBandRequiredIds.length+11;
  assert.ok(source.includes('require(definitions.size=='+total+')'),
    'Kotlin exact source count must include independently reviewed additions');
  assert.ok(source.includes(') + listOf(\\n') || source.includes(') + listOf('),
@@ -447,7 +450,7 @@ export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) 
  assert.ok(source.includes('mayTransferPreviousLoad:Boolean=false')&&
    !expected.includes('mayTransferPreviousLoad'),
    'reviewed IDs may never implicitly transfer historical loading');
- return {originalStablePrefixCount:49,additions:count+requestedIds.length+waveEightIds.length+waveNineIds.length+9,total};
+ return {originalStablePrefixCount:49,additions:count+requestedIds.length+waveEightIds.length+waveNineIds.length+11,total};
 }
 
 export function writeReviewedCatalogExpansion(manifest,source,web=EXERCISES) {
@@ -469,7 +472,7 @@ function requireCount(source) {
 function selfTest() {
  const m=JSON.parse(readFileSync(manifestPath,'utf8'));
  const src=readFileSync(nativePath,'utf8');
- assert.equal(validateReviewedCatalogExpansion(m,src).total,370);
+ assert.equal(validateReviewedCatalogExpansion(m,src).total,372);
  const unverifiedSupport=src.replace(
    'null,null,setOf("spanish-squat-support"),12..20',
    'null,null,emptySet(),12..20');

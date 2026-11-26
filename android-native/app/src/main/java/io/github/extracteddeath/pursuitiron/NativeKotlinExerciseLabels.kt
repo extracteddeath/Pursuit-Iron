@@ -21,6 +21,8 @@ private val kotlinExerciseNames=mapOf(
     "db_rear_delt_raise" to "Dumbbell Rear-Delt Raise",
     "pullup" to "Pull-Up",
     "weighted-pullup" to "Weighted Pull-Up (added load)",
+    "chest-supported-machine-row" to "Chest-Supported Machine Row",
+    "ez-bar-preacher-curl" to "EZ-Bar Preacher Curl",
     "leg_extension" to "Leg Extension",
     "seated_leg_curl" to "Seated Leg Curl",
     "split-squat" to "Two-Dumbbell Split Squat",

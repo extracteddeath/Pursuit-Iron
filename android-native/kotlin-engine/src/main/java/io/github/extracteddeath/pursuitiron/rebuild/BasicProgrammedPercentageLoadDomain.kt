@@ -80,7 +80,8 @@ object BasicProgrammedPercentageLoadDomain {
                 step.percentOfTrainingMax.stripTrailingZeros().scale()>3
         })return no(BasicProgrammedLoadRefusal.INCOMPLETE_OR_INVALID_WEEK_SCHEDULE)
         val basis=request.scope.basis
-        if(basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+        if(!StrengthStandardsMeasurementDomain.supportsMaxBasedPrescription(
+                request.scope.exerciseId,basis))
             return no(BasicProgrammedLoadRefusal.INCOMPATIBLE_ASSISTANCE_OR_LOAD_BASIS)
         val stock=request.verifiedStock
         if(stock==null || stock.unit!=request.scope.unit || stock.basis!=basis)
@@ -104,7 +105,8 @@ object BasicProgrammedPercentageLoadDomain {
         scope:BasicProgressionScope,stock:VerifiedLoadStock,raw:BigDecimal
     ):ProgrammedPhysicalLoadReview {
         fun no(reason:BasicProgrammedLoadRefusal)=ProgrammedPhysicalLoadReview.Refused(reason)
-        if(scope.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT ||
+        if(!StrengthStandardsMeasurementDomain.supportsMaxBasedPrescription(
+                scope.exerciseId,scope.basis) ||
             KotlinSetNumberAuthorityDomain.machineTagContradictsFreeBarbell(
                 scope.basis,scope.machineInstanceId))
             return no(BasicProgrammedLoadRefusal.INCOMPATIBLE_ASSISTANCE_OR_LOAD_BASIS)

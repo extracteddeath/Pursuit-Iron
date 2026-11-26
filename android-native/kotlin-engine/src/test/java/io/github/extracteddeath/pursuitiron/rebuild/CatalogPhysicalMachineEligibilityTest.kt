@@ -13,15 +13,15 @@ class CatalogPhysicalMachineEligibilityTest {
         val overrides=catalog.filter {
             it.expectedLoadBasis==LoadBasis.EXERCISE_OVERRIDE
         }
-        assertEquals(69,overrides.size) // 42 machines + 7 portable + 16 nominal bands + 4 neck implements
+        assertEquals(70,overrides.size) // 43 machines + 7 portable + 16 nominal bands + 4 neck implements
         val qualified=overrides.filter(CatalogPhysicalMachineEligibility::eligible)
-        assertEquals(42,qualified.size)
+        assertEquals(43,qualified.size)
         assertTrue(qualified.all{it.equipmentId!=null})
         for(id in listOf("leg_extension","seated_leg_curl",
             "machine_press","leg_press","hack_squat","lat-pulldown",
             "machine-row","incline-machine-press","machine-lat-raise",
             "machine-dip","standing_calf","machine-hip-thrust",
-            "hip-abduction","adduction-machine","machine-shrug")) {
+            "hip-abduction","adduction-machine","machine-shrug","chest-supported-machine-row")) {
             assertTrue("Reviewer-approved machine missing A/B: "+id,
                 CatalogPhysicalMachineEligibility.eligible(byId.getValue(id)))
         }

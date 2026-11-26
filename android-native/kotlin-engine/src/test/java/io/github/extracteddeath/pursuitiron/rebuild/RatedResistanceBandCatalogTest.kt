@@ -32,7 +32,7 @@ class RatedResistanceBandCatalogTest {
         r.issues.any{it.exerciseId==id && it.kind==kind}
 
     @Test fun allSixteenWebBandIdentitiesKeepDistinctReviewAndPracticalRepBands() {
-        assertEquals(370,entries.size)
+        assertEquals(372,entries.size)
         val ids=RatedResistanceBandDomain.reviewedExerciseIds()
         assertEquals(16,ids.size)
         assertEquals("spanish-squat",entries[361].legacyCuratedId)

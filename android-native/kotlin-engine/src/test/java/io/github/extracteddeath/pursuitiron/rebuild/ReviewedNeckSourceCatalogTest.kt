@@ -55,7 +55,7 @@ class ReviewedNeckSourceCatalogTest {
         assertEquals(ids,entries.map{it.legacyCuratedId})
         assertEquals(ids,StarterExerciseTranche.entries().drop(365).take(4)
             .map{it.legacyCuratedId})
-        assertEquals(370,StarterExerciseTranche.entries().size)
+        assertEquals(372,StarterExerciseTranche.entries().size)
         assertTrue(entries.all {it.practicalRepBand==RepBand(12,20)})
         assertTrue(entries.all{it.movement.pattern==ComposerPattern.ISOLATION &&
             it.movement.role==ComposerRole.ACCESSORY &&

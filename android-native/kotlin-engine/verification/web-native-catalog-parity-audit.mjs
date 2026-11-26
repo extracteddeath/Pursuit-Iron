@@ -217,7 +217,7 @@ function selfTest() {
     'All three reviewed assisted machine identities must be source matched');
   for(const id of pendingMeasurementSemantics.ASSISTED_COUNTERWEIGHT)
     assert.ok(nativeStarterIds.includes(id),'Missing reviewed assisted machine: '+id);
-  assert.deepEqual(completeAudit.nativeOnlyIds,['weighted-pullup'],
+  assert.deepEqual(completeAudit.nativeOnlyIds,['weighted-pullup','chest-supported-machine-row','ez-bar-preacher-curl'],
     'Historical weighted pull-up is a separate native identity, not a current-web exact match');
   assert.equal(completeAudit.exactIdMatches,369,
     'The frozen current-web source denominator is unchanged');

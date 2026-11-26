@@ -26,17 +26,11 @@ object KotlinComposerSwapRankingDomain {
      * Multiple words may match across the name, pattern and credited muscles.
      */
     private fun matchesSearch(
-        option:ComposerExerciseOption,search:String,displayLabel:String?=null
-    ):Boolean {
-        val needle=search.trim().take(80).lowercase()
-            .replace('_',' ').replace('-',' ')
-        if(needle.isBlank()) return true
-        fun readable(value:String)=value.lowercase().replace('_',' ').replace('-',' ')
-        val catalogText=(listOf(option.exerciseId,option.pattern.name,
-            displayLabel.orEmpty())+
-            option.credits.filter{it.fractionalSet.signum()>0}
-                .map{it.muscle.name}).joinToString(" ",transform=::readable)
-        return needle.split(Regex("\\s+")).all{it in catalogText}
+        option:ComposerExerciseOption,terms:List<String>,displayLabel:String?=null
+    ):Boolean = CoachExerciseChoiceSearchDomain.matches(terms){
+        listOfNotNull(option.exerciseId,option.pattern.name,
+            option.role.name,displayLabel) +
+            option.credits.filter{it.fractionalSet.signum()>0}.map{it.muscle.name}
     }
 
     /** Keep the owner's ranking intact; do not rank filtered search results
@@ -47,12 +41,14 @@ object KotlinComposerSwapRankingDomain {
         samePatternOnly:Boolean=false,
         sharedMusclesOnly:Boolean=false,
         displayLabels:Map<String,String> = emptyMap()
-    ):List<KotlinComposerSwapChoice> =
-        Collections.unmodifiableList(choices.filter{
+    ):List<KotlinComposerSwapChoice> {
+        val terms=CoachExerciseChoiceSearchDomain.tokens(search)
+        return Collections.unmodifiableList(choices.filter{
             (!samePatternOnly || it.samePattern) &&
                 (!sharedMusclesOnly || it.sharedReviewedMuscleCount>0) &&
-                matchesSearch(it.option,search,displayLabels[it.option.exerciseId])
+                matchesSearch(it.option,terms,displayLabels[it.option.exerciseId])
         })
+    }
 
     fun rank(
         source:ComposerExerciseOption,
@@ -71,11 +67,12 @@ object KotlinComposerSwapRankingDomain {
                     it.fractionalSet.signum()>0
             }.map{it.muscle}.toSet()
         val baseline=reviewedDirectMuscles(source)
+        val terms=CoachExerciseChoiceSearchDomain.tokens(search)
         return alternatives.asSequence().filter{it.exerciseId!=source.exerciseId &&
             it.exerciseId !in currentExerciseIds &&
             dayFocus in it.allowedFocus &&
             it.role==source.role &&
-            matchesSearch(it,search,displayLabels[it.exerciseId])
+            matchesSearch(it,terms,displayLabels[it.exerciseId])
         }.map{candidate->
             val shared=reviewedDirectMuscles(candidate).intersect(baseline).size
             val same=candidate.pattern==source.pattern

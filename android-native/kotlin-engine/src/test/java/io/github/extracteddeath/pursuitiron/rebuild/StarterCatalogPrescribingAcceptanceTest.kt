@@ -124,6 +124,57 @@ class StarterCatalogPrescribingAcceptanceTest {
         }
     }
 
+    @Test fun everyStandardIdentityRefusesUnverifiedPhysicalInputs() {
+        val schedule=template()
+        for(movement in catalog) {
+            val selected=choice(movement)
+            val gym=stockFor(listOf(movement.exerciseId))
+            // Isolate one real, unchanged catalog entry per case. There is
+            // no need to rebuild the whole catalog or compose a rejected week.
+            val request=CatalogWeekRequest(schedule,listOf(movement),
+                listOf(selected),gym)
+            fun refuse(kind:CatalogIssueType,
+                changed:CatalogWeekRequest) {
+                val result=CoachExerciseCatalogDomain.review(changed)
+                assertEquals(movement.exerciseId,
+                    CatalogWeekStatus.CATALOG_OR_GYM_UNRESOLVED,result.status)
+                assertTrue("${movement.exerciseId}: expected $kind; ${result.issues}",
+                    result.issues.any{it.exerciseId==movement.exerciseId && it.kind==kind})
+                assertNull(result.composedRequest)
+                assertNull(result.draft)
+                assertFalse(result.mayIssueWorkout)
+                assertFalse(result.mayOverwriteAuthoredProgram)
+            }
+            val equipmentId=movement.equipmentId
+            if(equipmentId==null) {
+                refuse(CatalogIssueType.INCOMPATIBLE_EXERCISE_IDENTITY,
+                    request.copy(chosen=listOf(selected.copy(selectedLoad=n("25")))))
+            } else {
+                refuse(CatalogIssueType.EQUIPMENT_UNAVAILABLE,
+                    request.copy(gym=gym.copy(confirmedStock=emptyMap())))
+                val wrongBasis=if(movement.expectedLoadBasis==LoadBasis.DUMBBELL_PER_HAND)
+                    cable else dumbbells
+                refuse(CatalogIssueType.EQUIPMENT_BASIS_MISMATCH,
+                    request.copy(gym=gym.copy(confirmedStock=mapOf(equipmentId to wrongBasis))))
+                refuse(CatalogIssueType.LOAD_UNVERIFIED,
+                    request.copy(chosen=listOf(selected.copy(selectedLoad=null))))
+                refuse(CatalogIssueType.LOAD_UNVERIFIED,
+                    request.copy(chosen=listOf(selected.copy(
+                        selectedLoad=checkNotNull(selected.selectedLoad).add(n("0.5"))))))
+            }
+            movement.attachmentId?.let{attachment->
+                refuse(CatalogIssueType.ATTACHMENT_UNAVAILABLE,
+                    request.copy(gym=gym.copy(
+                        availableAttachmentIds=gym.availableAttachmentIds-attachment)))
+            }
+            for(facility in movement.requiredFacilityIds) {
+                refuse(CatalogIssueType.FACILITY_UNAVAILABLE,
+                    request.copy(gym=gym.copy(
+                        availableFacilityIds=gym.availableFacilityIds-facility)))
+            }
+        }
+    }
+
     private data class RealGymScenario(
         val title:String,
         val exercises:List<String>,

@@ -7,16 +7,24 @@ const rank=readFileSync(
  'android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomExerciseSwapRankingDomain.kt',
  'utf8');
 
-// Source candidates always come from the already-reviewed current gym/catalog.
-assert.match(sheet,/val labeled=available\.filter \{ choice ->/);
-assert.match(sheet,/val terms=search\.trim\(\)\.replace\('_',' '\)\.replace\('-',' '\)/);
-assert.match(sheet,/terms\.all \{ searchable\.contains\(it\) \}/);
+const search=readFileSync(
+ 'android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CoachExerciseChoiceSearchDomain.kt',
+ 'utf8');
+// Search already-reviewed choices using the common engine matcher, not a
+// second Compose search pass. Match full choice metadata, not a sibling ID.
+assert.match(sheet,/available,replacing\?\.exerciseId,search=search/);
+assert.match(sheet,/displayLabel=::kotlinExerciseLabel/);
+assert.match(rank,/CoachExerciseChoiceSearchDomain\.tokens\(search\)/);
+assert.match(rank,/CoachExerciseChoiceSearchDomain\.matches\(terms\)/);
+assert.match(search,/tokens\.all\s*\{\s*searchable\.contains\(it\)\s*\}/);
 for(const field of [
  'choice.exerciseId','choice.familyId','choice.variantId',
- 'choice.attachmentId','kotlinExerciseLabel(choice.exerciseId)',
+ 'choice.attachmentId','displayLabel(choice.exerciseId)',
  'choice.pattern?.name','choice.role?.name',
- 'choice.muscleCredits.map { it.muscle.name }'
-]) assert.ok(sheet.includes(field),'search missing '+field);
+ 'credits(choice).map{it.name}'
+]) assert.ok(rank.includes(field),'search missing '+field);
+assert.doesNotMatch(sheet,/val labeled=available\.filter/);
+assert.doesNotMatch(sheet,/val searchable=/);
 
 // Rank before narrowing the matches, preserving pattern/family/role/muscle.
 assert.match(sheet,/CustomExerciseSwapRankingDomain\.rank\(\s*available,replacing\?\.exerciseId/);
@@ -28,11 +36,12 @@ assert.match(sheet,/otherDayExerciseIds=otherDayExerciseIds/);
 assert.match(sheet,/sourceHasWorkingSets=replacing\?\.sets\?\.any/);
 assert.match(rank,/fun rank\(/);
 
-// The same ID can represent different reviewed attachment/variant choices.
-// Only the exact matching choice may pass the visible search.
-assert.match(sheet,/val matchedChoices=labeled\.toSet\(\)/);
+// Duplicate identities are refused by the ranker. Only exact verified
+// choices proceed to contextual attachment/incline filtering and paging.
+assert.match(rank,/available\.map\{it\.exerciseId\}\.distinct\(\)\.size!=available\.size/);
+assert.doesNotMatch(sheet,/val matchedChoices=/);
 assert.match(sheet,/val searched=ranked\.filter \{ rankedChoice ->/);
-assert.match(sheet,/choice in matchedChoices/);
+assert.match(sheet,/val choice=rankedChoice\.choice/);
 assert.match(sheet,/verifiedAngleFor\(choice\.exerciseId\)==selectedAngle/);
 assert.match(sheet,/choice\.attachmentId==attachmentId/);
 assert.match(sheet,/StarterExerciseTranche\.movements\(\)/);

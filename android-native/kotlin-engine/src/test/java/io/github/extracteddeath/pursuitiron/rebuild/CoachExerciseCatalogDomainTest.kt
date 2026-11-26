@@ -116,6 +116,38 @@ class CoachExerciseCatalogDomainTest {
         assertEquals(n("32.5"),modified.first().selectedLoad)
     }
 
+    @Test fun physicallySelectableZeroUsesSharedPrescriptionBasisRule() {
+        val machine=press.copy(equipmentId="verified-machine",
+            expectedLoadBasis=LoadBasis.EXERCISE_OVERRIDE)
+        val zeroChoice=choices.map{
+            if(it.exerciseId=="press")it.copy(selectedLoad=BigDecimal.ZERO) else it
+        }
+        val selectableZero=VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.EXERCISE_OVERRIDE,listOf(n("0"),n("20"),n("30")))
+        val blocked=CoachExerciseCatalogDomain.review(request(
+            movements=listOf(machine,row,squat),selections=zeroChoice,
+            gym=gym.copy(confirmedStock=gym.confirmedStock+
+                ("verified-machine" to selectableZero))))
+        assertEquals(CatalogWeekStatus.CATALOG_OR_GYM_UNRESOLVED,blocked.status)
+        assertTrue(blocked.issues.any{it.exerciseId=="press" &&
+            it.kind==CatalogIssueType.LOAD_UNVERIFIED})
+        assertNull(blocked.composedRequest)
+        assertNull(blocked.draft)
+        val landmine=machine.copy(equipmentId="landmine-station",
+            expectedLoadBasis=LoadBasis.LANDMINE_ADDED_PLATES)
+        val landmineStock=selectableZero.copy(basis=LoadBasis.LANDMINE_ADDED_PLATES)
+        val accepted=CoachExerciseCatalogDomain.review(request(
+            movements=listOf(landmine,row,squat),selections=zeroChoice,
+            gym=gym.copy(confirmedStock=gym.confirmedStock+
+                ("landmine-station" to landmineStock))))
+        assertTrue(accepted.issues.toString(),accepted.issues.isEmpty())
+        val load=checkNotNull(accepted.composedRequest).exercises.first().equipment
+            as ComposerEquipment.Verified
+        assertEquals(BigDecimal.ZERO,load.plannedLoad)
+        assertEquals(LoadBasis.LANDMINE_ADDED_PLATES,load.inventory?.basis)
+        assertEquals(CatalogWeekStatus.VERIFIED_CATALOG_DRAFT_FOR_REVIEW,accepted.status)
+    }
+
     @Test fun ropeAndStraightBarAreNotInterchangeableAttachments() {
         val rope=spec("pushdown-rope",TrainingMuscle.TRICEPS,
             equipmentId="cable-a",basis=LoadBasis.CABLE_STACK,attachment="rope")

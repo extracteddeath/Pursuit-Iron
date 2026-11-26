@@ -1,12 +1,12 @@
 # Pursuit Iron — execution status v2
-**As of:** 2026-11-26. **Target:** architecture/kotlin-engine-rebuild. **Latest observed integrated SHA:** `11c2fee60c288cb4ad27040fc56c0252c7f2de64` (#1153).
+**As of:** 2026-11-26. **Target:** architecture/kotlin-engine-rebuild. **Latest observed integrated SHA:** `b903f25295accae0e6098ca9966579c152ae128e` (#1154).
 Authority: [MASTER_DEVELOPMENT_PLAN.md](MASTER_DEVELOPMENT_PLAN.md) and [EXECUTION_MILESTONES_V2.json](EXECUTION_MILESTONES_V2.json). Original inventories are immutable v1 provenance, not current stage assignments.
 
 ## Honest baseline
 - S0 and S1 completed: required integrated engine/Compose baseline checks (S0 merge `05c02ff2362736439ca1fcabfd7d477bfb2fa366`, runs 45482709594 and 45482709540) and versioned Stage 1 inventory (#1041). These are not training acceptance.
 - Canonical denominator: 965 items; 41 inherited rollups; 120 mandatory supplementary checks and five optional review candidates. Do not sum rollups or checks into 965. Original inventory records zero formally accepted supplementary checks. New execution ledger starts with zero **certified** canonical/required supplementary rows until the relevant assertions and layers are reviewed. This is a documentation and verification baseline, not an implementation estimate. Existing passing tests and integrated features are credited as evidence, not thrown away.
 - Separate source-certified, device-verified and fully accepted counts. Never require a device result to finish a source-only gate; never claim final acceptance before S9. All applicable device checks remain required. Do not treat percentages of PRs, test cases, or lines of code as percent parity.
-- Current lane: S3A workout execution lifecycle. Stage 2 is source-complete (36/36 canonical + 13/13 supplementary), including the exact integrated shared-number/history audit #1153. See [S2 exit matrix](S2_EXIT_MATRIX.md) and [closure evidence](https://github.com/extracteddeath/Pursuit-Iron/pull/1153#issuecomment-7190266264). Device and fully accepted counts remain zero; no engine superiority or APK approval. Reuse existing workout execution and UI owners; address concrete missing assertions without adding a separate runtime.
+- Current lane: S3B exercise catalog and swap. Stage 2 remains 49/49 source-certified; S3A 3/3 canonical + 3/3 supplementary source-certified on #1154. Device/fully accepted remain zero. Reuse existing catalog, physical rules and shared UI owners.
 
 | Milestone | Work package | Canonical IDs | Supplementary checks | Current gate status |
 | --- | --- | ---: | ---: | --- |
@@ -17,8 +17,8 @@ Authority: [MASTER_DEVELOPMENT_PLAN.md](MASTER_DEVELOPMENT_PLAN.md) and [EXECUTI
 | S2C | Specialist progression | 11 | 1 | Source-certified 11/11 + 1/1; device pending |
 | S2D | Factual history and correction | 4 | 3 | Source-certified 4/4 + 3/3; device pending |
 | S2E | Integrated numerical certification | 1 | 0 | Source-certified 1/1; #1153 exact audit verified and integrated |
-| S3A | Workout execution lifecycle | 3 | 3 | In source review; candidate cold issue/retry regression, fresh CI required |
-| S3B | Exercise catalog and swap | 759 | 8 | Not source-certified; inspect existing implementation |
+| S3A | Workout execution lifecycle | 3 | 3 | Source-certified 3/3 + 3/3 on #1154; device pending |
+| S3B | Exercise catalog and swap | 759 | 8 | Shared search candidate; catalog acceptance pending |
 | S3C | Techniques and supersets | 10 | 13 | Not source-certified; inspect existing implementation |
 | S3D | Session tools and restrictions | 5 | 5 | Not source-certified; inspect existing implementation |
 | S4A | Athlete inputs and constraints | 6 | 14 | Not source-certified; inspect existing implementation |
@@ -127,3 +127,13 @@ Ordinary and shortened first preparations previously checked only the requested 
 Input/Finish evidence inspected: KotlinWorkoutEntryDomainTest (123f30e568fda0724ecbc819cd5d349c41b80fa8) verifies missing weight/reps vs actual zero, failed zero reps, factual off-stock actuals and unknown RIR, and shared generated/custom parser; KotlinSetDraftStepDomainTest (cd52e37bd9466de893aeaab1b4c5dee83ae5d0a1) verifies exact stock neighbors and bounded reps/RIR gestures. kotlin-lab-workout-ui-test.mjs lines 1032–1098 asserts shared editable entry controls, independent receipts, explicit outcomes and asynchronous stock step edit-token guard. Lines 649–696 assert current revision and explicit Finish. NativeFinishReviewPolicyTest checks stale revision, incomplete/recovery refusal and uncertain acknowledgment. NativeKotlinPendingWorkoutDraftsTest checks exact identity, partial input, changed station and newer receipt invalidation. These remain source assertions, not device tests. Review exact custom/Composer finish transaction and manual route coverage before whole S3A certification.
 
 S3A exact candidate ca26aedb7748b57eada3386a8ed6accb180fd86d: Compose 45808969302 passed; engine 45808969419 reached native-store tests (862/864 passed, two fixture failures because they deliberately prepared a second ID for an already claimed slot). Keep the new guard intact. Split the old unguarded-authored-load issuance and stale time-undo tests into independent, unclaimed-slot fixtures; explicitly assert duplicate refusal and retained existing snapshot in the original scenarios. Both original safety contracts remain mandatory. Fresh full CI required.
+
+## S3A source exit and S3B intake
+
+[Exact S3A closure](https://github.com/extracteddeath/Pursuit-Iron/pull/1154#issuecomment-7191136646): corrected head 3765de52557177c8ce6a30dba7ea32c3dd6b89b1 passed engine/native journal/source compilation 45811703573 (job 139880927362) and Compose 45811703511; integrated b903f25295accae0e6098ca9966579c152ae128e has identical full tree 0e9dcbaad88c666327162a02fdf600834e89c443. Source exit 6/6; no independent push CI inferred. Free routine S3D; physical device S9.
+
+S3B: compare earlier UI staging #448, do not copy older code wholesale. Consolidate four separate exercise matching paths using existing CoachExerciseChoiceSearchDomain; canonical bounded token normalization once per search, Locale.ROOT, cross-field display label / reviewed metadata, and preserved ranking/authorization. Custom rank receives query/label directly, removing duplicate UI scan and matched set; angle, attachment and paging remain contextual. No change to numeric or history authority. Fresh tests required. Still outstanding: per-identity physical feasibility and source context incl. historical weighted pullup conflict, swap lifecycle and identity migration. No S3B certification yet.
+
+### S3B integrated search and physical catalog checks
+
+PR #1155 exact head 457dd41947a98070f8509e18543155997ce07b10 passed full engine/native/Android source CI 45822020199 and Compose 45822020220; squash 4c8cf22e392d15bbbc367db511f213e245417012 has identical complete tree 82bb80318802fbbab3d1d364baf9acad6fb45e25. Shared search and positive/negative per-standard-identity catalog fixture integrated. S3B remains open: historical shell identity/provenance, measured and swap execution evidence still require completion. New candidate aligns catalog selection with existing KotlinSetNumberAuthorityDomain.validPrescribedLoad rather than forwarding a selectable but invalid zero machine prescription to the composer; preserves zero ADDED landmine and factual actual zero. No new numerical authority. S3C separate draft #1156 tests existing generated technique runtime; do not merge until S3B dependencies verified. No APK.

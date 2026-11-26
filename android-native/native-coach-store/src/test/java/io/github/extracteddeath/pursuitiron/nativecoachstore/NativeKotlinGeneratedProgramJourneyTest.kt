@@ -900,13 +900,60 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(n("0"),doses.getValue(TrainingMuscle.QUADS).directWorkingSets)
     }
 
-    @Test fun generatedOptInMyoFinisherUsesLastActualAndColdFinishesWithoutGhostStages() {
-        val (cycle,inputs)=saveGenerated(includeHipMachines=true,includeMyoFinisher=true)
+    @Test fun generatedOptInMyoFinisherUsesLastActualAndColdFinishesWithoutGhostStages() =
+        generatedTechniqueJourney(CustomAmplifierKind.MYO_REPS)
+
+    @Test fun generatedProgramWithExplicitDropUsesVerifiedLowerActualAndColdHistory() =
+        generatedTechniqueJourney(CustomAmplifierKind.DROP_SET)
+
+    @Test fun generatedProgramWithExplicitPartialsKeepsSameActualAndSeparateHistory() =
+        generatedTechniqueJourney(CustomAmplifierKind.LENGTHENED_PARTIALS)
+
+    private fun generatedTechniqueJourney(kind:CustomAmplifierKind) {
+        val (generated,inputs)=saveGenerated(includeHipMachines=true,includeMyoFinisher=true)
+        // The first-program generator only offers optional myo-reps.
+        // Other techniques are explicit athlete-authored changes to that
+        // generated cycle, not automatic selection or silent mutation.
+        val cycle=if(kind==CustomAmplifierKind.MYO_REPS)generated else {
+            val block=generated.blocks.single()
+            val updated=generated.copy(revision=generated.revision+1,
+                blocks=listOf(block.copy(days=block.days.map{day->
+                    day.copy(slots=day.slots.map{slot->
+                        slot.copy(sets=slot.sets.map{set->
+                            if(set.amplifier==null)set else {
+                                val target=set.load as DraftSetLoad.Verified
+                                val amp=when(kind) {
+                                    CustomAmplifierKind.DROP_SET->CustomSetAmplifier(
+                                        kind,8,5,target.copy(value=n("15")),40)
+                                    CustomAmplifierKind.LENGTHENED_PARTIALS->CustomSetAmplifier(
+                                        kind,4,0,followUpActiveSeconds=20)
+                                    else->error("Unexpected explicitly authored technique")
+                                }
+                                set.copy(amplifier=amp)
+                            }
+                        })
+                    })
+                })))
+            val d=Disk()
+            assertTrue(d.drafts.save(owner,cycleId,generated.revision,updated)
+                is NativeCustomDraftWriteResult.Committed)
+            val previous=d.consent.read(owner,cycleId,inputs) as NativeCustomSignoffRead.Found
+            assertFalse(previous.isCurrent)
+            assertTrue(d.prepared.prepare(owner,"unsigned-technique",cycleId,1,
+                block.days.first().weekday,inputs) is NativeCustomPrepareResult.Rejected)
+            val source=(d.sources.read(owner) as NativeAuthoringSourceRead.Found).source
+            val signed=d.consent.confirm(owner,cycleId,updated.revision,source.revision,
+                previous.receipt.recordRevision,inputs,true)
+            assertTrue(signed.toString(),signed is NativeCustomSignoffWrite.Committed)
+            updated
+        }
         val days=cycle.blocks.single().days.sortedBy{it.weekday}
         val finishers=days.flatMap{it.slots}.flatMap{it.sets}.filter{it.amplifier!=null}
         assertEquals(1,finishers.size)
-        assertEquals(CoachFirstProgramMyoFinisherDomain.prescribedTechnique(),
-            finishers.single().amplifier)
+        assertEquals(kind,finishers.single().amplifier?.kind)
+        if(kind==CustomAmplifierKind.MYO_REPS)
+            assertEquals(CoachFirstProgramMyoFinisherDomain.prescribedTechnique(),
+                finishers.single().amplifier)
         val disk=Disk()
         val seed=(NativeKotlinFirstProgramSeedFileStore(disk.root,disk.fence,identity)
             .read(owner,cycleId) as NativeFirstProgramSeedRead.Found).seed
@@ -946,7 +993,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
                 record(main)
                 if(amp==null)continue
                 exercised++
-                assertEquals(CustomAmplifierKind.MYO_REPS,amp.kind)
+                assertEquals(kind,amp.kind)
                 val activationTarget=checkNotNull(load)
                 assertEquals(n("20"),activationTarget.value)
                 val slot=original.slots.single{it.sets.any{s->s.setKey==set.setKey}}
@@ -963,24 +1010,31 @@ class NativeKotlinGeneratedProgramJourneyTest {
                 assertEquals(listOf(first),CustomWorkoutExecutionDomain.followUpVisits(journal,set))
                 assertEquals(amp.followUpRestSeconds,
                     KotlinWorkoutRestDomain.inspect(journal,first).automaticCue?.seconds)
+                val stageWeight=if(kind==CustomAmplifierKind.DROP_SET)n("15") else n("25")
+                val wrongWeight=if(kind==CustomAmplifierKind.DROP_SET)n("25") else n("20")
                 val mini=CustomWorkoutJournalOperation.Record("mini-$index",journal.revision,
                     first,KotlinJournalSetOutcome.COMPLETED,
-                    KotlinPerformedSet(n("25"),activationTarget.unit,amp.followUpReps,1))
+                    KotlinPerformedSet(stageWeight,activationTarget.unit,amp.followUpReps,1))
                 assertTrue(Disk().journals.record(owner,id,mini.copy(
-                    eventId="wrong-mini-$index",performed=mini.performed!!.copy(load=n("20"))))
+                    eventId="wrong-mini-$index",performed=mini.performed!!.copy(load=wrongWeight)))
                     is NativeCustomJournalResult.Rejected)
                 record(mini)
-                val second=first.copy(stage=2)
-                assertEquals(listOf(first,second),
-                    CustomWorkoutExecutionDomain.followUpVisits(journal,set))
                 record(mini.copy(eventId="mini-correct-$index",expectedRevision=journal.revision,
                     correctsEventId=mini.eventId,performed=mini.performed!!.copy(actualRir=0)))
-                record(CustomWorkoutJournalOperation.Record("stop-$index",journal.revision,
-                    second,KotlinJournalSetOutcome.SKIPPED,null))
-                assertEquals(listOf(first,second),
-                    CustomWorkoutExecutionDomain.followUpVisits(journal,set))
-                assertFalse(journal.effectiveVisits.containsKey(first.copy(stage=3)))
-                assertEquals(n("25"),(journal.effectiveVisits.getValue(first).operation
+                if(kind==CustomAmplifierKind.MYO_REPS) {
+                    val second=first.copy(stage=2)
+                    assertEquals(listOf(first,second),
+                        CustomWorkoutExecutionDomain.followUpVisits(journal,set))
+                    record(CustomWorkoutJournalOperation.Record("stop-$index",journal.revision,
+                        second,KotlinJournalSetOutcome.SKIPPED,null))
+                    assertEquals(listOf(first,second),
+                        CustomWorkoutExecutionDomain.followUpVisits(journal,set))
+                    assertFalse(journal.effectiveVisits.containsKey(first.copy(stage=3)))
+                } else {
+                    assertEquals(listOf(first),CustomWorkoutExecutionDomain.followUpVisits(journal,set))
+                    assertFalse(journal.effectiveVisits.containsKey(first.copy(stage=2)))
+                }
+                assertEquals(stageWeight,(journal.effectiveVisits.getValue(first).operation
                     as CustomWorkoutJournalOperation.Record).performed?.load)
             }
             assertEquals(0,journal.unresolvedVisitCount)
@@ -999,6 +1053,25 @@ class NativeKotlinGeneratedProgramJourneyTest {
             assertEquals(original,cold.originalSnapshot)
             assertEquals(0,cold.unresolvedVisitCount)
             assertEquals(finish.eventId,cold.finishedByEventId)
+            val evidence=(CustomWorkoutHistoryEvidenceDomain.project(cold)
+                as CustomHistoryEvidenceResult.Candidate).evidence
+            val mains=evidence.visits.filter{it.part==CustomWorkoutVisitPart.MAIN}
+            assertEquals(original.slots.sumOf{it.sets.size},mains.size)
+            val followUps=evidence.visits.filter{it.part==CustomWorkoutVisitPart.FOLLOW_UP}
+            val activation=mains.singleOrNull{it.amplifierKind==kind}
+            if(activation==null)assertTrue(followUps.isEmpty()) else {
+                assertEquals(n("25"),activation.actual?.load)
+                assertEquals(if(kind==CustomAmplifierKind.MYO_REPS)2 else 1,followUps.size)
+                assertTrue(followUps.all{it.setKey==activation.setKey && it.amplifierKind==kind})
+                assertEquals(if(kind==CustomAmplifierKind.DROP_SET)n("15") else n("25"),
+                    followUps.first().actual?.load)
+                assertEquals(0,followUps.first().actual?.actualRir)
+                assertEquals(KotlinJournalSetOutcome.COMPLETED,followUps.first().outcome)
+                if(kind==CustomAmplifierKind.MYO_REPS) {
+                    assertEquals(KotlinJournalSetOutcome.SKIPPED,followUps.last().outcome)
+                    assertNull(followUps.last().actual)
+                }
+            }
         }
         assertEquals(1,exercised)
         assertEquals(NativeCustomNextCycleSlot.Next(2,days.first().weekday,days.first().label),

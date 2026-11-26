@@ -8,6 +8,20 @@ const ui=readFileSync(
 // filter is display-only; it cannot modify receipts or infer missing RIR.
 assert.match(ui,/host\.reviewVerifiedKotlinHistory\(\)/);
 assert.match(ui,/NativeKotlinMixedHistoryReadResult\.Review/);
+// Measured identities use the same full, verified timeline and the same
+// result renderer as workout History, never a rep-based history adapter.
+assert.match(ui,/if\(MeasuredExerciseCatalogDomain\.find\(exerciseId\)!=null\)/);
+assert.match(ui,/\.filterIsInstance<NativeKotlinMixedHistoryCompletion\.Measured>\(\)/);
+assert.match(ui,/NativeKotlinMeasuredHistoryRows\(session,exerciseId\)/);
+const measuredRows=readFileSync(
+  'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHistoryScreen.kt','utf8');
+assert.match(measuredRows,/nativeMeasuredHistoryPlans\(journal\.approvedPlan\.sets,exerciseId\)/);
+assert.match(measuredRows,/plans\.filter\{it\.exerciseId==exerciseId\}/);
+assert.match(measuredRows,/MeasuredWorkoutResultReviewDomain\.review\(/);
+const library=readFileSync(
+  'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinExerciseLibraryScreen.kt','utf8');
+assert.match(library,/if\(historyHost!=null\)OutlinedButton\(onClick=\{historyId=id\}/);
+assert.match(library,/NativeKotlinExerciseHistorySheet\(historyHost,id,onDismiss=/);
 assert.match(ui,/exerciseHistoryRows\(result\.timeline,exerciseId\)/);
 assert.match(ui,/timeline\.completions\.asReversed\(\)\.flatMap/);
 // Staged technique rows once shared a single MAIN/FOLLOW_UP key. In a

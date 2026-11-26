@@ -1930,6 +1930,17 @@ class NativeKotlinGeneratedProgramJourneyTest {
                     val sameIssue=Disk().journals.issue(owner,id,cycleId,1,
                         day.weekday,inputs) as NativeCustomJournalResult.Durable
                     assertEquals(retry.issued,sameIssue.issued)
+                    val duplicateId="duplicate-day-$index"
+                    assertEquals(NativeCustomPrepareResult.Rejected(
+                        NativeCustomPrepareRefusal.DIFFERENT_WORKOUT_ALREADY_PREPARED),
+                        Disk().prepared.prepare(owner,duplicateId,cycleId,1,
+                            day.weekday,inputs))
+                    assertEquals(NativeCustomPreparedRead.Missing,
+                        Disk().prepared.open(owner,duplicateId))
+                    assertEquals(NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.NOT_PREPARED),
+                        Disk().journals.issue(owner,duplicateId,cycleId,1,
+                            day.weekday,inputs))
                     assertEquals(NativeCustomJournalResult.Rejected(
                         NativeCustomJournalRefusal.WORKOUT_ID_CONFLICT),
                         Disk().journals.issue(owner,id,cycleId,1,

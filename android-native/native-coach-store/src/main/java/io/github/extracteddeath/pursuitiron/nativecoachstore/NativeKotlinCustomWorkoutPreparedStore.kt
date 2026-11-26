@@ -882,10 +882,7 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 }
                 NativeCustomPreparedRead.Missing->Unit
             }
-            if(current(ownerKey)!=owner)
-                return@withOwnerTransaction deny(NativeCustomPrepareRefusal.NOT_AUTHORIZED)
-            atomicWrite(path(ownerKey,workoutId),encode(planned))
-            NativeCustomPrepareResult.Prepared(planned,false)
+            commitNewPreparation(owner,planned)
         }}.getOrElse{deny(NativeCustomPrepareRefusal.STORAGE_UNAVAILABLE)}
     }
 
@@ -951,10 +948,7 @@ class NativeKotlinCustomWorkoutPreparedStore(
                     else deny(NativeCustomPrepareRefusal.DIFFERENT_WORKOUT_ALREADY_PREPARED)
                 NativeCustomPreparedRead.Missing -> Unit
             }
-            if(current(ownerKey)!=owner)
-                return@withOwnerTransaction deny(NativeCustomPrepareRefusal.NOT_AUTHORIZED)
-            atomicWrite(path(ownerKey,workoutId),encode(planned))
-            NativeCustomPrepareResult.Prepared(planned,false)
+            commitNewPreparation(owner,planned)
         }}.getOrElse{deny(NativeCustomPrepareRefusal.STORAGE_UNAVAILABLE)}
     }
 
@@ -1037,12 +1031,7 @@ class NativeKotlinCustomWorkoutPreparedStore(
                         NativeCustomPrepareResult.Prepared(existing.workout,true)
                     else NativeCustomPrepareResult.Rejected(
                         NativeCustomPrepareRefusal.DIFFERENT_WORKOUT_ALREADY_PREPARED)
-                if(current(ownerKey)!=owner)
-                    return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
-                        NativeCustomPrepareRefusal.NOT_AUTHORIZED)
-                val bytes=encode(planned)
-                atomicWrite(path(ownerKey,workoutId),bytes)
-                NativeCustomPrepareResult.Prepared(planned,false)
+                commitNewPreparation(owner,planned)
             }
         }.getOrElse {NativeCustomPrepareResult.Rejected(
             NativeCustomPrepareRefusal.STORAGE_UNAVAILABLE)}
@@ -1134,11 +1123,7 @@ class NativeKotlinCustomWorkoutPreparedStore(
                         NativeCustomPrepareResult.Prepared(existing.workout,true)
                     else NativeCustomPrepareResult.Rejected(
                         NativeCustomPrepareRefusal.DIFFERENT_WORKOUT_ALREADY_PREPARED)
-                if(current(ownerKey)!=owner)
-                    return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
-                        NativeCustomPrepareRefusal.NOT_AUTHORIZED)
-                atomicWrite(path(ownerKey,workoutId),encode(candidate))
-                NativeCustomPrepareResult.Prepared(candidate,false)
+                commitNewPreparation(owner,candidate)
             }
         }.getOrElse {NativeCustomPrepareResult.Rejected(
             NativeCustomPrepareRefusal.STORAGE_UNAVAILABLE)}
@@ -1187,7 +1172,7 @@ class NativeKotlinCustomWorkoutPreparedStore(
                     planned.copy(authoredReturnFingerprint=null))
                     return@withOwnerTransaction no(NativeCustomPrepareRefusal.DIFFERENT_WORKOUT_ALREADY_PREPARED)
                 replacePreparedAtomically(shown.ownerKey,shown.workoutId,planned)
-            } else atomicWrite(path(shown.ownerKey,shown.workoutId),encode(planned))
+            } else return@withOwnerTransaction commitNewPreparation(owner,planned)
             NativeCustomPrepareResult.Prepared(planned,false)
         }}.getOrElse{no(NativeCustomPrepareRefusal.STORAGE_UNAVAILABLE)}
     }
@@ -1320,26 +1305,35 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 else NativeCustomPrepareResult.Rejected(
                     NativeCustomPrepareRefusal.DIFFERENT_WORKOUT_ALREADY_PREPARED)
             }
-            // Multiple IDs must NEVER prepare the same cycle/week/weekday.
-            // Otherwise the athlete could log two contradictory versions of
-            // one session and pollute next-session progression history.
-            val all=inventory(ownerKey) as? NativePreparedInventoryResult.Found
-                ?:return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
-                    NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
-            if(all.workouts.any{
-                it.workoutId!=workoutId &&
-                    it.snapshot.stamp.cycleId==cycleId &&
-                    it.snapshot.absoluteWeek==absoluteWeek &&
-                    it.snapshot.weekday==weekday
-            })return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
-                NativeCustomPrepareRefusal.DIFFERENT_WORKOUT_ALREADY_PREPARED)
-            if(current(ownerKey)!=owner)
-                return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
-                    NativeCustomPrepareRefusal.NOT_AUTHORIZED)
-            atomicWrite(path(ownerKey,workoutId),encode(planned))
-            NativeCustomPrepareResult.Prepared(planned,false)
+            commitNewPreparation(owner,planned)
         }}.getOrElse{NativeCustomPrepareResult.Rejected(
             NativeCustomPrepareRefusal.STORAGE_UNAVAILABLE)}
+    }
+
+    /**
+     * Common first-write boundary for every preparation authority. Call only
+     * under the owner fence, after exact consent/review and same-ID replay
+     * checks. Do not confuse a new ID with a second scheduled workout.
+     */
+    private fun commitNewPreparation(owner:NativeKotlinOwnerIdentity,
+        planned:NativeCustomPreparedWorkout):NativeCustomPrepareResult {
+        fun deny(reason:NativeCustomPrepareRefusal)=NativeCustomPrepareResult.Rejected(reason)
+        val ownerKey=planned.ownerKey
+        if(current(ownerKey)!=owner || planned.athleteId!=owner.athleteId)
+            return deny(NativeCustomPrepareRefusal.NOT_AUTHORIZED)
+        val all=inventory(ownerKey) as? NativePreparedInventoryResult.Found
+            ?:return deny(NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
+        val slot=planned.snapshot
+        if(all.workouts.any {
+            it.workoutId==planned.workoutId ||
+                (it.snapshot.stamp.cycleId==slot.stamp.cycleId &&
+                    it.snapshot.absoluteWeek==slot.absoluteWeek &&
+                    it.snapshot.weekday==slot.weekday)
+        })return deny(NativeCustomPrepareRefusal.DIFFERENT_WORKOUT_ALREADY_PREPARED)
+        if(current(ownerKey)!=owner)
+            return deny(NativeCustomPrepareRefusal.NOT_AUTHORIZED)
+        atomicWrite(path(ownerKey,planned.workoutId),encode(planned))
+        return NativeCustomPrepareResult.Prepared(planned,false)
     }
 
     /**

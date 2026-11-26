@@ -481,6 +481,17 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
             NativeCustomPrepareRefusal.DIFFERENT_WORKOUT_ALREADY_PREPARED),
             prepared.prepare("owner-1","short-session-1",
                 "cycle-1",2,0,input()))
+        // A different ID is not permission to prepare the same slot,
+        // including through the other ordinary/shortened authority.
+        for(duplicate in listOf(
+            prepared.prepare("owner-1","duplicate-full","cycle-1",2,0,input()),
+            prepared.prepareShorter("owner-1","duplicate-short","cycle-1",
+                2,0,input(),shown,true))) {
+            assertEquals(NativeCustomPrepareResult.Rejected(
+                NativeCustomPrepareRefusal.DIFFERENT_WORKOUT_ALREADY_PREPARED),duplicate)
+        }
+        for(id in listOf("duplicate-full","duplicate-short"))
+            assertEquals(NativeCustomPreparedRead.Missing,prepared.open("owner-1",id))
         val first=issued.issue("owner-1","short-session-1",
             "cycle-1",2,0,input())
         assertTrue(first.toString(),first is NativeCustomJournalResult.Durable)

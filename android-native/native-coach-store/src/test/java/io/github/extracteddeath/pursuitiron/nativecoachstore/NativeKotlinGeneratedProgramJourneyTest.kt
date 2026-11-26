@@ -1920,6 +1920,25 @@ class NativeKotlinGeneratedProgramJourneyTest {
                         as NativeCustomJournalResult.Durable
                     assertEquals(saved.issued,retry.issued)
                     journal=retry.issued.journal
+                    // Process death after a durable actual/correction but before
+                    // acknowledging the UI: issue retry is a read, not a new workout.
+                    val cold=(Disk().journals.open(owner,id)
+                        as NativeCustomJournalResult.Durable).issued.journal
+                    assertEquals(journal,cold)
+                    assertEquals(NativeCustomNextCycleSlot.ResumeIssued(
+                        id,1,day.weekday,day.label),Disk().next(inputs))
+                    val sameIssue=Disk().journals.issue(owner,id,cycleId,1,
+                        day.weekday,inputs) as NativeCustomJournalResult.Durable
+                    assertEquals(retry.issued,sameIssue.issued)
+                    assertEquals(NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.WORKOUT_ID_CONFLICT),
+                        Disk().journals.issue(owner,id,cycleId,1,
+                            (day.weekday+1)%7,inputs))
+                    val coldRetry=Disk().journals.record(owner,id,edit)
+                        as NativeCustomJournalResult.Durable
+                    assertEquals(retry.issued,coldRetry.issued)
+                    assertEquals(original,coldRetry.issued.journal.snapshot)
+                    journal=coldRetry.issued.journal
                 }
                 assertEquals(original,journal.snapshot)
             }

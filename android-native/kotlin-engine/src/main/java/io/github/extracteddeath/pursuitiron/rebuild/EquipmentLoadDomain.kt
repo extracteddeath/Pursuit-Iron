@@ -151,6 +151,20 @@ object EquipmentLoadDomain {
     private fun validStep(value: BigDecimal): Boolean =
         value > zero && validLoad(value)
 
+    /** A picker must expose at least one issuable working setting, not merely
+     * a syntactically valid zero-only inventory. Same physical inspection
+     * and prescribed-number authority for repetition and measured sessions. */
+    fun hasPrescribableLoad(stock:VerifiedLoadStock,unit:LoadUnit):Boolean {
+        val inspection=inspect(stock,zero,unit) as? LoadInspection.Confirmed
+            ?:return false
+        return inspection.basis==stock.basis &&
+            ((inspection.exact &&
+                KotlinSetNumberAuthorityDomain.validPrescribedLoad(zero,stock.basis)) ||
+                inspection.nextAbove?.let {
+                    KotlinSetNumberAuthorityDomain.validPrescribedLoad(it,stock.basis)
+                }==true)
+    }
+
     /** Explicitly no unit inference and no unknown-stock fallback. */
     fun inspect(
         stock: VerifiedLoadStock?,

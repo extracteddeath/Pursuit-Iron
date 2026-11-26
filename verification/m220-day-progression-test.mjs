@@ -458,3 +458,30 @@ console.log('PASS B995: shortening means non-comparable, never 3-of-2 completion
     assert.deepEqual(savedHistory,before,'Replay must not change saved user history');
 }
 console.log('PASS B997 real backup replay: 3 completed of 4 prescribed cannot promote 60 to 65 after week changes to 3 sets.');
+
+/* A newer same-day workout with no completed observations for this slot
+ * cannot replace the Dynamic Double decision from its last actual exposure.
+ * Use the real generated adapter, not a synthetic evaluator-only session. */
+{
+    const p=structuredClone(generated), d=p.days[0], i=slot, id=d.exercises[i];
+    for(const [field,value] of [['sets',4],['reps','15-20'],['rir','2'],['progressionStyle','dynamic']])
+        p.overrides[`${d.id}:${i}`]=markUserPrescriptionOverride(p.overrides[`${d.id}:${i}`]||{},field,value);
+    const valid={id:'generated-dd-actual',programId:p.id,dayId:d.id,date:4000,weekIndex:1,unit:'lb',
+        perf:{[id]:{weight:90,reps:20,sets:[20,19,16,17].map(r=>({w:90,r,rir:2,tr:2,done:true}))}}};
+    const sibling=d.exercises.find((exercise,index)=>index!==i&&exercise!==id);
+    assert.ok(sibling,'generated fixture must have another lift');
+    const newer={...valid,id:'generated-dd-skipped',date:5000,perf:{
+        [id]:{weight:null,reps:null,sets:[]},
+        [sibling]:{weight:90,reps:10,sets:[{w:90,r:10,rir:2,done:true}]}}};
+    const original=nextWorkoutSuggestionForShell(p,[valid],EXERCISES,d,i,1,'lb');
+    const retained=nextWorkoutSuggestionForShell(p,[valid,newer],EXERCISES,d,i,1,'lb');
+    assert.equal(original.action,'increase_load','complete generated dynamic exposure earns one set increase');
+    assert.equal(retained.sourceEntryId,valid.id);
+    assert.deepEqual(retained.setTargets,original.setTargets,'unobserved newer slot cannot erase earned progression');
+    assert.deepEqual(retained.setTargets.map(t=>t.earnedLoadIncrease),[true,false,false,false]);
+    const s=sessionSuggestion(p,d,i,null,'lb',1,[valid,newer]);
+    const rows=prescribeSets(p,d,EX_BY_ID[id],i,1,'lb',s,{}, {},[valid,newer],false).filter(r=>!r.warm&&!r.sub);
+    assert.ok(Number(rows[0].weight)>90);
+    assert.deepEqual(rows.slice(1).map(r=>Number(r.weight)),[90,90,90]);
+    assert.deepEqual(rows.map(r=>Number(r.reps)),[15,20,17,18]);
+}

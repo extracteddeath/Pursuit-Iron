@@ -7800,11 +7800,7 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-home-game-plan{border:1px solid CanvasText}}
 /* B1049: navigation tabs keep their 16px shape; the shared press-morph never reshaped them. */
 #root[data-pi-motion] .wpb .wpb-tabbar .wpb-tab{border-radius:16px!important;}
-/* B910 / UI polish pass 04 — Settings and creation motion consistency.
-   The creation header formerly put a 44px Back target in a 34px-high row.
-   Keep header and progress geometry steady across all wizard questions;
-   move just the question content a few pixels, with no opacity flash or
-   spring overshoot. No workout, program or preference state changes. */
+/* B910 / UI polish pass 04 — Settings and creation motion: preserve 44px Back, stable header and progress; move only question content without flash or overshoot. No training/preference state changes. */
 
 #root[data-pi-motion="expressive"] .wpb .wpb-wizard-step[data-pi-step-enter="1"]{
   animation:piB910QuestionEnter 170ms cubic-bezier(.2,.8,.2,1) both!important;
@@ -7813,9 +7809,7 @@ background:var(--pi-color-card)!important;
   from{opacity:1;translate:0 4px;scale:1}
   to{opacity:1;translate:0 0;scale:1}
 }
-/* Only paint properties animate on selections: never width, height,
-   padding, position or row geometry. The shared selection indicator remains
-   responsible for Settings' animated selected pill. */
+/* Selection animates paint, never layout; shared indicator owns the Settings pill. */
 #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-segmented>button{
   transition:background-color 160ms var(--pi-ease),color 160ms var(--pi-ease),border-color 160ms var(--pi-ease)!important;
 }
@@ -7834,9 +7828,7 @@ background:var(--pi-color-card)!important;
   }
 }
 
-/* B911 / UI polish pass 05 — chart-favorites touch ergonomics.
-   Match Profile's accessible touch targets; keep pinned-order/storage logic
-   unchanged. Only locally selected paint responds: no row/screen animation. */
+/* B911 / UI polish pass 05 — chart favorites match Profile touch targets; only local paint animates. Pinned order/storage unchanged. */
 #root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-chart-favorite-row{
   box-sizing:border-box;
   min-width:0;
@@ -7886,8 +7878,8 @@ background:var(--pi-color-card)!important;
 /* M370 — one disclosure shell and program reference hierarchy. */
 #root .wpb .wpb-motion-reveal{height:0;overflow:hidden}
 #root .wpb .wpb-info-card.wpb-ui-card{padding:0;margin-bottom:12px;overflow:hidden}
-#root .wpb :is(.wpb-info-card,.wpb-motion-reveal):has(.wpb-progression){overflow:clip}
-#root .wpb :is(.wpb-info-card-toggle,.wpb-info-card-static-head){box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;min-width:0;min-height:48px;padding:14px 16px;border:0;background:none;color:var(--wpb-theme-text);text-align:left;line-height:1.4}
+#root .wpb .wpb-info-card:has(.wpb-progression),#root .wpb .wpb-motion-reveal:has(.wpb-progression){overflow:clip}
+#root .wpb .wpb-info-card-toggle,#root .wpb .wpb-info-card-static-head{box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;min-width:0;min-height:48px;padding:14px 16px;border:0;background:none;color:var(--wpb-theme-text);text-align:left;line-height:1.4}
 #root .wpb .wpb-info-card-icon{display:grid;place-items:center;flex-shrink:0;width:34px;height:34px;border-radius:12px;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-accent-ink)}
 #root .wpb .wpb-info-card-heading-copy{display:flex;flex:1;flex-direction:column;gap:3px;min-width:0;overflow-wrap:anywhere}
 #root .wpb .wpb-info-card-title{font-size:1rem;font-weight:700}
@@ -7932,11 +7924,11 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-progression-page{flex-shrink:0}
 #root .wpb .wpb-progression-page:disabled{opacity:.4;cursor:default}
 #root .wpb .wpb-progression-page-label{flex:1;min-width:0;font-size:.875rem;line-height:1.5;font-weight:600;text-align:center;color:var(--wpb-theme-muted)}
-#root .wpb :is(.wpb-progression-columns,.wpb-progression-row){display:grid;grid-template-columns:minmax(0,1.4fr) repeat(2,minmax(0,1fr));align-items:center;gap:12px;min-width:0}
+#root .wpb .wpb-progression-columns,#root .wpb .wpb-progression-row{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(2,minmax(0,1fr));align-items:center;gap:12px;min-width:0}
 #root .wpb .wpb-progression-columns{padding:0 0 6px;font-size:.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--wpb-theme-muted)}
 #root .wpb .wpb-progression-columns>span:not(:first-child){text-align:center}
 #root .wpb .wpb-progression-row{border-top:1px solid var(--wpb-theme-border);padding:12px 0}
-#root .wpb .wpb-progression[data-columns="1"] :is(.wpb-progression-columns,.wpb-progression-row){grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}
+#root .wpb .wpb-progression[data-columns="1"] .wpb-progression-columns,#root .wpb .wpb-progression[data-columns="1"] .wpb-progression-row{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}
 #root .wpb .wpb-progression-lift{display:flex;flex-direction:column;gap:3px;min-width:0;overflow-wrap:anywhere}
 #root .wpb .wpb-progression-lift strong{font-size:.875rem;line-height:1.5;font-weight:650}
 #root .wpb .wpb-progression-lift svg{margin-left:4px;color:var(--wpb-theme-accent-ink)}
@@ -7944,7 +7936,7 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-progression-cell{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;padding:8px 4px;text-align:center;overflow-wrap:anywhere}
 #root .wpb .wpb-progression-cell-week{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 #root .wpb .wpb-progression-prescription{max-width:100%;font-size:.875rem;line-height:1.5;font-weight:700;white-space:nowrap}
-#root .wpb :is(.wpb-progression-effort,.wpb-progression-variant,.wpb-progression-unavailable){max-width:100%;font-size:.75rem;line-height:1.5;color:var(--wpb-theme-muted)}
+#root .wpb .wpb-progression-effort,#root .wpb .wpb-progression-variant,#root .wpb .wpb-progression-unavailable{max-width:100%;font-size:.75rem;line-height:1.5;color:var(--wpb-theme-muted)}
 #root .wpb .wpb-progression-method{max-width:100%;font-size:.75rem;line-height:1.5;color:var(--wpb-theme-accent-ink)}
 #root .wpb .wpb-progression-origin-note{font-size:.75rem;line-height:1.5;color:var(--wpb-theme-muted)}
 #root .wpb .wpb-progression-cell[data-deload="true"]{border:1px dashed var(--wpb-theme-border);border-radius:12px}
@@ -7953,15 +7945,15 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-progression-empty p{margin:0}
 #root .wpb .wpb-progression-explanation{margin-top:12px;padding:12px;border:1px solid var(--wpb-theme-border-soft);border-radius:16px;background:var(--wpb-theme-bg-tint);font-size:.875rem;line-height:1.5;overflow-wrap:anywhere}
 #root .wpb .wpb-progression-explanation>summary{min-height:48px;display:list-item;align-content:center;color:var(--wpb-theme-accent-ink);font-weight:700;cursor:pointer}
-#root .wpb :is(.wpb-progression-explanation-heading,.wpb-progression-reason-heading){display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin-top:8px}
-#root .wpb :is(.wpb-progression-explanation-heading,.wpb-progression-reason-heading)>span{font-size:.75rem;color:var(--wpb-theme-accent-ink)}
+#root .wpb .wpb-progression-explanation-heading,#root .wpb .wpb-progression-reason-heading{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin-top:8px}
+#root .wpb .wpb-progression-explanation-heading>span,#root .wpb .wpb-progression-reason-heading>span{font-size:.75rem;color:var(--wpb-theme-accent-ink)}
 #root .wpb .wpb-progression-explanation p{margin:6px 0;color:var(--wpb-theme-muted)}
 #root .wpb .wpb-progression-methods{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
 #root .wpb .wpb-progression-methods>span{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 9px;border-radius:12px;background:var(--wpb-theme-card);font-size:.75rem}
 #root .wpb .wpb-progression-methods b{color:var(--wpb-theme-accent-ink)}
 #root .wpb .wpb-progression-reason{padding:8px 0;border-top:1px solid var(--wpb-theme-border-soft)}
 #root .wpb .wpb-progression-reason [data-progression-delta="changed"]{color:var(--wpb-theme-accent-ink);font-weight:650}
-#root .wpb .wpb-progression :is(button,input,summary):focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+#root .wpb .wpb-progression button:focus-visible,#root .wpb .wpb-progression input:focus-visible,#root .wpb .wpb-progression summary:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
 @container progression (max-width:32rem){
   #root .wpb .wpb-progression-columns{display:none}
   #root .wpb .wpb-progression-row{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
@@ -7975,7 +7967,7 @@ background:var(--pi-color-card)!important;
 }
 @media(prefers-reduced-motion:reduce){#root .wpb .wpb-program-reference-backdrop,#root .wpb .wpb-program-reference-panel{animation:none}}
 @media(forced-colors:active){
-  #root .wpb :is(.wpb-info-card,.wpb-program-reference-panel,.wpb-progression-cell,.wpb-progression-page){border:1px solid CanvasText;background:Canvas;color:CanvasText}
+  #root .wpb .wpb-info-card,#root .wpb .wpb-program-reference-panel,#root .wpb .wpb-progression-cell,#root .wpb .wpb-progression-page{border:1px solid CanvasText;background:Canvas;color:CanvasText}
   #root .wpb .wpb-progression-cell[data-deload="true"]{border-style:dashed}
   #root .wpb .wpb-info-card-toggle:focus-visible,#root .wpb .wpb-progression button:focus-visible,#root .wpb .wpb-progression input:focus-visible,#root .wpb .wpb-progression summary:focus-visible{outline-color:Highlight}
 }

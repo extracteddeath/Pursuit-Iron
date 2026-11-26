@@ -10970,8 +10970,8 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         // with the current cell; completed and manually controlled rows remain the lifter's record.
         const reconciled = restored.map(e => {
             const sets = liveMatch ? refreshPendingSetTargets(e.sets, fresh.find(row => row.id === e.id && row.slot === e.slot)?.sets) : e.sets;
-            return { ...e, ...(program.config?.noSupersets ? { superset: false } : {}), sets: syncSubSets(reconcilePendingRepTargets(sets,
-                computeCell(program, day, e.id, e.slot, weekIndex)), EX_BY_ID[e.id], unit) };
+            return { ...e, ...(program.config?.noSupersets ? { superset: false } : {}), sets: syncSubSets(growMyoSets(reconcilePendingRepTargets(sets,
+                computeCell(program, day, e.id, e.slot, weekIndex))), EX_BY_ID[e.id], unit) };
         });
         // Resume reconciliation updates app-owned prefills to the latest prescription.
         // Reapply the SAVED readiness from the original baseline in the same mount pass;
@@ -11199,6 +11199,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
     const [rest, setRest] = useState(_restRestore.rest);
     const [restMax, setRestMax] = useState(_restRestore.max);
     const [paused, setPaused] = useState(_restRestore.paused);
+    const restSourceRef = useRef(liveMatch?.restSource ?? null);
     const restEndRef = useRef(_restRestore.end); // Rest uses wall-clock time, including background time.
     const [finishing, setFinishing] = useState(false);
     const [finishFeedbackOpen, setFinishFeedbackOpen] = useState(false); // completion feedback is optional; keep the recap compact until the lifter asks for it
@@ -11294,7 +11295,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
             return false;
         try {
             if (!appStorageOwnership.writable()) throw new Error('Another window owns device storage.');
-            localStorage.setItem(LIVE_KEY, JSON.stringify({ schemaVersion: 2, programId: program.id, dayId: day.id, weekIndex, dayExSig, gymId:sessionGymId, startedAt: startRef.current, elapsedMs: runElapsedMs(), savedAt: Date.now(), data, readiness, injuryReports, sessionProgressions, sessionProgressionOrigins, sessionLengthPlan: day.sessionLengthPlan, sessionNote, sessionNoteRepeat, exIdx, focusPin, fbPump, fbSore, runPaused, restEndMs: restEndRef.current, restMax, restPaused: paused, restRemain: paused ? rest : 0, sessionId: sessionIdRef.current }));
+            localStorage.setItem(LIVE_KEY, JSON.stringify({ schemaVersion: 2, programId: program.id, dayId: day.id, weekIndex, dayExSig, gymId:sessionGymId, startedAt: startRef.current, elapsedMs: runElapsedMs(), savedAt: Date.now(), data, readiness, injuryReports, sessionProgressions, sessionProgressionOrigins, sessionLengthPlan: day.sessionLengthPlan, sessionNote, sessionNoteRepeat, exIdx, focusPin, fbPump, fbSore, runPaused, restEndMs: restEndRef.current, restSource: restSourceRef.current, restMax, restPaused: paused, restRemain: paused ? rest : 0, sessionId: sessionIdRef.current }));
             setSaveError(false);
             return true;
         }
@@ -11500,7 +11501,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         }, secs * 1000 + 250);
     };
     const syncRest = () => setRest(restEndRef.current > 0 ? Math.max(0, Math.ceil((restEndRef.current - Date.now()) / 1000)) : 0);
-    const startRest = (secs) => { restEndRef.current = Date.now() + secs * 1000; setRestMax(secs); setRest(secs); setPaused(false); scheduleRestNotif(secs); };
+    const startRest = (secs, source = null) => { restSourceRef.current = source; restEndRef.current = Date.now() + secs * 1000; setRestMax(secs); setRest(secs); setPaused(false); scheduleRestNotif(secs); };
     const bumpRest = (delta) => {
         if (paused) {
             setRest(r => { const n = Math.max(0, r + delta); setRestMax(m => Math.max(m, n)); return n; });
@@ -11513,7 +11514,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         syncRest();
         scheduleRestNotif(Math.ceil((restEndRef.current - Date.now()) / 1000));
     };
-    const skipRest = () => { restEndRef.current = 0; setRest(0); cancelRestNotif(); };
+    const skipRest = () => { restSourceRef.current = null; restEndRef.current = 0; setRest(0); cancelRestNotif(); };
     const resetRest = () => {
         if (!(restMax > 0))
             return;
@@ -11866,63 +11867,34 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                 }
             } // round done → next round's first movement
         }
-        /* IS THERE ANYTHING LEFT TO REST FOR? Not "are there working sets left".
-           This guard exists so the FINAL set of the session doesn't park the lifter on a rest clock for a
-           workout that's over. It asked `doneSets + 1 >= totalSets` — but `doneSets`/`totalSets` count
-           WORK ONLY (workOnly strips warm-ups and sub-sets), so the moment the last working set of the
-           session was ticked the guard read "session finished" while myo-rep minis and drop strips were
-           still pending. Every one of them was then denied its rest.
-           That is Haiden's report: on whichever exercise finishes LAST, the myo-rep timer never fires —
-           and "it doesn't matter what order they're completed", because the trigger is the last WORKING
-           set landing, not the exercise's position. The minis rested correctly on every earlier exercise
-           because working sets elsewhere were still outstanding.
-           The honest question is whether any set anywhere is still undone once this tick lands.
-
-           AND "ONCE THIS TICK LANDS" NOW INCLUDES A MINI THIS TICK IS ABOUT TO EARN. Growth appends the
-           next myo mini inside the setData wrapper, AFTER this decision has already been made against the
-           pre-growth list — so ticking the last mini read "nothing else pending", suppressed the rest, and
-           only then grew a fresh mini for the lifter to do with no clock on it. Exactly the bug this guard
-           was written to fix, reappearing through the one path that can extend the list mid-set: measured
-           at 2 rests across 5 minis, with the failures starting precisely where growth began. Asking
-           growMyoSets the same question it is about to answer keeps the two in step, and it is pure, so
-           calling it here costs a comparison. */
-        const grows = (ei2, si2) => {
-            const e = data[ei2];
-            if (!e)
-                return false;
-            const after = e.sets.map((s, j) => (j === si2 ? { ...s, done: true } : s));
-            return growMyoSets(after).length > after.length;
-        };
-        const morePending = data.some((e, i) => e.sets.some((s, j) => !((i === ei && j === si) || s.done)))
-            || (!wasDone && grows(ei, si));
-        if (!wasDone && morePending && restAutoStart && !midRound) {
-            // mid-round transitions (A1 → A2) take no rest; the round-end rest is the normal working rest,
-            // since each muscle recovered while the other was trained.
-            // Warm-ups get a short ramp rest; the myo-rep and drop mini-sets get an even shorter one — the
-            // whole point of a myo-rep is a ~15s pause before the next burst, and a drop set is stripped and
-            // hit immediately. Falling through to the working rest (which is what happened before, since a
-            // sub-set is neither warm nor a working set) parked the lifter on a 90–180s clock between myo
-            // bursts, which defeats the technique. Working sets keep the full prescribed rest.
-            /* REST IS THE GAP YOU ARE ABOUT TO TAKE — NOT A PROPERTY OF THE SET YOU JUST FINISHED.
-               For straight sets those are the same thing, which is why reading it off the completed set
-               worked everywhere except the one place it mattered: the myo-rep ACTIVATION set. That set is
-               an ordinary working set, so it charged the full working rest — 90 to 180 seconds — and the
-               ~15 second pause that IS the definition of a myo-rep never happened. The minis then rested
-               15s from each other correctly, so the timer looked right for mini 2 and 3 and was wrong for
-               the one that starts the technique. Haiden: "Myoreps timer for the first set started at the
-               full rest time." Same fault for a drop set, whose first strip should be immediate.
-               So look FORWARD: if the next set waiting in this exercise is an extension, the gap is that
-               extension's short pause. Otherwise the gap belongs to the set just logged. */
-            const nextPending = data[ei].sets.slice(si + 1).find(x => !x.done);
-            const subRest = (x) => workoutTechniqueRest(x, restScale);
-            const r = nextPending && nextPending.sub
-                ? subRest(nextPending)
+        // Use the same reconciled myo rows that setData will commit. Rest
+        // must see both a newly earned mini and an undone extension.
+        const projected = growMyoSets(data[ei].sets.map((row,j) =>
+            j === si ? {...row,done:!wasDone} : row));
+        const nextPending = projected.slice(si+1).find(row => !row.done);
+        const morePending = projected.some(row => !row.done)
+            || data.some((row,i) => i !== ei && row.sets.some(set => !set.done));
+        const extensionNext = !!nextPending?.sub;
+        if (!wasDone && extensionNext) {
+            advanceTo = -1; // finish the activation's chain before leaving it
+            midRound = false;
+        }
+        if (wasDone) {
+            const source = restSourceRef.current;
+            const sameExercise = source?.id === data[ei].id && source?.slot === data[ei].slot;
+            if (sameExercise || (!source && !projected.some(row=>row.done))) {
+                prevRest.current = 0;
+                skipRest();
+                setPaused(false);
+                setRestMax(0);
+            }
+        } else if (morePending && restAutoStart && !midRound) {
+            const r = extensionNext
+                ? workoutTechniqueRest(nextPending, restScale)
                 : set.warm
                     ? Math.max(10, Math.round(45 * (restScale || 1)))
-                    : set.sub
-                        ? subRest(set)
-                        : effectiveRest(goalForDay(program, day), ex, data[ei].slot === day.primaryIndex, data[ei].restCustom, restScale);
-            startRest(r);
+                    : effectiveRest(goalForDay(program, day), ex, data[ei].slot === day.primaryIndex, data[ei].restCustom, restScale);
+            startRest(r,{id:data[ei].id,slot:data[ei].slot,setIndex:si});
         }
         setData(d => d.map((e, i) => {
             if (i !== ei)

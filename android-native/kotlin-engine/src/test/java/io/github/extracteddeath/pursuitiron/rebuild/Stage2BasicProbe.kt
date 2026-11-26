@@ -16,6 +16,8 @@ object Stage2BasicProbe {
             val f=line.split('|')
             require(f.size==10)
             val style=f[1]
+            if(style=="select" || style.startsWith("select:"))
+                return@map selection(f)
             val mode=when(style) {
                 "double","e1rm" -> BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION
                 "dynamic" -> BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION
@@ -45,5 +47,63 @@ object Stage2BasicProbe {
         }
         val file=Path.of(args[1]);Files.createDirectories(file.toAbsolutePath().parent)
         Files.writeString(file,output.joinToString("\n",postfix="\n"))
+    }
+
+    // Exercise the production saved-method selector on the same actual
+    // catalog identity, role, rep band and coarse native phase as the web.
+    // This is a source recommendation comparison, not a generated program
+    // or approval grant; no new runtime policy is embedded in the probe.
+    private fun selection(f:List<String>):String {
+        val movement=StarterExerciseTranche.movements().single{it.exerciseId==f[2]}
+        val phase=when(f[3]) {
+            "hypertrophy_accumulation" -> TrainingPhase.HYPERTROPHY
+            "strength_accumulation","intensification" -> TrainingPhase.STRENGTH
+            "peak" -> TrainingPhase.PEAK
+            else -> error("Unsupported comparison phase")
+        }
+        val experience=when(f[4]) {
+            "novice" -> AthleteExperience.BEGINNER
+            "intermediate" -> AthleteExperience.INTERMEDIATE
+            "advanced" -> AthleteExperience.ADVANCED
+            else -> error("Unsupported comparison experience")
+        }
+        val role=when {
+            f[5].startsWith("primary_") -> ComposerRole.PRIMARY
+            f[5].startsWith("secondary_") -> ComposerRole.SECONDARY
+            f[5]=="accessory" -> ComposerRole.ACCESSORY
+            else -> error("Unsupported comparison role")
+        }
+        val reps=f[6].split(',').map{it.toInt()}
+        require(reps.size==2)
+        val band=RepBand(reps[0],reps[1])
+        val load=movement.expectedLoadBasis?.let{
+            DraftSetLoad.Verified(LoadUnit.LB,it,BigDecimal("100"))
+        } ?: DraftSetLoad.ExplicitBodyweight
+        val set=CustomAuthoredSet(DraftSetType.WORKING,load,band,2,45,90,
+            exactRepTarget=band.minimum)
+        val slot=CustomExerciseSlot("slot",movement.exerciseId,role,listOf(set,set))
+        val block=CustomTrainingBlock("block","Block",phase,CustomBlockPurpose.TRAINING,6,
+            CustomSplitIdentity.Named(ComposerSplit.FULL_BODY),
+            listOf(CustomTrainingDay(0,"Day",ComposerSessionPurpose.UNSPECIFIED,listOf(slot))))
+        val cycle=CustomTrainingCycle("cycle",1,"athlete",AthleteTrainingGoal.POWERBUILDING,
+            "Selection fixture",listOf(block))
+        val key=ProgramProgressionSlotKey("block",0,"slot")
+        val selected=f[1].substringAfter(':',"").takeIf{it.isNotEmpty()}?.let{
+            mapOf(key to NativeProgressionStyle.valueOf(it.uppercase()))
+        }.orEmpty()
+        val outcome=BasicProgramProgressionPlanDomain.review(cycle,
+            selectedStyles=selected,reviewedCatalog=mapOf(movement.exerciseId to movement),
+            experience=experience)
+        val method=when(outcome) {
+            is ProgramProgressionPlan.Refused -> "refused"
+            is ProgramProgressionPlan.Ready -> {
+                require(!outcome.mayIssueWorkout && !outcome.maySaveProgram)
+                val assignment=outcome.assignments.single()
+                require(assignment.key==key && assignment.exerciseId==movement.exerciseId)
+                BasicProgramProgressionPlanDomain.savedChoice(assignment)?.name?.lowercase()
+                    ?: assignment.route.name.lowercase()
+            }
+        }
+        return f[0]+"|"+method+"|-"
     }
 }

@@ -162,3 +162,30 @@ const emptyMachineProjection={...history[0],id:'newer-empty-machine',date:Number
 const withEmptyProjection=rowsFor(program,[emptyMachineProjection,...history]);
 assert.deepEqual(withEmptyProjection.rows.map(s=>[s.weight,s.reps]),fly.rows.map(s=>[s.weight,s.reps]),
     'Newer empty machine performance cannot erase older comparable history');
+
+/* Nov 26 phone report: leg extension Dynamic Double, previous 90 x 20/19/16/17.
+ * A qualifying set earns only its own next physical step. Unknown effort is
+ * not failure, but explicitly below-target effort may justify a hold. */
+{
+    const leg=EX_BY_ID['leg-ext'];
+    assert.ok(leg);
+    const p={...structuredClone(program),id:'leg-dd-phone',days:[{id:'legs',label:'Legs',primaryIndex:-1,exercises:[leg.id]}],
+        progStyle:{[leg.id]:'dynamic'},overrides:{'legs:0':{sets:4,reps:'15-20',rir:'2',progressionStyle:'dynamic',techOverride:null}},ss:{}};
+    const reps=[20,19,16,17];
+    const exposure=rir=>[{id:'leg-last',programId:p.id,dayId:'legs',date:3000,weekIndex:1,unit:'lb',
+        perf:{[leg.id]:{weight:90,reps:20,sets:reps.map(r=>({w:90,r,rir,done:true}))}}}];
+    for(const rir of [null,2]) {
+        const hs=exposure(rir);
+        const s=sessionSuggestion(p,p.days[0],0,null,'lb',1,hs);
+        assert.equal(s.action,'increase_load');
+        assert.ok(s.setTargets[0].weight>90,'only the qualifying set earns the next loadable weight');
+        assert.deepEqual(s.setTargets.map(t=>t.earnedLoadIncrease),[true,false,false,false]);
+        const rows=prescribeSets(p,p.days[0],leg,0,1,'lb',s,{}, {},hs,false).filter(r=>!r.warm&&!r.sub);
+        assert.ok(Number(rows[0].weight)>90,'earned increase survives real workout issuance');
+        assert.deepEqual(rows.slice(1).map(r=>Number(r.weight)),[90,90,90]);
+        assert.deepEqual(rows.map(r=>Number(r.reps)),[15,20,17,18]);
+    }
+    const hs=exposure(0);
+    const held=sessionSuggestion(p,p.days[0],0,null,'lb',1,hs);
+    assert.notEqual(held.action,'increase_load','explicit below-target effort does not qualify for a bump');
+}

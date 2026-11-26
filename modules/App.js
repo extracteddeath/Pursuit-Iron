@@ -11882,7 +11882,9 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         if (wasDone) {
             const source = restSourceRef.current;
             const sameExercise = source?.id === data[ei].id && source?.slot === data[ei].slot;
-            if (sameExercise || (!source && !projected.some(row=>row.done))) {
+            const invalidated = sameExercise && (source.setIndex === si ||
+                (source.setIndex > si && data[ei].sets[source.setIndex]?.sub));
+            if (invalidated || (!source && !projected.some(row=>row.done))) {
                 prevRest.current = 0;
                 skipRest();
                 setPaused(false);

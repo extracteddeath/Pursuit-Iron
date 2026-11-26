@@ -91,7 +91,8 @@ const refreshed = refreshProgressionSets(entered, replacementSets, userOwnsRunti
 assert.equal(refreshed[0], entered[0]);
 assert.equal(refreshed[1], entered[1]);
 assert.equal(refreshed[2].weight, '');
-assert.ok(app.includes('const runtimeSuggestions = data.map(row => workoutRowMatchesPrescription('));
+assert.ok(app.includes('const runtimeSuggestions = data.map(row => !row.machineInstanceId && workoutRowMatchesPrescription(program, day, row, weekIndex)'),
+    'Generic suggestions require both the authored movement identity and absence of a physical-machine identity');
 assert.ok(app.includes('const suggestion = workoutRowMatchesPrescription(nextProgram, day, row, weekIndex)'));
 assert.ok(!app.includes('suggestions[ei]') && !app.includes('const sug = suggestions[e.slot]'));
 console.log('PASS M329: swapped/added rows cannot borrow slot loads; native alternate weeks and manual work retain ownership.');

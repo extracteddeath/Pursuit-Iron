@@ -36,7 +36,20 @@ assert.equal(EXERCISES.find(ex=>ex.id==='pullup')?.name,'Pull-Up');
 assert.match(source,/entry\("weighted-pullup","vertical_pull","added-load-overhand",\s*ComposerPattern\.VERTICAL_PULL,ComposerRole\.PRIMARY,pull,\s*"weighted-pullup-resistance",LoadBasis\.EXERCISE_OVERRIDE/);
 assert.match(labels,/"weighted-pullup" to "Weighted Pull-Up \(added load\)"/);
 assert.match(labels,/"pullup" to "Pull-Up"/);
-const historicalNativeIds=new Set(['weighted-pullup']);
+const legacyCatalog=readFileSync('modules/training-domain/catalog.js','utf8');
+for(const [shellId,candidate,nativeId,rawEquipment,label] of [
+  ['chest-row','chest_supported_row','chest-supported-machine-row','["machinerow"]','Chest-Supported Machine Row'],
+  ['preacher','preacher_curl','ez-bar-preacher-curl','["ezbar", "preacher"]','EZ-Bar Preacher Curl']
+]) {
+  const row=historicalShell.shellRows.find(x=>x.shellId===shellId);
+  assert.equal(row?.candidateWebId,candidate);
+  assert.equal(row?.match,'explicit-web-alias');
+  const line=legacyCatalog.split('\n')[row.line-1];
+  assert.ok(line.includes('"'+shellId+'"')&&line.includes(rawEquipment),
+    'Historical physical source drift: '+shellId);
+  assert.ok(labels.includes('"'+nativeId+'" to "'+label+'"'));
+}
+const historicalNativeIds=new Set(['weighted-pullup','chest-supported-machine-row','ez-bar-preacher-curl']);
 assert.ok([...historicalNativeIds].every(id=>!activeIds.has(id)),
   'Separate native identity must not inflate current-web exact matches');
 for(const [id,label] of mappings.map(m=>[m[1],m[2]])) {

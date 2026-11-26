@@ -784,6 +784,53 @@ class StarterExerciseTrancheTest {
         assertFalse(crunch.mayOverwriteAuthoredProgram)
     }
 
+    @Test fun historicalAliasesCannotBorrowDifferentPhysicalImplementLoads() {
+        val byId=data.associateBy{it.legacyCuratedId}
+        val machine=byId.getValue("chest-supported-machine-row")
+        val dumbbell=byId.getValue("chest_supported_row")
+        val preacher=byId.getValue("ez-bar-preacher-curl")
+        val preacherMachine=byId.getValue("preacher_curl")
+        assertEquals(listOf("weighted-pullup","chest-supported-machine-row","ez-bar-preacher-curl"),
+            data.takeLast(3).map{it.legacyCuratedId})
+        assertEquals(LoadBasis.EXERCISE_OVERRIDE,machine.movement.expectedLoadBasis)
+        assertEquals(LoadBasis.DUMBBELL_PER_HAND,dumbbell.movement.expectedLoadBasis)
+        assertEquals(LoadBasis.BARBELL_TOTAL,preacher.movement.expectedLoadBasis)
+        assertEquals(LoadBasis.EXERCISE_OVERRIDE,preacherMachine.movement.expectedLoadBasis)
+        assertEquals(RepBand(8,12),machine.practicalRepBand)
+        assertEquals(RepBand(10,15),preacher.practicalRepBand)
+        assertFalse(machine.mayTransferPreviousLoad)
+        assertFalse(preacher.mayTransferPreviousLoad)
+        assertTrue(CatalogPhysicalMachineEligibility.eligible(machine.movement))
+        assertFalse(CatalogPhysicalMachineEligibility.eligible(preacher.movement))
+        val station=VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.EXERCISE_OVERRIDE,
+            listOf(n("25"),n("35"),n("45")))
+        val ez=VerifiedLoadStock.Barbell(LoadUnit.LB,n("25"),mapOf(n("5") to 2))
+        val complete=CatalogGym(mapOf("chest-supported-row-machine" to station,
+            "ez-curl-bar" to ez),emptySet(),setOf("preacher-bench"))
+        fun review(id:String,load:String,g:CatalogGym)=
+            CoachExerciseCatalogDomain.review(StarterExerciseTranche.forGym(
+                template(),listOf(choice(id,n(load))),g))
+        assertTrue(review(machine.legacyCuratedId,"35",complete).issues.isEmpty())
+        assertTrue(review(preacher.legacyCuratedId,"35",complete).issues.isEmpty())
+        assertTrue(review(machine.legacyCuratedId,"30",complete).issues.any{
+            it.kind==CatalogIssueType.LOAD_UNVERIFIED})
+        assertTrue(review(preacher.legacyCuratedId,"30",complete).issues.any{
+            it.kind==CatalogIssueType.LOAD_UNVERIFIED})
+        assertTrue(review(preacher.legacyCuratedId,"35",
+            complete.copy(availableFacilityIds=emptySet())).issues.any{
+                it.kind==CatalogIssueType.FACILITY_UNAVAILABLE})
+        assertTrue(review(machine.legacyCuratedId,"35",
+            complete.copy(confirmedStock=mapOf("dumbbell-rack" to db))).issues.any{
+                it.kind==CatalogIssueType.EQUIPMENT_UNAVAILABLE})
+        assertTrue(review(preacher.legacyCuratedId,"35",
+            complete.copy(confirmedStock=mapOf("preacher-curl-machine" to station))).issues.any{
+                it.kind==CatalogIssueType.EQUIPMENT_UNAVAILABLE})
+        assertTrue(review("chest_supported_row","35",complete).issues.any{
+            it.kind==CatalogIssueType.EQUIPMENT_UNAVAILABLE})
+        assertTrue(review("preacher_curl","35",complete).issues.any{
+            it.kind==CatalogIssueType.EQUIPMENT_UNAVAILABLE})
+    }
+
     @Test fun historicalWeightedPullupHasSeparateConfirmedAddedResistance() {
         val byId=data.associateBy{it.legacyCuratedId}
         val body=byId.getValue("pullup").movement
@@ -836,7 +883,7 @@ class StarterExerciseTrancheTest {
     @Test fun newlyReviewedBenchAccessoriesRequireSpecificFixturesAndNoPhantomLoading() {
         val byId=StarterExerciseTranche.entries().associateBy{it.legacyCuratedId}
         val ids=listOf("decline-situp","back-ext-45","prone-y-raise")
-        assertEquals(370,byId.size)
+        assertEquals(372,byId.size)
         assertTrue(ids.all{it in byId})
         assertEquals(listOf(RepBand(12,20),RepBand(12,20),RepBand(12,20)),
             ids.map{byId.getValue(it).practicalRepBand})

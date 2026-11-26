@@ -61,7 +61,7 @@ class PhysicalImplementWaveEightTest {
         result.issues.any{it.exerciseId==id && it.kind==kind}
 
     @Test fun sixSourceMatchedIdentitiesAppendOnlyWithIndependentlyAuthoredRepBands() {
-        assertEquals(369,catalog.size)
+        assertEquals(370,catalog.size)
         assertEquals(ids,catalog.drop(337).take(6).map{it.legacyCuratedId})
         assertTrue(ids.all{!byId.getValue(it).mayTransferPreviousLoad})
         assertEquals(ids.size,ids.map{

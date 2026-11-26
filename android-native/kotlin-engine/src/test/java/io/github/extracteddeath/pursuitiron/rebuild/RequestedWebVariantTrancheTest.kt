@@ -52,7 +52,7 @@ class RequestedWebVariantTrancheTest {
     )
 
     @Test fun exactWebIdentifiersKeepSeparateExerciseAndVariantHistory() {
-        assertEquals(369,byId.size)
+        assertEquals(370,byId.size)
         assertEquals(expected,
             StarterExerciseTranche.entries().drop(330).take(7)
                 .map{it.legacyCuratedId})

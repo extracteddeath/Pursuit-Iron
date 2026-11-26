@@ -53,9 +53,9 @@ class ReviewedNeckSourceCatalogTest {
 
     @Test fun sourceNeckIdsAppendWithoutModifyingPreviousWorkoutIdentity() {
         assertEquals(ids,entries.map{it.legacyCuratedId})
-        assertEquals(ids,StarterExerciseTranche.entries().takeLast(4)
+        assertEquals(ids,StarterExerciseTranche.entries().drop(365).take(4)
             .map{it.legacyCuratedId})
-        assertEquals(369,StarterExerciseTranche.entries().size)
+        assertEquals(370,StarterExerciseTranche.entries().size)
         assertTrue(entries.all {it.practicalRepBand==RepBand(12,20)})
         assertTrue(entries.all{it.movement.pattern==ComposerPattern.ISOLATION &&
             it.movement.role==ComposerRole.ACCESSORY &&

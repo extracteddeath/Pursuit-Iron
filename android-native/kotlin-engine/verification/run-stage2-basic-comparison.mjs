@@ -16,8 +16,17 @@ assert.equal(git(webRoot,'rev-parse','HEAD'),webPin);
 assert.equal(git(webRoot,'status','--porcelain'),'');
 const fixture=resolve(root,'android-native/kotlin-engine/verification/stage2-basic-cases.txt');
 const bytes=readFileSync(fixture);
-const rows=bytes.toString('utf8').split(/\r?\n/).filter(l=>l&&!l.startsWith('#')).map(l=>{
-  const f=l.split('|');assert.equal(f.length,10);
+const allRows=bytes.toString('utf8').split(/\r?\n/).filter(l=>l&&!l.startsWith('#')).map(l=>{
+  const f=l.split('|');assert.equal(f.length,10);return f;
+});
+assert.equal(new Set(allRows.map(f=>f[0])).size,allRows.length);
+const selectionRows=allRows.filter(f=>f[1]==='select'||f[1].startsWith('select:')).map(f=>{
+  const [id,mode,exerciseId,phase,experience,role,band,expectedWeb,expectedKotlin,classification]=f;
+  const manualStyle=mode.split(':')[1];
+  assert.ok(['matched','catalog-trait-gap','unloaded-rep-route','advanced-auto-gap','explicit-source-gate'].includes(classification));
+  return {id,exerciseId,phase,experience,role,band:band.split(',').map(Number),manualStyle,expectedWeb,expectedKotlin,classification};
+});
+const rows=allRows.filter(f=>!(f[1]==='select'||f[1].startsWith('select:'))).map(f=>{
   const [id,style,loads,reps,rir,stock,expectedWeb,expectedKotlin,estimates,classification]=f;
   assert.ok(['double','dynamic','linear','e1rm'].includes(style));
   assert.ok(['matched','basic-effort-policy','basic-linear-floor','original-goal-assumption'].includes(classification));
@@ -32,9 +41,10 @@ const nativeOutput=resolve(dirname(output),'stage2-current-basic-native.txt');
 mkdirSync(dirname(output),{recursive:true});
 runJvmProbe({root,args,probe:'Stage2BasicProbe',task:'runStage2BasicProbe',input:fixture,output:nativeOutput});
 const native=readFileSync(nativeOutput,'utf8').trim().split(/\r?\n/).map(l=>l.split('|'));
-assert.deepEqual(native.map(r=>r[0]),rows.map(r=>r.id));
+assert.deepEqual(native.map(r=>r[0]),allRows.map(r=>r[0]));
+const nativeById=new Map(native.map(r=>[r[0],r]));
 const {evaluateWorkoutProgression}=await import(pathToFileURL(resolve(webRoot,'modules/next-engine/performance.js')));
-const results=rows.map((row,i)=>{
+const results=rows.map(row=>{
   const exerciseId='machine_press';
   const exercise={exerciseId,name:'Machine Chest Press',role:'primary',
     sets:row.loads.length,progressionStyle:row.style,prescription:{reps:[5,8],rir:[2,2]}};
@@ -43,9 +53,9 @@ const results=rows.map((row,i)=>{
     loadingInventory:{unit:'lb',exerciseOverrides:{[exerciseId]:{availableLoads:row.stock}}},
     equipmentAvailable:['machine']})[0];
   const web=observed.setTargets.map(x=>x.weight).join(',');
-  const kotlin=native[i][1];
+  const kotlin=nativeById.get(row.id)[1];
   const webEstimate=row.style==='e1rm'?String(observed.estimated1RM):'-';
-  const kotlinEstimate=native[i][2];
+  const kotlinEstimate=nativeById.get(row.id)[2];
   const expectedEstimates=row.estimates==='-'?['-','-']:row.estimates.split(',');
   const webPass=web===row.expectedWeb&&webEstimate===expectedEstimates[0];
   const kotlinPass=kotlin===row.expectedKotlin&&kotlinEstimate===expectedEstimates[1];
@@ -55,10 +65,28 @@ const results=rows.map((row,i)=>{
     webAction:observed.action,webReason:observed.reasonCode,webPass,kotlinPass,
     matched:web===kotlin&&webEstimate===kotlinEstimate};
 });
-const report={schemaVersion:1,scope:'Complete same-prescription ordinary working sets; weight vectors and explicit e1RM estimates only. Not durable issuance, other progression methods, changed-phase calibration, or release certification.',
+const {EXERCISE_MAP}=await import(pathToFileURL(resolve(webRoot,'modules/next-engine/exercise-db.js')));
+const {selectProgressionStyle}=await import(pathToFileURL(resolve(webRoot,'modules/next-engine/progression-style.js')));
+const selectionResults=selectionRows.map(row=>{
+  const exercise=EXERCISE_MAP.get(row.exerciseId);
+  assert.ok(exercise,`Missing pinned catalog identity: ${row.exerciseId}`);
+  const observed=selectProgressionStyle(exercise,row.role,{
+    phase:row.phase,experience:row.experience,blockWeeks:6,prescription:{reps:row.band},
+    ...(row.manualStyle?{manualStyle:row.manualStyle}:{})
+  });
+  const web=observed.style,kotlin=nativeById.get(row.id)[1];
+  if(row.manualStyle)assert.equal(observed.source,'manual');
+  return {...row,web,kotlin,webSource:observed.source,webReason:observed.reason,
+    webPass:web===row.expectedWeb,kotlinPass:kotlin===row.expectedKotlin,matched:web===kotlin};
+});
+const report={schemaVersion:1,scope:'Same-prescription ordinary working sets, explicit e1RM estimates, and separate real-catalog selection probes. Not durable issuance, full phase generation, changed-phase calibration, or release certification.',
   webCommit:webPin,kotlinCommit:git(root,'rev-parse','HEAD'),
-  fixtureSha256:createHash('sha256').update(bytes).digest('hex'),results};
+  fixtureSha256:createHash('sha256').update(bytes).digest('hex'),results,selectionResults};
 writeFileSync(output,JSON.stringify(report,null,2)+'\n');
 for(const row of results)console.log(JSON.stringify(row));
 assert.ok(results.every(r=>r.webPass&&r.kotlinPass),'Unexpected observed result; investigate before revising expected values');
 assert.ok(results.every(r=>r.matched===(r.classification==='matched')),'Unexpected policy divergence');
+
+for(const row of selectionResults)console.log(JSON.stringify({kind:'selection',...row}));
+assert.ok(selectionResults.every(r=>r.webPass&&r.kotlinPass),'Unexpected recommendation result; investigate before revising expected values');
+assert.ok(selectionResults.every(r=>r.matched===(r.classification==='matched')),'Unexpected recommendation divergence');

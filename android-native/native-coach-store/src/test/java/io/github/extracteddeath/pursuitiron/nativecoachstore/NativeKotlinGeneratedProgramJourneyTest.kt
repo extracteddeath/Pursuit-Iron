@@ -947,7 +947,8 @@ class NativeKotlinGeneratedProgramJourneyTest {
                 if(amp==null)continue
                 exercised++
                 assertEquals(CustomAmplifierKind.MYO_REPS,amp.kind)
-                assertEquals(n("20"),checkNotNull(load).value)
+                val activationTarget=checkNotNull(load)
+                assertEquals(n("20"),activationTarget.value)
                 val slot=original.slots.single{it.sets.any{s->s.setKey==set.setKey}}
                 val earlier=slot.sets.filter{it.prescription.type==DraftSetType.WORKING &&
                     it.setKey!=set.setKey}
@@ -956,7 +957,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
                     val receipt=journal.effectiveVisits.getValue(
                         CustomWorkoutVisitKey(old.setKey,CustomWorkoutVisitPart.MAIN))
                     assertEquals(n("20"),(receipt.operation
-                        as CustomWorkoutJournalOperation.Record).performed?.weight)
+                        as CustomWorkoutJournalOperation.Record).performed?.load)
                 }
                 val first=CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.FOLLOW_UP,1)
                 assertEquals(listOf(first),CustomWorkoutExecutionDomain.followUpVisits(journal,set))
@@ -964,9 +965,9 @@ class NativeKotlinGeneratedProgramJourneyTest {
                     KotlinWorkoutRestDomain.inspect(journal,first).automaticCue?.seconds)
                 val mini=CustomWorkoutJournalOperation.Record("mini-$index",journal.revision,
                     first,KotlinJournalSetOutcome.COMPLETED,
-                    KotlinPerformedSet(n("25"),load.unit,amp.followUpReps,1))
+                    KotlinPerformedSet(n("25"),activationTarget.unit,amp.followUpReps,1))
                 assertTrue(Disk().journals.record(owner,id,mini.copy(
-                    eventId="wrong-mini-$index",performed=mini.performed!!.copy(weight=n("20"))))
+                    eventId="wrong-mini-$index",performed=mini.performed!!.copy(load=n("20"))))
                     is NativeCustomJournalResult.Rejected)
                 record(mini)
                 val second=first.copy(stage=2)
@@ -980,7 +981,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
                     CustomWorkoutExecutionDomain.followUpVisits(journal,set))
                 assertFalse(journal.effectiveVisits.containsKey(first.copy(stage=3)))
                 assertEquals(n("25"),(journal.effectiveVisits.getValue(first).operation
-                    as CustomWorkoutJournalOperation.Record).performed?.weight)
+                    as CustomWorkoutJournalOperation.Record).performed?.load)
             }
             assertEquals(0,journal.unresolvedVisitCount)
             val finish=CustomWorkoutJournalOperation.Finish("finish-myo-$index",journal.revision)

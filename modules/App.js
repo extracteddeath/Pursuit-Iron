@@ -29,9 +29,9 @@ import { PainCheckSheet } from './pain-check.js';
 import { RoutinePickerSheet, routineList } from './routine-picker.js';
 import { encodeShareCode, decodeShareCode, isShareCode } from './program-code.js';
 import { READINESS_CHOICES, readinessLabel, adjustWorkoutReadiness } from './workout-readiness.js';
-import { WorkoutExerciseNav, WorkingSetCountControl, SessionNoteEditor, WorkoutMachineInfoActions, selectNumericInput } from './workout-session-controls.js';
-import { latestMachineSet, machineHistory, historyForMachineRecommendation, resolveMachineVariant, LEGACY_MACHINE_ID } from './next-engine/machine-instances.js';
-import { chooseWorkoutPhysicalMachine, createWorkoutPhysicalMachine, associateLegacyWorkoutMachine, withGymMachineConfig } from './workout-machine-runtime.js';
+import { WorkoutExerciseNav, WorkingSetCountControl, SessionNoteEditor, WorkoutMachineInfoActions, selectNumericInput, dismissWorkoutNumericSelection } from './workout-session-controls.js';
+import { machineStartingReference, machineHistory, historyForMachineRecommendation, resolveMachineVariant, LEGACY_MACHINE_ID } from './next-engine/machine-instances.js';
+import { chooseWorkoutPhysicalMachine, seedMachineReferenceRows, createWorkoutPhysicalMachine, associateLegacyWorkoutMachine, withGymMachineConfig } from './workout-machine-runtime.js';
 import { useMachineChartScope, MachineChartScopePicker } from './machine-chart-scope.js';
 import { completedSetPR } from './workout-pr.js';
 import { captureWorkoutProgressionReplay } from './next-engine/workout-replay.js';
@@ -92,7 +92,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='1055';
+const __APP_VERSION__='4.0.0'; const __BUILD__='1056';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -2430,10 +2430,13 @@ function selectFocusNumericInput(event) {
     selectNumericInput(event);
     const input = event.currentTarget;
     const originalValue = input.value;
+    let blurred = false;
+    const cancel = () => { blurred = true; };
+    input.addEventListener('blur', cancel, { once: true });
     const restoreSelectAll = () => {
         // A touch may set its native caret AFTER React's focus/click handler.
         // Never steal selection from a changed value, different field or readonly set.
-        if (document.activeElement !== input || input.readOnly || input.disabled ||
+        if (blurred || !input.isConnected || document.activeElement !== input || input.readOnly || input.disabled ||
             input.value !== originalValue) return;
         if (input.selectionStart !== 0 || input.selectionEnd !== input.value.length)
             input.select();
@@ -2441,7 +2444,10 @@ function selectFocusNumericInput(event) {
     // End-of-click task wins over the browser's native touch caret placement;
     // paint-frame fallback covers slower Android selection scheduling.
     setTimeout(restoreSelectAll, 0);
-    requestAnimationFrame(() => requestAnimationFrame(restoreSelectAll));
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        restoreSelectAll();
+        input.removeEventListener('blur', cancel);
+    }));
 }
 // Keep the logger's existing IME action hints truthful without changing set values.
 // Weight's Next moves to reps in the SAME set; reps' Done dismisses the keyboard.
@@ -10948,20 +10954,11 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
             const configured=gymProfile?.id===sessionGymId &&
                 gymProfile?.machineVariants?.[id]?.instances?.length>0;
             const machineId=configured ? resolveMachineVariant(gymProfile,id).id : null;
-            const lastMachine=machineId ? latestMachineSet(history,{
-                gymId:sessionGymId,exerciseId:id,machineInstanceId:machineId,dayId:day.id,gym:gymProfile}) : null;
-            const comparableWeight=lastMachine ?
-                toUnit(lastMachine.weight,lastMachine.unit||unit,unit) : null;
-            const machineSets=buildSets(EX_BY_ID[id],slot,suggestions[slot],true);
-            // A new physical stack cannot inherit another machine's target.
-            // Existing pending weights become explicitly reviewable baselines.
-            const safeSets=machineId ? machineSets.map(set=>{
-                const weight=set.warm||set.sub ? '' :
-                    comparableWeight!=null ? String(Math.round(comparableWeight*1000)/1000) : '';
-                return {...set,machineInstanceId:machineId,weight,auto:false,
-                    valueOwner:'user',suggested:undefined,hint:undefined,
-                    target:{...set.target,w:weight}};
-            }) : machineSets;
+            const lastMachine=machineId ? machineStartingReference(history,{
+                gymId:sessionGymId,exerciseId:id,machineInstanceId:machineId,dayId:day.id,programId:program.id,gym:gymProfile}) : null;
+            const machineSets=buildSets(EX_BY_ID[id],slot,machineId ? null : suggestions[slot],true);
+            // Physical station reference is distinct from the generic movement suggestion.
+            const safeSets=machineId ? seedMachineReferenceRows(machineSets,lastMachine,machineId,unit) : machineSets;
             return ({ id, slot, ...(machineId ? {machineInstanceId:machineId} : {}),
                 sets:safeSets, ...(() => { const last = history.find(h => h.programId === program.id && h.dayId === day.id && h.perf?.[id]);
                 const n = repeatedNote(last?.perf?.[id]?.note, last?.perf?.[id]?.noteRepeat); return { note: n.text, noteRepeat: n.repeat }; })(), superset: !program.config?.noSupersets && !!program.ss?.[`${day.id}:${slot}`],
@@ -10973,8 +10970,8 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         // with the current cell; completed and manually controlled rows remain the lifter's record.
         const reconciled = restored.map(e => {
             const sets = liveMatch ? refreshPendingSetTargets(e.sets, fresh.find(row => row.id === e.id && row.slot === e.slot)?.sets) : e.sets;
-            return { ...e, ...(program.config?.noSupersets ? { superset: false } : {}), sets: syncSubSets(reconcilePendingRepTargets(sets,
-                computeCell(program, day, e.id, e.slot, weekIndex)), EX_BY_ID[e.id], unit) };
+            return { ...e, ...(program.config?.noSupersets ? { superset: false } : {}), sets: syncSubSets(growMyoSets(reconcilePendingRepTargets(sets,
+                computeCell(program, day, e.id, e.slot, weekIndex))), EX_BY_ID[e.id], unit) };
         });
         // Resume reconciliation updates app-owned prefills to the latest prescription.
         // Reapply the SAVED readiness from the original baseline in the same mount pass;
@@ -10991,7 +10988,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
        is an INVARIANT of the session state rather than a line somebody has to remember inside each of
        the ~15 handlers that can move a weight. Returns the original array untouched when nothing
        needed syncing, so this adds no re-renders. See syncSubSets. */
-    const runtimeSuggestions = data.map(row => workoutRowMatchesPrescription(program, day, row, weekIndex)
+    const runtimeSuggestions = data.map(row => !row.machineInstanceId && workoutRowMatchesPrescription(program, day, row, weekIndex)
         ? suggestions[row.slot] : null);
     const dataRef = useRef(data);
     dataRef.current = data;
@@ -11016,7 +11013,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         return changed ? out : next;
     });
     const switchPhysicalMachine=(ei,nextId,sourceGym=gymProfile)=>{
-        const scope={gym:sourceGym,sessionGymId,nextId,history,dayId:day.id,unit};
+        const scope={gym:sourceGym,sessionGymId,nextId,history,dayId:day.id,programId:program.id,unit};
         const check=chooseWorkoutPhysicalMachine(dataRef.current[ei],scope);
         if(!check.ok)return check;
         setData(rows=>rows.map((row,i)=>i!==ei?row:
@@ -11202,6 +11199,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
     const [rest, setRest] = useState(_restRestore.rest);
     const [restMax, setRestMax] = useState(_restRestore.max);
     const [paused, setPaused] = useState(_restRestore.paused);
+    const restSourceRef = useRef(liveMatch?.restSource ?? null);
     const restEndRef = useRef(_restRestore.end); // Rest uses wall-clock time, including background time.
     const [finishing, setFinishing] = useState(false);
     const [finishFeedbackOpen, setFinishFeedbackOpen] = useState(false); // completion feedback is optional; keep the recap compact until the lifter asks for it
@@ -11297,7 +11295,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
             return false;
         try {
             if (!appStorageOwnership.writable()) throw new Error('Another window owns device storage.');
-            localStorage.setItem(LIVE_KEY, JSON.stringify({ schemaVersion: 2, programId: program.id, dayId: day.id, weekIndex, dayExSig, gymId:sessionGymId, startedAt: startRef.current, elapsedMs: runElapsedMs(), savedAt: Date.now(), data, readiness, injuryReports, sessionProgressions, sessionProgressionOrigins, sessionLengthPlan: day.sessionLengthPlan, sessionNote, sessionNoteRepeat, exIdx, focusPin, fbPump, fbSore, runPaused, restEndMs: restEndRef.current, restMax, restPaused: paused, restRemain: paused ? rest : 0, sessionId: sessionIdRef.current }));
+            localStorage.setItem(LIVE_KEY, JSON.stringify({ schemaVersion: 2, programId: program.id, dayId: day.id, weekIndex, dayExSig, gymId:sessionGymId, startedAt: startRef.current, elapsedMs: runElapsedMs(), savedAt: Date.now(), data, readiness, injuryReports, sessionProgressions, sessionProgressionOrigins, sessionLengthPlan: day.sessionLengthPlan, sessionNote, sessionNoteRepeat, exIdx, focusPin, fbPump, fbSore, runPaused, restEndMs: restEndRef.current, restSource: restSourceRef.current, restMax, restPaused: paused, restRemain: paused ? rest : 0, sessionId: sessionIdRef.current }));
             setSaveError(false);
             return true;
         }
@@ -11503,7 +11501,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         }, secs * 1000 + 250);
     };
     const syncRest = () => setRest(restEndRef.current > 0 ? Math.max(0, Math.ceil((restEndRef.current - Date.now()) / 1000)) : 0);
-    const startRest = (secs) => { restEndRef.current = Date.now() + secs * 1000; setRestMax(secs); setRest(secs); setPaused(false); scheduleRestNotif(secs); };
+    const startRest = (secs, source = null) => { restSourceRef.current = source; restEndRef.current = Date.now() + secs * 1000; setRestMax(secs); setRest(secs); setPaused(false); scheduleRestNotif(secs); };
     const bumpRest = (delta) => {
         if (paused) {
             setRest(r => { const n = Math.max(0, r + delta); setRestMax(m => Math.max(m, n)); return n; });
@@ -11516,7 +11514,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         syncRest();
         scheduleRestNotif(Math.ceil((restEndRef.current - Date.now()) / 1000));
     };
-    const skipRest = () => { restEndRef.current = 0; setRest(0); cancelRestNotif(); };
+    const skipRest = () => { restSourceRef.current = null; restEndRef.current = 0; setRest(0); cancelRestNotif(); };
     const resetRest = () => {
         if (!(restMax > 0))
             return;
@@ -11805,10 +11803,12 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
             flashSnack("Reordered", snap.data, snap.exIdx);
     };
     const toggleDone = (ei, si) => {
-        setFocusPin(p => (p[data[ei]?.id] == null ? p : { ...p, [data[ei].id]: null })); // logging resumes auto-follow
         const ex = EX_BY_ID[data[ei].id];
         const set = data[ei].sets[si];
         const wasDone = set.done;
+        // Explicit undo selects that row, even when a later set is logged.
+        // A new completion resumes forward auto-follow.
+        setFocusPin(p => ({ ...p, [data[ei].id]: wasDone ? si : null }));
         // React may replay state updaters; PR effects belong to one real
         // not-done → done gesture, with an actual previous record to beat.
         const machineId=set.machineInstanceId ?? data[ei].machineInstanceId;
@@ -11869,63 +11869,36 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                 }
             } // round done → next round's first movement
         }
-        /* IS THERE ANYTHING LEFT TO REST FOR? Not "are there working sets left".
-           This guard exists so the FINAL set of the session doesn't park the lifter on a rest clock for a
-           workout that's over. It asked `doneSets + 1 >= totalSets` — but `doneSets`/`totalSets` count
-           WORK ONLY (workOnly strips warm-ups and sub-sets), so the moment the last working set of the
-           session was ticked the guard read "session finished" while myo-rep minis and drop strips were
-           still pending. Every one of them was then denied its rest.
-           That is Haiden's report: on whichever exercise finishes LAST, the myo-rep timer never fires —
-           and "it doesn't matter what order they're completed", because the trigger is the last WORKING
-           set landing, not the exercise's position. The minis rested correctly on every earlier exercise
-           because working sets elsewhere were still outstanding.
-           The honest question is whether any set anywhere is still undone once this tick lands.
-
-           AND "ONCE THIS TICK LANDS" NOW INCLUDES A MINI THIS TICK IS ABOUT TO EARN. Growth appends the
-           next myo mini inside the setData wrapper, AFTER this decision has already been made against the
-           pre-growth list — so ticking the last mini read "nothing else pending", suppressed the rest, and
-           only then grew a fresh mini for the lifter to do with no clock on it. Exactly the bug this guard
-           was written to fix, reappearing through the one path that can extend the list mid-set: measured
-           at 2 rests across 5 minis, with the failures starting precisely where growth began. Asking
-           growMyoSets the same question it is about to answer keeps the two in step, and it is pure, so
-           calling it here costs a comparison. */
-        const grows = (ei2, si2) => {
-            const e = data[ei2];
-            if (!e)
-                return false;
-            const after = e.sets.map((s, j) => (j === si2 ? { ...s, done: true } : s));
-            return growMyoSets(after).length > after.length;
-        };
-        const morePending = data.some((e, i) => e.sets.some((s, j) => !((i === ei && j === si) || s.done)))
-            || (!wasDone && grows(ei, si));
-        if (!wasDone && morePending && restAutoStart && !midRound) {
-            // mid-round transitions (A1 → A2) take no rest; the round-end rest is the normal working rest,
-            // since each muscle recovered while the other was trained.
-            // Warm-ups get a short ramp rest; the myo-rep and drop mini-sets get an even shorter one — the
-            // whole point of a myo-rep is a ~15s pause before the next burst, and a drop set is stripped and
-            // hit immediately. Falling through to the working rest (which is what happened before, since a
-            // sub-set is neither warm nor a working set) parked the lifter on a 90–180s clock between myo
-            // bursts, which defeats the technique. Working sets keep the full prescribed rest.
-            /* REST IS THE GAP YOU ARE ABOUT TO TAKE — NOT A PROPERTY OF THE SET YOU JUST FINISHED.
-               For straight sets those are the same thing, which is why reading it off the completed set
-               worked everywhere except the one place it mattered: the myo-rep ACTIVATION set. That set is
-               an ordinary working set, so it charged the full working rest — 90 to 180 seconds — and the
-               ~15 second pause that IS the definition of a myo-rep never happened. The minis then rested
-               15s from each other correctly, so the timer looked right for mini 2 and 3 and was wrong for
-               the one that starts the technique. Haiden: "Myoreps timer for the first set started at the
-               full rest time." Same fault for a drop set, whose first strip should be immediate.
-               So look FORWARD: if the next set waiting in this exercise is an extension, the gap is that
-               extension's short pause. Otherwise the gap belongs to the set just logged. */
-            const nextPending = data[ei].sets.slice(si + 1).find(x => !x.done);
-            const subRest = (x) => workoutTechniqueRest(x, restScale);
-            const r = nextPending && nextPending.sub
-                ? subRest(nextPending)
+        // Use the same reconciled myo rows that setData will commit. Rest
+        // must see both a newly earned mini and an undone extension.
+        const projected = growMyoSets(data[ei].sets.map((row,j) =>
+            j === si ? {...row,done:!wasDone} : row));
+        const nextPending = projected.slice(si+1).find(row => !row.done);
+        const morePending = projected.some(row => !row.done)
+            || data.some((row,i) => i !== ei && row.sets.some(set => !set.done));
+        const extensionNext = !!nextPending?.sub;
+        if (!wasDone && extensionNext) {
+            advanceTo = -1; // finish the activation's chain before leaving it
+            midRound = false;
+        }
+        if (wasDone) {
+            const source = restSourceRef.current;
+            const sameExercise = source?.id === data[ei].id && source?.slot === data[ei].slot;
+            const invalidated = sameExercise && (source.setIndex === si ||
+                (source.setIndex > si && data[ei].sets[source.setIndex]?.sub));
+            if (invalidated || (!source && !projected.some(row=>row.done))) {
+                prevRest.current = 0;
+                skipRest();
+                setPaused(false);
+                setRestMax(0);
+            }
+        } else if (morePending && restAutoStart && !midRound) {
+            const r = extensionNext
+                ? workoutTechniqueRest(nextPending, restScale)
                 : set.warm
                     ? Math.max(10, Math.round(45 * (restScale || 1)))
-                    : set.sub
-                        ? subRest(set)
-                        : effectiveRest(goalForDay(program, day), ex, data[ei].slot === day.primaryIndex, data[ei].restCustom, restScale);
-            startRest(r);
+                    : effectiveRest(goalForDay(program, day), ex, data[ei].slot === day.primaryIndex, data[ei].restCustom, restScale);
+            startRest(r,{id:data[ei].id,slot:data[ei].slot,setIndex:si});
         }
         setData(d => d.map((e, i) => {
             if (i !== ei)
@@ -12474,7 +12447,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
     };
     const elapsed = Math.max(0, Math.floor(runElapsedMs() / 1000));
     const fmtEl = `${Math.floor(elapsed / 3600)}:${String(Math.floor((elapsed % 3600) / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
-    return (_jsxs("div", { ref: workoutRoot, className: "wpb-page-shell wpb-workout", "data-focus-mode": focus ? "true" : "false", "data-keyboard-open": keyboardOpen ? "true" : "false", style: { position: "relative", maxHeight: viewportHeight || undefined }, children: [_jsxs("div", { className: "wpb-workout-header", children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-8 wpb-s956-minwidth-0", children: [_jsx("button", { onClick: () => setConfirmExit(true), "aria-label": "Leave workout", className: "pressable hit wpb-workout-close", children: _jsx(X, { size: 23 }) }), _jsxs("button", { onClick: onTimerTap, onPointerDown: beginTimerHold, onPointerMove: moveTimerHold, onPointerUp: endTimerHold, onPointerCancel: endTimerHold, onContextMenu: e => e.preventDefault(), "aria-label": runPaused ? "Resume workout timer" : "Pause workout timer", "aria-description": "Long press to reset timer", title: `${runPaused ? "Resume" : "Pause"} workout timer · hold to reset`, className: "pressable wpb-workout-timer", "data-paused": runPaused ? "true" : "false", children: [runPaused ? _jsx(Play, { size: 13, className: "wpb-icon-no-shrink" }) : _jsx(Clock, { size: 14, className: "wpb-icon-no-shrink" }), " ", _jsx("span", { className: "mono wpb-workout-timer-value", children: fmtEl })] }), _jsx("div", { className: "wpb-b962-layout-07",  }), _jsxs("div", { className: "wpb-workout-actions wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-6 wpb-s956-flexshrink-0", children: [_jsx("button", { "aria-label": focus ? "Exit focused mode" : "Focused mode", onClick: () => setFocus(f => !f), className: "pressable hit wpb-workout-header-action", title: focus ? "Exit focused mode" : "Focused mode", "data-focus": focus ? "1" : "0", children: focus ? _jsx(Minimize2, { size: 18 }) : _jsx(Maximize2, { size: 18 }) }), _jsx("button", { onClick: () => setSessionMenu(true), className: "pressable hit wpb-workout-header-action", title: "Workout options", "aria-label": "Workout options", children: _jsx(MoreHorizontal, { size: 20 }) }), _jsxs("button", { onClick: () => setFinishing(true), "aria-label": "Finish workout", className: "pressable hit wpb-workout-finish wpb-workout-header-action", "data-compact": narrowSet ? "true" : "false", children: [_jsx(CheckCircle2, { size: narrowSet ? 20 : 17, className: "wpb-icon-no-shrink" }), narrowSet ? null : " Finish"] })] })] }), _jsx("div", { role: "progressbar", "aria-label": "Workout completion", "aria-valuemin": 0, "aria-valuemax": Math.max(1, totalSets), "aria-valuenow": doneSets, children: _jsx("div", { className: "wpb-bar", style: { transform: `translateX(-${(1 - (totalSets ? doneSets / totalSets : 0)) * 100}%)` } }) }), _jsxs("div", { className: "wpb-workout-summary", children: [_jsxs("span", { children: [doneSets, " / ", totalSets, " sets \u00B7 ", day.sessionLengthPlan ? `${day.sessionLengthPlan.minutes} min plan · ` : "", _jsxs("button", { onClick: () => setExList(true), className: "pressable hit wpb-workout-exercise-link", "aria-label": "Show today's exercises", children: ["Exercise ", exIdx + 1, " of ", data.length] }), readiness && readiness.factor < 1 ? ` · ${readiness.label} −${Math.round((1 - readiness.factor) * 100)}%` : ""] }), _jsxs("span", { className: "mono", children: [Math.round(volume).toLocaleString(), " ", unit] })] }), !focus && !keyboardOpen && _jsx(WorkoutExerciseNav, { data, exIdx, onSelect: goEx })] }), saveError && _jsxs("div", { role: "alert", className: "wpb-workout-save-error", children: ["Workout could not be saved on this device. Keep this screen open and free storage, then ", _jsx("button", { type: "button", onClick: persistLive, children: "Retry save" }), "."] }), day.note && (_jsxs("div", { className: "wpb-workout-day-note", children: [_jsx(Info, { size: 14, color: C.accentInk, className: "wpb-b961-leading-icon" }), _jsx("span", { className: "wpb-workout-day-note-copy", children: day.note })] })), (() => {
+    return (_jsxs("div", { ref: workoutRoot, onPointerDownCapture: dismissWorkoutNumericSelection, className: "wpb-page-shell wpb-workout", "data-focus-mode": focus ? "true" : "false", "data-keyboard-open": keyboardOpen ? "true" : "false", style: { position: "relative", maxHeight: viewportHeight || undefined }, children: [_jsxs("div", { className: "wpb-workout-header", children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-8 wpb-s956-minwidth-0", children: [_jsx("button", { onClick: () => setConfirmExit(true), "aria-label": "Leave workout", className: "pressable hit wpb-workout-close", children: _jsx(X, { size: 23 }) }), _jsxs("button", { onClick: onTimerTap, onPointerDown: beginTimerHold, onPointerMove: moveTimerHold, onPointerUp: endTimerHold, onPointerCancel: endTimerHold, onContextMenu: e => e.preventDefault(), "aria-label": runPaused ? "Resume workout timer" : "Pause workout timer", "aria-description": "Long press to reset timer", title: `${runPaused ? "Resume" : "Pause"} workout timer · hold to reset`, className: "pressable wpb-workout-timer", "data-paused": runPaused ? "true" : "false", children: [runPaused ? _jsx(Play, { size: 13, className: "wpb-icon-no-shrink" }) : _jsx(Clock, { size: 14, className: "wpb-icon-no-shrink" }), " ", _jsx("span", { className: "mono wpb-workout-timer-value", children: fmtEl })] }), _jsx("div", { className: "wpb-b962-layout-07",  }), _jsxs("div", { className: "wpb-workout-actions wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-6 wpb-s956-flexshrink-0", children: [_jsx("button", { "aria-label": focus ? "Exit focused mode" : "Focused mode", onClick: () => setFocus(f => !f), className: "pressable hit wpb-workout-header-action", title: focus ? "Exit focused mode" : "Focused mode", "data-focus": focus ? "1" : "0", children: focus ? _jsx(Minimize2, { size: 18 }) : _jsx(Maximize2, { size: 18 }) }), _jsx("button", { onClick: () => setSessionMenu(true), className: "pressable hit wpb-workout-header-action", title: "Workout options", "aria-label": "Workout options", children: _jsx(MoreHorizontal, { size: 20 }) }), _jsxs("button", { onClick: () => setFinishing(true), "aria-label": "Finish workout", className: "pressable hit wpb-workout-finish wpb-workout-header-action", "data-compact": narrowSet ? "true" : "false", children: [_jsx(CheckCircle2, { size: narrowSet ? 20 : 17, className: "wpb-icon-no-shrink" }), narrowSet ? null : " Finish"] })] })] }), _jsx("div", { role: "progressbar", "aria-label": "Workout completion", "aria-valuemin": 0, "aria-valuemax": Math.max(1, totalSets), "aria-valuenow": doneSets, children: _jsx("div", { className: "wpb-bar", style: { transform: `translateX(-${(1 - (totalSets ? doneSets / totalSets : 0)) * 100}%)` } }) }), _jsxs("div", { className: "wpb-workout-summary", children: [_jsxs("span", { children: [doneSets, " / ", totalSets, " sets \u00B7 ", day.sessionLengthPlan ? `${day.sessionLengthPlan.minutes} min plan · ` : "", _jsxs("button", { onClick: () => setExList(true), className: "pressable hit wpb-workout-exercise-link", "aria-label": "Show today's exercises", children: ["Exercise ", exIdx + 1, " of ", data.length] }), readiness && readiness.factor < 1 ? ` · ${readiness.label} −${Math.round((1 - readiness.factor) * 100)}%` : ""] }), _jsxs("span", { className: "mono", children: [Math.round(volume).toLocaleString(), " ", unit] })] }), !focus && !keyboardOpen && _jsx(WorkoutExerciseNav, { data, exIdx, onSelect: goEx })] }), saveError && _jsxs("div", { role: "alert", className: "wpb-workout-save-error", children: ["Workout could not be saved on this device. Keep this screen open and free storage, then ", _jsx("button", { type: "button", onClick: persistLive, children: "Retry save" }), "."] }), day.note && (_jsxs("div", { className: "wpb-workout-day-note", children: [_jsx(Info, { size: 14, color: C.accentInk, className: "wpb-b961-leading-icon" }), _jsx("span", { className: "wpb-workout-day-note-copy", children: day.note })] })), (() => {
                 const ei = exIdx;
                 const e = data[ei];
                 if (!e)
@@ -12483,6 +12456,8 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                 const cell = computeCell(program, day, e.id, e.slot, weekIndex);
                 const isPrimary = e.slot === day.primaryIndex;
                 const wTotal = workOnly(e).length;
+                const plannedCount = workoutRowMatchesPrescription(program, day, e, weekIndex) && !cell.missing ? Number(cell.sets) : null;
+                const countDiffers = Number.isInteger(plannedCount) && plannedCount > 0 && plannedCount !== wTotal;
                 /* Select the last full working set, excluding warm-ups and mini-sets. */
                 const techTag = e.injuryAdjusted ? null : techSetTag(cell.tech);
                 const lastWorkRow = (() => {
@@ -12540,7 +12515,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                 return null;
                             return (_jsxs("div", { "data-noswipe": true, className: "wpb-workout-card wpb-warmup-card", children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-8 wpb-s956-marginbottom-8", children: [_jsx(Flame, { size: 15, color: C.accentInk }), _jsx("span", { className: "wpb-layout-strong-15", children: "Warm-up & mobility" }), _jsx("button", { onClick: () => { setShowWarmup(false); onSetWarmupCard?.(false); setSnack({ msg: "Warm-up card hidden — Settings can bring it back", undo: () => { onSetWarmupCard?.(true); setSnack(null); } }); }, "aria-label": "Hide the warm-up card from now on", className: "pressable hit wpb-warmup-hide", children: "Hide" })] }), moves.map((m, i) => (_jsxs("div", { className: "wpb-warmup-step", children: [_jsx("span", { className: "wpb-warmup-number", children: i + 1 }), _jsx("span", { className: "wpb-warmup-instruction", children: m })] }, i))), _jsx("button", { onClick: () => setShowWarmup(false), className: "pressable wpb-warmup-finish", children: "Warmed up \u2014 let\u2019s train" })] }));
                         })(), _jsxs("div", { className: "wpb-exercise-heading wpb-s956-display-flex wpb-s956-alignitems-flex-start wpb-s956-gap-8", children: [_jsxs("div", { className: "wpb-layout-grow-min", children: [_jsxs("div", { className: "wpb-exercise-title-row", children: [_jsx("div", { className: "wpb-exercise-name wpb-s960-fontsize-22px wpb-s960-fontweight-780 wpb-s960-letterspacing-neg-0-55px wpb-s960-lineheight-1-16 wpb-s960-overflowwrap-anywhere", children: ex.name }), _jsxs("div", { className: "wpb-s956-display-flex wpb-s956-flexdirection-column wpb-s956-alignitems-flex-end wpb-s956-gap-6 wpb-s956-flexshrink-0", children: [_jsxs("div", { className: "wpb-exercise-head-actions wpb-s956-display-flex wpb-s956-gap-8", children: [_jsx("button", { "aria-label": `Exercise info for ${ex.name}`, onClick: event => { infoOpenerRef.current = event.currentTarget; setInfo(true); }, title: "Exercise info", className: "pressable hit wpb-exercise-head-action", children: _jsx(Info, { size: 16 }) }), _jsx("button", { "aria-label": `History for ${ex.name}`, onClick: () => setHistSheet(true), title: "Exercise history", className: "pressable hit wpb-exercise-head-action", children: _jsx(History, { size: 16 }) }), confirmRemoveEx === ei ? (_jsxs("button", { onClick: () => removeExerciseFromSession(ei), title: "Tap again to skip for today", "aria-label": "Confirm skip exercise for today", className: "pressable hit wpb-exercise-head-action wpb-confirm-skip", children: [_jsx(SkipForward, { size: 14 }), " Skip?"] })) : (_jsx("button", { "aria-label": "Skip this exercise for today", onClick: () => setConfirmRemoveEx(ei), title: "Skip this exercise for today (stays in your program)", className: "pressable hit wpb-exercise-head-action", children: _jsx(SkipForward, { size: 15 }) }))] })] })] }), e.injuryAdjusted && _jsx(UiBanner, { className: "wpb-pain-banner", role: "note", "data-noswipe": true, icon: Activity, title: `Protecting your ${(PART_LABEL[e.injuryAdjusted] || e.injuryAdjusted).toLowerCase()}`, children: "Fewer sets today. A swap keeps the muscle working without the sore spot.", actionLabel: "Swap", actionVariant: "primary", onAction: () => setSwap(true) }), _jsx("div", { className: "wpb-exercise-tags", "data-exercise-tags": true,
-    children: exerciseSessionTags(ex, e, day, cell).map(tag => _jsx("span", { children: tag }, tag)) }), _jsxs("div", { className: "wpb-exercise-meta", children: [e.added && !focus && _jsx("button", { type: "button", className: "wpb-session-choice wpb-adjust-sets pressable", "aria-label": "Adjust working sets for " + ex.name, onClick: () => setSetCountEdit({ index: ei, exerciseId: e.id, value: wTotal }), children: `${wTotal} sets · Adjust` }), _jsx("div", { className: "wpb-exercise-set-context", children: focus ? PART_LABEL[ex.part] : `${(e.superset || (ei > 0 && data[ei - 1].superset)) ? "Round" : "Set"} ${Math.min(wDone + 1, wTotal)} of ${wTotal} · ${PART_LABEL[ex.part]}` }), !program.config?.percentScheme && (() => {
+    children: exerciseSessionTags(ex, e, day, cell).map(tag => _jsx("span", { children: tag }, tag)) }), _jsxs("div", { className: "wpb-exercise-meta", children: [((e.added && !focus) || countDiffers) && _jsx("button", { type: "button", className: "wpb-session-choice wpb-adjust-sets pressable", "aria-label": "Adjust working sets for " + ex.name, onClick: () => setSetCountEdit({ index: ei, exerciseId: e.id, value: countDiffers ? Math.max(plannedCount, wDone, 1) : wTotal }), children: countDiffers ? `Plan ${plannedCount} · Workout ${wTotal} · Review` : `${wTotal} sets · Adjust` }), _jsx("div", { className: "wpb-exercise-set-context", children: focus ? PART_LABEL[ex.part] : `${(e.superset || (ei > 0 && data[ei - 1].superset)) ? "Round" : "Set"} ${Math.min(wDone + 1, wTotal)} of ${wTotal} · ${PART_LABEL[ex.part]}` }), !program.config?.percentScheme && (() => {
                                             // name the progression style for EVERY exercise (not just dynamic double), so it's
                                             // always clear how this lift advances week to week.
                                             /* ⚠ ONE OWNER: THE LABEL NAMES THE METHOD THAT SETS THE LOADS. For a Pursuit Next program the loads come
@@ -12629,6 +12604,17 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                             // Per-set DDP: when each set has its own weight, the session-level banner would be
                             // misleading (it shows only the first set's weight). Show a different banner instead.
                             // The displayed advice is the same evaluated decision used to fill the rows.
+                            // A physical-machine row is seeded from its own history, not the generic movement suggestion.
+                            if (e.machineInstanceId) {
+                                const scope = { gymId:sessionGymId, exerciseId:e.id, machineInstanceId:e.machineInstanceId, dayId:day.id, programId:program.id, gym:gymProfile };
+                                const reference = machineStartingReference(history,scope);
+                                const entered = workOnly(e).some(set => Number(set.weight)>0);
+                                if (reference || entered) return null;
+                                const unassigned = machineStartingReference(history,{...scope,machineInstanceId:LEGACY_MACHINE_ID});
+                                return (_jsxs("div", { className: "wpb-workout-starting-hint", children: [_jsx(Info, { size: 13 }), unassigned
+                                    ? "Older machine history is unassigned. Choose its original machine in Exercise Info, or enter a load for this machine."
+                                    : "Choose a load for this physical machine. Other machines have independent histories."] }));
+                            }
                             const estimatedTarget = e.sets.find(set => !set.warm && set.target?.estimate)?.target;
                             if (!sug || estimatedTarget) {
                                 // A session can have a real previous lift (shown in the Last chips)

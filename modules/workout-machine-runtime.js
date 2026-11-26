@@ -6,14 +6,34 @@
  * Pure functions: Gym remains the shared store's owner, and WorkoutSession
  * remains the only writer of the current session's actual sets.
  */
-import { addMachineVariant, assignLegacyMachineHistory, latestMachineSet, resolveMachineVariant } from './next-engine/machine-instances.js';
+import { addMachineVariant, assignLegacyMachineHistory, machineStartingReference, resolveMachineVariant } from './next-engine/machine-instances.js';
 import { EX_BY_ID, isMachineLike, toUnit } from './engine-api.js';
 
 const fail=message=>({ok:false,message});
 const short=name=>String(name??'').trim();
 
+// Starting references are deliberately not progression decisions. Both
+// entrypoints retain the actual ordinal instead of flattening a mixed-load
+// history to the last set, and remove advice from the previous station.
+export function seedMachineReferenceRows(sets,last,nextId,unit) {
+    let ordinal=0;
+    return sets.map(set=>{
+        const index=set.warm||set.sub?null:ordinal++;
+        // This check MUST precede any weight or machine reassignment.
+        if(set.done)return set;
+        const matches=last?.workingSets?.filter(row=>row.setIndex===index)||[];
+        const observed=matches.length===1?matches[0]:last;
+        const reference=observed?toUnit(observed.weight,observed.unit||unit,unit):null;
+        const weight=index===null||!(reference>0)?'':String(Math.round(reference*1000)/1000);
+        const {decisionTrace,estimate,nextAction,confidence,...target}=set.target||{};
+        const {liveAdjustment,loadAdvice,...rest}=set;
+        return {...rest,machineInstanceId:nextId,weight,auto:false,valueOwner:'user',
+            suggested:undefined,hint:undefined,target:{...target,w:weight}};
+    });
+}
+
 export function chooseWorkoutPhysicalMachine(row,{
-    gym,sessionGymId,nextId,history=[],dayId,unit='lb'
+    gym,sessionGymId,nextId,history=[],dayId,programId,unit='lb'
 }) {
     if(!row || !isMachineLike(EX_BY_ID[row.id]?.equip))
         return fail('Only machine exercises support physical machine A/B.');
@@ -25,22 +45,13 @@ export function chooseWorkoutPhysicalMachine(row,{
     if(selected.missing||selected.active===false)
         return fail('This machine is no longer active at this gym.');
     if(row.machineInstanceId===nextId)return {ok:true,row};
-    const last=latestMachineSet(history,{
+    const last=machineStartingReference(history,{
         gymId:sessionGymId,exerciseId:row.id,
-        machineInstanceId:nextId,dayId,gym
+        machineInstanceId:nextId,dayId,programId,gym
     });
-    const reference=last?toUnit(last.weight,last.unit||unit,unit):null;
     return {ok:true,row:{
         ...row,machineInstanceId:nextId,
-        sets:row.sets.map(set=>{
-            // This check MUST precede any weight or machine reassignment.
-            if(set.done)return set;
-            const weight=set.warm||set.sub||reference==null?''
-                :String(Math.round(reference*1000)/1000);
-            return {...set,machineInstanceId:nextId,weight,auto:false,
-                valueOwner:'user',suggested:undefined,hint:undefined,
-                target:{...set.target,w:weight}};
-        })
+        sets:seedMachineReferenceRows(row.sets,last,nextId,unit)
     }};
 }
 

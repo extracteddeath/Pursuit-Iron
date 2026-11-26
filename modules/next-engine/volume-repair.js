@@ -17,6 +17,9 @@ import { INTENT_MUSCLES } from './topology.js';
 
 const EPS = .001;
 const STRENGTH = new Set(['primary_strength', 'secondary_strength', 'strength_support']);
+// Repair may reduce an existing over-cap slot, but must not create a new over-cap dose.
+const repairSetCap = (request, exercise) => Math.min(request.preferences.volumeApproach === 'minimalist' ? 3 : 5,
+    Number.isFinite(exercise?.workingSetCap) ? exercise.workingSetCap : Infinity);
 const LABELS = { upper_back: 'Upper back', lats: 'Lats', side_delts: 'Side delts', rear_delts: 'Rear delts', core: 'Core' };
 const label = id => LABELS[id] || id.charAt(0).toUpperCase() + id.slice(1).replaceAll('_', ' ');
 const fmt = n => Number(n.toFixed(1)).toString();
@@ -231,7 +234,7 @@ function rebuild(program, changes, legacyExercises, addition = null, options = {
         // writers and could silently rewrite a lifter's deliberate edit. Fail this proposal instead
         // and let the search choose another engine-owned slot.
         e.sets += change.delta;
-        if (request.preferences.volumeApproach === 'minimalist' && e.sets > 3) return null;
+        if (change.delta > 0 && e.sets > repairSetCap(request, e)) return null;
         if (e.sets < (preserveRoster ? 1 : 2)) return null; // locked cycles may retain a one-set accessory instead of changing the roster
         changed.add(key);
         // Do not mirror generated set counts back into overrides. nextWeekPrescriptions is the
@@ -394,7 +397,6 @@ export function reconcileShellWeekDose(program, legacyExercises = []) {
     const context = snapshotContext(program, legacyExercises), { request } = context;
     const targets = shellVolumeTargets(program, request);
     const prescriptions = createMusclePrescriptions(request, phaseOf(program));
-    const cap = request.preferences.volumeApproach === 'minimalist' ? 3 : 5;
     const objective = snapshot => targets.reduce((sum, t) => sum + Math.max(0, t.mev - snapshot.regions[t.region])
         + Math.max(0, snapshot.regions[t.region] - t.mrv), 0)
         + snapshot.sessions.reduce((sum, s) => sum + Math.max(0, s.estimatedMinutes - s.maxMinutes) * 4, 0);
@@ -414,7 +416,9 @@ export function reconcileShellWeekDose(program, legacyExercises = []) {
                 const cells = { ...current.nextWeekPrescriptions };
                 for (const { key, delta } of operations) {
                     const prior = cells[key]?.[week];
-                    if (!prior || !Number.isFinite(prior.sets) || prior.sets + delta < 1 || prior.sets + delta > cap) return;
+                    const slot = slots.find(x => x.e.shellKey === key);
+                    if (!slot || !prior || !Number.isFinite(prior.sets) || prior.sets + delta < 1
+                        || (delta > 0 && prior.sets + delta > repairSetCap(request, slot.e))) return;
                     cells[key] = { ...cells[key], [week]: { ...prior, sets: prior.sets + delta } };
                 }
                 const candidate = { ...current, nextWeekPrescriptions: cells };
@@ -432,15 +436,21 @@ export function reconcileShellWeekDose(program, legacyExercises = []) {
                     if (a < Math.min(p.minimum * .85, b) - EPS || a > Math.max(hi, b) + EPS) return;
                 }
                 if (after.sessions.some((s, i) => s.estimatedMinutes > Math.max(s.maxMinutes, before.sessions[i].estimatedMinutes))) return;
-                proposals.push({ candidate, after, operations, score: objective(before) - objective(after) });
+                // On equally productive repairs, prefer fewer sets on the receiving slot,
+                // then the less loaded session. Dose and full audit remain the primary gates.
+                const receiver = slots.find(x => operations.some(op => op.delta > 0 && op.key === x.e.shellKey));
+                proposals.push({ candidate, after, operations, score: objective(before) - objective(after),
+                    receiverSets: receiver?.e.sets ?? 0,
+                    receiverSessionSets: receiver?.s.exercises.reduce((sum, e) => sum + e.sets, 0) ?? 0 });
             };
             const under = targets.filter(t => before.regions[t.region] < t.mev - EPS);
             const donors = slots.filter(x => x.e.sets > 1);
-            const recipients = slots.filter(x => x.e.sets < cap && under.some(t => publicRegionContribution(x.def, t.region) > 0));
+            const recipients = slots.filter(x => x.e.sets < repairSetCap(request, x.e) && under.some(t => publicRegionContribution(x.def, t.region) > 0));
             for (const x of recipients) propose([{ key: x.e.shellKey, delta: 1 }]);
             for (const x of donors) propose([{ key: x.e.shellKey, delta: -1 }]);
             const baselineCounts = auditCounts(weekAudit(before));
-            const selectBest = () => proposals.sort((a, b) => b.score - a.score).find(p => {
+            const selectBest = () => proposals.sort((a, b) => b.score - a.score || a.receiverSets - b.receiverSets
+                || a.receiverSessionSets - b.receiverSessionSets).find(p => {
                 const counts = auditCounts(weekAudit(p.after));
                 return Object.entries(counts).every(([key, n]) => n <= (baselineCounts[key] || 0));
             });

@@ -17,6 +17,20 @@ export function selectNumericInput(event) {
         input.select();
 }
 
+/** Dismiss a numeric editor's native selection when tapping a non-editor
+ * workout control. Do not prevent the gesture, alter values, or intercept
+ * intentional selection and keyboard navigation inside text fields. */
+export function dismissWorkoutNumericSelection(event) {
+    const root = event.currentTarget;
+    const input = root?.ownerDocument?.activeElement;
+    const numeric = 'input[inputmode="decimal"],input[inputmode="numeric"]';
+    if (!input?.matches?.(numeric) || !root.contains(input)) return;
+    if (event.target?.closest?.('input,textarea,select,[contenteditable]')) return;
+    if (typeof input.selectionEnd === 'number')
+        input.setSelectionRange(input.selectionEnd,input.selectionEnd);
+    input.blur();
+}
+
 // Reveal a single button inside its rail; never scroll the workout page itself.
 function revealExerciseInRail(list, active) {
     if (!list?.isConnected || !active?.isConnected) return;

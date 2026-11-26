@@ -41,8 +41,25 @@ assert.match(app,/chooseWorkoutPhysicalMachine\(row,scope\)/);
 assert.match(app,/createWorkoutPhysicalMachine\(gymProfile,row\?\.id,name,makeDefault\)/);
 assert.match(runtime,/machineInstanceId:nextId/);
 assert.match(runtime,/withGymMachineConfig/);
-assert.match(app,/lastMachine=machineId \? latestMachineSet\(history/);
+assert.match(app,/lastMachine=machineId \? machineStartingReference\(history/);
+assert.match(runtime,/const last=machineStartingReference\(history/);
+assert.match(app,/!row.machineInstanceId && workoutRowMatchesPrescription/);
 assert.doesNotMatch(gym,/setProgram\(|history\.push\(/);
 assert.doesNotMatch(session,/localStorage\.setItem\(|history\.push\(/);
 assert.doesNotMatch(program,/setProgram\(|history\.push\(/);
 console.log('PASS A/B setup and workout switching are discoverable, while program drafts, logged sets, and machine histories remain independently owned');
+
+// App-only projection: the independent engine gate owns historical selection;
+// this integration gate owns seeding the selected reference into live rows.
+{
+    const reference={weight:75,unit:'lb',workingSets:[90,85,80,75].map((weight,setIndex)=>({weight,unit:'lb',setIndex}))};
+    const {seedMachineReferenceRows}=await import('../modules/workout-machine-runtime.js');
+    const original=[{done:true,weight:'95',reps:'20',machineInstanceId:'B'},
+        ...[1,2,3].map(()=>({weight:'999',reps:'18',target:{w:'999',decisionTrace:{},estimate:{},nextAction:'increase_load'},loadAdvice:{},hint:'up'}))];
+    const seeded=seedMachineReferenceRows(original,reference,'A','lb');
+    assert.equal(seeded[0],original[0],'completed set stays on its original machine');
+    assert.deepEqual(seeded.slice(1).map(s=>s.weight),['85','80','75']);
+    assert.ok(seeded.slice(1).every(s=>s.valueOwner==='user'&&s.machineInstanceId==='A'&&!s.target.decisionTrace&&!s.loadAdvice));
+    assert.equal(original[1].weight,'999','reference projection never mutates source rows');
+    console.log('PASS A/B runtime: independent positional references and immutable completed rows');
+}

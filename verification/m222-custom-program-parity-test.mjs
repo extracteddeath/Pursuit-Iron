@@ -155,3 +155,59 @@ assert.equal(constrained.days,compatible.days);assert.equal(constrained.override
 assert.equal(constrained.config.noSupersets,true);
 
 console.log('PASS M222: Cable Fly row targets; DDP positional loads/reps; reduced-load floor; effort/incomplete/mixed-load gates; per-day custom history ownership; canonical-engine parity; immutable resume repair; authored roster/settings and late-week Myo/Drop techniques; strict target parsing and atomic weekly target edits.');
+
+// A newer empty scoped performance must not mask older real history.
+const emptyMachineProjection={...history[0],id:'newer-empty-machine',date:Number(history[0].date)+1000,
+    perf:{[ex.id]:{weight:null,reps:null,sets:[]}}};
+const withEmptyProjection=rowsFor(program,[emptyMachineProjection,...history]);
+assert.deepEqual(withEmptyProjection.rows.map(s=>[s.weight,s.reps]),fly.rows.map(s=>[s.weight,s.reps]),
+    'Newer empty machine performance cannot erase older comparable history');
+
+/* Nov 26 phone report: leg extension Dynamic Double, previous 90 x 20/19/16/17.
+ * A qualifying set earns only its own next physical step. Unknown effort is
+ * not failure, but explicitly below-target effort may justify a hold. */
+{
+    const leg=EX_BY_ID['leg-ext'];
+    assert.ok(leg);
+    const p={...structuredClone(program),id:'leg-dd-phone',days:[{id:'legs',label:'Legs',primaryIndex:-1,exercises:[leg.id]}],
+        progStyle:{[leg.id]:'dynamic'},overrides:{'legs:0':{sets:4,reps:'15-20',rir:'2',progressionStyle:'dynamic',techOverride:null}},ss:{}};
+    const reps=[20,19,16,17];
+    const exposure=rir=>[{id:'leg-last',programId:p.id,dayId:'legs',date:3000,weekIndex:1,unit:'lb',
+        perf:{[leg.id]:{weight:90,reps:20,sets:reps.map(r=>({w:90,r,rir,done:true}))}}}];
+    for(const rir of [null,2]) {
+        const hs=exposure(rir);
+        const s=sessionSuggestion(p,p.days[0],0,null,'lb',1,hs);
+        assert.equal(s.action,'increase_load');
+        assert.ok(s.setTargets[0].weight>90,'only the qualifying set earns the next loadable weight');
+        assert.deepEqual(s.setTargets.map(t=>t.earnedLoadIncrease),[true,false,false,false]);
+        const rows=prescribeSets(p,p.days[0],leg,0,1,'lb',s,{}, {},hs,false).filter(r=>!r.warm&&!r.sub);
+        assert.ok(Number(rows[0].weight)>90,'earned increase survives real workout issuance');
+        assert.deepEqual(rows.slice(1).map(r=>Number(r.weight)),[90,90,90]);
+        assert.deepEqual(rows.map(r=>Number(r.reps)),[15,20,17,18]);
+    }
+    const hs=exposure(0);
+    const held=sessionSuggestion(p,p.days[0],0,null,'lb',1,hs);
+    assert.notEqual(held.action,'increase_load','explicit below-target effort does not qualify for a bump');
+}
+
+/* Machine Hip Thrust 3 vs 5: compare the exact working prescription,
+ * issued rows, weekly total and muscle volume even after
+ * an in-place edit (the old volume cache could miss this change). */
+{
+    const {sessionPrescriptionRows,plannedWeek,weeklyVolume,weekMuscleBreakdown}=await import('../modules/engine-api.js');
+    const hip=EX_BY_ID['machine-hip-thrust'];
+    const p={...structuredClone(program),id:'hip-count-parity',
+        days:[{id:'lower',label:'Lower',primaryIndex:-1,exercises:[hip.id]}],
+        overrides:{'lower:0':{sets:3,reps:'8-12',rir:'2',techOverride:null}},ss:{}};
+    const d=p.days[0];
+    for(const count of [3,5,3]) {
+        p.overrides['lower:0'].sets=count;
+        const issued=prescribeSets(p,d,hip,0,1,'lb',null,{},{},[],true)
+            .filter(s=>!s.warm&&!s.sub);
+        assert.equal(sessionPrescriptionRows(p,d,1)[0].cell.sets,count);
+        assert.equal(issued.length,count);
+        assert.equal(plannedWeek(p,1).sets,count);
+        assert.equal(weeklyVolume(p,1).glutes,count);
+        assert.equal(weekMuscleBreakdown(p,1).find(v=>v.part==='glutes').sets,count);
+    }
+}

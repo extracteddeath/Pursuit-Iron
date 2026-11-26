@@ -778,7 +778,8 @@ function positionedPriorLoads(perf, count, ex, fromUnit, toUnit) {
     return Array.from({ length: count }, (_, index) => {
         const observed = previousWorkoutSet(perf, index);
         const converted = observed && convertHistoryLoad(observed.w, fromUnit, toUnit);
-        return ex && converted > 0 ? loadableAtOrBelow(ex, converted, toUnit) : null;
+        return ex && converted > 0 ? loadableForSuggestion(ex, converted, toUnit,
+            fromUnit === toUnit ? [converted] : [], false) : null;
     });
 }
 
@@ -926,14 +927,21 @@ function loadableForSuggestion(ex, w, unit, known, nearest) {
 
 function customExerciseHistoryRefs(program, day, id, history) {
     const targetIndex = (program?.days || []).findIndex(candidate => candidate?.id === day?.id);
-    const own = normalizeHistoryEntries(history, program.id).entries.filter(h => h?.perf?.[id])
+    // A machine-scoped empty performance is not an exposure. It must not
+    // hide an older valid same-machine workout or block a starting reference.
+    const hasEvidence = h => {
+        const perf = h?.perf?.[id];
+        return Array.isArray(perf?.sets) ? completedHistorySets(perf).length > 0
+            : representativeCustomLoad(perf) > 0;
+    };
+    const own = normalizeHistoryEntries(history, program.id).entries.filter(hasEvidence)
         .slice().sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
     const comparable = targetIndex < 0 ? null : own.find(entry => resolveHistoryDayIndex(program.days, entry) === targetIndex) ?? null;
     if (comparable || own.length)
         return { comparable, reference: own[0] ?? null };
     // Cross-program history is deliberately reference-only and is consulted only when this program
     // has no canonical history for the exercise at all.
-    const entries = normalizeHistoryRevisions(history).entries.filter(h => h?.perf?.[id]).slice().sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
+    const entries = normalizeHistoryRevisions(history).entries.filter(hasEvidence).slice().sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
     return { comparable: null, reference: entries[0] || null };
 }
 function customExerciseHistory(program, day, id, history) {
@@ -1184,6 +1192,11 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
         if (estimateLoad > gymCap + 1e-6) estimateLoad = null;
         if (!(estimateLoad > 0)) estimate = estimateLoad = null;
     }
+    // Use the same equipment rule for issued rows as for the review. A real
+    // same-unit historical setting is evidence when the grid is only inferred.
+    const priorUnit = sug?.lastUnit || sug?.unit || unit;
+    const knownLoads = priorUnit === unit ? completedHistorySets(sug?.last)
+        .map(row => historyNumber(row.w)).filter(value => value > 0) : [];
     const targets = buildRuntimeSetTargets({
         exerciseId: resolveNextShellExerciseId(program, day, slot, ex) || ex.id,
         cell,
@@ -1194,7 +1207,7 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
         loadingInventory: loadingInventoryWithExerciseSteps(request?.equipment?.loading, unit, program?.exLoadInc,
             { nativeDefaults: !program.config?.loadingInventory }),
         equipmentAvailable: request?.equipment?.available,
-        snapLoad: value => loadableAtOrBelow(ex, value, unit)
+        snapLoad: value => loadableForSuggestion(ex, value, unit, knownLoads, false)
     });
     const range = cellRepRange(cell, program, ex, slot === day.primaryIndex);
     const rangeText = range[0] === range[1] ? String(range[0]) : `${range[0]}-${range[1]}`;
@@ -1205,7 +1218,8 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
         const previous = previousWorkoutSet(sug?.last, index);
         const priorUnit = sug?.lastUnit || sug?.unit || unit;
         const comparableLoad = previous?.w > 0
-            ? loadableAtOrBelow(ex, convertHistoryLoad(previous.w, priorUnit, unit), unit)
+            ? loadableForSuggestion(ex, convertHistoryLoad(previous.w, priorUnit, unit), unit,
+                priorUnit === unit ? [previous.w] : [], false)
             : null;
         const numeric = value => value !== null && value !== undefined && value !== ''
             && Number.isFinite(Number(value)) ? Number(value) : null;

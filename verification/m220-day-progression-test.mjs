@@ -66,6 +66,15 @@ const pending = [automatic, { ...automatic, done: true }, { ...automatic, valueO
 const before = structuredClone(pending);
 const refreshed = refreshPendingSetTargets(pending, [{...automatic,weight:'205',target:{...automatic.target,w:'205'}}]);
 assert.equal(refreshed[0].weight, '205'); assert.equal(refreshed[0].target.w, '205');
+// A current issued snapshot is not a legacy repair candidate, even if the
+// next recommendation would lower an untouched row after a restart.
+const issuedWrist = { ...automatic, weight:'15', reps:'18',
+    target:{w:'15',reps:'15-20',prefillReps:'18',
+        decisionTrace:{schemaVersion:1,ownership:'prescription',target:{load:15,reps:18,unit:'lb'}}} };
+const coldWrist = JSON.parse(JSON.stringify([issuedWrist]));
+const freshWrist = [{ ...issuedWrist,weight:'10',target:{...issuedWrist.target,w:'10'} }];
+assert.equal(refreshPendingSetTargets(coldWrist,freshWrist),coldWrist,
+    'Cold resume cannot replace a trace-backed 15 x 18 issued working set with 10 x 18');
 const unproven = { ...automatic, target: { w: '210', reps: '12-20' } };
 const missingProof = [unproven];
 assert.equal(refreshPendingSetTargets(missingProof,
@@ -449,3 +458,49 @@ console.log('PASS B995: shortening means non-comparable, never 3-of-2 completion
     assert.deepEqual(savedHistory,before,'Replay must not change saved user history');
 }
 console.log('PASS B997 real backup replay: 3 completed of 4 prescribed cannot promote 60 to 65 after week changes to 3 sets.');
+
+/* A newer same-day workout with no completed observations for this slot
+ * cannot replace the Dynamic Double decision from its last actual exposure.
+ * Use the real generated adapter, not a synthetic evaluator-only session. */
+{
+    const p=structuredClone(generated), d=p.days[0], i=slot, id=d.exercises[i];
+    for(const [field,value] of [['sets',4],['reps','15-20'],['rir','2'],['progressionStyle','dynamic']])
+        p.overrides[`${d.id}:${i}`]=markUserPrescriptionOverride(p.overrides[`${d.id}:${i}`]||{},field,value);
+    const valid={id:'generated-dd-actual',programId:p.id,dayId:d.id,date:4000,weekIndex:1,unit:'lb',
+        perf:{[id]:{weight:90,reps:20,sets:[20,19,16,17].map(r=>({w:90,r,rir:2,tr:2,done:true}))}}};
+    const sibling=d.exercises.find((exercise,index)=>index!==i&&exercise!==id);
+    assert.ok(sibling,'generated fixture must have another lift');
+    const newer={...valid,id:'generated-dd-skipped',date:5000,perf:{
+        [id]:{weight:null,reps:null,sets:[]},
+        [sibling]:{weight:90,reps:10,sets:[{w:90,r:10,rir:2,done:true}]}}};
+    const original=nextWorkoutSuggestionForShell(p,[valid],EXERCISES,d,i,1,'lb');
+    const retained=nextWorkoutSuggestionForShell(p,[valid,newer],EXERCISES,d,i,1,'lb');
+    assert.equal(original.action,'increase_load','complete generated dynamic exposure earns one set increase');
+    assert.equal(retained.sourceEntryId,valid.id);
+    assert.deepEqual(retained.setTargets,original.setTargets,'unobserved newer slot cannot erase earned progression');
+    assert.deepEqual(retained.setTargets.map(t=>t.earnedLoadIncrease),[true,false,false,false]);
+    const s=sessionSuggestion(p,d,i,null,'lb',1,[valid,newer]);
+    const rows=prescribeSets(p,d,EX_BY_ID[id],i,1,'lb',s,{}, {},[valid,newer],false).filter(r=>!r.warm&&!r.sub);
+    assert.ok(Number(rows[0].weight)>90);
+    assert.deepEqual(rows.slice(1).map(r=>Number(r.weight)),[90,90,90]);
+    assert.deepEqual(rows.map(r=>Number(r.reps)),[15,20,17,18]);
+}
+
+/* Phone report: planned machine hip thrust 3, stale live workout 5.
+ * Only untouched automatic surplus may be removed; actual and explicit work survives. */
+{
+    const id='machine-hip-thrust', d={id:'lower',label:'Lower',primaryIndex:-1,exercises:[id]};
+    const p={...structuredClone(program),days:[d],overrides:{'lower:0':{sets:3,reps:'10-15',rir:'2'}}};
+    const fresh=prescribeSets(p,d,EX_BY_ID[id],0,1,'lb',null,{}, {},[],false);
+    assert.equal(computeCell(p,d,id,0,1).sets,3);
+    assert.equal(fresh.filter(s=>!s.warm&&!s.sub).length,3);
+    const auto={weight:'90',reps:'12',auto:true,valueOwner:'prescription',target:{w:'90',prefillReps:'12'}};
+    const stale=Array.from({length:5},()=>structuredClone(auto));
+    assert.equal(refreshPendingSetTargets(stale,fresh).length,3);
+    const logged={...stale[3],done:true}, added={...stale[4],added:true};
+    const kept=refreshPendingSetTargets([...stale.slice(0,3),logged,added],fresh);
+    assert.equal(kept.length,5);
+    assert.equal(kept[3],logged);
+    assert.equal(kept[4],added);
+    assert.equal(stale.length,5);
+}

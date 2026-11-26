@@ -98,6 +98,23 @@ try {
     assert.equal(restored[1],stale[1], 'manual ownership is immutable');
     assert.equal(restored[2],stale[2], 'completed performance is immutable');
 
+    // A demonstrated same-unit setting remains valid when the step is only a
+    // guess. A confirmed increment still has authority over a new issue.
+    setExLoadInc({});
+    const inferred={...program,exLoadInc:{}};
+    const prior={weight:17.5,reps:8,sets:[8,9,8].map(r=>({w:17.5,r,done:true}))};
+    const retained={weight:17.5,target:9,action:'hold',last:prior,lastUnit:'lb',
+        setTargets:prior.sets.map(s=>({weight:s.w,reps:s.r}))};
+    const observed=prescribeSets(inferred,day,ex,0,2,'lb',retained,null,{},[],false)
+        .filter(s=>!s.warm&&!s.sub);
+    assert.deepEqual(observed.map(s=>Number(s.weight)),[17.5,17.5,17.5],
+        'Issuance must not independently floor a known same-unit setting on an inferred grid');
+    setExLoadInc(increment);
+    const explicit=prescribeSets(program,day,ex,0,2,'lb',retained,null,{},[],false)
+        .filter(s=>!s.warm&&!s.sub);
+    assert.deepEqual(explicit.map(s=>Number(s.weight)),[15,15,15],
+        'A confirmed changed increment remains authoritative for future prescriptions');
+
     const stocked = defaultLoadingInventoryFor('lb');
     stocked.exerciseOverrides[id] = {availableLoads:[105,115,120,125]};
     const rack = loadingInventoryWithExerciseSteps(stocked,'lb',increment);

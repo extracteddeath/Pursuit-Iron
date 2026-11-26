@@ -133,7 +133,10 @@ try {
             'IME navigation leaves the typed reps unchanged');
         assert.equal(await page.$eval('[data-testid="set-0-0"]', n=>n.dataset.done),'0',
             'IME Done does not log or complete the set');
-        await page.click('[data-testid="set-0-0"] button[aria-label="weight up"]');
+        await page.tap(weightField);
+        await page.tap('[data-testid="set-0-0"] button[aria-label="weight up"]');
+        assert.equal(await page.$eval(weightField, input => document.activeElement === input),false,
+            'A stepper tap dismisses the active numeric selection instead of keeping Android editing mode open');
         assert.ok(Number(await page.$eval(weightField, input => input.value)) > 205.5, 'steppers continue from the typed decimal');
         await page.focus('[data-testid="set-0-0"] button[aria-label="weight down"]');
         await page.keyboard.press('Tab');
@@ -203,6 +206,9 @@ try {
         assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[0].actualRIR), 2, 'older effort stays editable');
         await page.click('[data-testid="set-0-1"] button[aria-label="Mark set not done"]'); await settle();
         assert.equal(await page.$eval('[data-testid="set-0-1"] input[aria-label="weight"]', n => n.value), '190', 'Undo preserves the logged weight');
+        assert.equal(await page.$('[data-rest-card]'),null,'Undoing the countdown source cancels that invalid rest');
+        await page.click('[data-testid="set-0-1"] button[aria-label="Mark set done"]'); await settle();
+        assert.ok(await page.$('[data-rest-card]'),'Re-logging starts a new countdown');
         if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b827-after-log-phone.png') });
         await page.click('.wpb-workout-footer button[aria-label="Next exercise"]');
         await page.waitForSelector('[data-testid="set-1-0"]');
@@ -247,15 +253,27 @@ try {
             await page.keyboard.type(replacement);
             assert.equal(await page.$eval(selector, input => input.value), replacement);
         }
-        await page.click('button[aria-label="Exit focused mode"]');
+        await page.tap('.wpb-focus-value-input[aria-label="reps"]');
+        await page.tap('button[aria-label="Exit focused mode"]');
+        await settle();
+        assert.equal(await page.evaluate(() => document.activeElement?.matches('.wpb-focus-value-input')),false,
+            'Leaving Focus dismisses pending touch selection; deferred callbacks cannot restore the old field');
         await page.waitForSelector('[data-testid="set-0-0"]');
         assert.equal(await page.$eval(weightField, input => input.value), '195');
         assert.equal(await page.$eval(repsField, input => input.value), '6');
         // Regression: four finished sets must look like the ORIGINAL faded set rows,
         // not collapsed to summaries, even when the exercise itself is complete.
         for (let si = 0; si < 4; si++) {
-            await page.click(`[data-testid="set-0-${si}"] button[aria-label="Mark set done"]`);
-            await settle();
+            const row = `[data-testid="set-0-${si}"]`;
+            // The earlier rest regression deliberately re-logged set 2.
+            // Preserve that receipt rather than toggling it off or trying
+            // to complete a row which is already complete.
+            assert.equal(await page.$eval(row, n => n.dataset.done), si === 1 ? '1' : '0');
+            if (si !== 1) {
+                await page.click(row + ' button[aria-label="Mark set done"]');
+                await settle();
+            }
+            assert.equal(await page.$eval(row, n => n.dataset.done), '1');
         }
         const completed = await page.$$eval('[data-testid^="set-0-"][data-done="1"]', rows => rows.map(row => {
             const weight = row.querySelector('input[aria-label="weight"]');

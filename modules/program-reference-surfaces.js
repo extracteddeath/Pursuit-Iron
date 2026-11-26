@@ -1,6 +1,6 @@
 // Program reference and progression presentation. App owns changes and persistence.
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Check, Settings2, TrendingUp, Star, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { weeksOf, sessionPrescriptionRows, EX_BY_ID, PROG_STYLES, effortLabel, computeCell, exerciseAt } from './engine-api.js';
 import { UiAction, UiChoice, UiSheetClose, UiSheetHeading } from './ui-primitives.js';
@@ -130,6 +130,27 @@ export function ProgressionCard({ program, open, onToggle }) {
     // Clamp the view when the same program is shortened without changing component identity.
     const start = Math.max(0, Math.min(from, totalWeeks - Math.min(2, totalWeeks)));
     const cols = [start + 1, start + 2].filter(week => week <= totalWeeks);
+    const tableRef = useRef(null), anchorRef = useRef(null);
+    const moveWeek = next => {
+        const table = tableRef.current;
+        const scroller = table?.closest('.wpb-plan-view');
+        const header = table?.querySelector('.wpb-progression-week-header');
+        if (scroller && header) {
+            const visibleTop = Math.max(scroller.getBoundingClientRect().top, header.getBoundingClientRect().bottom);
+            const row = Array.from(table.querySelectorAll('[data-progression-row]'))
+                .find(node => node.getBoundingClientRect().bottom > visibleTop + 1);
+            if (row) anchorRef.current = { node: row, top: row.getBoundingClientRect().top, scroller };
+        }
+        setFrom(next);
+    };
+    useLayoutEffect(() => {
+        const anchor = anchorRef.current;
+        anchorRef.current = null;
+        if (!anchor?.node.isConnected || !anchor.scroller.isConnected) return;
+        // Stable day/slot keys preserve the same exercise while the columns
+        // change. Compensate for rows above it changing height across weeks.
+        anchor.scroller.scrollTop += anchor.node.getBoundingClientRect().top - anchor.top;
+    }, [start]);
     const columns = useMemo(() => cols.map(week => ({ week, rows: new Map((program.days || []).flatMap(day =>
         sessionPrescriptionRows(program, day, week).map(row => [`${day.id}:${row.slot}`, row]))) })), [program, start, totalWeeks]);
     const upper = new Set(['chest', 'lats', 'upper_back', 'shoulders', 'biceps', 'triceps', 'forearms', 'traps', 'neck']);
@@ -144,7 +165,7 @@ export function ProgressionCard({ program, open, onToggle }) {
     });
     return _jsx(InfoCard, { icon: TrendingUp, title: 'Lift progression', open, onToggle,
         subtitle: `${rows.length} lifts · ${weeks} training week${weeks === 1 ? '' : 's'}${program.config?.deload ? ' + deload' : ''}`,
-        children: _jsxs('div', { className: 'wpb-progression', 'data-columns': cols.length, children: [
+        children: _jsxs('div', { ref: tableRef, className: 'wpb-progression', 'data-columns': cols.length, children: [
             _jsxs('div', { className: 'wpb-progression-search-row', role: 'search', 'aria-label': 'Find a lift', children: [
                 _jsx('input', { type: 'search', autoComplete: 'off', spellCheck: false, value: q, onChange: event => setQ(event.target.value), placeholder: 'Search a lift…',
                     'aria-label': 'Search a lift', className: 'wpb-progression-search' }),
@@ -157,15 +178,16 @@ export function ProgressionCard({ program, open, onToggle }) {
                     _jsx(UiChoice, { selected: filter === key, onClick: () => setFilter(key), className: 'wpb-progression-filter', children: label }, key)) }),
             _jsx('p', { className: 'wpb-progression-result-count', role: 'status', 'aria-live': 'polite',
                 children: `${shown.length} of ${rows.length} lifts shown` }),
+            _jsxs('div', { className: 'wpb-progression-week-header', children: [
             _jsxs('div', { className: 'wpb-progression-pager', children: [
                 _jsx(UiAction, { variant: 'tonal', 'data-icon-only': true, className: 'wpb-progression-page', 'aria-label': 'Earlier weeks',
-                    disabled: start === 0, onClick: () => setFrom(Math.max(0, start - 1)), children: _jsx(ChevronLeft, { size: 18, 'aria-hidden': true }) }),
+                    disabled: start === 0, onClick: () => moveWeek(Math.max(0, start - 1)), children: _jsx(ChevronLeft, { size: 18, 'aria-hidden': true }) }),
                 _jsx('span', { className: 'wpb-progression-page-label', 'aria-live': 'polite', children: cols.length > 1 ? `Weeks ${cols[0]}–${cols.at(-1)} of ${totalWeeks}` : `Week ${cols[0]} of ${totalWeeks}` }),
                 _jsx(UiAction, { variant: 'tonal', 'data-icon-only': true, className: 'wpb-progression-page', 'aria-label': 'Later weeks',
-                    disabled: start + cols.length >= totalWeeks, onClick: () => setFrom(Math.max(0, Math.min(totalWeeks - 2, start + 1))), children: _jsx(ChevronRight, { size: 18, 'aria-hidden': true }) })
+                    disabled: start + cols.length >= totalWeeks, onClick: () => moveWeek(Math.max(0, Math.min(totalWeeks - 2, start + 1))), children: _jsx(ChevronRight, { size: 18, 'aria-hidden': true }) })
             ] }),
             _jsxs('div', { className: 'wpb-progression-columns', 'aria-hidden': true, children: [
-                _jsx('span', { children: 'Exercise' }), ...cols.map(week => _jsx('span', { children: week > weeks ? 'Deload' : `Wk ${week}` }, week))] }),
+                _jsx('span', { children: 'Exercise' }), ...cols.map(week => _jsx('span', { children: week > weeks ? 'Deload' : `Wk ${week}` }, week))] })] }),
             !shown.length && _jsxs('div', { className: 'wpb-progression-empty', children: [
                 _jsx('p', { children: rows.length ? 'No lifts match the current search or filter.' : 'No lifts are scheduled in this program yet.' }),
                 rows.length > 0 && _jsx(UiAction, { variant: 'tonal', className: 'wpb-progression-reset',

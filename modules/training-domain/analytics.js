@@ -1554,16 +1554,12 @@ function weeklyRecap(history, unit) {
 
 const __weeklyVolMemo = new WeakMap();
 
-function __volKey(program, weekIndex) {
-    const days = (program.days || []).map(d => (d.exercises || []).join(",")).join("|");
-    const bias = program.slotBias ? JSON.stringify(program.slotBias) : "";
-    /* ⚠ ANYTHING THAT CHANGES A SET COUNT BELONGS IN THIS KEY. The memo is keyed on exercise ids and
-       slotBias; `weekOff` changes what `computeCell` returns and was invisible to it, so a slot turned
-       off for a week still reported its old volume — the exact "repair pass reads stale numbers" trap
-       this key already carries a warning about, hit again by a new input. */
-    const off = program.weekOff ? JSON.stringify(program.weekOff) : "";
-    const pair = program.pairs ? JSON.stringify(program.pairs) : "";
-    return `${weekIndex}::${days}::${bias}::${off}::${pair}`;
+function __volKey(program, weekIndex, rows = daysInWeek(program, weekIndex).flatMap(day =>
+    sessionPrescriptionRows(program, day, weekIndex))) {
+    // Cache the resolved prescription itself, not a partial list of inputs.
+    // Set-count overrides, rotation, auto-bias and disabled slots are already
+    // reflected here. The engine version owns secondary-muscle credits.
+    return JSON.stringify([weekIndex, program.engineV, rows.map(({id, cell}) => [id, cell.sets])]);
 }
 
 function weeklyVolume(program, weekIndex) {
@@ -1571,36 +1567,22 @@ function weeklyVolume(program, weekIndex) {
         const snapshot = captureShellVolumeSnapshot(program, weekIndex, EXERCISES);
         if (snapshot) return snapshot.volume;
     }
-    const key = __volKey(program, weekIndex);
+    const rows = daysInWeek(program, weekIndex).flatMap(day => sessionPrescriptionRows(program, day, weekIndex));
+    const key = __volKey(program, weekIndex, rows);
     let byWeek = __weeklyVolMemo.get(program);
-    if (byWeek) {
-        const hit = byWeek.get(key);
-        if (hit)
-            return hit;
-    }
-    else {
+    if (!byWeek) {
         byWeek = new Map();
         __weeklyVolMemo.set(program, byWeek);
     }
-    /* ⚠ TWO OWNERS FOR ONE FACT. `weeklyVolumeOf` in the generator computes the same thing and both
-       iterated `program.days` independently — so teaching one about alternating weeks left the other
-       reporting every day every week, and a rotating program read 7.0 in both weeks while its rotation
-       mean said 5.5. `daysInWeek` is the single answer to "which days happen in week N"; both callers
-       ask it. Non-rotating programs get `program.days` unchanged. */
+    const hit = byWeek.get(key);
+    if (hit) return hit;
     const map = {};
-    daysInWeek(program, weekIndex).forEach(day => {
-        day.exercises.forEach((_id, slot) => {
-            const id = exerciseAt(program, day, slot, weekIndex);
-            const ex = EX_BY_ID[id];
-            if (!ex)
-                return; // guard against a stale/unknown exercise id (matches weeklySubVolume)
-            const sets = Number(computeCell(program, day, id, slot, weekIndex).sets) || 0;
-            map[ex.part] = (map[ex.part] || 0) + sets; // direct
-            secondaryOf(ex, program.engineV).forEach(([p, f]) => { map[p] = (map[p] || 0) + sets * f; }); // fractional
-        });
+    rows.forEach(({ex, cell}) => {
+        const sets = Number(cell.sets);
+        map[ex.part] = (map[ex.part] || 0) + sets;
+        secondaryOf(ex, program.engineV).forEach(([p, f]) => { map[p] = (map[p] || 0) + sets * f; });
     });
-    if (byWeek.size > 64)
-        byWeek.clear(); // a mutating generation pass churns keys; keep the map bounded
+    if (byWeek.size > 64) byWeek.clear();
     byWeek.set(key, map);
     return map;
 }
@@ -1698,7 +1680,7 @@ function weekIntent(program, weekIndex) {
 
 function plannedWeek(program, weekIndex) {
     let sets = 0, mins = 0;
-    ((program && program.days) || []).forEach(d => {
+    (program?.days?.length ? daysInWeek(program, weekIndex) : []).forEach(d => {
         const summary = summarizeSession(program, d, weekIndex);
         sets += summary.sets;
         mins += summary.budgetMinutes;
@@ -1708,7 +1690,7 @@ function plannedWeek(program, weekIndex) {
 
 function weekMuscleBreakdown(program, weekIndex) {
     const map = {};
-    ((program && program.days) || []).forEach(day => {
+    (program?.days?.length ? daysInWeek(program, weekIndex) : []).forEach(day => {
         dayMuscleBreakdown(program, day, weekIndex).forEach(e => {
             const t = map[e.part] || (map[e.part] = { part: e.part, sets: 0, from: [] });
             t.sets += e.sets;
@@ -3259,30 +3241,39 @@ function makeMyoMini(w, prescribed = true) {
 }
 
 function growMyoSets(sets) {
-    if (!Array.isArray(sets) || !sets.length)
-        return sets;
-    let lastMyo = -1;
-    let count = 0;
-    sets.forEach((s, i) => { if (s && s.sub && s.kind === "myo") {
-        lastMyo = i;
-        count++;
-    } });
-    if (lastMyo < 0 || count >= MYO_MAX_SETS)
-        return sets;
-    const last = sets[lastMyo];
-    if (!last.done)
-        return sets;
-    const reps = parseInt(last.reps);
-    if (!(reps >= MYO_MIN_REPS))
-        return sets; // couldn't hold the range — the extension is over
-    /* NO LOAD GUARD. An earlier version refused to grow unless the last mini carried a positive
-       weight, which silently disabled the whole rule for BODYWEIGHT and ASSISTED work — and for any
-       loaded lift with no history yet, where the row opens blank because there is nothing to suggest.
-       The DOM gate caught it: three minis went in, the last was logged at the target reps, and nothing
-       appended. A blank load is a load the lifter has not typed yet, not a reason to end the set.
-       syncSubSets fills the new row from the activation set on the same pass anyway, so carrying the
-       last mini's weight through — blank or not — is both correct and self-correcting. */
-    return [...sets.slice(0, lastMyo + 1), makeMyoMini(last.weight, !!last.prescribed), ...sets.slice(lastMyo + 1)];
+    if (!Array.isArray(sets) || !sets.length) return sets;
+    // A myo chain is attached to the preceding working activation. Reconcile
+    // its earned size in both directions, including out-of-order undo.
+    const isMyo = row => row?.sub && row.kind === "myo";
+    const earned = row => row?.done && Number(row.reps) >= MYO_MIN_REPS;
+    const protectedRow = row => row.done || userOwnsRuntimeSet(row) ||
+        row.weightOwner === "user" || row.added;
+    let out = sets, activation = null;
+    for (let i = 0; i < out.length; i++) {
+        const row = out[i];
+        if (!row?.sub && !row?.warm) activation = row;
+        if (!isMyo(row)) continue;
+        let end = i + 1;
+        while (end < out.length && isMyo(out[end])) end++;
+        const chain = out.slice(i,end);
+        let prefix = 0;
+        if (activation?.done) {
+            while (prefix < chain.length && earned(chain[prefix])) prefix++;
+        }
+        const desired = Math.min(MYO_MAX_SETS, Math.max(MYO_MINI_SETS,prefix+1));
+        // Never discard logged or explicitly edited work. Preserve all
+        // positions through the last protected row, even after a gap.
+        let retain = desired;
+        for (let j = desired; j < chain.length; j++)
+            if (protectedRow(chain[j])) retain = j+1;
+        let next = chain;
+        if (chain.length > retain) next = chain.slice(0,retain);
+        else if (chain.length < desired && prefix === chain.length && activation?.done)
+            next = [...chain,makeMyoMini(activation.weight,!!chain.at(-1).prescribed)];
+        if (next !== chain) out = [...out.slice(0,i),...next,...out.slice(end)];
+        i += next.length-1;
+    }
+    return out;
 }
 
 function syncSubSets(sets, ex, unit) {

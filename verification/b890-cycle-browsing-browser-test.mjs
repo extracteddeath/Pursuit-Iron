@@ -180,6 +180,40 @@ try{
   assert.ok(await page.$('.wpb-plan-selected-week .wpb-plan-session-link[data-next="true"]'));
   for(const pane of ['volume','progression','blueprint']){
    await page.click(`[data-plan-pane="${pane}"]`);
+   if(pane==='progression'&&[320,390,1280].includes(width)){
+    await page.waitForSelector('.wpb-progression-week-header');
+    await page.waitForFunction(()=>document.querySelector('.wpb-progression .wpb-progression-row')&&
+      document.querySelector('.wpb-progression-page[aria-label="Later weeks"]')?.disabled===false);
+    const before=await page.evaluate(()=>{
+      const root=document.querySelector('.wpb-plan-view'),header=root.querySelector('.wpb-progression-week-header');
+      const rows=[...root.querySelectorAll('[data-progression-row]')],row=rows[Math.floor(rows.length/2)];
+      root.scrollTop+=row.getBoundingClientRect().top-root.getBoundingClientRect().top-header.offsetHeight-12;
+      return row.dataset.progressionRow;
+    });
+    const geometry=()=>page.evaluate(id=>{
+      const root=document.querySelector('.wpb-plan-view'),header=root.querySelector('.wpb-progression-week-header');
+      const row=[...root.querySelectorAll('[data-progression-row]')].find(n=>n.dataset.progressionRow===id);
+      const b=header.querySelector('[aria-label="Later weeks"]'),r=b.getBoundingClientRect(),v=root.getBoundingClientRect();
+      const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+      return {rowTop:row.getBoundingClientRect().top,scroll:root.scrollTop,headerTop:header.getBoundingClientRect().top,
+        viewportTop:v.top,topInset:root.clientTop+parseFloat(getComputedStyle(root).paddingTop),visible:r.top>=v.top-2&&r.bottom<=v.bottom+2,hit:b.contains(hit),
+        week:row.querySelector('[data-progression-week]').dataset.progressionWeek,
+        x:r.left+r.width/2,y:r.top+r.height/2};
+    },before);
+    const a=await geometry();
+    assert.ok(a.scroll>0&&a.visible&&a.hit&&a.headerTop>=a.viewportTop-2&&a.headerTop<=a.viewportTop+a.topInset+2,
+      'Progression controls remain usable at a deeply scrolled exercise: '+JSON.stringify(a));
+    await page.mouse.click(a.x,a.y);
+    await page.waitForFunction((id,w)=>[...document.querySelectorAll('[data-progression-row]')].find(n=>n.dataset.progressionRow===id)
+      ?.querySelector('[data-progression-week]')?.dataset.progressionWeek===String(Number(w)+1),{},before,a.week);
+    const next=await geometry();
+    assert.ok(Math.abs(next.rowTop-a.rowTop)<=4&&next.scroll>0,'Week change retains the same exercise and reading position');
+    await page.click('.wpb-progression-page[aria-label="Earlier weeks"]');
+    await page.waitForFunction((id,w)=>[...document.querySelectorAll('[data-progression-row]')].find(n=>n.dataset.progressionRow===id)
+      ?.querySelector('[data-progression-week]')?.dataset.progressionWeek===w,{},before,a.week);
+    assert.ok(Math.abs((await geometry()).rowTop-a.rowTop)<=4,'Earlier week retains the same exercise');
+    await page.$eval('.wpb-plan-view',n=>n.scrollTop=0);
+   }
    for(const index of [1,2,0]){
     await page.$$eval('.wpb-plan-block-nav button',(ns,index)=>ns[index].click(),index);
     await page.waitForFunction((pane,index)=>document.querySelector(`[data-plan-pane="${pane}"]`)?.getAttribute('aria-pressed')==='true'

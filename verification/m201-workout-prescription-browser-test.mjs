@@ -26,7 +26,7 @@ localStorage.setItem('m201-seeded','1');localStorage.setItem('wpb:live',JSON.str
 {weight:'25',reps:'12',done:false,auto:true,target:{w:'25',reps:'8-12'}},
 {weight:'25',reps:'14',done:false,auto:true,target:{w:'25',reps:'12-20'}},
 {weight:'25',reps:'13',done:false,auto:true,added:true,target:{w:'25',reps:'8-12'}}]}]}));}
-createRoot(document.getElementById('root')).render(React.createElement('div',{className:'wpb',style:{height:'100%'}},React.createElement(StyleTag),React.createElement(WorkoutSession,{program,day:program.days[0],weekIndex:week,unit:'lb',perf:{},history,restAutoStart:false,warmupCard:false,onExit:()=>{},onFinish:()=>{},setUnit:()=>{}})));
+createRoot(document.getElementById('root')).render(React.createElement('div',{className:'wpb',style:{height:'100%'}},React.createElement(StyleTag),React.createElement(WorkoutSession,{program,day:program.days[0],weekIndex:week,unit:'lb',perf:{},history,restAutoStart:exercise==='lat-raise',warmupCard:false,onExit:()=>{},onFinish:()=>{},setUnit:()=>{}})));
 window.__m201Ready=true;
 </script></body></html>`;
 const variants = ['seated-db-lat-raise','single-db-lat-raise','chest-supported-lat-raise','seated-cable-lat-raise','cuff-cable-lat-raise','seated-rear-fly','single-cable-rear-fly','chest-supported-rear-fly'];
@@ -102,6 +102,57 @@ try {
     await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets.some(s=>s.sub&&s.kind==='myo'));
     assert.equal((await rows()).filter(s=>s.sub&&s.kind==='myo'&&s.prescribed).length,3);
     await page.screenshot({path:path.join(root,'verification/m201-intensifier-phone.png'),fullPage:true});
+    // Reproduce the wrong-exercise correction in the real workout logger.
+    const clickSet=async(index,done)=>{
+        const selector=`[data-testid="set-0-${index}"] button[aria-label="Mark set ${done?'done':'not done'}"]`;
+        await page.waitForSelector(selector);
+        await page.click(selector);
+        await page.waitForFunction((i,expected)=>{
+            const set=JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[i];
+            return set ? set.done===expected : !expected;
+        },{},index,done);
+    };
+    const clearRest=async()=>{
+        if(await page.$('button[aria-label="Skip rest"]'))await page.click('button[aria-label="Skip rest"]');
+        await page.waitForSelector('[data-rest-card]',{hidden:true});
+    };
+    const exerciseRows=await rows();
+    const firstMini=exerciseRows.findIndex(s=>s.sub&&s.kind==='myo');
+    assert.ok(firstMini>0);
+    const workIndexes=exerciseRows.map((r,i)=>!r.sub?i:-1).filter(i=>i>=0);
+    for(const i of workIndexes) {await clickSet(i,true);await clearRest();}
+    // First four minis each have a successor (including dynamic fourth/fifth).
+    for(let offset=0;offset<5;offset++){
+        await clickSet(firstMini+offset,true);
+        if(offset<4){
+            await page.waitForSelector('[data-rest-card]');
+            const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')));
+            assert.equal(state.restMax,15,'myo next-gap rest uses the short interval');
+        }
+        await clearRest();
+    }
+    assert.equal((await rows()).filter(s=>s.sub&&s.kind==='myo').length,5);
+    for(let i=(await rows()).length-1;i>=0;i--) {
+        const current=await rows();
+        if(current[i]?.done)await clickSet(i,false);
+    }
+    assert.equal((await rows()).filter(s=>s.sub&&s.kind==='myo').length,3);
+    assert.ok((await rows()).every(s=>!s.done));
+    await page.reload({waitUntil:'networkidle0'});
+    await page.waitForSelector('input[aria-label="reps"]');
+    assert.equal((await rows()).filter(s=>s.sub&&s.kind==='myo').length,3);
+    for(const i of workIndexes){await clickSet(i,true);if(i!==workIndexes.at(-1))await clearRest();}
+    await page.waitForSelector('[data-rest-card]');
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')).restMax),15);
+    await clearRest();
+    await clickSet(firstMini,true);
+    await page.waitForSelector('[data-rest-card]');
+    await clickSet(firstMini,false);
+    await page.waitForSelector('[data-rest-card]',{hidden:true});
+    await clickSet(firstMini,true);
+    await page.waitForSelector('[data-rest-card]');
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')).restMax),15);
+    await clearRest();
     await page.goto('http://127.0.0.1:8768/variants.html',{waitUntil:'networkidle0'});
     await page.waitForSelector('[data-variant-visual="lateral-seated-db"]');
     assert.equal(await page.$$eval('[data-variant]',nodes=>nodes.length),8);

@@ -8,7 +8,7 @@ import { analyzeShellHistoryForNextEngine, nextWorkoutSuggestionForShell,
     nextWorkoutSuggestionFromPerformedShell } from '../modules/next-engine/workout-history-adapter.js';
 import { captureShellVolumeSnapshot, repairShellVolume } from '../modules/next-engine/volume-repair.js';
 import { convertProgramToNextCycleForShell, advanceNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
-import { withProgressionChoices } from '../modules/session-tools.js';
+import { withProgressionChoices, buildSessionReview } from '../modules/session-tools.js';
 
 const fixture = JSON.parse(fs.readFileSync('verification/m205-generation-parity-results.json')).rows[3];
 const original = generateNextProgramForShell({ config: fixture.config, legacyExercises: EXERCISES,
@@ -305,3 +305,22 @@ for (const adaptBetweenBlocks of [false, true]) {
 }
 
 console.log('PASS M214 executable synchronization: user prescription/method ownership, honest completed-set evidence, shared techniques, cycle swaps/reorders, live diagnoses, stale saved identity, immutable history/base and Auto-fix protection.');
+
+ // App-bound review joins the portable M222 exact-dose checks without importing
+ // session-tools into the standalone engine package.
+ {
+    const hip = EX_BY_ID['machine-hip-thrust'];
+    const day = {id:'lower',label:'Lower',primaryIndex:-1,exercises:[hip.id]};
+    const program = {id:'hip-review-parity',custom:true,weeks:10,days:[day],
+        config:{unit:'lb',weeks:10,goal:'both',experience:'intermediate',progression:'auto',deload:false,equipment:['cable','machine','barbell','bench','rack']},
+        overrides:{'lower:0':{sets:3,reps:'8-12',rir:'2',techOverride:null}},ss:{}};
+    for (const count of [3,5,3]) {
+        program.overrides['lower:0'].sets=count;
+        const review=buildSessionReview(program,day,1,'lb');
+        const issued=prescribeSets(program,day,hip,0,1,'lb',null,{},{},[],true).filter(s=>!s.warm&&!s.sub);
+        assert.equal(computeCell(program,day,hip.id,0,1).sets,count);
+        assert.equal(review.exercises[0].effective.length,count);
+        assert.equal(issued.length,count);
+    }
+    console.log('PASS M214 review: edited 3/5/3 hip-thrust prescription agrees with live issuance.');
+ }

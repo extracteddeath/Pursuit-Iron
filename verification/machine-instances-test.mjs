@@ -103,3 +103,14 @@ assert.equal(machineStartingReference(history,{...referenceScope,gymId:'gymY',da
 const foreignSummary={...history[4],perf:{chest_press:{weight:100,reps:8,sets:[set(100,8,'B')]}}};
 assert.equal(historyForMachineRecommendation([foreignSummary],'chest_press','A','gymX',x)[0].perf.chest_press.weight,null);
 console.log('PASS same-machine starting references and cross-gym summary isolation');
+
+const mixedOrdinals=row('ordinal-mix',10,'gymX','upper',[
+    {...set(180,8,'A'),warm:true},set(90,20,'A'),set(50,19,'B'),
+    set(90,16,'A'),set(90,17,'A'),{...set(200,5,'A'),sub:true},
+    {...set(300,20,'A'),done:false}]);
+const beforeMixed=structuredClone(mixedOrdinals);
+const projected=historyForMachineRecommendation([mixedOrdinals],'chest_press','A','gymX',x)[0].perf.chest_press;
+assert.deepEqual(projected.sets.filter(s=>!s.warm&&!s.sub&&s.done!==false).map(s=>s.workingSetIndex),[0,2,3],
+    'Filtering station B must not compress A working-set positions');
+assert.equal(projected.weight,90,'warmups, technique extensions and pending rows cannot set the working-load summary');
+assert.deepEqual(mixedOrdinals,beforeMixed,'projection cannot rewrite historical receipts');

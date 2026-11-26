@@ -3241,30 +3241,39 @@ function makeMyoMini(w, prescribed = true) {
 }
 
 function growMyoSets(sets) {
-    if (!Array.isArray(sets) || !sets.length)
-        return sets;
-    let lastMyo = -1;
-    let count = 0;
-    sets.forEach((s, i) => { if (s && s.sub && s.kind === "myo") {
-        lastMyo = i;
-        count++;
-    } });
-    if (lastMyo < 0 || count >= MYO_MAX_SETS)
-        return sets;
-    const last = sets[lastMyo];
-    if (!last.done)
-        return sets;
-    const reps = parseInt(last.reps);
-    if (!(reps >= MYO_MIN_REPS))
-        return sets; // couldn't hold the range — the extension is over
-    /* NO LOAD GUARD. An earlier version refused to grow unless the last mini carried a positive
-       weight, which silently disabled the whole rule for BODYWEIGHT and ASSISTED work — and for any
-       loaded lift with no history yet, where the row opens blank because there is nothing to suggest.
-       The DOM gate caught it: three minis went in, the last was logged at the target reps, and nothing
-       appended. A blank load is a load the lifter has not typed yet, not a reason to end the set.
-       syncSubSets fills the new row from the activation set on the same pass anyway, so carrying the
-       last mini's weight through — blank or not — is both correct and self-correcting. */
-    return [...sets.slice(0, lastMyo + 1), makeMyoMini(last.weight, !!last.prescribed), ...sets.slice(lastMyo + 1)];
+    if (!Array.isArray(sets) || !sets.length) return sets;
+    // A myo chain is attached to the preceding working activation. Reconcile
+    // its earned size in both directions, including out-of-order undo.
+    const isMyo = row => row?.sub && row.kind === "myo";
+    const earned = row => row?.done && Number(row.reps) >= MYO_MIN_REPS;
+    const protectedRow = row => row.done || userOwnsRuntimeSet(row) ||
+        row.weightOwner === "user" || row.added;
+    let out = sets, activation = null;
+    for (let i = 0; i < out.length; i++) {
+        const row = out[i];
+        if (!row?.sub && !row?.warm) activation = row;
+        if (!isMyo(row)) continue;
+        let end = i + 1;
+        while (end < out.length && isMyo(out[end])) end++;
+        const chain = out.slice(i,end);
+        let prefix = 0;
+        if (activation?.done) {
+            while (prefix < chain.length && earned(chain[prefix])) prefix++;
+        }
+        const desired = Math.min(MYO_MAX_SETS, Math.max(MYO_MINI_SETS,prefix+1));
+        // Never discard logged or explicitly edited work. Preserve all
+        // positions through the last protected row, even after a gap.
+        let retain = desired;
+        for (let j = desired; j < chain.length; j++)
+            if (protectedRow(chain[j])) retain = j+1;
+        let next = chain;
+        if (chain.length > retain) next = chain.slice(0,retain);
+        else if (chain.length < desired && prefix === chain.length && activation?.done)
+            next = [...chain,makeMyoMini(activation.weight,!!chain.at(-1).prescribed)];
+        if (next !== chain) out = [...out.slice(0,i),...next,...out.slice(end)];
+        i += next.length-1;
+    }
+    return out;
 }
 
 function syncSubSets(sets, ex, unit) {

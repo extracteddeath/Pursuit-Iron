@@ -246,10 +246,12 @@ object CoachExerciseCatalogDomain {
                 } else {
                     val inspection=EquipmentLoadDomain.inspect(
                         stock,choice.selectedLoad,stock?.unit ?: LoadUnit.LB)
-                    if(inspection !is LoadInspection.Confirmed || !inspection.exact) {
+                    if(!KotlinSetNumberAuthorityDomain.validPrescribedLoad(
+                            choice.selectedLoad,checkNotNull(spec.expectedLoadBasis)) ||
+                        inspection !is LoadInspection.Confirmed || !inspection.exact) {
                         issues+=CatalogIssue(spec.exerciseId,
                             CatalogIssueType.LOAD_UNVERIFIED,
-                            "The specified working load is not physically confirmed.")
+                            "The specified working load is not a valid, physically confirmed prescription.")
                     }
                 }
                 // If the exact equipment is missing the whole request fails;

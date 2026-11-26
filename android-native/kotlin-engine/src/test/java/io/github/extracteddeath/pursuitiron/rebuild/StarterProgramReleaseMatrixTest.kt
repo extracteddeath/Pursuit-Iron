@@ -180,7 +180,11 @@ class StarterProgramReleaseMatrixTest {
                     val session=draft.sessions.single{it.dayIndex==dayIndex}
                     assertEquals(lift.exerciseId,session.exercises.first().exerciseId)
                     val work=session.exercises.first().sets.filter{it.type==DraftSetType.WORKING}
-                    assertTrue(work.all{it.targetReps==RepBand(3,6) && it.targetRir==2})
+                    // v13 deliberately gives peak primaries a lower rep ceiling;
+                    // strength retains the exact original band and effort.
+                    val expectedBand=if(phase==TrainingPhase.PEAK)RepBand(3,5) else RepBand(3,6)
+                    assertTrue("$split/$phase/${lift.exerciseId}: $work",
+                        work.isNotEmpty() && work.all{it.targetReps==expectedBand && it.targetRir==2})
                 }
                 for(intent in generated.intents.filter{it !in skill}) {
                     assertEquals(ComposerSessionPurpose.GENERAL_PREPARATION,intent.purpose)
@@ -198,6 +202,33 @@ class StarterProgramReleaseMatrixTest {
                 TrainingMuscle.WRIST_EXTENSORS)))
             assertFalse(result.mayIssueWorkout)
         }
+    }
+
+    @Test fun archivedV12PeakPreservesOriginalExactRepBandAndCurrentPeakKeepsCalibratedLoad() {
+        val input=StarterProgramReleaseFixture.request(ComposerSplit.UPPER_LOWER,TrainingPhase.PEAK)
+        val archivedInput=input.copy(policyVersion=CoachFirstProgramStartDomain.V12_POLICY_VERSION)
+        val archived=CoachFirstProgramStartDomain.review(archivedInput)
+        val current=CoachFirstProgramStartDomain.review(input)
+        assertEquals(FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,archived.status)
+        assertEquals(FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,current.status)
+        assertEquals("v12",archived.policy?.revision)
+        assertEquals("v13",current.policy?.revision)
+        for((review,band) in listOf(archived to RepBand(3,6),current to RepBand(3,5))) {
+            val generation=checkNotNull(review.generation)
+            val sessions=checkNotNull(review.prescription).sessions
+            val weekdays=checkNotNull(input.setup.reviewed).trainingWeekdays.sorted()
+            for(intent in generation.intents.filter{it.purpose==ComposerSessionPurpose.STRENGTH_SKILL}) {
+                val session=sessions.single{it.dayIndex==weekdays.indexOf(intent.weekday)}
+                val exercise=session.exercises.first()
+                assertEquals(intent.requiredPrimaryExerciseId,exercise.exerciseId)
+                val working=exercise.sets.filter{it.type==DraftSetType.WORKING}
+                assertTrue(working.isNotEmpty())
+                val calibrated=input.startingLoads.getValue(exercise.exerciseId)
+                assertTrue(working.all{it.targetReps==band && it.targetRir==2 &&
+                    (it.load as? DraftSetLoad.Verified)?.value?.compareTo(calibrated)==0})
+            }
+        }
+        assertEquals(archived,CoachFirstProgramStartDomain.review(archivedInput))
     }
 
     @Test fun fiveDayUlpplStrengthAndPeakGuaranteeTwoBenchAndTwoSquatSkills() {

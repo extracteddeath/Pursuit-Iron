@@ -40,16 +40,8 @@ internal data class NativeMovementConcernOptions(
  */
 internal object NativeMovementSwapEligibility {
     fun generated(journal:KotlinWorkoutJournalState?,exerciseId:String?):Boolean {
-        if(journal==null || exerciseId.isNullOrBlank() ||
-            journal.finishedByEventId!=null)return false
-        val targets=journal.snapshot.targets.filter{it.exerciseId==exerciseId}
-        if(targets.isEmpty())return false
-        val keys=targets.map{it.setKey}.toSet()
-        return targets.none{it.setKey in journal.effectiveSets} &&
-            journal.receipts.none{receipt->
-                (receipt.operation as? KotlinJournalOperation.RecordSet)
-                    ?.setKey?.let{it in keys}==true
-            }
+        if(journal==null || exerciseId.isNullOrBlank())return false
+        return KotlinComposerSwapReviewDomain.canReviewReplacement(journal,exerciseId)
     }
     fun custom(journal:CustomWorkoutJournalDraft?,slotId:String?):Boolean {
         if(journal==null || slotId.isNullOrBlank() ||

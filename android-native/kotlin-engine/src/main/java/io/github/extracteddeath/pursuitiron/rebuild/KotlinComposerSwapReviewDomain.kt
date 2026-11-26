@@ -98,6 +98,22 @@ sealed interface KotlinComposerSwapReview {
  * This cannot authorize itself or select a different athlete, gym or cycle.
  */
 object KotlinComposerSwapReviewDomain {
+    /** Bulk replacement by exercise ID is safe only for a single
+     * contiguous issued occurrence. Share the live review with the UI;
+     * do not change the historical journal replay contract. */
+    fun canReviewReplacement(state:KotlinWorkoutJournalState,exerciseId:String):Boolean {
+        if(state.finishedByEventId!=null ||
+            !KotlinWorkoutPresentationDomain.hasSingleOccurrence(
+                state.snapshot.targets,exerciseId))return false
+        val keys=state.snapshot.targets.filter{it.exerciseId==exerciseId}
+            .map{it.setKey}.toSet()
+        return keys.none{it in state.effectiveSets} &&
+            state.receipts.none{receipt->
+                (receipt.operation as? KotlinJournalOperation.RecordSet)
+                    ?.setKey?.let{it in keys}==true
+            }
+    }
+
     fun review(
         state:KotlinWorkoutJournalState,
         eventId:String,expectedRevision:Long,
@@ -109,6 +125,8 @@ object KotlinComposerSwapReviewDomain {
         fun reject(message:String)=KotlinComposerSwapReview.Rejected(message)
         if(state.finishedByEventId!=null || expectedRevision!=state.revision)
             return reject("Workout revision changed or this workout finished.")
+        if(!canReviewReplacement(state,previousExerciseId))
+            return reject("Only one unstarted exercise occurrence can be replaced.")
         val original=state.snapshot.targets.filter{
             it.exerciseId==previousExerciseId
         }
@@ -125,10 +143,6 @@ object KotlinComposerSwapReviewDomain {
                 original.map{it.type to it.ordinal}.toSet() ||
             intents.map{it.type to it.ordinal}.distinct().size!=intents.size)
             return reject("Every warm-up and working set needs a fresh target.")
-        if(state.receipts.any{r->
-            (r.operation as? KotlinJournalOperation.RecordSet)
-                ?.setKey in original.map{it.setKey}.toSet()
-        })return reject("Recorded sets cannot be replaced.")
         if(eventId.length !in 1..60 ||
             !eventId.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_:-]*$")))
             return reject("Invalid workout operation.")

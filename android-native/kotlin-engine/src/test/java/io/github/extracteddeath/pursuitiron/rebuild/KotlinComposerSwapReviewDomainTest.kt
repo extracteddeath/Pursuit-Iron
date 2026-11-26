@@ -61,6 +61,24 @@ class KotlinComposerSwapReviewDomainTest {
         return (result as KotlinJournalDecision.Proposed).state
     }
 
+    @Test fun repeatedMovementCannotCollapseTwoOccurrencesIntoOneSwap() {
+        val separated=issued.copy(targets=listOf(
+            target("db-press","old-0",0),
+            target("row","row-0",0,ComposerRole.ACCESSORY),
+            target("db-press","old-1",1)))
+        val journal=KotlinWorkoutJournalDomain.begin(separated,identity)
+        assertFalse(KotlinComposerSwapReviewDomain.canReviewReplacement(journal,"db-press"))
+        assertTrue(KotlinComposerSwapReviewDomain.canReviewReplacement(journal,"row"))
+        assertNull(WorkoutRemainingExerciseDomain.generated(journal,"db-press"))
+        assertTrue(reviewed(journal) is KotlinComposerSwapReview.Rejected)
+        assertEquals(listOf("db-press","row","db-press"),
+            KotlinWorkoutPresentationDomain.inspect(journal).exercises.map{it.exerciseId})
+        assertEquals(separated,journal.snapshot)
+        assertTrue(journal.receipts.isEmpty())
+        assertTrue(KotlinComposerSwapReviewDomain.canReviewReplacement(start(),"db-press"))
+        assertTrue(reviewed(start()) is KotlinComposerSwapReview.Ready)
+    }
+
     @Test fun gymBackedChoicesRankReviewedPatternAndExplicitRole() {
         val ranked=KotlinComposerSwapRankingDomain.rank(
             first,listOf(different,same,wrongRole,first),

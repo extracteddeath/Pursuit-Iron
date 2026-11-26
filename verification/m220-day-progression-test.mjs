@@ -66,6 +66,15 @@ const pending = [automatic, { ...automatic, done: true }, { ...automatic, valueO
 const before = structuredClone(pending);
 const refreshed = refreshPendingSetTargets(pending, [{...automatic,weight:'205',target:{...automatic.target,w:'205'}}]);
 assert.equal(refreshed[0].weight, '205'); assert.equal(refreshed[0].target.w, '205');
+// A current issued snapshot is not a legacy repair candidate, even if the
+// next recommendation would lower an untouched row after a restart.
+const issuedWrist = { ...automatic, weight:'15', reps:'18',
+    target:{w:'15',reps:'15-20',prefillReps:'18',
+        decisionTrace:{schemaVersion:1,ownership:'prescription',target:{load:15,reps:18,unit:'lb'}}} };
+const coldWrist = JSON.parse(JSON.stringify([issuedWrist]));
+const freshWrist = [{ ...issuedWrist,weight:'10',target:{...issuedWrist.target,w:'10'} }];
+assert.equal(refreshPendingSetTargets(coldWrist,freshWrist),coldWrist,
+    'Cold resume cannot replace a trace-backed 15 x 18 issued working set with 10 x 18');
 const unproven = { ...automatic, target: { w: '210', reps: '12-20' } };
 const missingProof = [unproven];
 assert.equal(refreshPendingSetTargets(missingProof,

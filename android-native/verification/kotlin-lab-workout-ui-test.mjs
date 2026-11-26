@@ -1784,6 +1784,12 @@ assert.ok(numberAuthority.includes('fun validPhysicalLoadValue(') &&
 const numberGenerated=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinWorkoutJournalDomain.kt');
 const numberCustom=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomWorkoutJournalDomain.kt');
 const numberEditor=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinWorkoutEntryDomain.kt');
+const numberSnapshot=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinWorkoutSnapshotDomain.kt');
+assert.ok(!numberEditor.includes('BigDecimal("100000")') &&
+  !numberSnapshot.includes('BigDecimal("100000")') &&
+  numberSnapshot.includes('KotlinSetNumberAuthorityDomain.validIssuedLoad(weight)') &&
+  numberSnapshot.includes('EquipmentLoadDomain.inspect('),
+  'Actual entry and generated snapshot must delegate numeric limits; stock remains independently verified for issued targets');
 const numberTests=read('android-native/kotlin-engine/src/test/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinSetNumberAuthorityDomainTest.kt');
 assert.ok(
   numberAuthority.includes('object KotlinSetNumberAuthorityDomain') &&

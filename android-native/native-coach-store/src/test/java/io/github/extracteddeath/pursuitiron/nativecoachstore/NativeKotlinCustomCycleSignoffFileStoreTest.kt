@@ -225,6 +225,196 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             as NativeCustomDraftReadResult.Found).draft.revision)
     }
 
+    @Test fun physicalStationProgressionKeepsIndependentEarnedStepsThroughColdIssue() =
+        physicalStationProgressionJourney(false)
+
+    @Test fun basicAssistedProgressionUsesLessCounterweightThroughColdIssue() =
+        physicalStationProgressionJourney(true)
+
+    // Same existing basic policy and journal path for both resistance
+    // directions. Two authored days use distinct physical station stocks.
+    private fun physicalStationProgressionJourney(assisted:Boolean) {
+        machineBindingFixture=true
+        val owner="owner-1"
+        val athlete="athlete-1"
+        val cycleId="cycle-1"
+        val root=temp.root.toPath()
+        val basis=if(assisted)LoadBasis.ASSISTANCE_COUNTERWEIGHT else LoadBasis.EXERCISE_OVERRIDE
+        val exercise=if(assisted)"assisted-chinup" else "leg_extension"
+        val method=if(assisted)SavedProgressionMethod.ASSISTANCE_DOUBLE else SavedProgressionMethod.DOUBLE
+        val band=if(assisted)RepBand(8,12) else RepBand(10,15)
+        val aLoad=n(if(assisted)"40" else "55")
+        val bLoad=n(if(assisted)"50" else "60")
+        val earnedA=n(if(assisted)"35" else "60")
+        val earnedB=n(if(assisted)"40" else "70")
+        val originalSource=source()
+        val originalSetup=originalSource.setup
+        val setupForCycle=if(!assisted)originalSetup else {
+            val profile=checkNotNull(originalSetup.reviewed)
+            originalSetup.copy(reviewed=profile.copy(gym=profile.gym.copy(
+                confirmedStock=mapOf("assisted-pullup-dip-counterweight" to
+                    VerifiedLoadStock.Stack(LoadUnit.LB,basis,n("10"),n("5"),n("80"))),
+                availableFacilities=profile.gym.availableFacilities+"assisted-pullup-dip")))
+        }
+        val sourceForCycle=originalSource.copy(setup=setupForCycle)
+        val original=cycle()
+        val block=original.blocks.single()
+        val cycleForReview=original.copy(blocks=listOf(block.copy(days=block.days.map { day ->
+            day.copy(slots=day.slots.map { slot ->
+                slot.copy(exerciseId=exercise,
+                    role=if(assisted)ComposerRole.SECONDARY else slot.role,
+                    progressionMethod=method,
+                    machineInstanceId=if(day.weekday==2)"B" else "A",
+                    sets=slot.sets.map{it.copy(reps=band,load=DraftSetLoad.Verified(
+                        LoadUnit.LB,basis,if(day.weekday==2)bLoad else aLoad))})
+            })
+        })))
+        val auditPolicy=if(!assisted)policy() else {
+            val dose=TrainingMuscle.entries.map { muscle ->
+                when(muscle) {
+                    TrainingMuscle.LATS -> DeclaredMuscleDoseBounds(muscle,n("3"),n("4"),n("5"),3)
+                    TrainingMuscle.BICEPS -> DeclaredMuscleDoseBounds(muscle,n("0"),n("2"),n("3"),0)
+                    else -> DeclaredMuscleDoseBounds(muscle,n("0"),n("0"),n("0"),0)
+                }
+            }
+            policy().copy(baselineBounds=dose,selectedBounds=dose)
+        }
+        val auditInputs=inputs(auditPolicy)
+        val authority=object:NativeKotlinWorkoutAuthority {
+            override fun currentApprovedWorkout(ownerKey:String,workoutId:String):
+                NativeKotlinWorkoutApproval?=null
+            override fun canAccessIssuedWorkout(ownerKey:String,source:KotlinTrainingSourceRevision)=false
+        }
+        class Disk {
+            val lock=NativeKotlinApprovalRevisionFence(root)
+            val sourceStore=NativeKotlinCustomAuthoringSourceFileStore(root,lock,identity)
+            val draftStore=NativeCustomCycleDraftFileStore(root,lock,identity)
+            val consent=NativeKotlinCustomCycleSignoffFileStore(root,lock,identity,draftStore,sourceStore)
+            val roster=NativeKotlinMachineRosterFileStore(root)
+            val preflight=NativeKotlinCustomWorkoutPreflight(lock,identity,draftStore,sourceStore,consent,roster)
+            val prepared=NativeKotlinCustomWorkoutPreparedStore(root,lock,identity,preflight)
+            val history=NativeKotlinHistoryManifestFileStore(root)
+            val composer=KotlinNativeJournalFileStore(root)
+            val issuer=NativeKotlinCustomWorkoutJournalFileStore(root,lock,identity,prepared,preflight,history,composer)
+            val corrections=NativeKotlinCustomSavedCorrectionFileStore(root,lock,identity,issuer,history)
+            val reader=NativeKotlinMixedHistoryReadCoordinator(history,composer,
+                KotlinNativeSavedCorrectionFileStore(root,composer),issuer,authority,identity,lock,corrections)
+            val basic=NativeKotlinCustomBasicNextReview(lock,identity,draftStore,sourceStore,preflight,reader,issuer,roster)
+        }
+        val first=Disk()
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),first.sourceStore.publish(owner,0,sourceForCycle))
+        assertEquals(NativeCustomDraftWriteResult.Committed(1),first.draftStore.save(owner,cycleId,0,cycleForReview))
+        val a=KotlinPhysicalMachine("A","Station A",unit=LoadUnit.LB,
+            increment=n("5"),minimum=n(if(assisted)"10" else "20"),maximum=n(if(assisted)"80" else "160"))
+        val b=KotlinPhysicalMachine("B","Station B",unit=LoadUnit.LB,
+            increment=n("10"),minimum=n(if(assisted)"10" else "20"),maximum=n(if(assisted)"80" else "180"))
+        assertTrue(first.roster.save(owner,0,listOf(KotlinGymMachineAlternatives(
+            "gym-1",exercise,"B",listOf(a,b)))) is NativeMachineRosterResult.Saved)
+        val signed=first.consent.confirm(owner,cycleId,1,1,0,auditInputs,true)
+        assertTrue(signed.toString(),signed is NativeCustomSignoffWrite.Committed)
+        assertTrue(first.history.enroll(owner,athlete){o,aId->
+            active==NativeKotlinOwnerIdentity(o,aId)
+        } is NativeHistoryLedgerResult.Durable)
+        val finished=linkedMapOf<String,CustomWorkoutDaySnapshot>()
+        for(day in listOf(0,2,4)) {
+            val id="station-w1-d$day"
+            val disk=Disk()
+            val prep=disk.prepared.prepare(owner,id,cycleId,1,day,auditInputs)
+            assertTrue(prep.toString(),prep is NativeCustomPrepareResult.Prepared)
+            val issued=disk.issuer.issue(owner,id,cycleId,1,day,auditInputs)
+            assertTrue(issued.toString(),issued is NativeCustomJournalResult.Durable)
+            val journal=(issued as NativeCustomJournalResult.Durable).issued.journal
+            val slot=journal.snapshot.slots.single()
+            val set=slot.sets.single()
+            val station=if(day==2)"B" else "A"
+            assertEquals(station,slot.machineInstanceId)
+            val performed=KotlinPerformedSet(if(day==2)bLoad else aLoad,LoadUnit.LB,
+                if(day==2)band.minimum else band.maximum,2,station)
+            val record=disk.issuer.record(owner,id,CustomWorkoutJournalOperation.Record(
+                "station-actual-$day",journal.revision,
+                CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,performed))
+            assertTrue(record.toString(),record is NativeCustomJournalResult.Durable)
+            val done=NativeKotlinCustomHistoryTransaction(disk.history,disk.issuer,disk.lock,identity)
+                .complete(owner,athlete,id,CustomWorkoutJournalOperation.Finish(
+                    "station-finish-$day",(record as NativeCustomJournalResult.Durable).issued.journal.revision))
+            assertTrue(done.toString(),done is NativeCustomFinishResult.Committed)
+            finished[id]=journal.originalSnapshot
+        }
+        fun review(day:Int):NativeCustomBasicNextReadResult.Reviewed {
+            val result=Disk().basic.reviewAuthored(owner,cycleId,auditInputs,2,day,
+                "slot-$day","next-station-$day",n("10"))
+            assertTrue(result.toString(),result is NativeCustomBasicNextReadResult.Reviewed)
+            return result as NativeCustomBasicNextReadResult.Reviewed
+        }
+        fun candidate(day:Int):CustomBasicHistoryResult.Reviewed {
+            val result=review(day).projection
+            assertTrue(result.toString(),result is CustomBasicHistoryResult.Reviewed)
+            return result as CustomBasicHistoryResult.Reviewed
+        }
+        val aCandidate=candidate(0)
+        assertEquals("station-w1-d0",aCandidate.historyWorkoutId)
+        assertEquals("A",aCandidate.machineInstanceId)
+        assertEquals(listOf(earnedA),aCandidate.candidate.proposedWorkingLoads)
+        assertEquals(BasicProgressionDecision.EARNED_INCREMENT,aCandidate.candidate.decision)
+        val bCandidate=candidate(2)
+        assertEquals("station-w1-d2",bCandidate.historyWorkoutId)
+        assertEquals("B",bCandidate.machineInstanceId)
+        assertEquals(listOf(bLoad),bCandidate.candidate.proposedWorkingLoads)
+        assertEquals(BasicProgressionDecision.BUILD_REPS,bCandidate.candidate.decision)
+
+        // A factual correction at B may earn B's own larger step, without
+        // changing the approved A or B prescription from week one.
+        val correctionDisk=Disk()
+        val old=(correctionDisk.issuer.open(owner,"station-w1-d2")
+            as NativeCustomJournalResult.Durable).issued.journal
+        val visit=CustomWorkoutVisitKey(old.snapshot.slots.single().sets.single().setKey,CustomWorkoutVisitPart.MAIN)
+        val actual=old.effectiveVisits.getValue(visit).operation as CustomWorkoutJournalOperation.Record
+        val correction=CustomSavedVisitCorrection("station-b-corrected",0,visit,actual.eventId,
+            KotlinJournalSetOutcome.COMPLETED,checkNotNull(actual.performed).copy(reps=band.maximum))
+        val corrected=NativeKotlinCustomHistoryCorrectionTransaction(correctionDisk.history,correctionDisk.issuer,
+            correctionDisk.corrections,correctionDisk.lock,identity).correct(owner,athlete,"station-w1-d2",correction)
+        assertTrue(corrected.toString(),corrected is NativeCustomCorrectionTransactionResult.Committed)
+        assertEquals(aCandidate,candidate(0))
+        assertEquals(listOf(earnedB),candidate(2).candidate.proposedWorkingLoads)
+
+        val reviewed=review(0)
+        val unchanged=reviewed.next.slots.single().sets.map{it.prescription}
+        val proposed=checkNotNull(CustomBasicProgressionDraftDomain.forWeekEdit("slot-0",unchanged,reviewed.projection))
+        assertEquals(earnedA,(proposed.single().load as DraftSetLoad.Verified).value)
+        assertEquals(band,proposed.single().reps)
+        assertFalse(reviewed.maySaveProgram)
+        assertFalse(reviewed.mayIssueWorkout)
+        val edit=CustomCoachWeekEditDomain.review(cycleForReview,1,2,0,"slot-0",
+            proposed,setupForCycle,sourceForCycle.catalog,auditInputs)
+        assertTrue(edit.toString(),edit is CustomCoachWeekEditResult.Reviewed)
+        val draft=(edit as CustomCoachWeekEditResult.Reviewed).review.proposal.draft
+        assertEquals(cycleForReview,(Disk().draftStore.read(owner,cycleId) as NativeCustomDraftReadResult.Found).draft)
+        assertTrue(Disk().draftStore.save(owner,cycleId,1,draft) is NativeCustomDraftWriteResult.Committed)
+        assertTrue(Disk().prepared.prepare(owner,"station-unsigned",cycleId,2,0,auditInputs)
+            is NativeCustomPrepareResult.Rejected)
+        val outdated=(Disk().consent.read(owner,cycleId,auditInputs) as NativeCustomSignoffRead.Found)
+        assertFalse(outdated.isCurrent)
+        assertTrue(Disk().consent.confirm(owner,cycleId,draft.revision,1,outdated.receipt.recordRevision,
+            auditInputs,true) is NativeCustomSignoffWrite.Committed)
+        val disk=Disk()
+        val prep=disk.prepared.prepare(owner,"station-approved",cycleId,2,0,auditInputs)
+        assertTrue(prep.toString(),prep is NativeCustomPrepareResult.Prepared)
+        val issued=Disk().issuer.issue(owner,"station-approved",cycleId,2,0,auditInputs)
+        assertTrue(issued.toString(),issued is NativeCustomJournalResult.Durable)
+        val snapshot=(issued as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot
+        assertEquals("A",snapshot.slots.single().machineInstanceId)
+        assertEquals(earnedA,(snapshot.slots.single().sets.single().prescription.load as DraftSetLoad.Verified).value)
+        assertEquals(snapshot,(Disk().issuer.open(owner,"station-approved")
+            as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
+        val untouchedB=Disk().preflight.inspect(owner,cycleId,2,2,auditInputs)
+            as NativeCustomPreflightResult.ReviewedPreview
+        assertEquals("B",untouchedB.session.slots.single().machineInstanceId)
+        assertEquals(bLoad,(untouchedB.session.slots.single().sets.single().prescription.load as DraftSetLoad.Verified).value)
+        for((id,saved) in finished)assertEquals(saved,(Disk().issuer.open(owner,id)
+            as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
+    }
+
     @Test fun customConsentInventoryPreservesActiveRevokedAndLegacyHistoryWithoutGrantingAuthority() {
         initialize()
         val reader=store()

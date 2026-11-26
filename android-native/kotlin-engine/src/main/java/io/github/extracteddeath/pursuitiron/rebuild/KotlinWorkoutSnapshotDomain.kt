@@ -1,6 +1,5 @@
 package io.github.extracteddeath.pursuitiron.rebuild
 
-import java.math.BigDecimal
 import java.util.Collections
 
 /**
@@ -98,8 +97,6 @@ sealed interface KotlinWorkoutSnapshotResult {
 object KotlinWorkoutSnapshotDomain {
     private val id = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$")
     private const val MAX_REV = 9_007_199_254_740_991L
-    private val zero = BigDecimal.ZERO
-    private val maxLoad = BigDecimal("100000")
 
     private fun sourceValid(source: KotlinTrainingSourceRevision): Boolean =
         listOf(source.athleteId, source.programId, source.gymId,
@@ -116,7 +113,7 @@ object KotlinWorkoutSnapshotDomain {
         is ComposerEquipment.Verified -> {
             val weight = target.load as? DraftSetLoad.Verified ?: return false
             if(weight.unit != equipment.unit || weight.basis != equipment.inventory?.basis ||
-                weight.value < zero || weight.value > maxLoad)
+                !KotlinSetNumberAuthorityDomain.validIssuedLoad(weight))
                 return false
             val inspection=EquipmentLoadDomain.inspect(
                 equipment.inventory,weight.value,equipment.unit)

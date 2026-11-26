@@ -20,12 +20,15 @@ const allRows=bytes.toString('utf8').split(/\r?\n/).filter(l=>l&&!l.startsWith('
   const f=l.split('|');assert.equal(f.length,10);return f;
 });
 assert.equal(new Set(allRows.map(f=>f[0])).size,allRows.length);
-const isSelection=f=>['select','select-v13','select-saved-auto'].includes(f[1].split(':')[0]);
+const isSelection=f=>['select','select-v13','select-saved-auto','select-week'].includes(f[1].split(':')[0]);
 const selectionRows=allRows.filter(isSelection).map(f=>{
   const [id,mode,exerciseId,phase,experience,role,band,expectedWeb,expectedKotlin,classification]=f;
-  const manualStyle=mode.split(':')[1]; // saved-auto is automatic on both sides
+  const weekly=mode.startsWith('select-week:');
+  const manualStyle=weekly?undefined:mode.split(':')[1];
+  const week=weekly?Number(mode.split(':')[1]):undefined;
+  const blockWeeks=weekly?Number(mode.split(':')[2]):6;
   assert.ok(['matched','catalog-trait-gap','unloaded-rep-route','advanced-auto-gap','explicit-source-gate'].includes(classification));
-  return {id,exerciseId,phase,experience,role,band:band.split(',').map(Number),manualStyle,selectionPolicy:mode==='select-saved-auto'?'saved-auto':mode.startsWith('select-v13')?'v13':'v12',expectedWeb,expectedKotlin,classification};
+  return {id,exerciseId,phase,experience,role,band:band.split(',').map(Number),manualStyle,week,blockWeeks,selectionPolicy:weekly?'weekly-auto':mode==='select-saved-auto'?'saved-auto':mode.startsWith('select-v13')?'v13':'v12',expectedWeb,expectedKotlin,classification};
 });
 const rows=allRows.filter(f=>!isSelection(f)).map(f=>{
   const [id,style,loads,reps,rir,stock,expectedWeb,expectedKotlin,estimates,classification]=f;
@@ -71,14 +74,18 @@ const results=rows.map(row=>{
 });
 const {EXERCISE_MAP}=await import(pathToFileURL(resolve(webRoot,'modules/next-engine/exercise-db.js')));
 const {selectProgressionStyle}=await import(pathToFileURL(resolve(webRoot,'modules/next-engine/progression-style.js')));
+const {weeklyProgressionStyle}=await import(pathToFileURL(resolve(webRoot,'modules/next-engine/simulation.js')));
 const selectionResults=selectionRows.map(row=>{
   const exercise=EXERCISE_MAP.get(row.exerciseId);
   assert.ok(exercise,`Missing pinned catalog identity: ${row.exerciseId}`);
   const observed=selectProgressionStyle(exercise,row.role,{
-    phase:row.phase,experience:row.experience,blockWeeks:6,prescription:{reps:row.band},
+    phase:row.phase,experience:row.experience,blockWeeks:row.blockWeeks,prescription:{reps:row.band},
     ...(row.manualStyle?{manualStyle:row.manualStyle}:{})
   });
-  const web=observed.style,kotlin=nativeById.get(row.id)[1];
+  const web=row.week===undefined?observed.style:weeklyProgressionStyle({exerciseId:row.exerciseId,
+    role:row.role,progressionStyle:observed.style,progressionSelection:{source:observed.source}},
+    row.phase,row.week,row.blockWeeks);
+  const kotlin=nativeById.get(row.id)[1];
   if(row.manualStyle)assert.equal(observed.source,'manual');
   return {...row,web,kotlin,webSource:observed.source,webReason:observed.reason,
     webPass:web===row.expectedWeb,kotlinPass:kotlin===row.expectedKotlin,matched:web===kotlin};

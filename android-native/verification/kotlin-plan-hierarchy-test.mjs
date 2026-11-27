@@ -17,7 +17,8 @@ assert.match(overview,/val endWeek=startWeek\+block\.weeks-1/);
 assert.match(overview,/PursuitDisclosureRow\([\s\S]*?title=block\.label/);
 assert.match(overview,/rememberSaveable\(cycle\.cycleId,block\.blockId,week\)/);
 assert.match(overview,/if\(hasNextSession\)block==selectedBlock else index==0/);
-assert.match(overview,/if\(blockExpanded\)block\.days\.sortedBy/);
+assert.match(overview,/if\(blockExpanded\)displayDays\.sortedBy/);
+assert.match(overview,/val displayDays=exactWeek\?\.takeIf\{it\.blockId==block\.blockId\}\s*\?\.days \?: block\.days/);
 
 // A verified NEXT, PREPARED, or RESUMABLE day is labeled correctly.
 for(const kind of ['Next','Prepared','ResumeIssued'])
@@ -26,7 +27,7 @@ assert.match(overview,/is NativeCustomNextCycleSlot\.ResumeIssued -> "Resume wor
 assert.match(overview,/is NativeCustomNextCycleSlot\.Prepared -> "Prepared workout"/);
 assert.match(overview,/is NativeCustomNextCycleSlot\.Next -> "Next workout"/);
 assert.match(overview,/val isNextDay=hasNextSession/);
-assert.match(overview,/subtitle=\(if\(isNextDay\)"\$selectedStatus · " else ""\)/);
+assert.match(overview,/subtitle=\(if\(isNextDay && exactWeek!=null\)"\$selectedStatus · " else ""\)/);
 
 // Workout prescriptions remain inspectable and separately editable; this is
 // not a program mutation or an unapproved week override.
@@ -34,7 +35,8 @@ assert.match(overview,/if\(showTargets\)/);
 assert.match(overview,/slot\.sets\.forEachIndexed/);
 assert.match(overview,/onEditDay\(block\.blockId,day\.weekday\)/);
 assert.match(overview,/onEditExercise\(block\.blockId,day\.weekday,slot\.slotId\)/);
-assert.match(overview,/Your workout preview includes any changes for its specific week/);
+assert.match(overview,/Current block: full plan for week/);
+assert.match(overview,/Week-specific prescription not yet verified/);
 
 // Returning to Plan is a read of the selected native program, not another
 // picker reset. Fresh policy checks still run; only a validated Undo survives.
@@ -150,3 +152,13 @@ assert.match(screen,/onAddExercise=\{exerciseEditor=Triple\(block\.blockId,day\.
 assert.doesNotMatch(navigator+dayEditor+presentation,/controller\.|host\.|java\.io|java\.nio|\.save\(|\.finish\(|\.record\(/);
 assert.match(presentation,/singleOrNull\(\)/);
 console.log('PASS native Plan hierarchy, responsive editing, task continuity and owner-verified saved-program chooser');
+
+// The selected full plan and the next-session brief consume one canonical reviewed week.
+const brief=readFileSync(app+'NativeKotlinNextSessionBrief.kt','utf8');
+assert.match(screen,/CustomTrainingCycleDomain\.week\(it,selectedPlanWeek\)/);
+assert.match(screen,/it\.verifiedDraft==draft/);
+assert.match(screen,/NativeKotlinNextSessionBrief\(draft,week,weekday,resolvedPlanWeek\)/);
+assert.match(screen,/NativeKotlinCustomCycleOverview\(draft,currentSelection,resolvedPlanWeek,/);
+assert.match(brief,/week\?\.days\?\.singleOrNull\{it\.weekday==weekday\}/);
+assert.doesNotMatch(brief,/block\.days/);
+assert.match(brief,/Week-specific prescription unavailable/);

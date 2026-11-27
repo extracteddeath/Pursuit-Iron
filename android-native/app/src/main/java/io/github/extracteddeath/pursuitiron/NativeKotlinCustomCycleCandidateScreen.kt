@@ -301,6 +301,20 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     val currentSelection=state.nextCycleSlot?.takeIf{
         state.nextSlotCycleRevision==draft?.revision && policyReady && signed
     }
+    // Plan and Next Session use exactly the same verified week resolver as
+    // CustomWorkoutSnapshotDomain. A stale or unreviewed draft cannot claim
+    // that its base template is the selected workout.
+    val selectedPlanWeek=when(val selection=currentSelection) {
+        is NativeCustomNextCycleSlot.Next -> selection.absoluteWeek
+        is NativeCustomNextCycleSlot.Prepared -> selection.absoluteWeek
+        is NativeCustomNextCycleSlot.ResumeIssued -> selection.absoluteWeek
+        else -> 1
+    }
+    val resolvedPlanWeek=remember(draft,state.coachingAudit,policyReady,selectedPlanWeek) {
+        state.coachingAudit?.structuralReview
+            ?.takeIf{policyReady && draft!=null && it.verifiedDraft==draft}
+            ?.let{CustomTrainingCycleDomain.week(it,selectedPlanWeek)}
+    }
     var offeredInitialPolicyEditor by rememberSaveable(draft?.athleteId,draft?.cycleId){mutableStateOf(false)}
     LaunchedEffect(draft?.cycleId,busy,policyReady) {
         // Offer missing rules once when opening a program. A read-only browse
@@ -740,7 +754,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         }
                         Text("Week ${week} · ${customWeekdays.getOrElse(weekday){"Day"}} · ${label}",
                             style=MaterialTheme.typography.titleMedium)
-                        NativeKotlinNextSessionBrief(draft,week,weekday)
+                        NativeKotlinNextSessionBrief(draft,week,weekday,resolvedPlanWeek)
                         Button(onClick={
                             inspectedWeek=week.toString()
                             inspectedWeekday=weekday
@@ -818,7 +832,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
             // Do not force the athlete to scroll past the whole outline and
             // optional calibration panel to reach the actual editor.
             if(!showProgramEditor) {
-                NativeKotlinCustomCycleOverview(draft,currentSelection,
+                NativeKotlinCustomCycleOverview(draft,currentSelection,resolvedPlanWeek,
                     onEditDay={blockId,weekday->
                         // Navigation selects the genuine authored day only;
                         // all edits still go through the native controller.

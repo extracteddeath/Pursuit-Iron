@@ -679,6 +679,79 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             cycle(2).copy(title="Edited")),drafts.read("owner-1","cycle-1"))
     }
 
+    @Test fun programSwapAffectsOnlyReviewedDayAndFutureIssuanceNeverOriginalWorkout() {
+        val f=authoredCoachFixture(initializeHistory=false,phaseTransition=true)
+        initialize()
+        val consent=approved()
+        val original=cycle()
+        assertTrue(f.history.enroll("owner-1","athlete-1"){o,a->
+            active==NativeKotlinOwnerIdentity(o,a)
+        } is NativeHistoryLedgerResult.Durable)
+        fun prepare(id:String,week:Int,day:Int)=
+            f.prepared.prepare("owner-1",id,"cycle-1",week,day,inputs())
+        fun issue(id:String,week:Int,day:Int)=
+            f.issuer.issue("owner-1",id,"cycle-1",week,day,inputs())
+        assertTrue(prepare("original-bench",1,0) is NativeCustomPrepareResult.Prepared)
+        val issued=issue("original-bench",1,0) as NativeCustomJournalResult.Durable
+        val before=issued.issued.journal
+        val target=before.snapshot.slots.single().sets.single()
+        assertEquals("barbell_bench",before.snapshot.slots.single().exerciseId)
+        val waiting=prepare("old-consent-day",1,2) as NativeCustomPrepareResult.Prepared
+        val replacement=CustomExerciseSlot("paused-new","paused_bench",
+            ComposerRole.PRIMARY,listOf(set().copy(
+                load=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.BARBELL_TOTAL,n("25")),
+                reps=RepBand(8,10))),pinned=true,coachNote="Fresh paused bench target")
+        val proposal=CustomExerciseAuthoringDomain.replaceSelectedExercise(
+            original,1,"base",0,"slot-0",replacement,source().setup,source().catalog)
+        assertTrue(proposal.toString(),proposal is CustomAuthoringResult.Accepted)
+        val edited=(proposal as CustomAuthoringResult.Accepted).proposal.draft
+        assertEquals(2L,edited.revision)
+        assertEquals(replacement,edited.blocks.single().days.first().slots.single())
+        assertEquals(original.blocks.single().days.drop(1),edited.blocks.single().days.drop(1))
+        assertEquals(original.weekOverrides,edited.weekOverrides)
+        assertEquals(NativeCustomDraftWriteResult.Committed(2),
+            drafts.save("owner-1","cycle-1",1,edited))
+        assertEquals(NativeCustomDraftReadResult.Found(edited),
+            NativeCustomCycleDraftFileStore(temp.root.toPath(),
+                NativeKotlinApprovalRevisionFence(temp.root.toPath()),identity)
+                .read("owner-1","cycle-1"))
+        assertEquals(NativeCustomSignoffRead.Found(consent,false),
+            store().read("owner-1","cycle-1",inputs()))
+        assertEquals(NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.CONSENT_CHANGED),
+            issue("old-consent-day",1,2))
+        assertEquals(NativeCustomPreparedRead.Found(waiting.workout),
+            f.prepared.open("owner-1","old-consent-day"))
+        assertTrue(prepare("new-unapproved",2,0) is NativeCustomPrepareResult.Rejected)
+        assertEquals(before,(f.issuer.open("owner-1","original-bench")
+            as NativeCustomJournalResult.Durable).issued.journal)
+        val logged=f.issuer.record("owner-1","original-bench",CustomWorkoutJournalOperation.Record(
+            "bench-actual",0,CustomWorkoutVisitKey(target.setKey,CustomWorkoutVisitPart.MAIN),
+            KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(n("20"),LoadUnit.LB,12,2)))
+        assertTrue(logged.toString(),logged is NativeCustomJournalResult.Durable)
+        val finished=NativeKotlinCustomHistoryTransaction(f.history,f.issuer,fence,identity)
+            .complete("owner-1","athlete-1","original-bench",
+                CustomWorkoutJournalOperation.Finish("bench-finish",1))
+        assertTrue(finished.toString(),finished is NativeCustomFinishResult.Committed)
+        val fact=(finished as NativeCustomFinishResult.Committed).evidence.visits.single()
+        assertEquals("barbell_bench",fact.exerciseId)
+        assertEquals(target.prescription.load,fact.prescribedLoad)
+        assertEquals(n("20"),fact.actual?.load)
+        assertEquals(12,fact.actual?.reps)
+        val timeline=(f.reader.read("owner-1","athlete-1")
+            as NativeKotlinMixedHistoryReadResult.Review).timeline
+        val fresh=store().confirm("owner-1","cycle-1",2,1,consent.recordRevision,inputs(),true)
+        assertTrue(fresh.toString(),fresh is NativeCustomSignoffWrite.Committed)
+        val next=prepare("paused-next",2,0) as NativeCustomPrepareResult.Prepared
+        assertEquals("paused_bench",next.workout.snapshot.slots.single().exerciseId)
+        assertEquals(replacement.sets.single(),
+            next.workout.snapshot.slots.single().sets.single().prescription)
+        assertTrue(issue("paused-next",2,0) is NativeCustomJournalResult.Durable)
+        assertEquals(timeline,(f.reader.read("owner-1","athlete-1")
+            as NativeKotlinMixedHistoryReadResult.Review).timeline)
+        assertEquals(before.originalSnapshot,(f.issuer.open("owner-1","original-bench")
+            as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
+    }
+
     @Test fun actualPolicyContentsAndNonSetTimeAreInFingerprintNotJustVersionName() {
         initialize()
         val receipt=approved()

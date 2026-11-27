@@ -613,8 +613,29 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         style=MaterialTheme.typography.bodySmall)
                     if(matched)request.sessionChoices.forEach{(slotId,method)->
                         val source=request.originalSlots.singleOrNull{it.first==slotId}
-                        if(source!=null)Text(kotlinExerciseLabel(source.second)+": "+
-                            method.name.lowercase().replace('_',' '),style=MaterialTheme.typography.bodyMedium)
+                        if(source!=null) {
+                            val key=ProgramProgressionSlotKey(request.blockId,request.weekday,slotId)
+                            val current=draft.blocks.singleOrNull{it.blockId==key.blockId}
+                                ?.days?.singleOrNull{it.weekday==key.weekday}
+                                ?.slots?.singleOrNull{it.slotId==key.slotId}
+                            val allowed=remember(draft,key,method){
+                                method in CustomCycleBuilderDomain.availableProgressionMethods(draft,key)
+                            }
+                            val label=method.name.lowercase().replace('_',' ')
+                            Text(kotlinExerciseLabel(source.second)+": "+label,style=MaterialTheme.typography.bodyMedium)
+                            if(current?.progressionMethod==method)Text("Already selected in the saved program.")
+                            else if(allowed && current?.exerciseId==source.second)
+                                OutlinedButton(enabled=!busy,modifier=Modifier.fillMaxWidth(),onClick={
+                                    // Athlete explicitly chooses this ONE saved slot;
+                                    // the existing controller CAS and cycle consent remain mandatory.
+                                    controller.chooseExerciseProgression(draft,key.blockId,key.weekday,key.slotId,method)
+                                    showProgramEditor=true
+                                    expandedBlockId=request.blockId
+                                    expandedDayKey=programDayKey(request.blockId,request.weekday)
+                                }){Text("Use "+label+" in future workouts")}
+                            else Text("This method is no longer available for this slot.",
+                                color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall)
+                        }
                     }
                     if(matched)Button(enabled=!busy,modifier=Modifier.fillMaxWidth(),
                         onClick={

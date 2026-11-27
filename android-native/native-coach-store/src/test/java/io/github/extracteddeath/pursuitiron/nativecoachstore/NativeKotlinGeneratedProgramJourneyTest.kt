@@ -1120,6 +1120,82 @@ class NativeKotlinGeneratedProgramJourneyTest {
             as CustomWorkoutJournalOperation.Record).performed?.actualRir)
     }
 
+    @Test fun generatedCycleSessionMethodChoiceNeedsSeparateSavedProgramConsent() {
+        val (cycle,inputs)=saveGenerated()
+        val day=cycle.blocks.single().days.first()
+        val id="generated-session-method"
+        val disk=Disk()
+        val originalConsent=disk.consent.read(owner,cycleId,inputs)
+            as NativeCustomSignoffRead.Found
+        assertTrue(disk.prepared.prepare(owner,id,cycleId,1,day.weekday,inputs)
+            is NativeCustomPrepareResult.Prepared)
+        var journal=(disk.journals.issue(owner,id,cycleId,1,day.weekday,inputs)
+            as NativeCustomJournalResult.Durable).issued.journal
+        val frozen=journal.snapshot
+        val selected=frozen.slots.first{slot->
+            val source=day.slots.single{it.slotId==slot.slotId}
+            source.progressionMethod!=SavedProgressionMethod.MANUAL &&
+                SavedProgressionMethod.MANUAL in
+                MidSessionWorkingEditDomain.availableCustomProgressionMethods(
+                    journal,cycle,id,journal.revision,slot.slotId)
+        }
+        val first=selected.sets.first{it.prescription.type==DraftSetType.WORKING}
+        fun actual(set:CustomWorkoutSetSnapshot):KotlinPerformedSet {
+            val target=set.prescription
+            val load=target.load as? DraftSetLoad.Verified
+            return KotlinPerformedSet(load?.value,load?.unit,target.exactRepTarget?:target.reps.minimum,null)
+        }
+        // Log an independent actual before choosing a method if more work
+        // remains in that slot; this proves resolved facts cannot be overwritten.
+        if(selected.sets.count{it.prescription.type==DraftSetType.WORKING}>1) {
+            journal=(Disk().journals.record(owner,id,CustomWorkoutJournalOperation.Record(
+                "method-first",journal.revision,CustomWorkoutVisitKey(first.setKey,CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,actual(first))) as NativeCustomJournalResult.Durable).issued.journal
+        }
+        val request=MidSessionWorkingEdit(id,journal.revision,selected.slotId,
+            selected.sets.count{it.prescription.type==DraftSetType.WORKING},
+            progressionMethod=SavedProgressionMethod.MANUAL)
+        val prior=journal
+        val edit=CustomWorkoutJournalOperation.AdjustRemaining("generated-method",journal.revision,request)
+        assertTrue(Disk().journals.adjustRemaining(owner,id,edit,false) is NativeCustomJournalResult.Rejected)
+        val saved=Disk().journals.adjustRemaining(owner,id,edit,true)
+        assertTrue(saved.toString(),saved is NativeCustomJournalResult.Durable)
+        journal=(saved as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals(frozen,journal.snapshot)
+        assertEquals(prior.effectiveVisits,journal.effectiveVisits)
+        assertEquals(mapOf(selected.slotId to SavedProgressionMethod.MANUAL),journal.sessionProgressionChoices)
+        assertEquals(journal,(Disk().journals.open(owner,id) as NativeCustomJournalResult.Durable).issued.journal)
+        assertEquals(cycle,(Disk().drafts.read(owner,cycleId) as NativeCustomDraftReadResult.Found).draft)
+        assertEquals(originalConsent,Disk().consent.read(owner,cycleId,inputs))
+        for((index,set) in frozen.slots.flatMap{it.sets}.withIndex()) {
+            val visit=CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN)
+            if(visit in journal.effectiveVisits)continue
+            journal=(Disk().journals.record(owner,id,CustomWorkoutJournalOperation.Record(
+                "method-set-$index",journal.revision,visit,KotlinJournalSetOutcome.COMPLETED,actual(set)))
+                as NativeCustomJournalResult.Durable).issued.journal
+        }
+        val finished=NativeKotlinCustomHistoryTransaction(Disk().history,Disk().journals,Disk().fence,identity)
+            .complete(owner,athlete,id,CustomWorkoutJournalOperation.Finish("method-finish",journal.revision))
+        assertTrue(finished.toString(),finished is NativeCustomFinishResult.Committed)
+        val cold=(Disk().journals.open(owner,id) as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals(mapOf(selected.slotId to SavedProgressionMethod.MANUAL),cold.sessionProgressionChoices)
+        assertEquals(frozen,cold.snapshot)
+        val history=Disk().timeline.read(owner,athlete)
+        // Explicit future-program edit uses the same existing builder, not
+        // an automatic copy of the journal method or its target numbers.
+        val proposed=CustomCycleBuilderDomain.setProgressionMethod(cycle,cycle,
+            frozen.blockId,frozen.weekday,selected.slotId,SavedProgressionMethod.MANUAL)
+            as CustomCycleBuilderResult.Proposed
+        assertEquals(NativeCustomDraftWriteResult.Committed(cycle.revision+1),
+            Disk().drafts.save(owner,cycleId,cycle.revision,proposed.draft))
+        val nextConsent=Disk().consent.read(owner,cycleId,inputs)
+        assertEquals(NativeCustomSignoffRead.Found(originalConsent.receipt,false),nextConsent)
+        assertEquals(history,Disk().timeline.read(owner,athlete))
+        assertEquals(cold,(Disk().journals.open(owner,id) as NativeCustomJournalResult.Durable).issued.journal)
+        assertEquals(cycle.blocks.single().days.flatMap{it.slots}.map{it.sets},
+            proposed.draft.blocks.single().days.flatMap{it.slots}.map{it.sets})
+    }
+
     @Test fun generatedWorkoutUsesColdSavedSetsAndCurrentOptOutForLiveAdvice() {
         val (cycle,inputs)=saveGenerated()
         val day=cycle.blocks.single().days.first()

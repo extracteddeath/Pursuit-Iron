@@ -385,6 +385,48 @@ object MidSessionWorkingEditDomain {
             CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW
     }.getOrDefault(false)
 
+    /** Read-only choices for one ordinary, still-editable occurrence of the
+     * exact issued authored cycle. Reuse the saved-method policy, not a
+     * second progression table. This is not a journal operation or consent.
+     * The owner must independently load the signed cycle and validate stock
+     * before applying a future session-only choice. */
+    fun availableCustomProgressionMethods(
+        state:CustomWorkoutJournalDraft,cycle:CustomTrainingCycle,
+        workoutId:String,expectedRevision:Long,slotId:String
+    ):Set<SavedProgressionMethod> {
+        val original=state.originalSnapshot
+        val stamp=original.stamp
+        if(cycle.cycleId!=stamp.cycleId || cycle.athleteId!=stamp.athleteId ||
+            cycle.revision!=stamp.cycleRevision ||
+            state.receipts.any{it.operation is CustomWorkoutJournalOperation.Swap ||
+                it.operation is CustomWorkoutJournalOperation.UndoSwap})
+            return emptySet()
+        val block=cycle.blocks.singleOrNull{it.blockId==original.blockId}
+            ?:return emptySet()
+        if(block.phase!=original.phase || block.purpose!=original.blockPurpose)
+            return emptySet()
+        val day=block.days.singleOrNull{it.weekday==original.weekday}
+            ?:return emptySet()
+        val authored=day.slots.singleOrNull{it.slotId==slotId}?:return emptySet()
+        val issued=original.slots.singleOrNull{it.slotId==slotId}?:return emptySet()
+        val active=state.snapshot.slots.singleOrNull{it.slotId==slotId}?:return emptySet()
+        if(authored.exerciseId!=issued.exerciseId || authored.attachmentId!=issued.attachmentId ||
+            authored.machineInstanceId!=issued.machineInstanceId || authored.role!=issued.role ||
+            authored.supersetGroup!=issued.supersetGroup || authored.pinned!=issued.pinned ||
+            active.exerciseId!=issued.exerciseId || active.attachmentId!=issued.attachmentId ||
+            active.machineInstanceId!=issued.machineInstanceId || active.role!=issued.role ||
+            active.supersetGroup!=issued.supersetGroup || active.pinned!=issued.pinned)
+            return emptySet()
+        // An unchanged prescription is only NO_CHANGE after the ordinary
+        // working-row, pending-work and exact-revision checks succeed.
+        val guard=custom(state,MidSessionWorkingEdit(workoutId,expectedRevision,slotId,
+            active.sets.count{it.prescription.type==DraftSetType.WORKING}))
+        if(guard!=MidSessionWorkingEditReview.Rejected(MidSessionWorkingEditRefusal.NO_CHANGE))
+            return emptySet()
+        return Collections.unmodifiableSet(CustomCycleBuilderDomain.availableProgressionMethods(
+            cycle,ProgramProgressionSlotKey(block.blockId,day.weekday,slotId)))
+    }
+
     fun custom(state:CustomWorkoutJournalDraft,request:MidSessionWorkingEdit):
         MidSessionWorkingEditReview<CustomWorkoutSetSnapshot> {
         if(state.workoutId!=request.workoutId || state.revision!=request.expectedRevision ||

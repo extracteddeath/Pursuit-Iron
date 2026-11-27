@@ -1033,6 +1033,20 @@ function loadableAtOrBelow(ex, w, unit) {
     return step > 0 ? Math.max(step, Math.floor(w / step + 1e-9) * step) : w;
 }
 
+// Shared by issuance and live sub-set reconciliation. A rounded minimum
+// is NOT a valid drop if it is above the requested ceiling or the previous
+// physical setting. No reverse-assistance or unweighted drop is inferred.
+export function feasibleDropLoad(ex, activation, previous, fraction, unit) {
+    if (!ex || /^assisted-/.test(ex.id || '') ||
+        ![activation, previous, fraction].every(Number.isFinite) ||
+        !(activation > 0 && previous > 0 && fraction > 0 && fraction < 1)) return null;
+    const ceiling = Math.min(activation * fraction, previous - 1e-6);
+    if (!(ceiling > 0)) return null;
+    const weight = loadableAtOrBelow(ex, ceiling, unit);
+    return Number.isFinite(weight) && weight > 0 &&
+        weight <= ceiling + 1e-9 && weight < previous ? weight : null;
+}
+
 const EFFORT_MIN_PAIRS = 6;
 
 const EFFORT_MAX_BIAS = 2.5;
@@ -1303,12 +1317,20 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
             }
         if (lastWork >= 0) {
             const base = Number(rows[lastWork].weight) || 0;
-            for (const drop of protocol.drops || [])
+            let previous = base;
+            for (const drop of protocol.drops || []) {
+                const weight = feasibleDropLoad(ex, base, previous, drop.fraction, unit);
+                // With a known starting load, no feasible reduction means no
+                // additional automatic stage. Unknown starting loads remain
+                // editable, but do not invent a numerical target.
+                if (base > 0 && weight == null) break;
                 rows.push({
-                    weight: base > 0 ? String(loadableAtOrBelow(ex, base * drop.fraction, unit)) : '', reps: '', warm: false,
+                    weight: weight == null ? '' : String(weight), reps: '', warm: false,
                     sub: true, kind: 'drop', dropF: drop.fraction, prescribed: true, done: false, auto: true, valueOwner: "prescription",
-                    target: { w: base > 0 ? String(loadableAtOrBelow(ex, base * drop.fraction, unit)) : '—', reps: 'to failure', rir: null, rest: drop.restSeconds }
+                    target: { w: weight == null ? '—' : String(weight), reps: 'to failure', rir: null, rest: drop.restSeconds }
                 });
+                previous = weight;
+            }
         }
     }
     return rows;

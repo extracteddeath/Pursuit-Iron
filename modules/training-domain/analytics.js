@@ -10,7 +10,7 @@ import { SUPPORTED_PHASES, phaseLabel } from '../next-engine/phase-policy.js';
 import { ENGINE_COMPATIBLE_VERSIONS } from "../next-engine/config.js";
 import { ALL_EQUIP_IDS, ENGINE_V, EXERCISES, EX_BY_ID, SESSIONS, SPLITS, expandEquipment } from './catalog.js';
 import { GYM_PRESETS, LOWER_PARTS, SECONDARY, SUB_LANDMARKS, blockPhase, exerciseAt, cellRepRange, clamp, compositeMrv, computeCell, effortBounds, goalForDay, isBarLike, isMachineLike, landmarkFor, lastSetTech, loadStep, movePattern, roundTo, secondaryOf, weeksOf } from './records.js';
-import { GYM_LIMITS, INVENTORY_KEYS, PART_LABEL, anchorPerfFor, effortCalibration, gymRackFor, muscleRecovery, parseRIRNum, personalRecoveryHours, prescribeSets, prescribedRIRof, progressionHistoryForProgram, sessionSuggestion, setsOf, toUnit } from './prescriptions.js';
+import { GYM_LIMITS, INVENTORY_KEYS, PART_LABEL, anchorPerfFor, effortCalibration, feasibleDropLoad, gymRackFor, muscleRecovery, parseRIRNum, personalRecoveryHours, prescribeSets, prescribedRIRof, progressionHistoryForProgram, sessionSuggestion, setsOf, toUnit } from './prescriptions.js';
 import { E1RM_REP_CAP, EPLEY_SLOPE, PART_ORDER, decodeProgramCode, e1rm, e1rmRIR, engHas, engLacks, isAxialLoad, nextSessionCursor, sameProgramContent } from './programs.js';
 
 const FOCUS_CAVEAT = { neck: "Rarely fits — most sessions have no room for direct neck work" };
@@ -3279,8 +3279,8 @@ function growMyoSets(sets) {
 function syncSubSets(sets, ex, unit) {
     if (!Array.isArray(sets) || !sets.length)
         return sets;
-    const step = loadStep(ex, unit);
     let actW = null; // load of the working set these extensions hang off
+    let previousDrop = null;
     let changed = false;
     const out = sets.map(s => {
         if (!s)
@@ -3288,34 +3288,44 @@ function syncSubSets(sets, ex, unit) {
         if (!s.sub) {
             if (!s.warm) {
                 const w = parseFloat(s.weight);
-                if (w > 0)
-                    actW = w;
+                actW = Number.isFinite(w) && w > 0 ? w : null;
+                previousDrop = actW;
             }
             return s;
         }
-        if (s.done || !(actW > 0))
+        if (s.done) {
+            if (s.kind === "drop") previousDrop = Number(s.weight) > 0 ? Number(s.weight) : null;
             return s;
+        }
+        if (!(actW > 0) && s.kind !== "drop") return s;
         // Reps-only changes must not take ownership of the inherited mini load.
         // Logged rows and manually chosen weights stay authoritative.
         const manualLoad = userOwnsRuntimeSet(s) && (
             s.kind !== "myo" || s.weightOwner === "user" ||
             s.target?.w == null || String(s.weight) !== String(s.target.w)
         );
-        if (manualLoad)
+        if (manualLoad) {
+            if (s.kind === "drop") previousDrop = Number(s.weight) > 0 ? Number(s.weight) : null;
             return s;
+        }
         let want;
         if (s.kind === "drop") {
-            if (!(s.dropF > 0))
+            if (!(s.dropF > 0)) {
+                previousDrop = Number(s.weight) > 0 ? Number(s.weight) : null;
                 return s; // legacy row with no recorded fraction — don't invent one
-            want = String(Math.max(step, roundTo(actW * s.dropF, step)));
+            }
+            const next = feasibleDropLoad(ex, actW, previousDrop, s.dropF, unit);
+            previousDrop = next;
+            want = next == null ? '' : String(next);
         }
         else {
             want = String(actW); // myo mini: the activation load, unchanged
         }
-        if (String(s.weight) === want && String(s.target?.w) === want)
+        const target = want === '' ? '—' : want;
+        if (String(s.weight) === want && String(s.target?.w) === target)
             return s;
         changed = true;
-        return { ...s, weight: want, target: { ...(s.target || {}), w: want } };
+        return { ...s, weight: want, target: { ...(s.target || {}), w: target } };
     });
     return changed ? out : sets;
 }

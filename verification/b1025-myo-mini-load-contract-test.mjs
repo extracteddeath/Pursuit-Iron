@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { EX_BY_ID, growMyoSets, syncSubSets } from '../modules/engine-api.js';
+import { EX_BY_ID, feasibleDropLoad, growMyoSets, setGymLimits, syncSubSets } from '../modules/engine-api.js';
 
 // Regression: editing only a myo mini's reps used to mark its entire row
 // user-owned. Subsequent activation-load changes left stale 30/25 lb
@@ -93,3 +93,28 @@ assert.equal(preserved[5],manualFifth,'explicitly edited mini remains protected'
 assert.equal(growMyoSets([activation,...firstThree.slice(1).map((row,i)=>({...row,done:i===2}))]).length,4,'out-of-order third cannot earn extra work');
 assert.equal(growMyoSets([{...activation,done:false},...firstThree.slice(1)]).length,4,'undone activation cannot earn extra work');
 console.log('PASS myo undo, replay, out-of-order protection and earned mini limits.');
+
+// The two planned drops must be genuinely lower even on a coarse rack.
+const coarse = (weight, fraction, done = false) => ({
+    weight: String(weight), reps: '8', sub: true, kind: 'drop', dropF: fraction,
+    auto: true, done, target: { w: String(weight) }
+});
+try {
+    setGymLimits({unit:'lb', inventory:{dumbbell:[10,20,30]}});
+    assert.equal(feasibleDropLoad(ex,30,30,.8,'lb'),20);
+    assert.equal(feasibleDropLoad(ex,30,20,.6,'lb'),10);
+    assert.equal(feasibleDropLoad(ex,10,10,.8,'lb'),null);
+    assert.equal(feasibleDropLoad(ex,30,10,.6,'lb'),null);
+    const prior = {...activation,weight:'30'};
+    const logged = coarse(10,.8,true);
+    const corrected = syncSubSets([prior,logged,coarse(20,.6)],ex,'lb');
+    assert.equal(corrected[1],logged,'completed lower setting is factual');
+    assert.equal(corrected[2].weight,'','no automatic repeat or increase after actual first drop');
+    assert.equal(corrected[2].target.w,'—');
+    assert.equal(corrected[2].reps,'8');
+    assert.equal(syncSubSets(corrected,ex,'lb'),corrected,'no repair loop');
+    const unresolved = syncSubSets([prior,{...prior,weight:'',done:false},coarse(20,.8)],ex,'lb');
+    assert.equal(unresolved.at(-1).weight,'','never borrow an earlier activation');
+    assert.equal(feasibleDropLoad(EX_BY_ID['assisted-pullup'],30,30,.8,'lb'),null);
+} finally { setGymLimits(null); }
+console.log('PASS strict physical drop chain, actual prior reduction, unresolved activation and no impossible targets.');

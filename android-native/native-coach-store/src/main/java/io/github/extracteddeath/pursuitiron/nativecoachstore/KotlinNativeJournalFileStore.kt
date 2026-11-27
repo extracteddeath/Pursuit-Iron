@@ -580,6 +580,26 @@ class KotlinNativeJournalFileStore(private val privateDirectory: Path) {
     internal fun skipRemainingStored(
         ownerKey:String,workoutId:String,expectedRevision:Long,exerciseId:String,
         authorizeCurrent:(String,KotlinTrainingSourceRevision)->Boolean
+    ):NativeJournalFileResult = skipSelectedStored(ownerKey,workoutId,expectedRevision,
+        authorizeCurrent){journal->
+            WorkoutRemainingExerciseDomain.generated(journal,exerciseId)?.entries
+        }
+
+    internal fun applyConcernStored(
+        ownerKey:String,workoutId:String,shown:WorkoutConcernReview<String>,
+        credits:Map<String,List<DeclaredMuscleCredit>>,
+        authorizeCurrent:(String,KotlinTrainingSourceRevision)->Boolean
+    ):NativeJournalFileResult = skipSelectedStored(ownerKey,workoutId,shown.journalRevision,
+        authorizeCurrent){journal->
+            WorkoutRemainingExerciseDomain.generatedConcerns(journal,credits)
+                .singleOrNull{it==shown}?.entries
+        }
+
+    /** Private selector is called only by the two exact reviewed skip routes. */
+    private fun skipSelectedStored(
+        ownerKey:String,workoutId:String,expectedRevision:Long,
+        authorizeCurrent:(String,KotlinTrainingSourceRevision)->Boolean,
+        select:(KotlinWorkoutJournalState)->List<String>?
     ):NativeJournalFileResult {
         if(!ownerId.matches(ownerKey) || !ownerId.matches(workoutId))
             return NativeJournalFileResult.Rejected(
@@ -588,18 +608,17 @@ class KotlinNativeJournalFileStore(private val privateDirectory: Path) {
             locked(ownerKey,workoutId){file->
                 val prior=recoverSaved(file,ownerKey,workoutId,authorizeCurrent)
                 if(prior !is NativeJournalFileResult.Durable)return@locked prior
-                val review=WorkoutRemainingExerciseDomain.generated(
-                    prior.journal,exerciseId)
-                    ?:return@locked NativeJournalFileResult.Rejected(
-                        NativeJournalFileRefusal.JOURNAL_REJECTED,
-                        KotlinJournalRefusal.UNKNOWN_SET)
-                if(review.journalRevision!=expectedRevision)
+                if(prior.journal.revision!=expectedRevision)
                     return@locked NativeJournalFileResult.Rejected(
                         NativeJournalFileRefusal.JOURNAL_REJECTED,
                         KotlinJournalRefusal.STALE_REVISION)
-                if(review.entries.isEmpty())return@locked prior
+                val entries=select(prior.journal)
+                    ?:return@locked NativeJournalFileResult.Rejected(
+                        NativeJournalFileRefusal.JOURNAL_REJECTED,
+                        KotlinJournalRefusal.UNKNOWN_SET)
+                if(entries.isEmpty())return@locked prior
                 var next=prior.journal
-                for(key in review.entries){
+                for(key in entries){
                     val operation=KotlinJournalOperation.RecordSet(
                         "skip-"+java.util.UUID.randomUUID(),next.revision,
                         key,KotlinJournalSetOutcome.SKIPPED,null)

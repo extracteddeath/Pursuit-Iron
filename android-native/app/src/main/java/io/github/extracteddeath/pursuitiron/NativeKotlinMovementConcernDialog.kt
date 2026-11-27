@@ -11,7 +11,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.rebuild.*
@@ -101,7 +104,8 @@ internal fun NativeKotlinMovementConcernDialog(
     onWriteNote:()->Unit,
     onReviewSkip:()->Unit,
     onReviewReplacement:()->Unit,
-    onDismiss:()->Unit
+    onDismiss:()->Unit,
+    onReviewMuscles:(()->Unit)?=null
 ) {
     val editable=options.current && !busy
     AlertDialog(
@@ -134,6 +138,12 @@ internal fun NativeKotlinMovementConcernDialog(
                 enabled=editable,
                 modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
             ) {Text("Write session note")}
+            onReviewMuscles?.let { review->
+                OutlinedButton(onClick=review,enabled=editable,
+                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+                    Text("Review affected muscles")
+                }
+            }
             if(options.skipRequest!=null)OutlinedButton(
                 onClick=onReviewSkip,
                 enabled=editable,
@@ -161,4 +171,61 @@ internal fun NativeKotlinMovementConcernDialog(
             }
         }
     )
+}
+
+
+/** Shared generated/custom review, with exact source-derived entries. */
+@Composable
+internal fun <K> NativeKotlinMuscleConcernDialog(
+    workoutId:String,revision:Long,currentRevision:Long?,busy:Boolean,
+    load:()->List<WorkoutConcernReview<K>>,
+    onConfirm:(WorkoutConcernReview<K>)->Unit,onDismiss:()->Unit
+) {
+    var reviews by remember(workoutId,revision){mutableStateOf<List<WorkoutConcernReview<K>>?>(null)}
+    var selectedMuscle by remember(workoutId,revision){mutableStateOf<TrainingMuscle?>(null)}
+    var action by remember(workoutId,revision){mutableStateOf(WorkoutConcernAction.SKIP)}
+    val current=currentRevision==revision
+    LaunchedEffect(workoutId,revision) {
+        reviews=withContext(Dispatchers.IO){runCatching{load()}.getOrDefault(emptyList())}
+            .filter{it.workoutId==workoutId && it.journalRevision==revision}
+    }
+    val shown=reviews?.singleOrNull{it.muscle==selectedMuscle && it.action==action}
+    AlertDialog(onDismissRequest={if(!busy)onDismiss()},title={Text("Review affected muscles")},
+        text={Column(Modifier.heightIn(max=440.dp).verticalScroll(rememberScrollState()),
+            verticalArrangement=Arrangement.spacedBy(PursuitSpace.sm)) {
+            Text("Choose the affected muscle. This is not a diagnosis or clearance to train through pain. Stop the movement if it causes concerning symptoms.")
+            if(!current)Text("The workout changed. Reopen this review.",color=MaterialTheme.colorScheme.error)
+            else if(reviews==null)Text("Checking saved movement metadata…")
+            else if(reviews.isNullOrEmpty())Text("Exact muscle involvement could not be verified, or no affected entries remain. Use the individual movement review instead.")
+            else {
+                reviews.orEmpty().map{it.muscle}.distinct().forEach{muscle->
+                    TextButton(onClick={selectedMuscle=muscle},enabled=!busy,
+                        modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+                        Text((if(selectedMuscle==muscle)"Selected · " else "")+nativeLibraryWords(muscle.name))
+                    }
+                }
+                selectedMuscle?.let{
+                    WorkoutConcernAction.entries.forEach{option->
+                        OutlinedButton(onClick={action=option},enabled=!busy,
+                            modifier=Modifier.fillMaxWidth()) {
+                            Text((if(action==option)"Selected · " else "")+
+                                if(option==WorkoutConcernAction.SKIP)"Skip affected work" else "Reduce affected work")
+                        }
+                    }
+                }
+                shown?.let{review->
+                    review.groups.forEach{group->
+                        Text(kotlinExerciseLabel(group.exerciseId)+" · "+group.entries.size+
+                            " entries to skip · "+group.recordedCount+" recorded retained")
+                    }
+                    Text(if(action==WorkoutConcernAction.REDUCE)
+                        "Caps working-set attempts at half the original issued count (rounded up), counts completed and failed attempts even if logged out of order, and skips extra pending work and unlocked affected technique extensions. Already recorded entries stay unchanged."
+                        else "Skips the unresolved affected entries only.")
+                    Text("No future program, issued target or existing actual will change.")
+                }
+            }
+        }},
+        confirmButton={Button(onClick={shown?.let(onConfirm)},
+            enabled=!busy && current && shown?.entries?.isNotEmpty()==true){Text("Confirm reviewed skips")}},
+        dismissButton={TextButton(onClick=onDismiss,enabled=!busy){Text("Back")}})
 }

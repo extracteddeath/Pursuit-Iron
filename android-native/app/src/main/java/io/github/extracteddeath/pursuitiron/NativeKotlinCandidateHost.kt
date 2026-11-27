@@ -1476,6 +1476,17 @@ internal class NativeKotlinCandidateHost(context:Context) {
         return customIssuedStore.record(owner.ownerKey,workoutId,operation)
     }
 
+    fun reviewCustomMuscleConcerns(workoutId:String):List<WorkoutConcernReview<CustomWorkoutVisitKey>> {
+        val owner=localAthlete.signedInIdentity()?:return emptyList()
+        return customIssuedStore.reviewMuscleConcerns(owner.ownerKey,workoutId)
+    }
+    fun applyCustomMuscleConcern(workoutId:String,
+        shown:WorkoutConcernReview<CustomWorkoutVisitKey>):NativeCustomJournalResult {
+        val owner=localAthlete.signedInIdentity()?:return NativeCustomJournalResult.Rejected(
+            NativeCustomJournalRefusal.NOT_AUTHORIZED)
+        return customIssuedStore.applyMuscleConcern(owner.ownerKey,workoutId,shown)
+    }
+
     fun skipRemainingCustomExercise(
         workoutId:String,expectedRevision:Long,slotId:String
     ):NativeCustomJournalResult {
@@ -4174,6 +4185,16 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 NativeJournalFileRefusal.NOT_AUTHORIZED)
         return trackedWorkout.append(
             owner.ownerKey,owner.athleteId,workoutId,operation)
+    }
+
+    fun reviewGeneratedMuscleConcerns(workoutId:String):List<WorkoutConcernReview<String>> {
+        val owner=localAthlete.signedInIdentity()?:return emptyList()
+        return trackedWorkout.reviewMuscleConcerns(owner.ownerKey,owner.athleteId,workoutId)
+    }
+    fun applyGeneratedMuscleConcern(workoutId:String,shown:WorkoutConcernReview<String>):NativeJournalFileResult {
+        val owner=localAthlete.signedInIdentity()?:return NativeJournalFileResult.Rejected(
+            NativeJournalFileRefusal.NOT_AUTHORIZED)
+        return trackedWorkout.applyMuscleConcern(owner.ownerKey,owner.athleteId,workoutId,shown)
     }
 
     fun skipRemainingGeneratedExercise(

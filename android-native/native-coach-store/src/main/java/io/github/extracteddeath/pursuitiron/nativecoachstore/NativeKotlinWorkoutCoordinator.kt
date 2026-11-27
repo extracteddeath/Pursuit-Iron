@@ -374,6 +374,17 @@ class NativeKotlinWorkoutCoordinator(
     }.getOrElse {NativeJournalFileResult.Rejected(
         NativeJournalFileRefusal.STORAGE_UNAVAILABLE)}
 
+    internal fun applyMuscleConcern(
+        ownerKey:String,athleteId:String,workoutId:String,
+        shown:WorkoutConcernReview<String>,credits:Map<String,List<DeclaredMuscleCredit>>
+    ):NativeJournalFileResult = runCatching {
+        revisionFence.withOwnerTransaction(ownerKey) {
+            store.applyConcernStored(ownerKey,workoutId,shown,credits){owner,source->
+                source.athleteId==athleteId && authority.canAccessIssuedWorkout(owner,source)
+            }
+        }
+    }.getOrElse{NativeJournalFileResult.Rejected(NativeJournalFileRefusal.STORAGE_UNAVAILABLE)}
+
     fun append(
         ownerKey:String,workoutId:String,operation:KotlinJournalOperation
     ):NativeJournalFileResult =

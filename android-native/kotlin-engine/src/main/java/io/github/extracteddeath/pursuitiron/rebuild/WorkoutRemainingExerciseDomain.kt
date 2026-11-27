@@ -15,7 +15,108 @@ data class RemainingExerciseReview<K>(
     val preservedEntryCount:Int
 )
 
+enum class WorkoutConcernAction { REDUCE, SKIP }
+
+/** Exact preview of the affected issued entries. No diagnosis, prescription
+ * mutation or workout authorization. The owner rederives it at commit. */
+data class WorkoutConcernGroup<K>(
+    val exerciseId:String,val entries:List<K>,val recordedCount:Int
+)
+data class WorkoutConcernReview<K>(
+    val workoutId:String,val journalRevision:Long,val muscle:TrainingMuscle,
+    val action:WorkoutConcernAction,val groups:List<WorkoutConcernGroup<K>>
+) {
+    val entries:List<K> get()=groups.flatMap{it.entries}
+}
+
 object WorkoutRemainingExerciseDomain {
+    private data class ConcernEntry<K>(val key:K,val type:DraftSetType,
+        val followUp:Boolean=false,val outcome:KotlinJournalSetOutcome?=null) {
+        val recorded:Boolean get()=outcome!=null
+        // Failed attempts also consumed effort. A skip did not.
+        val attempted:Boolean get()=outcome==KotlinJournalSetOutcome.COMPLETED ||
+            outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT
+    }
+
+    /** Cap remaining work against ceil(original working sets / 2) in each
+     * issued occurrence, accounting for completed and failed attempts even
+     * when logged out of order. Already skipped entries do not consume
+     * this budget. Keep only the earliest unresolved sets that fit; never
+     * change any observed entry or fabricate a follow-up. */
+    private fun <K> selectConcern(
+        entries:List<ConcernEntry<K>>,action:WorkoutConcernAction
+    ):List<K> {
+        if(action==WorkoutConcernAction.SKIP)
+            return entries.filterNot{it.recorded}.map{it.key}
+        val working=entries.filter{!it.followUp && it.type==DraftSetType.WORKING}
+        val remainingBudget=((working.size+1)/2-working.count{it.attempted})
+            .coerceAtLeast(0)
+        val pending=working.filterNot{it.recorded}
+        val kept=pending.take(remainingBudget)
+        val tail=pending.drop(kept.size).map{it.key}.toSet()
+        val retainsPendingWorking=kept.isNotEmpty()
+        return entries.filter{entry->
+            !entry.recorded && (entry.followUp || entry.key in tail ||
+                (entry.type==DraftSetType.WARMUP && !retainsPendingWorking))
+        }.map{it.key}
+    }
+
+    private fun involvement(
+        exerciseIds:Set<String>,credits:Map<String,List<DeclaredMuscleCredit>>
+    ):Map<String,Set<TrainingMuscle>>? {
+        if(exerciseIds.any{credits[it].isNullOrEmpty()})return null
+        return exerciseIds.associateWith{id->
+            credits.getValue(id).filter{it.fractionalSet.signum()>0}.map{it.muscle}.toSet()
+        }.takeIf{map->map.values.none{it.isEmpty()}}
+    }
+
+    private fun <K> concernReviews(
+        workoutId:String,revision:Long,groups:List<Pair<String,List<ConcernEntry<K>>>>,
+        credits:Map<String,List<DeclaredMuscleCredit>>
+    ):List<WorkoutConcernReview<K>> {
+        val parts=involvement(groups.map{it.first}.toSet(),credits)?:return emptyList()
+        return TrainingMuscle.entries.flatMap{muscle->
+            WorkoutConcernAction.entries.mapNotNull{action->
+                val affected=groups.filter{muscle in parts.getValue(it.first)}.mapNotNull{(id,entries)->
+                    val selected=selectConcern(entries,action)
+                    selected.takeIf{it.isNotEmpty()}?.let{
+                        WorkoutConcernGroup(id,it,entries.count{entry->entry.recorded})
+                    }
+                }
+                affected.takeIf{it.isNotEmpty()}?.let{
+                    WorkoutConcernReview(workoutId,revision,muscle,action,it)
+                }
+            }
+        }
+    }
+
+    fun generatedConcerns(journal:KotlinWorkoutJournalState,
+        credits:Map<String,List<DeclaredMuscleCredit>>):List<WorkoutConcernReview<String>> {
+        if(journal.finishedByEventId!=null)return emptyList()
+        // Preserve A/B/A occurrences independently, even with equal IDs.
+        val groups=KotlinWorkoutPresentationDomain.inspect(journal).exercises.map{exercise->
+            exercise.exerciseId to exercise.sets.map{set->
+                ConcernEntry(set.target.setKey,set.target.type,outcome=set.outcome)
+            }
+        }
+        return concernReviews(journal.snapshot.workoutId,journal.revision,groups,credits)
+    }
+
+    fun customConcerns(journal:CustomWorkoutJournalDraft,
+        credits:Map<String,List<DeclaredMuscleCredit>>):List<WorkoutConcernReview<CustomWorkoutVisitKey>> {
+        if(journal.finishedByEventId!=null)return emptyList()
+        val order=CustomWorkoutVisitFocusDomain.visibleOrder(journal)
+        val groups=journal.snapshot.slots.map{slot->
+            val sets=slot.sets.associateBy{it.setKey}
+            slot.exerciseId to order.filter{it.setKey in sets}.map{visit->
+                ConcernEntry(visit,sets.getValue(visit.setKey).prescription.type,
+                    visit.part==CustomWorkoutVisitPart.FOLLOW_UP,
+                    (journal.effectiveVisits[visit]?.operation as? CustomWorkoutJournalOperation.Record)?.outcome)
+            }
+        }
+        return concernReviews(journal.workoutId,journal.revision,groups,credits)
+    }
+
     fun generated(
         journal:KotlinWorkoutJournalState,exerciseId:String
     ):RemainingExerciseReview<String>? {

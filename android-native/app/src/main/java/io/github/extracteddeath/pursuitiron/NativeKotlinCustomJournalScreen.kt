@@ -145,6 +145,7 @@ internal fun NativeKotlinCustomJournalScreen(
     var pendingConcern by remember(workoutId) {
         mutableStateOf<NativeMovementConcernRequest?>(null)
     }
+    var muscleConcernRevision by remember(workoutId){mutableStateOf<Long?>(null)}
     var verifiedFinishedInHistory by remember(host,workoutId){
         mutableStateOf(false)
     }
@@ -1661,8 +1662,38 @@ internal fun NativeKotlinCustomJournalScreen(
                     pendingConcern=null
                     reviewSwap(target)
                 }
-            },onDismiss={pendingConcern=null}
+            },onDismiss={pendingConcern=null},
+            onReviewMuscles={
+                pendingConcern=null
+                muscleConcernRevision=request.journalRevision
+            }
         )
+    }
+    muscleConcernRevision?.let{revision->
+        NativeKotlinMuscleConcernDialog(workoutId,revision,journal?.revision,busy,
+            load={host.reviewCustomMuscleConcerns(workoutId)},
+            onConfirm={shown->
+                muscleConcernRevision=null
+                if(!busy && !finished && journal?.revision==shown.journalRevision) {
+                    busy=true
+                    scope.launch {
+                        val result=withContext(Dispatchers.IO){
+                            runCatching{host.applyCustomMuscleConcern(workoutId,shown)}.getOrNull()
+                        }
+                        if(result is NativeCustomJournalResult.Durable) {
+                            journal=result.issued.journal
+                            error=null;reviewSetKey=null;reviewPart=null
+                        } else {
+                            error="Affected work was not confirmed. Reload and review saved entries."
+                            val recovered=withContext(Dispatchers.IO){
+                                runCatching{host.openIssuedCustomWorkout(workoutId)}.getOrNull()
+                            }
+                            (recovered as? NativeCustomJournalResult.Durable)?.issued?.journal?.let{journal=it}
+                        }
+                        busy=false
+                    }
+                }
+            },onDismiss={muscleConcernRevision=null})
     }
     pendingExerciseSkip?.let {request->
         val review=journal?.let{WorkoutRemainingExerciseDomain.custom(it,request.scopeId)}

@@ -63,6 +63,7 @@ class KotlinFreestyleWorkoutDomainTest {
         assertEquals(listOf(DraftSetType.WARMUP),routine.slots.first().setTypes)
         val restarted=checkNotNull(domain.startRoutine("free-2",routine,setup(),2,catalog))
         assertEquals(routine.slots.map{it.exerciseId},restarted.exercises.map{it.exerciseId})
+        assertEquals(routine.slots.map{it.setTypes},restarted.exercises.map{it.routineSetTypes})
         assertTrue(restarted.effectiveSets.isEmpty())
         assertNull(restarted.finishedByEventId)
         assertEquals(2L,restarted.source.gymRevision)

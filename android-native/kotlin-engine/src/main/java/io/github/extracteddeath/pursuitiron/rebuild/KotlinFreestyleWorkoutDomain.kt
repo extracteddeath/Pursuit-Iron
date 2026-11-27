@@ -10,7 +10,9 @@ data class KotlinFreestyleSource(
 )
 data class KotlinFreestyleExercise(
     val slotId:String,val exerciseId:String,val familyId:String,val variantId:String,
-    val attachmentId:String?,val unit:LoadUnit?,val basis:LoadBasis?
+    val attachmentId:String?,val unit:LoadUnit?,val basis:LoadBasis?,
+    /** Optional reusable row shape, not a prescription or recorded result. */
+    val routineSetTypes:List<DraftSetType> = emptyList()
 )
 sealed interface KotlinFreestyleOperation {
     val eventId:String
@@ -94,12 +96,18 @@ object KotlinFreestyleWorkoutDomain {
     private fun validExercise(exercise:KotlinFreestyleExercise):Boolean =
         listOf(exercise.slotId,exercise.exerciseId,exercise.familyId,exercise.variantId)
             .all(id::matches) && (exercise.attachmentId==null || id.matches(exercise.attachmentId)) &&
-            ((exercise.unit==null)==(exercise.basis==null))
+            ((exercise.unit==null)==(exercise.basis==null)) &&
+            exercise.routineSetTypes.size<=MAX_SETS_PER_SLOT
 
     fun reduce(prior:KotlinFreestyleWorkout,input:KotlinFreestyleOperation):KotlinFreestyleDecision {
         fun reject(reason:KotlinFreestyleRefusal)=KotlinFreestyleDecision.Rejected(reason)
-        val op=if(input is KotlinFreestyleOperation.Reorder)
-            input.copy(slotIds=Collections.unmodifiableList(input.slotIds.toList())) else input
+        val op=when(input) {
+            is KotlinFreestyleOperation.Reorder ->input.copy(
+                slotIds=Collections.unmodifiableList(input.slotIds.toList()))
+            is KotlinFreestyleOperation.Add ->input.copy(exercise=input.exercise.copy(
+                routineSetTypes=Collections.unmodifiableList(input.exercise.routineSetTypes.toList())))
+            else ->input
+        }
         if(!id.matches(op.eventId))return reject(KotlinFreestyleRefusal.INVALID_EVENT)
         val old=prior.receipts.firstOrNull{it.operation.eventId==op.eventId}
         if(old!=null)return if(old.operation==op)KotlinFreestyleDecision.Proposed(prior,true)
@@ -119,7 +127,9 @@ object KotlinFreestyleWorkoutDomain {
             is KotlinFreestyleOperation.Add -> {
                 if(!validExercise(op.exercise) || exercises.any{it.slotId==op.exercise.slotId})
                     return reject(KotlinFreestyleRefusal.INVALID_EXERCISE)
-                if(exercises.size>=MAX_EXERCISES)return reject(KotlinFreestyleRefusal.LIMIT)
+                if(exercises.size>=MAX_EXERCISES ||
+                    exercises.sumOf{it.routineSetTypes.size}+op.exercise.routineSetTypes.size>MAX_SETS)
+                    return reject(KotlinFreestyleRefusal.LIMIT)
                 exercises=Collections.unmodifiableList(exercises+op.exercise)
             }
             is KotlinFreestyleOperation.Reorder -> {
@@ -202,7 +212,8 @@ object KotlinFreestyleWorkoutDomain {
             val exercise=selectedExercise(workout,setup,gymRevision,catalog,
                 "slot-${index+1}",slot.exerciseId)?:return null
             val next=reduce(workout,KotlinFreestyleOperation.Add(
-                "routine-add-${index+1}",workout.revision,exercise))
+                "routine-add-${index+1}",workout.revision,
+                exercise.copy(routineSetTypes=slot.setTypes)))
                 as? KotlinFreestyleDecision.Proposed?:return null
             workout=next.workout
         }

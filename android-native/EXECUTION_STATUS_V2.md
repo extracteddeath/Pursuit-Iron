@@ -206,3 +206,24 @@ All rows below have both required exact-head workflow conclusions verified as su
 | #1191 | Real generated first-program session method through corrected durable journal, Finish and separate future slot edit/consent | `d846cdac896fb54ed06dda42f64fa175d55267ac`; engine 46065238612, Compose 46065238590 | `062c69389798e6afd77ddef155a50086618cbdd5` |
 
 The generated first-program and authored cycle workout routes share the same journal owner. The lower-level Composer path has no saved method DTO and remains outside this progression evidence. A session choice is a recorded method intent, not an unauthorized recalculation of already-issued numeric targets. All source gates remain subject to the frozen acceptance matrix and applicable layers. No device acceptance or APK is claimed.
+
+
+## Stage 3 consolidated exact-head checkpoint — 2026-11-27
+
+The integrated branch at `e16ebef911e9b5ceac0ff7f1d8aec57dd0c5d86c` retains all of the following verified changes. Required engine and Compose workflows succeeded on each listed head; the tested and squash trees for #1195, #1197 and #1198 were independently compared and identical. Source evidence is distinct from device acceptance.
+
+| PR | Exact tested head | Engine / Compose | Integrated squash | Scope |
+|---|---|---|---|---|
+| #1192 | `e55fde06d5ad6e624603aac63a40d6073d458da1` | 46066825596 / 46066825771 | `e88c013fabdb6325aea18d696c9285a092a3dff6` | Generated opt-in drop and lengthened partial finishers; seed and real cold journey. |
+| #1193 | `4eb2385e49bbe4a19259030b932ed840141b2894` | 46068355629 / 46068355634 | `6de7fce0cc77a51bf60695110c034ddfe61e5f27` | All 14 measured exercise IDs, 15 corrected rows in one durable whole-session History. |
+| #1195 | `0c0975dcd2734cbfe1e52df1d5f0e3cbd18db488` | 46070037020 / 46070037026 | `f7634e2e65b6f317056b63b36651307cc87dcc9e` | Session-specific numerical progression review, strict/dynamic distinction, separate consent. |
+| #1197 (includes #1196) | `54384b06313832398a83fb6b1a1c6136cae5275e` | 46072709240 / 46072709293 | `7448ebc8be7c65b9b4f26d8476c6c2bf3b3f5ab6` | Repeat/remove approved warmups, exact owner/station fence and replay, shared Finish snapshot encoding; 20/30/45-minute authored preparation, Undo and History. |
+| #1198 | `6bb8aefafc611366ddc4210791aa2e554c66bcb8` | 46074347060 / 46074347045 | `e16ebef911e9b5ceac0ff7f1d8aec57dd0c5d86c` | All 372 standard native catalog identities through corrected factual History and next comparable stock-aware progression review. |
+
+S3B: `StarterCatalogPrescribingAcceptanceTest.everyRealStandardIdentityIsAuthorableAndProjectsCorrectedActualsWithItsOwnStock` now exercises the issued target, correction, factual completion and next review for every standard identity, with stock-specific increments, inverse assistance, and capped bodyweight reps. It is headless per-identity evidence, not 372 separate device or native-file journeys. `NativeMeasuredWorkoutConsentFileStoreTest.mixedMeasuredSessionColdReplaysAndFinishesAsOneRealHistoryWorkout` covers the separate 14 measured IDs. Retain the frozen 383 CAT and 372 SHELL denominators: the native catalog counts are not the same denominator. Explicit physical alias context, not a name-only match, governs discovery; historical receipt migration remains S7B. Final row-level acceptance not asserted here.
+
+S3C: `NativeKotlinCustomWorkoutJournalFileStoreTest.approvedWarmupRepeatAndRemovalUseRealOwnerGateAndColdFinish` proves the exact reviewed warmup repeat/remove path and factual classification. The currently implemented editor requires an original approved warmup template and rejects changed physical stations, already-started working sets, linked supersets and shortened sessions. It does not establish first-time warmup authoring for a slot without any template. Preserve that limitation rather than marking the entire CHECK-WORK-WARMUP assertion accepted. Existing stock-aware generated warmup issuance is separate evidence.
+
+S3D: the generated-program 20/30/45-minute regression candidate #1199 uses the same signed preparation and journal owners. Initial head `e44e03de96aa37db980abe897829bb2523f7ccd9` failed test compilation (two positional Boolean arguments to acceptTimeUndo); correct to named athleteConfirmed and run exact integrated CI. Do not infer a pass from the previous authored test. Verify every applicable original acceptance layer before closing the stage.
+
+Web main #1194: exact head `aa5a0128926493ed2420f6ecd49839a0a022695b`, squash `32fc5aa168d6a9ad65f8927b3410f0522aa8dde2`; strictly descending physically feasible drop targets, shared issuance/sync rule. All five premerge workflows passed; no claim that full native station provenance or every session-edit improvement was ported. Keep parity follow-up separate from native gate status. No APK or device acceptance.

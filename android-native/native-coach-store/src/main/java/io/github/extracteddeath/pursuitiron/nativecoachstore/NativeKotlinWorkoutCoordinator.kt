@@ -309,6 +309,9 @@ class NativeKotlinWorkoutCoordinator(
                 val approved=authority.currentApprovedWorkout(
                     ownerKey,workoutId)
                 if(approved==null ||
+                    approved.ownerKey!=ownerKey ||
+                    approved.athleteId!=journal.originalSnapshot.source.athleteId ||
+                    approved.currentSource!=approved.approvedSource ||
                     approved.approvedSource!=journal.originalSnapshot.source)
                     return@appendReviewedWorkoutSwap null
                 val selected=approved.program.exercises.singleOrNull{

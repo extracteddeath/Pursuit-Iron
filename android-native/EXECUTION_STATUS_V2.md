@@ -1,5 +1,5 @@
 # Pursuit Iron — execution status v2
-**As of:** 2026-11-26. **Target:** architecture/kotlin-engine-rebuild. **Latest observed integrated SHA:** `b903f25295accae0e6098ca9966579c152ae128e` (#1154).
+**As of:** 2026-11-27. **Target:** architecture/kotlin-engine-rebuild. **Latest observed integrated SHA:** `4e30f12fc2feb340a27f28d034fb8137f3c8d3b8` (#1181).
 Authority: [MASTER_DEVELOPMENT_PLAN.md](MASTER_DEVELOPMENT_PLAN.md) and [EXECUTION_MILESTONES_V2.json](EXECUTION_MILESTONES_V2.json). Original inventories are immutable v1 provenance, not current stage assignments.
 
 ## Honest baseline
@@ -18,7 +18,7 @@ Authority: [MASTER_DEVELOPMENT_PLAN.md](MASTER_DEVELOPMENT_PLAN.md) and [EXECUTI
 | S2D | Factual history and correction | 4 | 3 | Source-certified 4/4 + 3/3; device pending |
 | S2E | Integrated numerical certification | 1 | 0 | Source-certified 1/1; #1153 exact audit verified and integrated |
 | S3A | Workout execution lifecycle | 3 | 3 | Source-certified 3/3 + 3/3 on #1154; device pending |
-| S3B | Exercise catalog and swap | 759 | 8 | Shared search candidate; catalog acceptance pending |
+| S3B | Exercise catalog and swap | 759 | 8 | Full standard catalog authoring/actuals and generated gym switch verified; historical source review pending final verification |
 | S3C | Techniques and supersets | 10 | 13 | Not source-certified; inspect existing implementation |
 | S3D | Session tools and restrictions | 5 | 5 | Not source-certified; inspect existing implementation |
 | S4A | Athlete inputs and constraints | 6 | 14 | Not source-certified; inspect existing implementation |
@@ -168,3 +168,10 @@ Reviewed all 71 literal differences using the frozen historical RAW rows, effect
 - #1156 exact head 9bd3e59a9c9f192bb4fdd1c15a7bed7c04b8d1a7 passed [engine/native-store/source 45941414551](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/45941414551) and [Compose 45941414541](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/45941414541). Integrated candidate 8f69c252d00450a24aa61269ae0883ead108f636 includes #1175, only two technique test files differ from the new base. Fresh exact-head CI and S3B source dependency remain required.
 
 Remaining S3B: independently review standard and typed identity behavior, attachment/variant and full custom picker/authoring coverage, complete saved-gym and swap-scope acceptance, explicit original historical source context and future verified import where applicable. Preserve all 759 canonical and eight supplementary requirements, no automatic historical transfer. This candidate extends the existing per-standard-identity real-catalog fixture to native custom picker/authoring, exact option metadata and negative load/unit/equipment/facility/attachment/exclusion cases; fresh CI required. No source exit or APK.
+
+### S3B integrated catalog and gym-switch checkpoint — 2026-11-27
+
+- #1177 program-scope swap and #1180 all 372 native standard catalog definitions: exact authored snapshot, load, actual, correction, Finish and replayed factual history in the shared Kotlin engine. #1180 exact head `9757adc6d3175598852f3f5dba79015438575b26` passed engine 45955592917 and Compose 45955592912, integrated `a176eb64aea579edfa8cc26f552f814ec528a00e`. This is headless per-identity evidence, not a claim that 372 separate native store or device journeys ran. Real-store representative generated/custom journeys remain separate. #1178 and #1179 preserve ordinary deficit movement availability while retaining actual step-up fixtures.
+- #1181 generated first-program saved-gym switch: original issued workout remains loggable and finishable; stale approval prevents fresh issue; explicit approval of compatible same-unit gym stock allows next day; original history and saved cycle stay unchanged. Exact head `00de88dd3b02a9212298ede13fbe2db85a040e3c` passed engine 45961799620 and Compose 45961799645, integrated `4e30f12fc2feb340a27f28d034fb8137f3c8d3b8`. Complements custom cross-unit and machine station tests. Device pending.
+- Historical shell review: all 372 frozen IDs have distinct native candidates. This candidate additionally compares physical load meaning even when equipment strings match, checks 14 typed measurement contexts, and pins weighted pull-up, dedicated lat-pulldown station, single-plate front raise and band-supported Spanish squat conventions. No historic receipt or inferred load is transferred. Original implement/attachment/station, unit, and typed observation remain prerequisites for import acceptance (S7B); no unknown context is silently repaired. This does not waive SHELL-IDENTITY or certify all S3B rows. Fresh CI required.
+- #1156 combined candidate `cbd71aff4cd36f00dcd2fe9053952e8da1c03f6e` includes #1181, preserves both test insertions; Compose 45963722075 passed, engine 45963722070 pending at review. Keep Stage 3C certification dependent on Stage 3B; no device acceptance or APK.

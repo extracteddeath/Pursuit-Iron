@@ -151,6 +151,8 @@ internal fun NativeKotlinCandidateHistoryScreen(
                     entry.evidence.sets.map{it.exerciseId}
                 is NativeKotlinMixedHistoryCompletion.Custom ->
                     entry.evidence.visits.map{it.exerciseId}
+                is NativeKotlinMixedHistoryCompletion.Freestyle ->
+                    entry.workout.observations().map{it.exercise.exerciseId}
                 is NativeKotlinMixedHistoryCompletion.Measured ->
                     entry.stored.journal.approvedPlan.sets.map{it.exerciseId}
             }
@@ -169,6 +171,8 @@ internal fun NativeKotlinCandidateHistoryScreen(
                     entry.evidence.sets.map{it.exerciseId}
                 is NativeKotlinMixedHistoryCompletion.Custom ->
                     entry.evidence.visits.map{it.exerciseId}
+                is NativeKotlinMixedHistoryCompletion.Freestyle ->
+                    entry.workout.observations().map{it.exercise.exerciseId}
                 is NativeKotlinMixedHistoryCompletion.Measured -> emptyList()
             }
         }.toSet()
@@ -215,6 +219,8 @@ internal fun NativeKotlinCandidateHistoryScreen(
                     entry.evidence.sets.any{it.exerciseId in filteredMovements}
                 is NativeKotlinMixedHistoryCompletion.Custom ->
                     entry.evidence.visits.any{it.exerciseId in filteredMovements}
+                is NativeKotlinMixedHistoryCompletion.Freestyle ->
+                    entry.workout.observations().any{it.exercise.exerciseId in filteredMovements}
                 is NativeKotlinMixedHistoryCompletion.Measured ->
                     entry.stored.journal.approvedPlan.sets.any{
                         it.exerciseId in filteredMovements}
@@ -459,6 +465,7 @@ internal fun NativeKotlinCandidateHistoryScreen(
                             is NativeKotlinMixedHistoryCompletion.Custom -> "Custom program"
                             is NativeKotlinMixedHistoryCompletion.Composer -> "Generated program"
                             is NativeKotlinMixedHistoryCompletion.Measured -> "Measured workout"
+                            is NativeKotlinMixedHistoryCompletion.Freestyle -> "Freestyle workout"
                         },style=MaterialTheme.typography.bodySmall)
                         // A held second or carried centimeter is not a
                         // Composer repetition and must never count as a PR.
@@ -482,6 +489,15 @@ internal fun NativeKotlinCandidateHistoryScreen(
                             Text("Measurements retain their actual seconds, distance, sides and equipment. No rep PRs are inferred.",
                                 style=MaterialTheme.typography.bodySmall,
                                 color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else if(entry is NativeKotlinMixedHistoryCompletion.Freestyle) {
+                            val sets=entry.workout.effectiveSets.values
+                            val completed=sets.count{it.type==DraftSetType.WORKING &&
+                                it.outcome==KotlinJournalSetOutcome.COMPLETED}
+                            Text("$completed working sets completed",
+                                style=MaterialTheme.typography.titleSmall)
+                            Text("Unplanned training · recorded actuals only",
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
                         } else {
                             // These are effective, correction-aware facts from
                             // the verified owner history, not estimated PRs.
@@ -490,6 +506,7 @@ internal fun NativeKotlinCandidateHistoryScreen(
                                     KotlinHistoryPerformanceSummaryDomain.fromComposer(entry.evidence.sets)
                                 is NativeKotlinMixedHistoryCompletion.Custom ->
                                     KotlinHistoryPerformanceSummaryDomain.fromCustom(entry.evidence.visits)
+                                is NativeKotlinMixedHistoryCompletion.Freestyle,
                                 is NativeKotlinMixedHistoryCompletion.Measured ->
                                     error("Handled by typed branch")
                             }
@@ -516,6 +533,8 @@ internal fun NativeKotlinCandidateHistoryScreen(
                                 entry.evidence.sets.map{it.exerciseId}
                             is NativeKotlinMixedHistoryCompletion.Custom ->
                                 entry.evidence.visits.map{it.exerciseId}
+                            is NativeKotlinMixedHistoryCompletion.Freestyle ->
+                                entry.workout.observations().map{it.exercise.exerciseId}
                             is NativeKotlinMixedHistoryCompletion.Measured ->
                                 emptyList()
                         }.distinct()
@@ -560,6 +579,8 @@ internal fun NativeKotlinCandidateHistoryScreen(
                             Text(if(expanded)"Hide sets"
                                 else if(entry is NativeKotlinMixedHistoryCompletion.Measured)
                                     "View recorded measurements"
+                                else if(entry is NativeKotlinMixedHistoryCompletion.Freestyle)
+                                    "View actual sets"
                                 else "View targets, notes and actuals")
                         }
                         if(expanded)when(entry) {
@@ -569,6 +590,12 @@ internal fun NativeKotlinCandidateHistoryScreen(
                                 NativeKotlinGeneratedHistoryNote(host,entry)
                             is NativeKotlinMixedHistoryCompletion.Measured ->
                                 NativeKotlinMeasuredHistoryRows(entry)
+                            is NativeKotlinMixedHistoryCompletion.Freestyle ->
+                                entry.workout.observations().forEach{(exercise,record)->
+                                    key(record.setKey,record.eventId) {
+                                        NativeKotlinSavedFreestyleRow(host,entry,exercise,record,onChanged={reload()})
+                                    }
+                                }
                         }
                         if(expanded)when(entry) {
                             is NativeKotlinMixedHistoryCompletion.Composer ->entry.evidence.sets.forEach {set->
@@ -578,6 +605,7 @@ internal fun NativeKotlinCandidateHistoryScreen(
                             is NativeKotlinMixedHistoryCompletion.Custom ->
                                 NativeKotlinSavedCustomHistoryTechniqueLedger(
                                     host,entry,onChanged={reload()})
+                            is NativeKotlinMixedHistoryCompletion.Freestyle,
                             is NativeKotlinMixedHistoryCompletion.Measured -> Unit
                         }
                     }
@@ -1178,5 +1206,77 @@ internal fun NativeKotlinMeasuredHistoryRows(
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         HorizontalDivider()
+    }
+}
+
+/** Actual-only saved-set correction. The exact predecessor and revision
+ * are checked by the same owner-fenced History redo transaction. */
+@Composable
+private fun NativeKotlinSavedFreestyleRow(
+    host:NativeKotlinCandidateHost,entry:NativeKotlinMixedHistoryCompletion.Freestyle,
+    exercise:KotlinFreestyleExercise,record:KotlinFreestyleOperation.Record,
+    onChanged:()->Unit
+) {
+    Text(kotlinExerciseLabel(exercise.exerciseId),style=MaterialTheme.typography.titleSmall)
+    Text(record.type.name.lowercase().replaceFirstChar{it.uppercase()}+" · "+
+        nativeFreestyleHistoryActual(record.actual,exercise.basis,record.outcome),
+        style=MaterialTheme.typography.bodyMedium)
+    val scope=rememberCoroutineScope()
+    var editing by remember(record.eventId){mutableStateOf(false)}
+    var submitting by remember{mutableStateOf(false)}
+    var error by remember{mutableStateOf<String?>(null)}
+    var weight by remember(record.eventId){mutableStateOf(record.actual?.load?.toPlainString().orEmpty())}
+    var reps by remember(record.eventId){mutableStateOf(record.actual?.reps?.toString().orEmpty())}
+    var rir by remember(record.eventId){mutableStateOf(record.actual?.actualRir?.toString().orEmpty())}
+    var outcome by remember(record.eventId){mutableStateOf(record.outcome)}
+    TextButton(enabled=!submitting,onClick={editing=!editing;error=null}) {
+        Text(if(editing)"Cancel correction" else "Correct saved set")
+    }
+    if(editing) {
+        Text("Only the observed result changes. The original completion stays in History.",
+            style=MaterialTheme.typography.bodySmall)
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement=Arrangement.spacedBy(8.dp)){
+            KotlinJournalSetOutcome.entries.forEach{choice->
+                FilterChip(selected=choice==outcome,enabled=!submitting,
+                    onClick={outcome=choice},label={Text(choice.name.lowercase().replace('_',' '))})
+            }
+        }
+        val unit=exercise.unit
+        if(outcome!=KotlinJournalSetOutcome.SKIPPED) {
+            if(unit!=null)OutlinedTextField(weight,{weight=it},enabled=!submitting,
+                label={Text("Actual weight (${unit.name.lowercase()})")},
+                singleLine=true,modifier=Modifier.fillMaxWidth())
+            if(outcome==KotlinJournalSetOutcome.COMPLETED) {
+                Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                    OutlinedTextField(reps,{reps=it},enabled=!submitting,label={Text("Actual reps")},
+                        singleLine=true,modifier=Modifier.weight(1f))
+                    OutlinedTextField(rir,{rir=it},enabled=!submitting,label={Text("Actual RIR (optional)")},
+                        singleLine=true,modifier=Modifier.weight(1f))
+                }
+            }
+        }
+        val parsed=KotlinWorkoutEntryDomain.parseUnplanned(unit,weight,reps,rir,
+            outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT)
+        val actual=if(outcome==KotlinJournalSetOutcome.SKIPPED)null
+            else (parsed as? KotlinSetEntryResult.Accepted)?.performed?.copy(
+                machineInstanceId=record.actual?.machineInstanceId)
+        Button(enabled=!submitting && (outcome==KotlinJournalSetOutcome.SKIPPED || actual!=null),
+            onClick={
+                submitting=true;error=null
+                val operation=KotlinFreestyleOperation.CorrectSaved(record.copy(
+                    eventId="correct-"+java.util.UUID.randomUUID().toString().replace("-",""),
+                    expectedRevision=entry.workout.revision,outcome=outcome,actual=actual,
+                    correctsEventId=record.eventId))
+                scope.launch {
+                    try {
+                        val result=withContext(Dispatchers.IO){
+                            host.correctFinishedFreestyle(entry.manifest.workoutId,operation)}
+                        if(result is NativeFreestyleResult.Durable)onChanged()
+                        else error="Correction not verified. Refresh History and try again."
+                    }finally{submitting=false}
+                }
+            }){Text("Save corrected actual")}
+        error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
     }
 }

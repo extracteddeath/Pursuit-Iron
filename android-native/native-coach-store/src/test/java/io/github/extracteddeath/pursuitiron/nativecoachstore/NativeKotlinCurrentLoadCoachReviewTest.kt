@@ -279,6 +279,37 @@ class NativeKotlinCurrentLoadCoachReviewTest {
             result)
     }
 
+    @Test fun actualOnlyFreestyleAppearanceCannotAdvanceOrBypassProgrammedProgression() {
+        fun free(i:Int,exerciseId:String="db-press"):NativeKotlinMixedHistoryCompletion.Freestyle {
+            val workoutId="workout-$i"
+            var state=checkNotNull(KotlinFreestyleWorkoutDomain.begin(workoutId,
+                KotlinFreestyleSource("athlete-1","gym-1","profile-1",3)))
+            fun append(op:KotlinFreestyleOperation) {
+                state=(KotlinFreestyleWorkoutDomain.reduce(state,op)
+                    as KotlinFreestyleDecision.Proposed).workout
+            }
+            append(KotlinFreestyleOperation.Add("add",0,KotlinFreestyleExercise(
+                "slot",exerciseId,exerciseId,"standard",null,LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND)))
+            append(KotlinFreestyleOperation.Record("actual",1,"slot","set",DraftSetType.WORKING,
+                KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(n("35"),LoadUnit.LB,12,2)))
+            append(KotlinFreestyleOperation.Finish("finish-$i",2))
+            return NativeKotlinMixedHistoryCompletion.Freestyle(
+                KotlinHistoryManifestEntry(i.toLong(),workoutId,"receipt-$i","finish-$i",3,0),state)
+        }
+        for(t in listOf(timeline(composer(1),composer(2),free(3)),
+            timeline(composer(1),free(2),composer(3)))) {
+            assertEquals(NativeCurrentLoadReviewResult.Rejected(
+                NativeCurrentLoadReviewRefusal.CUSTOM_OR_UNWEIGHTED_INTERVENING_VISIT),inspect(t))
+        }
+        val rep=NativeKotlinCurrentRepPrescriptionDomain.inspect(approval(),
+            timeline(composer(1),composer(2),free(3)),"db-press",CoachReadiness.NORMAL,false)
+        assertEquals(NativeCurrentRepPrescriptionResult.Rejected(
+            NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT),rep)
+        // Another movement is not an intervening appearance.
+        assertTrue(inspect(timeline(composer(1),composer(2),free(3,"db-row")))
+            is NativeCurrentLoadReviewResult.Reviewed)
+    }
+
     @Test fun doNotSkipPoorOrIncompatibleNewestComposerSession() {
         val poor=inspect(timeline(composer(1),composer(2),
             composer(3,completedReps=listOf(8,9))))

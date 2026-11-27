@@ -36,13 +36,14 @@ private data class ExerciseVisitDisplay(
     val type:DraftSetType,
     val followUp:Boolean,
     val outcome:KotlinJournalSetOutcome,
-    val issuedLoad:DraftSetLoad,
-    val issuedReps:RepBand,
+    val issuedLoad:DraftSetLoad?,
+    val issuedReps:RepBand?,
     val issuedRir:Int?,
     val actual:KotlinPerformedSet?,
     val techniqueKind:CustomAmplifierKind?=null,
     val techniqueStage:Int=1,
-    val techniqueParentKey:String?=null
+    val techniqueParentKey:String?=null,
+    val freestyleBasis:LoadBasis?=null
 )
 
 private fun exerciseHistoryRows(
@@ -64,6 +65,15 @@ private fun exerciseHistoryRows(
         // Rep-based history sheets must never relabel seconds, centimeters
         // or qualitative band observations as working-set repetitions.
         is NativeKotlinMixedHistoryCompletion.Measured -> emptyList()
+        is NativeKotlinMixedHistoryCompletion.Freestyle ->
+            completed.workout.observations().filter{it.exercise.exerciseId==exerciseId}
+                .mapIndexed{index,(exercise,record)->
+                    ExerciseVisitDisplay(
+                        nativeExerciseHistoryRowKey(completed.manifest.workoutId,record.setKey,null),
+                        order,completed.workout.source.gymId,index+1,record.type,false,
+                        record.outcome,null,null,null,record.actual,
+                        freestyleBasis=exercise.basis)
+                }
         is NativeKotlinMixedHistoryCompletion.Custom ->
             completed.evidence.visits.filter {
                 it.exerciseId==exerciseId
@@ -83,6 +93,25 @@ private fun exerciseHistoryRows(
 }
 
 private fun historyLoadLabel(load:DraftSetLoad):String=kotlinIssuedLoadLabel(load)
+
+/** No dummy target is required to describe the observed free-session set. */
+internal fun nativeFreestyleHistoryActual(actual:KotlinPerformedSet?,basis:LoadBasis?,
+    outcome:KotlinJournalSetOutcome):String {
+    if(outcome==KotlinJournalSetOutcome.SKIPPED)return "Skipped · no performed set"
+    if(actual==null)return "No performed value"
+    val weight=actual.load?.let{
+        it.stripTrailingZeros().toPlainString()+" "+actual.unit?.name.orEmpty().lowercase()+
+            when(basis) {
+                LoadBasis.ASSISTANCE_COUNTERWEIGHT ->" assistance"
+                LoadBasis.DUMBBELL_PER_HAND ->" per hand"
+                else ->""
+            }
+    }?:"Bodyweight"
+    val result=if(outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT)
+        "Failed attempt · $weight" else "$weight × ${actual.reps} reps"
+    return result+(actual.actualRir?.let{" · $it RIR"}?:"")+
+        (actual.machineInstanceId?.let{" · $it"}?:"")
+}
 
 private fun actualLabel(actual:KotlinPerformedSet?,issuedLoad:DraftSetLoad):String {
     if(actual==null)return "No performed value"
@@ -432,20 +461,29 @@ internal fun NativeKotlinExerciseHistorySheet(
                                     // would mislabel a second exercise's mini 1.
                                     Text(if(row.followUp)"$kind" else "$kind $ordinal",
                                         style=MaterialTheme.typography.titleSmall)
-                                    val targetReps=if(row.issuedReps.minimum==row.issuedReps.maximum)
-                                        "${row.issuedReps.minimum}"
-                                    else "${row.issuedReps.minimum}–${row.issuedReps.maximum}"
-                                    Text("Target · ${historyLoadLabel(row.issuedLoad)} × $targetReps"+
-                                        (row.issuedRir?.let{" · $it RIR"} ?: ""),
-                                        style=MaterialTheme.typography.bodySmall,
-                                        color=MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(when(row.outcome) {
-                                        KotlinJournalSetOutcome.SKIPPED -> "Skipped · no performed set"
-                                        KotlinJournalSetOutcome.FAILED_ATTEMPT ->
-                                            "Failed attempt · ${actualLabel(row.actual,row.issuedLoad)}"
-                                        KotlinJournalSetOutcome.COMPLETED ->
-                                            "Actual · ${actualLabel(row.actual,row.issuedLoad)}"
-                                    },style=MaterialTheme.typography.bodyMedium)
+                                    val issued=row.issuedLoad
+                                    val reps=row.issuedReps
+                                    if(issued!=null && reps!=null) {
+                                        val targetReps=if(reps.minimum==reps.maximum)
+                                            "${reps.minimum}" else "${reps.minimum}–${reps.maximum}"
+                                        Text("Target · ${historyLoadLabel(issued)} × $targetReps"+
+                                            (row.issuedRir?.let{" · $it RIR"} ?: ""),
+                                            style=MaterialTheme.typography.bodySmall,
+                                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(when(row.outcome) {
+                                            KotlinJournalSetOutcome.SKIPPED -> "Skipped · no performed set"
+                                            KotlinJournalSetOutcome.FAILED_ATTEMPT ->
+                                                "Failed attempt · ${actualLabel(row.actual,issued)}"
+                                            KotlinJournalSetOutcome.COMPLETED ->
+                                                "Actual · ${actualLabel(row.actual,issued)}"
+                                        },style=MaterialTheme.typography.bodyMedium)
+                                    } else {
+                                        Text("Freestyle · actual only",
+                                            style=MaterialTheme.typography.bodySmall,
+                                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(nativeFreestyleHistoryActual(row.actual,row.freestyleBasis,row.outcome),
+                                            style=MaterialTheme.typography.bodyMedium)
+                                    }
                                     if(!row.followUp)
                                         row.techniqueParentKey?.let{parent->
                                             techniqueCaptions[parent]?.let{caption->

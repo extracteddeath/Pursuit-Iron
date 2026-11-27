@@ -97,6 +97,8 @@ class KotlinSetNumberAuthorityDomainTest {
                 KotlinWorkoutJournalDomain.validPerformed(target,outcome,performed))
             assertEquals("Custom case $i",policy,
                 CustomWorkoutJournalDomain.actualValid(issued,outcome,performed))
+            assertEquals("Unplanned actual case $i",policy,
+                KotlinSetNumberAuthorityDomain.actualRefusal(LoadUnit.LB,outcome,performed)==null)
         }
         assertTrue(KotlinSetNumberAuthorityDomain.valid(
             DraftSetLoad.ExplicitBodyweight,KotlinJournalSetOutcome.COMPLETED,
@@ -112,6 +114,38 @@ class KotlinSetNumberAuthorityDomainTest {
         assertEquals(KotlinSetEntryRefusal.INVALID_WEIGHT,
             (KotlinWorkoutEntryDomain.parse(target,"205.0001","9","")
                 as KotlinSetEntryResult.Rejected).reason)
+    }
+
+    @Test fun unplannedEntriesRequireExplicitActualsAndNeverInventTargets() {
+        val parser=KotlinWorkoutEntryDomain
+        val authority=KotlinSetNumberAuthorityDomain
+        val logged=parser.parseUnplanned(LoadUnit.KG,"42.125","9","")
+            as KotlinSetEntryResult.Accepted
+        assertEquals(KotlinPerformedSet(n("42.125"),LoadUnit.KG,9,null),logged.performed)
+        assertNull(authority.actualRefusal(LoadUnit.KG,KotlinJournalSetOutcome.COMPLETED,logged.performed))
+        assertEquals(KotlinSetNumberRefusal.MISSING_OR_MISMATCHED_WEIGHT,
+            authority.actualRefusal(LoadUnit.LB,KotlinJournalSetOutcome.COMPLETED,logged.performed))
+        assertEquals(KotlinSetEntryResult.Rejected(KotlinSetEntryRefusal.MISSING_WEIGHT),
+            parser.parseUnplanned(LoadUnit.KG,"","9",""))
+        assertEquals(KotlinSetEntryResult.Rejected(KotlinSetEntryRefusal.MISSING_REPS),
+            parser.parseUnplanned(LoadUnit.KG,"42.125","",""))
+        assertEquals(KotlinSetEntryResult.Rejected(KotlinSetEntryRefusal.INVALID_RIR),
+            parser.parseUnplanned(LoadUnit.KG,"42.125","9","11"))
+        assertEquals(KotlinSetEntryResult.Rejected(KotlinSetEntryRefusal.INVALID_WEIGHT),
+            parser.parseUnplanned(LoadUnit.KG,"42.1251","9",""))
+        val zero=parser.parseUnplanned(LoadUnit.KG,"0","12","2") as KotlinSetEntryResult.Accepted
+        assertEquals(n("0"),zero.performed.load)
+        val failed=parser.parseUnplanned(LoadUnit.KG,"50","","",true) as KotlinSetEntryResult.Accepted
+        assertEquals(KotlinPerformedSet(n("50"),LoadUnit.KG,0,null),failed.performed)
+        val body=parser.parseUnplanned(null,"","12","") as KotlinSetEntryResult.Accepted
+        assertEquals(KotlinPerformedSet(null,null,12,null),body.performed)
+        assertEquals(KotlinSetNumberRefusal.WEIGHT_NOT_APPLICABLE_TO_BODYWEIGHT,
+            authority.actualRefusal(null,KotlinJournalSetOutcome.COMPLETED,logged.performed))
+        assertNull(authority.actualRefusal(null,KotlinJournalSetOutcome.SKIPPED,null))
+        assertEquals(KotlinSetNumberRefusal.SKIP_CONTAINS_ACTUAL,
+            authority.actualRefusal(null,KotlinJournalSetOutcome.SKIPPED,body.performed))
+        assertEquals(KotlinSetNumberRefusal.MISSING_ACTUAL,
+            authority.actualRefusal(LoadUnit.KG,null,logged.performed))
     }
 
     @Test fun completedPhysicalStationRequiresValidWeightedActualAndExplicitIdentity() {

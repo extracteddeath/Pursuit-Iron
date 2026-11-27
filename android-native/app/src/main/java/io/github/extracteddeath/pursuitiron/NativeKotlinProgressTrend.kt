@@ -31,32 +31,43 @@ internal fun verifiedStrengthTrend(
     exerciseId:String,
     displayUnit:LoadUnit
 ):List<StrengthTrendSample> = timeline.completions.mapNotNull { entry ->
-    val sets: List<Pair<DraftSetLoad, KotlinPerformedSet?>> = when(entry) {
+    val sets: List<Pair<LoadUnit?, KotlinPerformedSet?>> = when(entry) {
         is NativeKotlinMixedHistoryCompletion.Composer ->
             entry.evidence.sets.filter{
                 it.exerciseId==exerciseId &&
                     it.type==DraftSetType.WORKING &&
                     it.outcome==KotlinJournalSetOutcome.COMPLETED
-            }.map{it.issuedLoad to it.actual}
+            }.mapNotNull{set->
+                (set.issuedLoad as? DraftSetLoad.Verified)
+                    ?.takeIf{it.basis==LoadBasis.BARBELL_TOTAL}?.let{it.unit to set.actual}
+            }
         // No typed measured outcome is a verified rep-based 1RM sample.
         is NativeKotlinMixedHistoryCompletion.Measured -> emptyList()
+        is NativeKotlinMixedHistoryCompletion.Freestyle ->
+            entry.workout.observations().filter{(exercise,record)->
+                exercise.exerciseId==exerciseId && exercise.basis==LoadBasis.BARBELL_TOTAL &&
+                    record.type==DraftSetType.WORKING && record.outcome==KotlinJournalSetOutcome.COMPLETED
+            }.map{(exercise,record)->exercise.unit to record.actual}
         is NativeKotlinMixedHistoryCompletion.Custom ->
             entry.evidence.visits.filter{
                 it.exerciseId==exerciseId &&
                     it.part==CustomWorkoutVisitPart.MAIN &&
                     it.setType==DraftSetType.WORKING &&
                     it.outcome==KotlinJournalSetOutcome.COMPLETED
-            }.map{it.prescribedLoad to it.actual}
+            }.mapNotNull{set->
+                (set.prescribedLoad as? DraftSetLoad.Verified)
+                    ?.takeIf{it.basis==LoadBasis.BARBELL_TOTAL}?.let{it.unit to set.actual}
+            }
     }
-    val best=sets.mapNotNull { (issued,actual) ->
-        val loaded=issued as? DraftSetLoad.Verified
-        if(loaded?.basis!=LoadBasis.BARBELL_TOTAL ||
-            actual?.unit!=loaded.unit)return@mapNotNull null
+    val best=sets.mapNotNull { (unit,actual) ->
+        if(unit==null || actual==null || actual.unit!=unit ||
+            KotlinSetNumberAuthorityDomain.machineTagContradictsFreeBarbell(
+                LoadBasis.BARBELL_TOTAL,actual.machineInstanceId))return@mapNotNull null
         val actualLoad=actual.load ?:return@mapNotNull null
         val estimate=StrengthStandardsMeasurementDomain.epley(
             actualLoad,actual.reps)?:return@mapNotNull null
         StrengthStandardsMeasurementDomain.convert(
-            estimate,loaded.unit,displayUnit)
+            estimate,unit,displayUnit)
     }.maxOrNull()
     best?.let{StrengthTrendSample(
         entry.manifest.completionOrder,it,entry.manifest.completedAtEpochMillis)}

@@ -25,13 +25,13 @@ object KotlinWorkoutEntryDomain {
      * generated/custom journals and cold replay.
      */
     private fun accepted(
-        load:DraftSetLoad,
+        expectedUnit:LoadUnit?,
         performed:KotlinPerformedSet,
         failed:Boolean
     ):KotlinSetEntryResult =
-        if(KotlinSetNumberAuthorityDomain.valid(load,
+        if(KotlinSetNumberAuthorityDomain.actualRefusal(expectedUnit,
                 if(failed)KotlinJournalSetOutcome.FAILED_ATTEMPT
-                else KotlinJournalSetOutcome.COMPLETED,performed))
+                else KotlinJournalSetOutcome.COMPLETED,performed)==null)
             KotlinSetEntryResult.Accepted(performed)
         else KotlinSetEntryResult.Rejected(KotlinSetEntryRefusal.INVALID_WEIGHT)
 
@@ -49,6 +49,25 @@ object KotlinWorkoutEntryDomain {
     /** Custom main/follow-up visits use the same bounded actual-entry policy. */
     fun parse(
         load:DraftSetLoad,
+        weightText:String,
+        repsText:String,
+        actualRirText:String,
+        failed:Boolean=false
+    ):KotlinSetEntryResult {
+        // Keep malformed issued-load refusal distinct from actual-only entry.
+        // Existing field validation order is retained by checking after parse.
+        val result=parseUnplanned((load as? DraftSetLoad.Verified)?.unit,
+            weightText,repsText,actualRirText,failed)
+        if(result is KotlinSetEntryResult.Accepted &&
+            !KotlinSetNumberAuthorityDomain.validIssuedLoad(load))
+            return KotlinSetEntryResult.Rejected(KotlinSetEntryRefusal.INVALID_WEIGHT)
+        return result
+    }
+
+    /** Shared actual-only field parser. A verified bodyweight movement uses
+     * null unit; an unknown/unreviewed physical context must not call this. */
+    fun parseUnplanned(
+        expectedUnit:LoadUnit?,
         weightText:String,
         repsText:String,
         actualRirText:String,
@@ -73,10 +92,10 @@ object KotlinWorkoutEntryDomain {
                 return KotlinSetEntryResult.Rejected(KotlinSetEntryRefusal.INVALID_RIR)
             value
         }
-        return when(val planned=load) {
-            DraftSetLoad.ExplicitBodyweight ->
-                accepted(load,KotlinPerformedSet(null,null,reps,rir),failed)
-            is DraftSetLoad.Verified -> {
+        return when(expectedUnit) {
+            null ->
+                accepted(null,KotlinPerformedSet(null,null,reps,rir),failed)
+            else -> {
                 val text=weightText.trim()
                 if(text.isEmpty())
                     return KotlinSetEntryResult.Rejected(KotlinSetEntryRefusal.MISSING_WEIGHT)
@@ -87,7 +106,7 @@ object KotlinWorkoutEntryDomain {
                         KotlinSetEntryRefusal.INVALID_WEIGHT)
                 // The parser owns text syntax only. The shared receipt
                 // authority below owns the physical numeric envelope.
-                accepted(load,KotlinPerformedSet(amount,planned.unit,reps,rir),failed)
+                accepted(expectedUnit,KotlinPerformedSet(amount,expectedUnit,reps,rir),failed)
             }
         }
     }

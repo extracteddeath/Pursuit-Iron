@@ -517,8 +517,10 @@ assert.ok(
   liveJournalDomain.includes('CustomWorkoutJournalRefusal.SWAP_ALREADY_STARTED') &&
   liveJournalDomain.includes('CustomWorkoutJournalRefusal.SWAP_PROTECTED') &&
   liveJournalDomain.includes('prior.receipts.any') &&
-  liveJournalCodec.includes('private const val VERSION=6') &&
-  liveJournalCodec.includes('val version=if(exactDecimal) VERSION else if(stageTagged) 5 else if(machineTagged) 4') &&
+  liveJournalCodec.includes('private const val VERSION=7') &&
+  liveJournalCodec.includes('val version=if(adjusted) VERSION else if(exactDecimal) 6 else if(stageTagged) 5 else if(machineTagged) 4') &&
+  liveJournalCodec.includes('is CustomWorkoutJournalOperation.AdjustRemaining->') &&
+  liveJournalCodec.includes('NativeMidSessionWorkingEditCodec.read(this)') &&
   liveJournalCodec.includes('if(version>=5)writeInt(event.visit.stage)') &&
   liveJournalCodec.includes('if(version>=5)readInt() else 1') &&
   liveJournalCodec.includes('if(version>=4)textOptional(value.machineInstanceId)') &&

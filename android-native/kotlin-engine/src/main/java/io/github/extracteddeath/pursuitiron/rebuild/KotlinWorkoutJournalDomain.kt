@@ -236,6 +236,11 @@ object KotlinWorkoutJournalDomain {
                 null
             }
             is KotlinJournalOperation.SwapExercise -> {
+                // Existing swap Undo reconstructs its source from issuance.
+                // Do not lose a prior adjustment by swapping that occurrence.
+                if(journal.receipts.any{
+                    (it.operation as? KotlinJournalOperation.AdjustRemaining)?.request?.occurrenceId==operation.previousExerciseId
+                })return KotlinJournalDecision.Rejected(KotlinJournalRefusal.INVALID_ADJUSTMENT)
                 val earlier=journal.snapshot.targets.filter{
                     it.exerciseId==operation.previousExerciseId
                 }

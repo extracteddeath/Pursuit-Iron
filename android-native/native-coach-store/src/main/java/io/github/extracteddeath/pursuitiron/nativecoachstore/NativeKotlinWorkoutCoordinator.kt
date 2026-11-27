@@ -363,6 +363,36 @@ class NativeKotlinWorkoutCoordinator(
     }.getOrElse {NativeJournalFileResult.Rejected(
         NativeJournalFileRefusal.STORAGE_UNAVAILABLE)}
 
+    internal fun adjustRemaining(
+        ownerKey:String,workoutId:String,operation:KotlinJournalOperation
+    ):NativeJournalFileResult=runCatching {
+        revisionFence.withOwnerTransaction(ownerKey) {
+            store.appendReviewedWorkoutAdjustment(ownerKey,workoutId,{owner,source->
+                runCatching{authority.canAccessIssuedWorkout(owner,source)}.getOrDefault(false)
+            }) { journal->
+                if(operation !is KotlinJournalOperation.AdjustRemaining &&
+                    operation !is KotlinJournalOperation.UndoAdjustment)return@appendReviewedWorkoutAdjustment null
+                // Exact receipt retry is idempotent even if the source later
+                // changes; a different payload with the same ID is refused.
+                journal.receipts.firstOrNull{it.operation.eventId==operation.eventId}?.let{
+                    return@appendReviewedWorkoutAdjustment operation.takeIf{op->it.operation==op}
+                }
+                if(operation is KotlinJournalOperation.UndoAdjustment)
+                    return@appendReviewedWorkoutAdjustment operation
+                val edit=operation as KotlinJournalOperation.AdjustRemaining
+                val approved=authority.currentApprovedWorkout(ownerKey,workoutId)
+                    ?:return@appendReviewedWorkoutAdjustment null
+                if(approved.ownerKey!=ownerKey || approved.athleteId!=journal.originalSnapshot.source.athleteId ||
+                    approved.approvedSource!=journal.originalSnapshot.source || approved.currentSource!=approved.approvedSource ||
+                    approved.grant.workoutId!=workoutId || approved.grant.dayIndex!=journal.snapshot.dayIndex)
+                    return@appendReviewedWorkoutAdjustment null
+                operation.takeIf{
+                    MidSessionWorkingEditDomain.approvedGenerated(journal,edit.request,approved.program,approved.policies)
+                }
+            }
+        }
+    }.getOrElse{NativeJournalFileResult.Rejected(NativeJournalFileRefusal.STORAGE_UNAVAILABLE)}
+
     internal fun skipRemainingExercise(
         ownerKey:String,athleteId:String,workoutId:String,
         expectedRevision:Long,exerciseId:String

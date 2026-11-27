@@ -674,6 +674,18 @@ class KotlinNativeJournalFileStore(private val privateDirectory: Path) {
         ownerKey:String,workoutId:String,
         authorizeCurrent:(String,KotlinTrainingSourceRevision)->Boolean,
         reviewed:(KotlinWorkoutJournalState)->KotlinJournalOperation?
+    ):NativeJournalFileResult = appendReviewedWorkoutMutation(ownerKey,workoutId,authorizeCurrent,false,reviewed)
+
+    internal fun appendReviewedWorkoutAdjustment(
+        ownerKey:String,workoutId:String,
+        authorizeCurrent:(String,KotlinTrainingSourceRevision)->Boolean,
+        reviewed:(KotlinWorkoutJournalState)->KotlinJournalOperation?
+    ):NativeJournalFileResult = appendReviewedWorkoutMutation(ownerKey,workoutId,authorizeCurrent,true,reviewed)
+
+    private fun appendReviewedWorkoutMutation(
+        ownerKey:String,workoutId:String,
+        authorizeCurrent:(String,KotlinTrainingSourceRevision)->Boolean,
+        adjustment:Boolean,reviewed:(KotlinWorkoutJournalState)->KotlinJournalOperation?
     ):NativeJournalFileResult {
         if(!ownerId.matches(ownerKey) || !ownerId.matches(workoutId))
             return NativeJournalFileResult.Rejected(
@@ -686,8 +698,10 @@ class KotlinNativeJournalFileStore(private val privateDirectory: Path) {
                 val proposed=reviewed(saved.journal)
                     ?:return@locked NativeJournalFileResult.Rejected(
                         NativeJournalFileRefusal.SWAP_INVALID_TARGET)
-                if(proposed !is KotlinJournalOperation.SwapExercise &&
-                    proposed !is KotlinJournalOperation.UndoSwap)
+                val allowed=if(adjustment)
+                    proposed is KotlinJournalOperation.AdjustRemaining || proposed is KotlinJournalOperation.UndoAdjustment
+                else proposed is KotlinJournalOperation.SwapExercise || proposed is KotlinJournalOperation.UndoSwap
+                if(!allowed)
                     return@locked NativeJournalFileResult.Rejected(
                         NativeJournalFileRefusal.SWAP_INVALID_TARGET)
                 val result=KotlinWorkoutJournalDomain.reduce(

@@ -139,6 +139,67 @@ object MidSessionWorkingEditDomain {
 
     /** Recompute effective session timing from the original approved
      * estimate and exact set-time delta, avoiding accumulated rounding. */
+    /** Independently review the complete approved week with this ONE
+     * effective day substituted. Only the existing muscle-dose/time auditor
+     * computes capacity. Never treat a UI-supplied estimate as approval.
+     * No mixed-swap or specialist-day adjustments in this initial lane. */
+    fun approvedGenerated(
+        state:KotlinWorkoutJournalState,request:MidSessionWorkingEdit,
+        program:ComposerRequest,policies:List<ExercisePrescriptionPolicy>
+    ):Boolean = runCatching {
+        if(state.receipts.any{it.operation is KotlinJournalOperation.SwapExercise ||
+                it.operation is KotlinJournalOperation.UndoSwap} ||
+            !KotlinWorkoutPresentationDomain.hasSingleOccurrence(state.snapshot.targets,request.occurrenceId))
+            return@runCatching false
+        val next=generatedSnapshot(state,request)?:return@runCatching false
+        val approved=CoachSessionPrescriptionDomain.draft(program,policies)
+        if(approved.status!=PrescriptionDraftStatus.COMPLETE_FOR_REVIEW ||
+            approved.finalAudit?.satisfiesDeclaredHardConstraints!=true)return@runCatching false
+        val day=approved.sessions.singleOrNull{it.dayIndex==next.dayIndex}
+            ?:return@runCatching false
+        if(day.purpose!=next.purpose || program.days.getOrNull(next.dayIndex)?.calendarDay!=next.calendarDay)
+            return@runCatching false
+        val options=program.exercises.associateBy{it.exerciseId}
+        if(options.size!=program.exercises.size)return@runCatching false
+        val groups=next.targets.groupBy{it.exerciseId}
+        if(groups.keys.toList()!=day.exercises.map{it.exerciseId})return@runCatching false
+        val revised=day.exercises.map{original->
+            val option=options[original.exerciseId]?:return@runCatching false
+            val rows=groups.getValue(original.exerciseId)
+            val working=rows.filter{it.type==DraftSetType.WORKING}
+            val policy=CoachSessionPrescriptionDomain.selectedPolicy(policies,original.exerciseId,
+                day.purpose,day.dayIndex)?:return@runCatching false
+            if(working.size !in option.minimumSetsPerVisit..option.maximumSetsPerVisit ||
+                rows.any{it.role!=option.role || it.purpose!=day.purpose})return@runCatching false
+            if(original.exerciseId==request.occurrenceId) {
+                if(policy.scheme!=SetLoadScheme.STRAIGHT)return@runCatching false
+                val band=option.sourcePracticalReps?:policy.workingReps
+                // Reps may change within reviewed practical range, but an
+                // increased upper bound needs a new active-duration review.
+                if(working.any{it.reps.minimum<band.minimum || it.reps.maximum>band.maximum ||
+                        it.reps.maximum>policy.workingReps.maximum ||
+                        it.restSeconds<policy.restSecondsPerSet})return@runCatching false
+            }
+            for(row in rows) {
+                val matches=when(val equipment=option.equipment) {
+                    ComposerEquipment.Bodyweight -> row.load==DraftSetLoad.ExplicitBodyweight
+                    is ComposerEquipment.Verified -> {
+                        val load=row.load as? DraftSetLoad.Verified?:return@runCatching false
+                        val inspected=EquipmentLoadDomain.inspect(equipment.inventory,load.value,load.unit)
+                        load.unit==equipment.unit && load.basis==equipment.inventory?.basis &&
+                            inspected is LoadInspection.Confirmed && inspected.exact && inspected.basis==load.basis
+                    }
+                }
+                if(!matches)return@runCatching false
+            }
+            original.copy(sets=rows.map{row->DraftPrescribedSet(row.setKey,row.type,row.ordinal,row.load,
+                row.reps,row.targetRir,row.activeSeconds,row.restSeconds)})
+        }
+        val sessions=approved.sessions.map{if(it.dayIndex==day.dayIndex)day.copy(exercises=revised) else it}
+        CoachSessionPrescriptionDomain.auditPrescription(approved.composer,options,sessions)
+            .satisfiesDeclaredHardConstraints
+    }.getOrDefault(false)
+
     internal fun generatedSnapshot(state:KotlinWorkoutJournalState,request:MidSessionWorkingEdit):KotlinStagedWorkout? {
         val review=generated(state,request) as? MidSessionWorkingEditReview.Reviewed ?:return null
         val old=state.snapshot

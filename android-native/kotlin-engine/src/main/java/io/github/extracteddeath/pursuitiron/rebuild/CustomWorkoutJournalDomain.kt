@@ -377,6 +377,9 @@ object CustomWorkoutJournalDomain {
                 null
             }
             is CustomWorkoutJournalOperation.Swap -> {
+                if(prior.receipts.any{
+                    (it.operation as? CustomWorkoutJournalOperation.AdjustRemaining)?.request?.occurrenceId==operation.previousSlotId
+                })return CustomWorkoutJournalDecision.Rejected(CustomWorkoutJournalRefusal.INVALID_ADJUSTMENT)
                 val previous=prior.snapshot.slots.firstOrNull {
                     it.slotId==operation.previousSlotId
                 } ?:return CustomWorkoutJournalDecision.Rejected(

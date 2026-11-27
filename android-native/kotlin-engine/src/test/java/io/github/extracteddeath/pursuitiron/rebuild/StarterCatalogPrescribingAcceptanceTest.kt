@@ -242,7 +242,7 @@ class StarterCatalogPrescribingAcceptanceTest {
             val key=CustomWorkoutVisitKey(target.setKey,CustomWorkoutVisitPart.MAIN)
             accept(CustomWorkoutJournalOperation.Record("catalog-actual",0,key,
                 KotlinJournalSetOutcome.COMPLETED,actual))
-            val corrected=actual.copy(rir=1)
+            val corrected=actual.copy(actualRir=1)
             accept(CustomWorkoutJournalOperation.Record("catalog-correction",1,key,
                 KotlinJournalSetOutcome.COMPLETED,corrected,"catalog-actual"))
             accept(CustomWorkoutJournalOperation.Finish("catalog-finish",2))

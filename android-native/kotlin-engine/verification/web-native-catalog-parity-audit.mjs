@@ -292,6 +292,62 @@ function reviewHistoricalRepBand(id,legacy,nativeEntry,measurement) {
   return {native,review:'NATIVE_RANGE_INCLUDES_LEGACY'};
 }
 
+// Compare physical load meaning even where legacy and current equipment tokens
+// are identical. The old equipment category alone never authorizes migration
+// of an observed load; original unit, implement/station and attachment remain
+// required at import. No runtime alias table or conversion is produced.
+const historicalOrdinaryLoadGroups=new Map(Object.entries({
+  barbell:'BARBELL_TOTAL',ezbar:'BARBELL_TOTAL',trapbar:'BARBELL_TOTAL',
+  dumbbell:'DUMBBELL_PER_HAND',cable:'CABLE_STACK',smith:'SMITH_TOTAL',
+  assisted:'ASSISTANCE_COUNTERWEIGHT',landmine:'LANDMINE_ADDED_PLATES',
+  kettlebell:'KETTLEBELL_EACH',dip:'UNWEIGHTED',pullup:'UNWEIGHTED',
+  declinebench:'UNWEIGHTED',inclinebench:'UNWEIGHTED',bench:'UNWEIGHTED',
+  bands:'EXERCISE_OVERRIDE',machinepress:'EXERCISE_OVERRIDE',
+  pecdeck:'EXERCISE_OVERRIDE',machinerow:'EXERCISE_OVERRIDE',
+  machineshoulder:'EXERCISE_OVERRIDE',hacksquat:'EXERCISE_OVERRIDE',
+  legpress:'EXERCISE_OVERRIDE',legext:'EXERCISE_OVERRIDE',
+  legcurl:'EXERCISE_OVERRIDE',calfmachine:'EXERCISE_OVERRIDE',
+  machinelatraise:'EXERCISE_OVERRIDE',machinecurl:'EXERCISE_OVERRIDE',
+  machineext:'EXERCISE_OVERRIDE',beltsquat:'EXERCISE_OVERRIDE',
+  hipthrustmachine:'EXERCISE_OVERRIDE',abduction:'EXERCISE_OVERRIDE',
+  reversehyper:'EXERCISE_OVERRIDE',machinecrunch:'EXERCISE_OVERRIDE',
+  machineshrug:'EXERCISE_OVERRIDE',machinepullover:'EXERCISE_OVERRIDE',
+  kickback:'EXERCISE_OVERRIDE',adduction:'EXERCISE_OVERRIDE'
+}));
+const historicalLoadExceptions=new Map([
+  ['pullup',['pullup','EXERCISE_OVERRIDE','"weighted-pullup-resistance",LoadBasis.EXERCISE_OVERRIDE','ADDED_PULLUP_RESISTANCE']],
+  ['lat-pulldown',['cable','EXERCISE_OVERRIDE','"lat-pulldown-machine",LoadBasis.EXERCISE_OVERRIDE','DEDICATED_PULLDOWN_STATION']],
+  ['plate-front-raise',['dumbbell','EXERCISE_OVERRIDE','"single-weight-plate",LoadBasis.EXERCISE_OVERRIDE','SINGLE_WEIGHT_PLATE']],
+  ['spanish-squat',['bands','UNWEIGHTED','null,null,setOf("spanish-squat-support")','POSITIONING_SUPPORT_NOT_RESISTANCE']]
+]);
+function reviewHistoricalLoadContext(id,equipment,nativeEntry,measurement) {
+  if(measurement) {
+    assert.equal(nativeEntry,undefined,'Typed history cannot use an ordinary load basis: '+id);
+    assert.ok(measurement.kind&&measurement.loadKind&&measurement.sideRule,
+      'Missing typed history observation context: '+id);
+    return {basis:null,implement:null,review:'ORIGINAL_TYPED_OBSERVATION_REQUIRED',
+      measurementKind:measurement.kind,measurementLoadKind:measurement.loadKind,
+      measurementSideRule:measurement.sideRule};
+  }
+  const parsed=nativeEntry?.match(/,\s*(?:"([^"]+)"|([A-Z][A-Z_]+)|null),\s*(?:LoadBasis\.([A-Z_]+)|null),/);
+  assert.ok(parsed,'Missing historical native physical load declaration: '+id);
+  const implement=parsed[1]??parsed[2]??null,basis=parsed[3]??'UNWEIGHTED';
+  assert.equal(implement===null,basis==='UNWEIGHTED','Physical implement/basis mismatch: '+id);
+  const exception=historicalLoadExceptions.get(id);
+  if(exception) {
+    assert.deepEqual(equipment,[exception[0]],'Historical special load equipment drift: '+id);
+    assert.equal(basis,exception[1],'Historical special load basis drift: '+id);
+    assert.ok(nativeEntry.includes(exception[2]),'Historical special load implement drift: '+id);
+    return {basis,implement,review:exception[3]};
+  }
+  const expected=equipment.length===0?
+    (legacyMissingResistance.has(id)?'EXERCISE_OVERRIDE':'UNWEIGHTED'):
+    historicalOrdinaryLoadGroups.get(equipment[0]);
+  assert.ok(expected,'Unreviewed historical load category: '+id);
+  assert.equal(basis,expected,'Historical load basis drift: '+id);
+  return {basis,implement,review:'ORIGINAL_PHYSICAL_LOAD_CONTEXT_REQUIRED'};
+}
+
 export function reviewHistoricalShellCoverage(shell,rawSource,projection,
   frozenMissing,canonical,nativeIds,measured,nativeSource) {
   assert.equal(frozenMissing.webCommit,shell.webCommit);
@@ -358,10 +414,12 @@ export function reviewHistoricalShellCoverage(shell,rawSource,projection,
     const equipmentReview=equipmentTokensDiffer?reviewEquipmentDifference(row.shellId,raw[4],active.equipment,nativeEntry,measured.find(x=>x.id===nativeId)):null;
     const muscle=reviewHistoricalMuscle(row.shellId,raw[2],nativeEntry,measuredSet.has(nativeId));
     const band=reviewHistoricalRepBand(row.shellId,raw.slice(5,7),nativeEntry,measured.find(x=>x.id===nativeId));
+    const loadContext=reviewHistoricalLoadContext(row.shellId,raw[4],nativeEntry,measured.find(x=>x.id===nativeId));
     return {shellId:row.shellId,shellName:raw[1],pinnedSourceLine:row.line,
       shellPrimaryMuscle:raw[2],nativeDirectMuscles:muscle.direct,muscleReview:muscle.review,
       shellEquipment:raw[4],shellRepBand:raw.slice(5,7),
       nativePracticalRepBand:band.native,repBandReview:band.review,
+      nativeLoadContext:loadContext,
       canonicalCandidateId:row.candidateWebId,canonicalEquipment:active.equipment,
       nativeCandidateId:nativeId,match:row.match,equipmentTokensDiffer,
       nativeAttachment:attachment,fallbackContext,equipmentReview,
@@ -393,6 +451,13 @@ export function reviewHistoricalShellCoverage(shell,rawSource,projection,
   const repBandReviewCounts={};
   for(const item of candidates)
     repBandReviewCounts[item.repBandReview]=(repBandReviewCounts[item.repBandReview]??0)+1;
+  const loadReviewCounts={};
+  for(const item of candidates)
+    loadReviewCounts[item.nativeLoadContext.review]=(loadReviewCounts[item.nativeLoadContext.review]??0)+1;
+  assert.equal(loadReviewCounts.ORIGINAL_TYPED_OBSERVATION_REQUIRED,14);
+  assert.equal(loadReviewCounts.ORIGINAL_PHYSICAL_LOAD_CONTEXT_REQUIRED,354);
+  for(const exception of historicalLoadExceptions.values())
+    assert.equal(loadReviewCounts[exception[3]],1);
   const equipmentReviewCounts={};
   for(const item of candidates.filter(x=>x.equipmentTokensDiffer)) {
     assert.ok(item.equipmentReview,'Missing equipment review: '+item.shellId);
@@ -403,7 +468,7 @@ export function reviewHistoricalShellCoverage(shell,rawSource,projection,
   assert.equal(equipmentReviewCounts.DISTINCT_EXTERNAL_RESISTANCE,3);
   assert.equal(equipmentReviewCounts.INCLINE_SUPPORT_REQUIRED,1);
   assert.equal(equipmentReviewCounts.ORIGINAL_DURATION_AND_SETUP_REQUIRED,7);
-  return {total:candidates.length,equipmentReviewCounts,muscleReviewCounts,repBandReviewCounts,distinctPhysicalVariants:historicalPhysicalVariants.size,
+  return {total:candidates.length,equipmentReviewCounts,muscleReviewCounts,repBandReviewCounts,loadReviewCounts,distinctPhysicalVariants:historicalPhysicalVariants.size,
     equipmentTokenDifferences:candidates.filter(x=>x.equipmentTokensDiffer).length,
     nameFallbacks:candidates.filter(x=>x.match==='web-name-fallback-review').length,
     independentlyAccepted:0,automaticHistoryTransfers:0,candidates};
@@ -484,6 +549,19 @@ function selfTest() {
     'direct(TrainingMuscle.ABS)',true),/Typed identity must not also issue ordinary reps/);
   assert.ok(historical.candidates.every(x=>!x.mayTransferHistory&&!x.independentlyAccepted));
   const byShell=new Map(historical.candidates.map(x=>[x.shellId,x]));
+  assert.deepEqual(byShell.get('lat-pulldown').nativeLoadContext,
+    {basis:'EXERCISE_OVERRIDE',implement:'lat-pulldown-machine',review:'DEDICATED_PULLDOWN_STATION'});
+  assert.equal(byShell.get('plate-front-raise').nativeLoadContext.review,'SINGLE_WEIGHT_PLATE');
+  assert.equal(byShell.get('spanish-squat').nativeLoadContext.basis,'UNWEIGHTED');
+  assert.equal(byShell.get('plank').nativeLoadContext.measurementKind,'HOLD_SECONDS');
+  assert.equal(byShell.get('farmers').nativeLoadContext.measurementKind,'CARRY_CENTIMETERS');
+  assert.throws(()=>reviewHistoricalLoadContext('bb-bench',['barbell','bench','rack'],
+    ', DBS,LoadBasis.DUMBBELL_PER_HAND,emptySet(),',null),/Historical load basis drift/);
+  assert.throws(()=>reviewHistoricalLoadContext('lat-pulldown',['cable'],
+    ', "cable-station",LoadBasis.CABLE_STACK,emptySet(),',null),/Historical special load basis drift/);
+  assert.throws(()=>reviewHistoricalLoadContext('spanish-squat',['bands'],
+    ', "band-stock",LoadBasis.EXERCISE_OVERRIDE,emptySet(),',null),/Historical special load basis drift/);
+
   assert.equal(byShell.get('wrist-roller').equipmentReview,'EXPLICIT_IMPLEMENT_AND_LOAD_REQUIRED');
   assert.equal(byShell.get('leg-ext').equipmentReview,'STATION_CONTEXT_REQUIRED');
   assert.equal(byShell.get('side-plank').equipmentReview,'ORIGINAL_DURATION_AND_SETUP_REQUIRED');
@@ -620,6 +698,7 @@ else {
       equipmentReviewCounts:report.historicalShellReview.equipmentReviewCounts,
       muscleReviewCounts:report.historicalShellReview.muscleReviewCounts,
       repBandReviewCounts:report.historicalShellReview.repBandReviewCounts,
+      loadReviewCounts:report.historicalShellReview.loadReviewCounts,
       independentlyAccepted:report.historicalShellReview.independentlyAccepted
     },
     missingByMeasurementSemantics:report.missingByMeasurementSemantics

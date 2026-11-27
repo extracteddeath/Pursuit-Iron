@@ -324,6 +324,31 @@ class StarterCatalogPrescribingAcceptanceTest {
         })
     }
 
+    @Test fun smallDeficitLiftsAllowOrdinaryStockWhileStepUpsRetainFixtureRequirements() {
+        for(id in listOf("deficit-barbell-deadlift","db-deficit-lunge","deficit-db-rdl")) {
+            val move=byId.getValue(id)
+            val gym=stockFor(listOf(id)).copy(availableFacilityIds=emptySet())
+            fun inspect(candidate:CatalogGym)=CoachExerciseCatalogDomain.review(
+                StarterExerciseTranche.forGym(template(),listOf(choice(move)),candidate))
+            assertTrue(id,move.requiredFacilityIds.isEmpty())
+            assertTrue(id,inspect(gym).issues.isEmpty())
+            assertTrue(id,inspect(gym.copy(confirmedStock=emptyMap())).issues.any{
+                it.exerciseId==id && it.kind==CatalogIssueType.EQUIPMENT_UNAVAILABLE
+            })
+        }
+        for(id in listOf("step-up","db-deficit-step-up")) {
+            val move=byId.getValue(id)
+            val gym=stockFor(listOf(id))
+            assertTrue(id,"step-platform" in move.requiredFacilityIds)
+            val missing=CoachExerciseCatalogDomain.review(StarterExerciseTranche.forGym(
+                template(),listOf(choice(move)),
+                gym.copy(availableFacilityIds=gym.availableFacilityIds-"step-platform")))
+            assertTrue(id,missing.issues.any{
+                it.exerciseId==id && it.kind==CatalogIssueType.FACILITY_UNAVAILABLE
+            })
+        }
+    }
+
     @Test fun switchingMachinesHandlesAndUnverifiedWeightsRefusesInvalidDraft() {
         fun inspect(id:String,gym:CatalogGym,value:BigDecimal?=n("25"))=
             CoachExerciseCatalogDomain.review(StarterExerciseTranche.forGym(

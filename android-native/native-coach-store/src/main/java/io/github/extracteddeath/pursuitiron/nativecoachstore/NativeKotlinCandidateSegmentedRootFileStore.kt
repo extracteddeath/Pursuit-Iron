@@ -451,6 +451,7 @@ internal class NativeKotlinCandidateSegmentedRootFileStore(
                 // The candidate segmented-root transport has no verified
                 // typed measurement implementation. Never fingerprint or
                 // acknowledge a measured Finish as another receipt type.
+                is NativeHistoryWriteIntent.FreestyleFinish,
                 is NativeHistoryWriteIntent.MeasuredFinish ->
                     throw IOException("measured History requires typed segmented migration")
                 is NativeHistoryWriteIntent.Finish -> {

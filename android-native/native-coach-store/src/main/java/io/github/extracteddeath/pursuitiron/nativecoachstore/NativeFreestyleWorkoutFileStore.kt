@@ -111,6 +111,19 @@ class NativeFreestyleWorkoutFileStore(
         return NativeFreestyleResult.Durable(state,replayed)
     }
 
+    /** Read an exact committed freestyle entry under the shared owner
+     * fence, with no program targets or inference. Pending or unindexed
+     * archives cannot be published as History facts. */
+    internal fun readCommitted(owner:String,athlete:String,entry:KotlinHistoryManifestEntry)
+        :NativeFreestyleResult=guarded(owner,entry.workoutId){current->
+        if(current.athleteId!=athlete)return@guarded reject(NativeFreestyleRefusal.NOT_AUTHORIZED)
+        val manifest=ledger(current)?:return@guarded reject(NativeFreestyleRefusal.HISTORY_NOT_READY)
+        if(!manifest.readyForHistoryReads ||
+            manifest.completions.singleOrNull{it.workoutId==entry.workoutId}!=entry)
+            return@guarded reject(NativeFreestyleRefusal.HISTORY_NOT_READY)
+        committed(current,entry,true)
+    }
+
     /** The canonical manifest owns completion. Only the exact prepared intent
      * can advance the persisted active journal, even after a process death. */
     private fun replayFinish(owner:NativeKotlinOwnerIdentity,ledger:NativeHistoryLedger):NativeFreestyleResult {

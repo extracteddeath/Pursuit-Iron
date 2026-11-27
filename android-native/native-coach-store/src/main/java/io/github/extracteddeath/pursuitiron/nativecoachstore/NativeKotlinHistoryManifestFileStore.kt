@@ -802,7 +802,7 @@ class NativeKotlinHistoryManifestFileAuthority(
         if (opened !is NativeHistoryLedgerResult.Durable ||
             !opened.ledger.readyForHistoryReads ||
             opened.ledger.completions.any {
-                it.storedReceiptId.startsWith("custom-")
+                !NativeHistoryLedgerBinary.composerReceipt(it.storedReceiptId)
             })
             return null
         return NativeKotlinHistoryManifest(

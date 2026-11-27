@@ -474,9 +474,31 @@ export function reviewHistoricalShellCoverage(shell,rawSource,projection,
     independentlyAccepted:0,automaticHistoryTransfers:0,candidates};
 }
 
+// Compare the compiled candidate lookup to the frozen shell, not just counts.
+function assertNativeHistoricalDiscovery(source,review) {
+  assert.equal(source.match(/PINNED_SHELL_COMMIT="([^"]+)"/)?.[1],shellInventory.webCommit);
+  const unchanged=source.match(/private val unchangedIds = """([\s\S]*?)"""/)?.[1]
+    .trim().split(/\s+/);
+  const remapped=source.match(/private val remappedIds=mapOf\(([\s\S]*?)\n    \)/)?.[1];
+  assert.ok(unchanged && remapped,'Missing Kotlin historical discovery declaration');
+  const pairs=[...remapped.matchAll(/"([^"]+)" to "([^"]+)"/g)].map(m=>[m[1],m[2]]);
+  assert.equal(unchanged.length,345);
+  assert.equal(pairs.length,27);
+  const actual=new Map([...unchanged.map(id=>[id,id]),...pairs]);
+  assert.equal(actual.size,372,'Duplicate or omitted historical lookup identity');
+  for(const row of review.candidates)
+    assert.equal(actual.get(row.shellId),row.nativeCandidateId,
+      'Native historical discovery drift: '+row.shellId);
+}
+
 function historicalReview() {
-  return reviewHistoricalShellCoverage(shellInventory,shellSource,projectionSource,
+  const review=reviewHistoricalShellCoverage(shellInventory,shellSource,projectionSource,
     pinnedShell,reviewedWebBaseline,nativeStarterIds,measuredCandidates,native);
+  const discovery=readFileSync(join(dirname(nativePath),'HistoricalExerciseIdentityDomain.kt'),'utf8');
+  assertNativeHistoricalDiscovery(discovery,review);
+  assert.throws(()=>assertNativeHistoricalDiscovery(discovery.replace(
+    '"pullup" to "weighted-pullup"','"pullup" to "pullup"'),review),/discovery drift/);
+  return {...review,nativeDiscoveryCandidates:review.candidates.length};
 }
 
 function assertMeasuredCandidateSourceIntegrity() {

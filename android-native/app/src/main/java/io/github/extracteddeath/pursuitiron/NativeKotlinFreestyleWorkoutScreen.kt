@@ -146,9 +146,10 @@ internal fun NativeKotlinFreestyleWorkoutScreen(
                     Text("${routine.slots.size} exercises · ${routine.slots.sumOf{it.setTypes.size}} set rows")
                     Row(horizontalArrangement=Arrangement.spacedBy(PursuitSpace.sm)){
                         Button(enabled=!busy && source!=null,onClick={
+                            val rev=routines?.revision?:return@Button
                             val id=freestyleId("free")
                             perform{accept(withContext(Dispatchers.IO){
-                                host.startFreestyle(id,routine.routineId,routines.revision)})}
+                                host.startFreestyle(id,routine.routineId,rev)})}
                         }){Text("Start routine")}
                         TextButton(enabled=!busy,onClick={routineDelete=routine.routineId}){Text("Delete")}
                     }
@@ -237,6 +238,12 @@ internal fun NativeKotlinFreestyleWorkoutScreen(
                 if(choices.size>visibleChoices)TextButton(enabled=!busy,onClick={visibleChoices+=30}){Text("Show more exercises")}
                 TextButton(enabled=!busy,onClick={perform{reloadLists()}}){Text("Refresh gym")}
             }
+            TextButton(enabled=!busy,onClick={
+                perform{
+                    withContext(Dispatchers.IO){host.recoverPendingNativeHistory()}
+                    accept(withContext(Dispatchers.IO){host.openFreestyle(state.workoutId)})
+                }
+            }){Text("Recover interrupted completion")}
             PursuitPrimaryAction("Finish workout",enabled=!busy && state.effectiveSets.values.any{it.actual!=null}){
                 finishReview=KotlinFreestyleOperation.Finish(freestyleId("finish"),state.revision)
             }
@@ -248,7 +255,17 @@ internal fun NativeKotlinFreestyleWorkoutScreen(
             confirmButton={TextButton(enabled=!busy,onClick={
                 val id=activeId?:return@TextButton
                 finishReview=null
-                perform{accept(withContext(Dispatchers.IO){host.finishFreestyle(id,finish)})}
+                perform{
+                    val result=withContext(Dispatchers.IO){host.finishFreestyle(id,finish)}
+                    accept(result)
+                    if(result is NativeFreestyleResult.Rejected) {
+                        // A pending transaction may have written the original
+                        // Finish before the UI received its response.
+                        val reopened=withContext(Dispatchers.IO){host.openFreestyle(id)}
+                        if(reopened is NativeFreestyleResult.Durable &&
+                            reopened.workout.finishedByEventId!=null)accept(reopened)
+                    }
+                }
             }){Text("Finish")}},dismissButton={TextButton(onClick={finishReview=null}){Text("Keep training")}})
     }
     routineDelete?.let{id->
@@ -271,12 +288,20 @@ private fun NativeFreestyleSetEditor(
     onRecord:(KotlinFreestyleOperation.Record)->Unit
 ) {
     var correctingKey by rememberSaveable{mutableStateOf<String?>(null)}
-    val correction=records.singleOrNull{it.setKey==correctingKey}
+    var correctionPredecessor by rememberSaveable{mutableStateOf<String?>(null)}
+    val correction=records.singleOrNull{it.setKey==correctingKey && it.eventId==correctionPredecessor}
+    LaunchedEffect(correctingKey,correction?.eventId) {
+        if(correctingKey!=null && correction==null) {
+            correctingKey=null;correctionPredecessor=null
+        }
+    }
     records.forEach{record->
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
             Text(nativeFreestyleHistoryActual(record.actual,exercise.basis,record.outcome),
                 modifier=Modifier.weight(1f),style=MaterialTheme.typography.bodyMedium)
-            TextButton(enabled=enabled,onClick={correctingKey=record.setKey}){Text("Edit")}
+            TextButton(enabled=enabled,onClick={
+                correctingKey=record.setKey;correctionPredecessor=record.eventId
+            }){Text("Edit")}
         }
     }
     key(correction?.eventId ?: "new",records.size) {
@@ -290,8 +315,9 @@ private fun NativeFreestyleSetEditor(
         val parsed=KotlinWorkoutEntryDomain.parseUnplanned(exercise.unit,weight,reps,rir)
         val failed=KotlinWorkoutEntryDomain.parseUnplanned(exercise.unit,weight,reps,rir,true)
         Text(if(correction==null)"Record a set" else "Correct recorded set",style=MaterialTheme.typography.titleSmall)
-        if(exercise.unit!=null)OutlinedTextField(weight,{weight=it},enabled=enabled,
-            label={Text("Actual weight (${exercise.unit.name.lowercase()})")},singleLine=true,
+        val unit=exercise.unit
+        if(unit!=null)OutlinedTextField(weight,{weight=it},enabled=enabled,
+            label={Text("Actual weight (${unit.name.lowercase()})")},singleLine=true,
             keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),modifier=Modifier.fillMaxWidth())
         Row(horizontalArrangement=Arrangement.spacedBy(PursuitSpace.sm)) {
             OutlinedTextField(reps,{reps=it},enabled=enabled,label={Text("Reps")},singleLine=true,
@@ -315,7 +341,9 @@ private fun NativeFreestyleSetEditor(
                 (failed as? KotlinSetEntryResult.Accepted)?.let{submit(KotlinJournalSetOutcome.FAILED_ATTEMPT,it.performed)}
             }){Text("Failed attempt")}
             TextButton(enabled=enabled,onClick={submit(KotlinJournalSetOutcome.SKIPPED,null)}){Text("Skip set")}
-            if(correction!=null)TextButton(enabled=enabled,onClick={correctingKey=null}){Text("Cancel edit")}
+            if(correction!=null)TextButton(enabled=enabled,onClick={
+                correctingKey=null;correctionPredecessor=null
+            }){Text("Cancel edit")}
         }
     }
 }

@@ -867,6 +867,76 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
         assertEquals(signoffBefore,consent.recoverReviewedInputs("owner-1","cycle-1"))
     }
 
+    @Test fun approvedWarmupRepeatAndRemovalUseRealOwnerGateAndColdFinish() {
+        val base=cycle()
+        val warm=CustomAuthoredSet(DraftSetType.WARMUP,DraftSetLoad.ExplicitBodyweight,
+            RepBand(5,5),null,30,60)
+        val authored=base.copy(weekOverrides=mapOf("base" to listOf(
+            CustomWeekSlotOverride(2,0,"slot-0",listOf(warm,set(16))))))
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),sources.publish("owner-1",0,source()))
+        assertEquals(NativeCustomDraftWriteResult.Committed(1),drafts.save("owner-1","cycle-1",0,authored))
+        val audit=CustomCycleCoachAuditDomain.review(authored,setup(),source().catalog,input())
+        assertEquals(audit.issues.toString(),CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,audit.status)
+        approve();enroll();prepareWeek()
+        val original=issueWeek().issued.journal
+        val working=original.snapshot.slots.single().sets.last()
+        val consentBefore=consent.recoverReviewedInputs("owner-1","cycle-1")
+        fun store()=NativeKotlinCustomWorkoutJournalFileStore(temp.root.toPath(),
+            NativeKotlinApprovalRevisionFence(temp.root.toPath()),identity,prepared,preflight,
+            history,composerJournal,null,sources)
+        fun open()=(store().open("owner-1","workout-2") as NativeCustomJournalResult.Durable).issued.journal
+        fun edit(id:String,state:CustomWorkoutJournalDraft,change:SessionWarmupChange)=
+            CustomWorkoutJournalOperation.AdjustRemaining(id,state.revision,
+                MidSessionWorkingEdit("workout-2",state.revision,"slot-0",1,warmupChange=change))
+        val add=edit("repeat-warm",original,SessionWarmupChange.REPEAT_APPROVED)
+        assertTrue(store().adjustRemaining("owner-1","workout-2",add,false) is NativeCustomJournalResult.Rejected)
+        current=NativeKotlinOwnerIdentity("owner-2","athlete-2")
+        assertTrue(store().adjustRemaining("owner-1","workout-2",add,true) is NativeCustomJournalResult.Rejected)
+        current=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        assertEquals(original,open())
+        val result=store().adjustRemaining("owner-1","workout-2",add,true)
+        assertTrue(result.toString(),result is NativeCustomJournalResult.Durable)
+        val added=open()
+        assertEquals(original.originalSnapshot,added.originalSnapshot)
+        assertEquals(working.setKey,added.snapshot.slots.single().sets.last().setKey)
+        assertEquals(2,added.snapshot.slots.single().sets.count{it.prescription.type==DraftSetType.WARMUP})
+        assertEquals(original.snapshot.knownSetAndRestSeconds+90,added.snapshot.knownSetAndRestSeconds)
+        val remove=store().adjustRemaining("owner-1","workout-2",
+            edit("remove-warm",added,SessionWarmupChange.REMOVE_PENDING),true)
+        assertTrue(remove.toString(),remove is NativeCustomJournalResult.Durable)
+        val removed=open()
+        assertEquals(original.snapshot,removed.snapshot)
+        val repeated=store().adjustRemaining("owner-1","workout-2",
+            edit("repeat-again",removed,SessionWarmupChange.REPEAT_APPROVED),true)
+        assertTrue(repeated.toString(),repeated is NativeCustomJournalResult.Durable)
+        val issuedRows=open().snapshot.slots.single().sets
+        for((i,row) in issuedRows.withIndex()) {
+            val before=open()
+            val actual=KotlinPerformedSet(null,null,if(row.prescription.type==DraftSetType.WARMUP)5 else 16,
+                if(row.prescription.type==DraftSetType.WARMUP)null else 1)
+            val logged=store().record("owner-1","workout-2",CustomWorkoutJournalOperation.Record(
+                "warm-fact-$i",before.revision,CustomWorkoutVisitKey(row.setKey,CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,actual))
+            assertTrue(logged.toString(),logged is NativeCustomJournalResult.Durable)
+        }
+        val logged=open()
+        assertTrue(store().adjustRemaining("owner-1","workout-2",
+            edit("too-late",logged,SessionWarmupChange.REMOVE_PENDING),true) is NativeCustomJournalResult.Rejected)
+        assertEquals(logged,open())
+        val tx=NativeKotlinCustomHistoryTransaction(history,store(),fence,identity)
+        val finish=CustomWorkoutJournalOperation.Finish("warm-finish",logged.revision)
+        assertTrue(tx.complete("owner-1","athlete-1","workout-2",finish) is NativeCustomFinishResult.Committed)
+        assertTrue(tx.complete("owner-1","athlete-1","workout-2",finish) is NativeCustomFinishResult.Committed)
+        val completed=open()
+        val facts=(CustomWorkoutHistoryEvidenceDomain.project(completed) as CustomHistoryEvidenceResult.Candidate).evidence
+        assertEquals(issuedRows.map{it.setKey},facts.visits.map{it.setKey})
+        assertEquals(listOf(DraftSetType.WARMUP,DraftSetType.WARMUP,DraftSetType.WORKING),facts.visits.map{it.setType})
+        assertEquals(listOf(5,5,16),facts.visits.map{it.actual?.reps})
+        assertEquals(original.originalSnapshot,completed.originalSnapshot)
+        assertEquals(authored,(drafts.read("owner-1","cycle-1") as NativeCustomDraftReadResult.Found).draft)
+        assertEquals(consentBefore,consent.recoverReviewedInputs("owner-1","cycle-1"))
+    }
+
     @Test fun confirmedRemainingEditUsesSavedPolicyAndNeverRewritesCycle() {
         initialize();approve();prepareWeek();enroll()
         val original=issueWeek().issued.journal

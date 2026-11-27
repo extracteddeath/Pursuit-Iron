@@ -13,7 +13,9 @@ data class MidSessionWorkingEdit(
     /** Total working rows, including already resolved working rows. */
     val workingSetCount:Int,
     val reps:RepBand?=null,
-    val restSeconds:Int?=null
+    val restSeconds:Int?=null,
+    /** Explicit session-only method intent; never itself changes issued numbers. */
+    val progressionMethod:SavedProgressionMethod?=null
 )
 enum class MidSessionWorkingEditRefusal {
     STALE_WORKOUT, FINISHED, UNKNOWN_OCCURRENCE, INVALID_REQUEST,
@@ -122,6 +124,7 @@ object MidSessionWorkingEditDomain {
             request.expectedRevision !in 0 until 9_007_199_254_740_991L)
             return refused(MidSessionWorkingEditRefusal.STALE_WORKOUT)
         if(state.finishedByEventId!=null)return refused(MidSessionWorkingEditRefusal.FINISHED)
+        if(request.progressionMethod!=null)return refused(MidSessionWorkingEditRefusal.PROTECTED_PROTOCOL)
         val rows=state.snapshot.targets.filter{it.exerciseId==request.occurrenceId}
         return review(request,rows.map{Row(it,it.setKey,it.type,it.ordinal,it.load,
             it.reps,it.targetRir,it.activeSeconds,it.restSeconds)},
@@ -272,6 +275,7 @@ object MidSessionWorkingEditDomain {
 
     internal fun customSnapshot(state:CustomWorkoutJournalDraft,request:MidSessionWorkingEdit):CustomWorkoutDaySnapshot? {
         val review=custom(state,request) as? MidSessionWorkingEditReview.Reviewed ?:return null
+        if(request.progressionMethod!=null)return state.snapshot
         val slots=state.snapshot.slots.map{slot->
             if(slot.slotId==request.occurrenceId)slot.copy(sets=review.after) else slot
         }
@@ -298,6 +302,9 @@ object MidSessionWorkingEditDomain {
         if(profile.athleteProfileId!=stamp.athleteId ||
             profile.profileRevision!=stamp.athleteProfileRevision || profile.gym.gymId!=stamp.gymId)
             return@runCatching false
+        if(request.progressionMethod!=null && request.progressionMethod !in
+            availableCustomProgressionMethods(state,cycle,request.workoutId,
+                request.expectedRevision,request.occurrenceId))return@runCatching false
         val next=customSnapshot(state,request)?:return@runCatching false
         val baseline=CustomCycleCoachAuditDomain.review(cycle,setup,catalog,inputs)
         if(baseline.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW)
@@ -435,6 +442,22 @@ object MidSessionWorkingEditDomain {
         if(state.finishedByEventId!=null)return refused(MidSessionWorkingEditRefusal.FINISHED)
         val slot=state.snapshot.slots.singleOrNull{it.slotId==request.occurrenceId}
             ?:return refused(MidSessionWorkingEditRefusal.UNKNOWN_OCCURRENCE)
+        val method=request.progressionMethod
+        if(method!=null) {
+            // A method-only receipt leaves the approved numbers untouched.
+            // The full signed-cycle eligibility check lives at the owner gate.
+            if(request.reps!=null || request.restSeconds!=null ||
+                request.workingSetCount!=slot.sets.count{it.prescription.type==DraftSetType.WORKING})
+                return refused(MidSessionWorkingEditRefusal.INVALID_REQUEST)
+            if(state.sessionProgressionChoices[slot.slotId]==method)
+                return refused(MidSessionWorkingEditRefusal.NO_CHANGE)
+            val guard=custom(state,request.copy(progressionMethod=null))
+            if(guard!=MidSessionWorkingEditReview.Rejected(MidSessionWorkingEditRefusal.NO_CHANGE))
+                return guard
+            val rows=Collections.unmodifiableList(slot.sets.toList())
+            return MidSessionWorkingEditReview.Reviewed(request,rows,rows,emptyList(),emptyList(),
+                rows.filter{row->state.effectiveVisits.keys.any{it.setKey==row.setKey}}.map{it.setKey})
+        }
         val rows=slot.sets.map{set->with(set.prescription){
             Row(set,set.setKey,type,set.ordinalInSlot,load,reps,targetRir,activeSeconds,restSeconds)
         }}

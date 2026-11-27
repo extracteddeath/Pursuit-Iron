@@ -825,6 +825,48 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
             issued.issue("owner-1","workout-2","cycle-1",2,0,input()))
     }
 
+    @Test fun sessionProgressionChoiceColdReplayUndoAndFinishDoNotChangeSavedProgram() {
+        initialize();approve();prepareWeek();enroll()
+        val original=issueWeek().issued.journal
+        val draftBefore=(drafts.read("owner-1","cycle-1") as NativeCustomDraftReadResult.Found).draft
+        val signoffBefore=consent.recoverReviewedInputs("owner-1","cycle-1")
+        val request=MidSessionWorkingEdit("workout-2",0,"slot-0",1,
+            progressionMethod=SavedProgressionMethod.MANUAL)
+        val op=CustomWorkoutJournalOperation.AdjustRemaining("method",0,request)
+        assertTrue(issued.adjustRemaining("owner-1","workout-2",op,false) is NativeCustomJournalResult.Rejected)
+        val bad=op.copy(eventId="bad-method",request=request.copy(progressionMethod=SavedProgressionMethod.DYNAMIC))
+        assertTrue(issued.adjustRemaining("owner-1","workout-2",bad,true) is NativeCustomJournalResult.Rejected)
+        val changed=issued.adjustRemaining("owner-1","workout-2",op,true)
+        assertTrue(changed.toString(),changed is NativeCustomJournalResult.Durable)
+        val journal=(changed as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals(mapOf("slot-0" to SavedProgressionMethod.MANUAL),journal.sessionProgressionChoices)
+        assertEquals(original.snapshot,journal.snapshot)
+        assertEquals(original.effectiveVisits,journal.effectiveVisits)
+        val cold=NativeKotlinCustomWorkoutJournalFileStore(temp.root.toPath(),
+            NativeKotlinApprovalRevisionFence(temp.root.toPath()),identity,prepared,preflight,history,composerJournal,null,sources)
+        assertEquals(journal,(cold.open("owner-1","workout-2") as NativeCustomJournalResult.Durable).issued.journal)
+        val undo=cold.adjustRemaining("owner-1","workout-2",
+            CustomWorkoutJournalOperation.UndoAdjustment("undo-method",1,"method"),true)
+            as NativeCustomJournalResult.Durable
+        assertTrue(undo.issued.journal.sessionProgressionChoices.isEmpty())
+        val chosen=cold.adjustRemaining("owner-1","workout-2",
+            op.copy(eventId="method-again",expectedRevision=2,
+                request=request.copy(expectedRevision=2)),true) as NativeCustomJournalResult.Durable
+        val actual=cold.record("owner-1","workout-2",CustomWorkoutJournalOperation.Record(
+            "actual-method",3,CustomWorkoutVisitKey(original.snapshot.slots.single().sets.single().setKey,
+                CustomWorkoutVisitPart.MAIN),KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(null,null,16,1))) as NativeCustomJournalResult.Durable
+        assertEquals(chosen.issued.journal.sessionProgressionChoices,actual.issued.journal.sessionProgressionChoices)
+        val finished=NativeKotlinCustomHistoryTransaction(history,cold,fence,identity).complete(
+            "owner-1","athlete-1","workout-2",CustomWorkoutJournalOperation.Finish("finish-method",4))
+        assertTrue(finished.toString(),finished is NativeCustomFinishResult.Committed)
+        val reopened=(cold.open("owner-1","workout-2") as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals(mapOf("slot-0" to SavedProgressionMethod.MANUAL),reopened.sessionProgressionChoices)
+        assertEquals(original.snapshot,reopened.snapshot)
+        assertEquals(draftBefore,(drafts.read("owner-1","cycle-1") as NativeCustomDraftReadResult.Found).draft)
+        assertEquals(signoffBefore,consent.recoverReviewedInputs("owner-1","cycle-1"))
+    }
+
     @Test fun confirmedRemainingEditUsesSavedPolicyAndNeverRewritesCycle() {
         initialize();approve();prepareWeek();enroll()
         val original=issueWeek().issued.journal

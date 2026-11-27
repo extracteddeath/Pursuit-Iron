@@ -219,6 +219,7 @@ class StarterCatalogPrescribingAcceptanceTest {
 
     @Test fun everyRealStandardIdentityIsAuthorableAndProjectsCorrectedActualsWithItsOwnStock() {
         val athlete=fullCatalogAthlete()
+        val gym=athlete.gym
         val all=CustomExerciseAuthoringDomain.picker(review(athlete),catalog)
         assertEquals(catalog.map{it.exerciseId}.toSet(),all.map{it.exerciseId}.toSet())
         assertEquals(catalog.size,all.size)

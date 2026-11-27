@@ -99,6 +99,7 @@ internal fun NativeKotlinCustomJournalScreen(
     var historyExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var infoSlotId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var infoWarmupsOnly by rememberSaveable(workoutId){mutableStateOf(false)}
+    var warmupEdit by remember(workoutId){mutableStateOf<MidSessionWorkingEdit?>(null)}
     var plateRequest by remember(workoutId){
         mutableStateOf<NativeCustomPlateRequest?>(null)
     }
@@ -785,7 +786,9 @@ internal fun NativeKotlinCustomJournalScreen(
                         },
                         onSwap=null,
                         onWarmup=upcoming?.first?.takeIf {slot->
-                            slot.sets.any{it.prescription.type==DraftSetType.WARMUP}
+                            slot.sets.any{it.prescription.type==DraftSetType.WARMUP} ||
+                                current.originalSnapshot.slots.singleOrNull{it.slotId==slot.slotId}
+                                    ?.sets?.any{it.prescription.type==DraftSetType.WARMUP}==true
                         }?.let {slot->{
                             infoWarmupsOnly=true
                             infoSlotId=slot.slotId
@@ -1564,6 +1567,26 @@ internal fun NativeKotlinCustomJournalScreen(
             },onDismiss={adjustment=null},progressionChoices=methods,
             currentSessionMethod=active?.sessionProgressionChoices?.get(anchor.occurrenceId))
     }
+    warmupEdit?.let{request->
+        val reviewed=journal?.let{MidSessionWorkingEditDomain.custom(it,request)}
+            as? MidSessionWorkingEditReview.Reviewed
+        AlertDialog(
+            onDismissRequest={warmupEdit=null},
+            title={Text(if(request.warmupChange==SessionWarmupChange.REPEAT_APPROVED)
+                "Repeat approved warm-up?" else "Remove unlogged warm-up?")},
+            text={Text(if(reviewed==null) "The workout changed. Open the warm-up details again."
+                else if(request.warmupChange==SessionWarmupChange.REPEAT_APPROVED)
+                    "Add one warm-up using the exact previously approved warm-up target. The current gym stock and session limits will be checked before saving."
+                else "Remove only the final unlogged warm-up. All working sets and actuals stay unchanged.")},
+            confirmButton={Button(enabled=reviewed!=null && !busy && !finished && machineChoices.ready &&
+                !machineChoices.busy,onClick={
+                warmupEdit=null
+                submitRemainingEdit(CustomWorkoutJournalOperation.AdjustRemaining(
+                    "warmup-"+UUID.randomUUID(),request.expectedRevision,request))
+            }){Text("Confirm")}},
+            dismissButton={TextButton(onClick={warmupEdit=null}){Text("Cancel")}}
+        )
+    }
     infoSlotId?.let { slotId ->
         journal?.snapshot?.slots?.firstOrNull{it.slotId==slotId}
             ?.let { slot ->
@@ -1613,8 +1636,20 @@ internal fun NativeKotlinCustomJournalScreen(
                     hasActiveSwap=infoUndo!=null,
                     hasRecordedWork=infoRecorded,
                     linkedSuperset=slot.supersetGroup!=null)
+                fun warmupAction(change:SessionWarmupChange): (()->Unit)? {
+                    val current=journal ?:return null
+                    if(!infoWarmupsOnly || busy || finished || !machineChoices.ready || machineChoices.busy)
+                        return null
+                    val request=MidSessionWorkingEdit(workoutId,current.revision,slot.slotId,
+                        slot.sets.count{it.prescription.type==DraftSetType.WORKING},warmupChange=change)
+                    if(MidSessionWorkingEditDomain.custom(current,request) !is MidSessionWorkingEditReview.Reviewed)
+                        return null
+                    return { infoSlotId=null;infoWarmupsOnly=false;warmupEdit=request }
+                }
                 NativeKotlinWorkoutExerciseInfoSheet(
                     exerciseId=slot.exerciseId,
+                    onRepeatWarmup=warmupAction(SessionWarmupChange.REPEAT_APPROVED),
+                    onRemoveWarmup=warmupAction(SessionWarmupChange.REMOVE_PENDING),
                     sourceDescription="Issued custom workout · "+
                         slot.role.name.lowercase().replace('_',' ')+
                         (if(slot.supersetGroup!=null)" · superset linked" else "")+

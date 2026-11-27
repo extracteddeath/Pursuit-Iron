@@ -452,6 +452,48 @@ class NativeKotlinWorkoutCoordinatorTest {
                 KotlinJournalOperation.Finish("finish",0)))
     }
 
+    @Test fun workoutSwapRequiresExactCurrentGymAndOwnerButUndoRetainsFrozenTargets() {
+        val auth=FakeAuthority(approval())
+        val original=issued(coordinator(auth).issue("owner-1","session-1")).journal
+        fun cold()=durable(coordinator(auth).open("owner-1","session-1")).journal
+        // Isolate the swap boundary with a reviewed replacement option.
+        val alternative=press.copy(exerciseId="alternate-press")
+        val reviewed=approval().copy(program=program().copy(
+            exercises=program().exercises+alternative))
+        val intents=original.snapshot.targets.filter{it.exerciseId=="db-press"}.map{
+            KotlinComposerSwapSetIntent(it.type,it.ordinal,
+                DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,n("25")),
+                RepBand(5,5),2)
+        }
+        assertTrue(intents.isNotEmpty())
+        fun replace()=coordinator(auth).swapExercise("owner-1","session-1",
+            "swap-gym",0L,"db-press","alternate-press",intents)
+        for(stale in listOf(
+            reviewed.copy(currentSource=source.copy(gymId="gym-2")),
+            reviewed.copy(currentSource=source.copy(gymRevision=source.gymRevision+1)),
+            reviewed.copy(ownerKey="other-owner"),
+            reviewed.copy(athleteId="other-athlete"))) {
+            auth.approved=stale
+            assertTrue(replace() is NativeJournalFileResult.Rejected)
+            assertEquals(original,cold())
+        }
+        auth.approved=reviewed
+        val swapped=durable(replace()).journal
+        assertEquals(original.originalSnapshot,swapped.originalSnapshot)
+        assertEquals(intents.size,swapped.snapshot.targets.count{it.exerciseId=="alternate-press"})
+        assertTrue(swapped.snapshot.targets.filter{it.exerciseId=="alternate-press"}.all{
+            (it.load as DraftSetLoad.Verified).value==n("25")
+        })
+        assertEquals(swapped,cold())
+        assertTrue(durable(replace()).replayed)
+        auth.approved=reviewed.copy(currentSource=source.copy(gymId="gym-2"))
+        val undone=durable(coordinator(auth).undoExerciseSwap("owner-1","session-1",
+            "undo-gym",swapped.revision,"swap-gym")).journal
+        assertEquals(original.snapshot,undone.snapshot)
+        assertEquals(original.originalSnapshot,undone.originalSnapshot)
+        assertEquals(undone,cold())
+    }
+
     @Test fun repeatedBackoffTargetsRemainExactThroughApprovalIssueAndColdReopen() {
         val compatible=policies().map {p->
             if(p.exerciseId=="db-press" &&

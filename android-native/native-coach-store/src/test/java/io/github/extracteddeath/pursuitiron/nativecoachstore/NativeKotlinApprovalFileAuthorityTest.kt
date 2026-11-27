@@ -531,6 +531,74 @@ class NativeKotlinApprovalFileAuthorityTest {
                 .journal.snapshot)
     }
 
+    @Test fun changedGymApprovalCannotRewriteAnIssuedWorkoutOrItsActuals() {
+        val root=temp.root.toPath()
+        fun journals()=KotlinNativeJournalFileStore(root)
+        fun ledger()=NativeKotlinHistoryManifestFileStore(root)
+        fun corrections()=KotlinNativeSavedCorrectionFileStore(root,journals())
+        fun transactions()=NativeKotlinHistoryTransactionCoordinator(
+            ledger(),journals(),corrections(),authority(),fence())
+        fun gateway()=NativeKotlinTrackedWorkoutGateway(
+            NativeKotlinWorkoutCoordinator(journals(),authority(),fence()),
+            transactions(),ledger(),corrections(),authority(),fence())
+        assertEquals(1L,success(authority().publish("owner-1",0,approval())))
+        assertTrue(transactions().enroll("owner-1","athlete-1"){o,a->
+            signedIn==NativeKotlinOwnerIdentity(o,a)
+        } is NativeHistoryTransactionResult.Durable)
+        val original=got(gateway().issue("owner-1","athlete-1","workout-1")).journal
+        // Persist a new approval for another gym, with independent KG stock.
+        val nextSource=source.copy(gymId="gym-2",gymRevision=4)
+        val nextStock=VerifiedLoadStock.Totals(LoadUnit.KG,LoadBasis.DUMBBELL_PER_HAND,
+            listOf(n("10"),n("15"),n("20"),n("25")))
+        val nextProgram=program().copy(exercises=program().exercises.map{
+            it.copy(equipment=ComposerEquipment.Verified(LoadUnit.KG,n("20"),nextStock))
+        })
+        val nextPolicies=listOf(
+            policy("db-press",ComposerSessionPurpose.STRENGTH_SKILL,
+                RepBand(3,5),3,240,SetLoadScheme.LAST_SET_BACKOFF,n("5"),
+                listOf(DeclaredWarmupStep(n("10"),8,60,60)),RepBand(6,8),2),
+            policy("db-press",ComposerSessionPurpose.HYPERTROPHY,RepBand(8,12),2,120),
+            policy("db-row",ComposerSessionPurpose.STRENGTH_SKILL,RepBand(6,10),2,180),
+            policy("db-row",ComposerSessionPurpose.HYPERTROPHY,RepBand(10,15),null,120))
+        val next=approval(2,"approval-2").copy(
+            approvedSource=nextSource,currentSource=nextSource,
+            grant=KotlinWorkoutSelectionGrant("approval-2","workout-2",nextSource,0),
+            program=nextProgram,policies=nextPolicies)
+        assertEquals(2L,success(authority().publish("owner-1",1,next)))
+        assertEquals(next,authority().currentApprovedWorkout("owner-1","workout-2"))
+        assertNull(authority().currentApprovedWorkout("owner-1","workout-1"))
+        fun cold()=(gateway().open("owner-1","athlete-1","workout-1")
+            as NativeJournalFileResult.Durable).journal
+        assertEquals(original,cold())
+        assertTrue(gateway().swapExercise("owner-1","athlete-1","workout-1",
+            "cross-gym-swap",0L,"db-press","db-row",emptyList()) is NativeJournalFileResult.Rejected)
+        assertEquals(original,cold())
+        var current=original
+        for((index,target) in original.snapshot.targets.withIndex()) {
+            val load=target.load as DraftSetLoad.Verified
+            assertEquals(LoadUnit.LB,load.unit)
+            val result=gateway().append("owner-1","athlete-1","workout-1",
+                KotlinJournalOperation.RecordSet("old-gym-set-$index",current.revision,
+                    target.setKey,KotlinJournalSetOutcome.COMPLETED,
+                    KotlinPerformedSet(load.value,load.unit,target.reps.minimum,null)))
+            assertTrue(result.toString(),result is NativeJournalFileResult.Durable)
+            current=(result as NativeJournalFileResult.Durable).journal
+            assertEquals(original.snapshot,current.snapshot)
+            assertEquals(current,cold())
+        }
+        val finish=KotlinJournalOperation.Finish("old-gym-finish",current.revision)
+        val done=gateway().append("owner-1","athlete-1","workout-1",finish)
+        assertTrue(done.toString(),done is NativeJournalFileResult.Durable)
+        assertEquals((done as NativeJournalFileResult.Durable).journal,cold())
+        assertEquals(1,(ledger().open("owner-1","athlete-1") as NativeHistoryLedgerResult.Durable)
+            .ledger.completions.size)
+        val fresh=got(gateway().issue("owner-1","athlete-1","workout-2")).journal
+        assertEquals(nextSource,fresh.snapshot.source)
+        assertTrue(fresh.snapshot.targets.all{(it.load as DraftSetLoad.Verified).unit==LoadUnit.KG})
+        assertEquals(original.snapshot,cold().snapshot)
+        assertEquals(next,authority().currentApprovedWorkout("owner-1","workout-2"))
+    }
+
     @Test fun signoutCrossAccountAndDeletedCurrentGrantAlwaysFailClosed() {
         val a=authority()
         assertEquals(NativeApprovalWriteResult.Rejected(

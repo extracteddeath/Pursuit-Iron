@@ -1136,8 +1136,23 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
                 CustomWorkoutJournalOperation.Finish(
                     "finish-after-swap",journal.revision))
         assertTrue(finished.toString(),finished is NativeCustomFinishResult.Committed)
+        val evidence=(finished as NativeCustomFinishResult.Committed).evidence
+        val fact=evidence.visits.single()
+        assertEquals("pullup",fact.exerciseId)
+        assertEquals(key,fact.setKey)
+        assertEquals(RepBand(8,10),fact.prescribedReps)
+        assertEquals(DraftSetLoad.ExplicitBodyweight,fact.prescribedLoad)
+        assertEquals(KotlinPerformedSet(null,null,9,2),fact.actual)
+        assertFalse(evidence.canApplyProgression)
         val restored=fresh.open("owner-1","workout-2")
             as NativeCustomJournalResult.Durable
+        assertEquals(evidence,(CustomWorkoutHistoryEvidenceDomain.project(restored.issued.journal)
+            as CustomHistoryEvidenceResult.Candidate).evidence)
+        // Workout-only replacement must never rewrite the signed cycle,
+        // another weekday, or the original week-specific rep override.
+        assertEquals(cycle(),(NativeCustomCycleDraftFileStore(temp.root.toPath(),
+            NativeKotlinApprovalRevisionFence(temp.root.toPath()),identity)
+            .read("owner-1","cycle-1") as NativeCustomDraftReadResult.Found).draft)
         assertEquals("finish-after-swap",
             restored.issued.journal.finishedByEventId)
         assertEquals(1,restored.issued.journal.effectiveVisits.size)

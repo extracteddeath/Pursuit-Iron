@@ -64,6 +64,16 @@ sealed interface CustomWorkoutJournalOperation {
 
     /** Athlete-written text. Empty text explicitly clears the session note.
      * Every edit is a revisioned, owner-fenced receipt; no draft is factual. */
+    /** Explicit single-workout edit; no permanent cycle write. */
+    data class AdjustRemaining(
+        override val eventId:String,override val expectedRevision:Long,
+        val request:MidSessionWorkingEdit
+    ):CustomWorkoutJournalOperation
+    data class UndoAdjustment(
+        override val eventId:String,override val expectedRevision:Long,
+        val adjustmentEventId:String
+    ):CustomWorkoutJournalOperation
+
     data class SessionNote(
         override val eventId:String,
         override val expectedRevision:Long,
@@ -90,7 +100,8 @@ data class CustomWorkoutJournalDraft(
     val effectiveVisits: Map<CustomWorkoutVisitKey, CustomWorkoutJournalReceipt>,
     val finishedByEventId: String?,
     /** Never changes: exact originally prepared/consent-approved workout. */
-    val originalSnapshot:CustomWorkoutDaySnapshot=snapshot
+    val originalSnapshot:CustomWorkoutDaySnapshot=snapshot,
+    val lastAdjustment:MidSessionUndo<CustomWorkoutDaySnapshot>?=null
 ) {
     /** A note never leaks into the next workout's issued targets or coach. */
     val sessionNote:String get()=receipts.asReversed().firstNotNullOfOrNull{
@@ -127,7 +138,7 @@ enum class CustomWorkoutJournalRefusal {
     MAIN_NOT_COMPLETED, ALREADY_RECORDED, INVALID_CORRECTION,
     INVALID_ACTUAL, INCOMPLETE_WORKOUT, TOO_MANY_EVENTS,
     SWAP_ALREADY_STARTED, SWAP_PROTECTED, SWAP_IDENTITY_CONFLICT,
-    SWAP_INVALID_TARGET, SWAP_UNDO_UNAVAILABLE, INVALID_SESSION_NOTE
+    SWAP_INVALID_TARGET, SWAP_UNDO_UNAVAILABLE, INVALID_SESSION_NOTE, INVALID_ADJUSTMENT
 }
 
 sealed interface CustomWorkoutJournalDecision {
@@ -211,7 +222,20 @@ object CustomWorkoutJournalDomain {
 
         val nextEffective=LinkedHashMap(prior.effectiveVisits)
         var nextSnapshot=prior.snapshot
+        var undo:MidSessionUndo<CustomWorkoutDaySnapshot>?=null
         val finish=when(operation) {
+            is CustomWorkoutJournalOperation.AdjustRemaining -> {
+                nextSnapshot=MidSessionWorkingEditDomain.customSnapshot(prior,operation.request)
+                    ?:return CustomWorkoutJournalDecision.Rejected(CustomWorkoutJournalRefusal.INVALID_ADJUSTMENT)
+                undo=MidSessionUndo(operation.eventId,prior.snapshot)
+                null
+            }
+            is CustomWorkoutJournalOperation.UndoAdjustment -> {
+                val last=prior.lastAdjustment?.takeIf{it.eventId==operation.adjustmentEventId}
+                    ?:return CustomWorkoutJournalDecision.Rejected(CustomWorkoutJournalRefusal.INVALID_ADJUSTMENT)
+                nextSnapshot=last.before
+                null
+            }
             is CustomWorkoutJournalOperation.Record -> {
                 val target=prior.snapshot.slots.asSequence()
                     .flatMap{it.sets.asSequence()}
@@ -499,7 +523,7 @@ object CustomWorkoutJournalDomain {
             revision=prior.revision+1,
             receipts=Collections.unmodifiableList(prior.receipts+receipt),
             effectiveVisits=Collections.unmodifiableMap(nextEffective),
-            finishedByEventId=finish)
+            finishedByEventId=finish,lastAdjustment=undo)
         return CustomWorkoutJournalDecision.Proposed(updated,false)
     }
 }

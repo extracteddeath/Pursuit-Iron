@@ -40,7 +40,8 @@ data class CustomWorkoutHistoricalEvidence(
     val journalRevision: Long,
     val visits: List<CustomHistoricalVisitFact>,
     val shortSessionLimitMinutes:Int?=null,
-    val shortSessionOmittedSetKeys:List<String> =emptyList()
+    val shortSessionOmittedSetKeys:List<String> =emptyList(),
+    val sessionAdjusted:Boolean=false
 ) {
     val prescriptionEditedForTime:Boolean
         get()=shortSessionOmittedSetKeys.isNotEmpty()
@@ -57,7 +58,7 @@ data class CustomWorkoutHistoricalEvidence(
                 it.setType==DraftSetType.WORKING
         }
         return shortSessionLimitMinutes==null &&
-            !prescriptionEditedForTime && mains.isNotEmpty() &&
+            !prescriptionEditedForTime && !sessionAdjusted && mains.isNotEmpty() &&
             mains.all{
                 it.outcome==KotlinJournalSetOutcome.COMPLETED &&
                     it.actual!=null
@@ -153,6 +154,7 @@ object CustomWorkoutHistoryEvidenceDomain {
                 journal.revision,Collections.unmodifiableList(facts),
                 journal.originalSnapshot.shortSessionLimitMinutes,
                 Collections.unmodifiableList(
-                    journal.originalSnapshot.shortSessionOmittedSetKeys.toList())))
+                    journal.originalSnapshot.shortSessionOmittedSetKeys.toList()),
+                sessionAdjusted=journal.receipts.any{it.operation is CustomWorkoutJournalOperation.AdjustRemaining}))
     }
 }

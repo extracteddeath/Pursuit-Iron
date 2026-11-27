@@ -79,7 +79,7 @@ private data class SavedReceipts(
 
 private object NativeJournalBinary {
     private const val MAGIC = 0x50494A32 // "PIJ2" (not a legacy JS journal)
-    private const val VERSION = 6
+    private const val VERSION = 7
     private const val MAX_BYTES = 2_000_000
 
     fun hash(raw: ByteArray): String =
@@ -103,7 +103,8 @@ private object NativeJournalBinary {
         val swapped=saved.receipts.any{
             it.operation is KotlinJournalOperation.SwapExercise
         }
-        require(swapped || saved.originalSnapshot==saved.snapshot)
+        val adjusted=saved.receipts.any{it.operation is KotlinJournalOperation.AdjustRemaining}
+        require(swapped || adjusted || saved.originalSnapshot==saved.snapshot)
         val notes=saved.receipts.any {
             it.operation is KotlinJournalOperation.SessionNote
         }
@@ -122,7 +123,7 @@ private object NativeJournalBinary {
             val load=(it.operation as? KotlinJournalOperation.RecordSet)?.performed?.load
             load!=null && load.scale()!=maxOf(0,load.stripTrailingZeros().scale())
         }
-        val version=if(exactDecimal) VERSION else if(machineTagged) 5 else if(notes) 4 else if(swapped) 3 else 2
+        val version=if(adjusted) VERSION else if(exactDecimal) 6 else if(machineTagged) 5 else if(notes) 4 else if(swapped) 3 else 2
         val body=ByteArrayOutputStream()
         DataOutputStream(body).use { out ->
             with(out) {
@@ -153,12 +154,18 @@ private object NativeJournalBinary {
                             writeInt(op.replacementTargets.size)
                             op.replacementTargets.forEach {target->
                                 val bytes=KotlinIssuedSnapshotCodec.encode(
-                                    saved.snapshot.copy(targets=listOf(target)))
+                                    saved.originalSnapshot.copy(targets=listOf(target)))
                                 writeInt(bytes.size);write(bytes)
                             }
                         }
                         is KotlinJournalOperation.UndoSwap -> {
                             writeByte(4);writeUTF(op.swapEventId)
+                        }
+                        is KotlinJournalOperation.AdjustRemaining -> {
+                            writeByte(6);NativeMidSessionWorkingEditCodec.write(this,op.request)
+                        }
+                        is KotlinJournalOperation.UndoAdjustment -> {
+                            writeByte(7);writeUTF(op.adjustmentEventId)
                         }
                         is KotlinJournalOperation.SessionNote -> {
                             require(KotlinWorkoutJournalDomain.validSessionNote(op.text))
@@ -314,6 +321,15 @@ private object NativeJournalBinary {
                                     throw IOException("invalid journal note")
                                 KotlinJournalOperation.SessionNote(
                                     eventId,expectedRevision,text)
+                            }
+                            6 -> {
+                                if(version<7)throw IOException("adjustment in legacy journal")
+                                KotlinJournalOperation.AdjustRemaining(eventId,expectedRevision,
+                                    NativeMidSessionWorkingEditCodec.read(this))
+                            }
+                            7 -> {
+                                if(version<7)throw IOException("adjustment undo in legacy journal")
+                                KotlinJournalOperation.UndoAdjustment(eventId,expectedRevision,readUTF())
                             }
                             else -> throw IOException("unknown journal operation")
                         }
@@ -547,7 +563,9 @@ class KotlinNativeJournalFileStore(private val privateDirectory: Path) {
         // Generic set/Finish routes must never accept UI-invented exercise
         // or target changes. Replacements have a separate trusted builder.
         if(operation is KotlinJournalOperation.SwapExercise ||
-            operation is KotlinJournalOperation.UndoSwap)
+            operation is KotlinJournalOperation.UndoSwap ||
+            operation is KotlinJournalOperation.AdjustRemaining ||
+            operation is KotlinJournalOperation.UndoAdjustment)
             return NativeJournalFileResult.Rejected(
                 NativeJournalFileRefusal.SWAP_SOURCE_UNAVAILABLE)
         if(!ownerId.matches(ownerKey) || !ownerId.matches(workoutId))

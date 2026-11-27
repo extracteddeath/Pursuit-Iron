@@ -125,6 +125,9 @@ object KotlinWorkoutHistoryEvidenceDomain {
                 journal.originalSnapshot.prescriptionEditedForTime ||
                     journal.snapshot.prescriptionEditedForTime ->
                         KotlinHistoryProgressionGate.TIME_LIMIT_EDITED_PRESCRIPTION
+                journal.receipts.any{
+                    (it.operation as? KotlinJournalOperation.AdjustRemaining)?.request?.occurrenceId==exerciseId
+                } -> KotlinHistoryProgressionGate.UNVERIFIED_RECORDED_EVIDENCE
                 working.isEmpty() -> KotlinHistoryProgressionGate.NO_WORKING_SETS
                 working.size > 32 -> KotlinHistoryProgressionGate.TOO_MANY_WORKING_SETS
                 working.map { it.originalOrdinal }.sorted() !=

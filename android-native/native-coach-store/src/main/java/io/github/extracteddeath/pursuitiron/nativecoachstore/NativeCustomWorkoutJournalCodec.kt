@@ -25,7 +25,7 @@ internal data class NativeCustomWorkoutJournalRecord(
 
 internal object NativeCustomWorkoutJournalCodec {
     private const val MAGIC=0x5049434A // PICJ
-    private const val VERSION=6
+    private const val VERSION=7
     const val MAX_BYTES=2_000_000
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
@@ -102,6 +102,14 @@ internal object NativeCustomWorkoutJournalCodec {
                 writeLong(event.expectedRevision)
                 writeUTF(event.swapEventId)
             }
+            is CustomWorkoutJournalOperation.AdjustRemaining->{
+                writeByte(6);writeUTF(event.eventId);writeLong(event.expectedRevision)
+                NativeMidSessionWorkingEditCodec.write(this,event.request)
+            }
+            is CustomWorkoutJournalOperation.UndoAdjustment->{
+                writeByte(7);writeUTF(event.eventId);writeLong(event.expectedRevision)
+                writeUTF(event.adjustmentEventId)
+            }
             is CustomWorkoutJournalOperation.SessionNote->{
                 require(CustomWorkoutJournalDomain.validSessionNote(event.text))
                 writeByte(5)
@@ -158,6 +166,15 @@ internal object NativeCustomWorkoutJournalCodec {
                     throw IOException("invalid session note")
                 CustomWorkoutJournalOperation.SessionNote(eventId,revision,note)
             }
+            6->{
+                if(version<7)throw IOException("adjustment in legacy journal")
+                CustomWorkoutJournalOperation.AdjustRemaining(readUTF(),readLong(),
+                    NativeMidSessionWorkingEditCodec.read(this))
+            }
+            7->{
+                if(version<7)throw IOException("adjustment undo in legacy journal")
+                CustomWorkoutJournalOperation.UndoAdjustment(readUTF(),readLong(),readUTF())
+            }
             else->throw IOException("invalid workout receipt kind $kind")
         }
 
@@ -209,7 +226,8 @@ internal object NativeCustomWorkoutJournalCodec {
         val notes=state.receipts.any {
             it.operation is CustomWorkoutJournalOperation.SessionNote
         }
-        require(swapped || state.originalSnapshot==state.snapshot)
+        val adjusted=state.receipts.any{it.operation is CustomWorkoutJournalOperation.AdjustRemaining}
+        require(swapped || adjusted || state.originalSnapshot==state.snapshot)
         // Older versions and their history-manifest digests must remain
         // byte-identical. Version 4 exists only for physical-machine sets.
         val machineTagged=state.receipts.any {
@@ -230,10 +248,10 @@ internal object NativeCustomWorkoutJournalCodec {
             ((it.operation as? CustomWorkoutJournalOperation.Record)
                 ?.performed?.load?.scale() ?: 0)<0
         }
-        val version=if(exactDecimal) VERSION else if(stageTagged) 5 else if(machineTagged) 4
+        val version=if(adjusted) VERSION else if(exactDecimal) 6 else if(stageTagged) 5 else if(machineTagged) 4
             else if(notes) 3 else if(swapped) 2 else 1
-        val snapshot=NativeKotlinCustomWorkoutSnapshotCodec.encode(state.snapshot)
-        val original=if(swapped)
+        val snapshot=NativeKotlinCustomWorkoutSnapshotCodec.encode(state.snapshot,allowMidSessionKeys=adjusted)
+        val original=if(swapped || adjusted)
             NativeKotlinCustomWorkoutSnapshotCodec.encode(state.originalSnapshot)
             else snapshot
         val out=ByteArrayOutputStream()
@@ -289,7 +307,7 @@ internal object NativeCustomWorkoutJournalCodec {
                         throw IOException("invalid effective journal target")
                     val content=ByteArray(size)
                     data.readFully(content)
-                    NativeKotlinCustomWorkoutSnapshotCodec.decode(content)
+                    NativeKotlinCustomWorkoutSnapshotCodec.decode(content,allowMidSessionKeys=version>=7)
                 } else original
                 val revision=data.readLong()
                 val finish=data.textOptional()

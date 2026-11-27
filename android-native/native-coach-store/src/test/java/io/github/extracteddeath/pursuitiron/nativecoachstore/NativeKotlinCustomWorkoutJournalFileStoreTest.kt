@@ -869,6 +869,52 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
             .issued.journal.effectiveVisits.size)
     }
 
+    @Test fun completedSessionNoteStaysInHistoryButNeverCarriesIntoAnotherWorkout() {
+        initialize();approve();prepareWeek();enroll();issueWeek()
+        val note=CustomWorkoutJournalOperation.SessionNote(
+            "session-only-note",0L,"Grip fatigued today")
+        val noted=issued.saveSessionNote("owner-1","workout-2",note)
+        assertTrue(noted.toString(),noted is NativeCustomJournalResult.Durable)
+        val recorded=issued.record("owner-1","workout-2",
+            recordSet("actual-with-note",1L))
+        assertTrue(recorded.toString(),recorded is NativeCustomJournalResult.Durable)
+        val beforeFinish=(recorded as NativeCustomJournalResult.Durable).issued.journal
+        val finish=NativeKotlinCustomHistoryTransaction(
+            history,issued,fence,identity).complete(
+                "owner-1","athlete-1","workout-2",
+                CustomWorkoutJournalOperation.Finish("finish-with-note",beforeFinish.revision))
+        assertTrue(finish.toString(),finish is NativeCustomFinishResult.Committed)
+        val fresh=NativeKotlinCustomWorkoutJournalFileStore(
+            temp.root.toPath(),NativeKotlinApprovalRevisionFence(temp.root.toPath()),
+            identity,prepared,preflight,history,composerJournal,null,sources)
+        val historical=(fresh.open("owner-1","workout-2")
+            as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals("finish-with-note",historical.finishedByEventId)
+        assertEquals("Grip fatigued today",historical.sessionNote)
+        assertEquals(beforeFinish.effectiveVisits,historical.effectiveVisits)
+        val lateEdit=fresh.saveSessionNote("owner-1","workout-2",
+            CustomWorkoutJournalOperation.SessionNote("late-note",historical.revision,"Changed"))
+        assertTrue(lateEdit.toString(),lateEdit is NativeCustomJournalResult.Rejected)
+        // Same athlete, program, week and exercise, but a different scheduled day.
+        val nextPrepared=prepared.prepare("owner-1","workout-2-day-2",
+            "cycle-1",2,2,input())
+        assertTrue(nextPrepared.toString(),nextPrepared is NativeCustomPrepareResult.Prepared)
+        val nextIssued=fresh.issue("owner-1","workout-2-day-2","cycle-1",2,2,input())
+        assertTrue(nextIssued.toString(),nextIssued is NativeCustomJournalResult.Durable)
+        val next=(nextIssued as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals(historical.snapshot.slots.single().exerciseId,
+            next.snapshot.slots.single().exerciseId)
+        assertEquals("",next.sessionNote)
+        assertTrue(next.effectiveVisits.isEmpty())
+        val nextNote=fresh.saveSessionNote("owner-1","workout-2-day-2",
+            CustomWorkoutJournalOperation.SessionNote("next-note",next.revision,"Fresh today"))
+        assertTrue(nextNote.toString(),nextNote is NativeCustomJournalResult.Durable)
+        assertEquals("Fresh today",(fresh.open("owner-1","workout-2-day-2")
+            as NativeCustomJournalResult.Durable).issued.journal.sessionNote)
+        assertEquals(historical,(fresh.open("owner-1","workout-2")
+            as NativeCustomJournalResult.Durable).issued.journal)
+    }
+
     @Test fun actualSetWriteIsDurableAndColdRecoveryDoesNotInventRir() {
         initialize();approve();prepareWeek();enroll();issueWeek()
         val operation=recordSet("event-1",0)

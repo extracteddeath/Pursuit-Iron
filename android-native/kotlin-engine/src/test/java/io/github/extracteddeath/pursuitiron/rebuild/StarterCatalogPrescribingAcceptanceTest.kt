@@ -308,6 +308,22 @@ class StarterCatalogPrescribingAcceptanceTest {
         }
     }
 
+    @Test fun deficitPendlayRowDoesNotRequireADedicatedStepPlatform() {
+        val id="deficit-pendlay-row"
+        val move=byId.getValue(id)
+        val gym=stockFor(listOf(id))
+        assertFalse(move.requiredFacilityIds.contains("step-platform"))
+        fun inspect(candidate:CatalogGym)=CoachExerciseCatalogDomain.review(
+            StarterExerciseTranche.forGym(template(),listOf(choice(move)),candidate))
+        val ordinaryBarbellGym=gym.copy(availableFacilityIds=emptySet())
+        assertTrue(inspect(ordinaryBarbellGym).issues.isEmpty())
+        val noBarbell=inspect(ordinaryBarbellGym.copy(confirmedStock=emptyMap()))
+        assertNull(noBarbell.composedRequest)
+        assertTrue(noBarbell.issues.any{
+            it.exerciseId==id && it.kind==CatalogIssueType.EQUIPMENT_UNAVAILABLE
+        })
+    }
+
     @Test fun switchingMachinesHandlesAndUnverifiedWeightsRefusesInvalidDraft() {
         fun inspect(id:String,gym:CatalogGym,value:BigDecimal?=n("25"))=
             CoachExerciseCatalogDomain.review(StarterExerciseTranche.forGym(

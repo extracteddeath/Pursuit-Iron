@@ -1168,8 +1168,8 @@ class NativeKotlinGeneratedProgramJourneyTest {
                 assertEquals(full,shown.full)
                 assertEquals(shortened,shown.shortened)
                 assertEquals(NativeCustomTimeUndoWrite.Rejected(NativeCustomTimeUndoRefusal.CONFIRMATION_REQUIRED),
-                    Disk().prepared.acceptTimeUndo(shown,inputs,Disk().journals,false))
-                val restored=Disk().prepared.acceptTimeUndo(shown,inputs,Disk().journals,true)
+                    Disk().prepared.acceptTimeUndo(shown,inputs,Disk().journals,athleteConfirmed=false))
+                val restored=Disk().prepared.acceptTimeUndo(shown,inputs,Disk().journals,athleteConfirmed=true)
                 assertTrue(restored.toString(),restored is NativeCustomTimeUndoWrite.Restored)
                 expected=(restored as NativeCustomTimeUndoWrite.Restored).prepared.snapshot
                 assertEquals(full,expected)

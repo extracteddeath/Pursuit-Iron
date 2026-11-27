@@ -262,8 +262,14 @@ class StarterCatalogPrescribingAcceptanceTest {
             val load=calibratedLoad(move)?.let{
                 DraftSetLoad.Verified(LoadUnit.LB,checkNotNull(move.expectedLoadBasis),it)
             }?:DraftSetLoad.ExplicitBodyweight
+            val band=checkNotNull(move.sourcePracticalReps)
+            val method=when {
+                load==DraftSetLoad.ExplicitBodyweight->SavedProgressionMethod.BODYWEIGHT_REPS
+                move.expectedLoadBasis==LoadBasis.ASSISTANCE_COUNTERWEIGHT->SavedProgressionMethod.ASSISTANCE_DOUBLE
+                else->SavedProgressionMethod.DOUBLE
+            }
             val set=CustomAuthoredSet(DraftSetType.WORKING,load,
-                checkNotNull(move.sourcePracticalReps),2,40,90)
+                band,2,40,90,exactRepTarget=band.minimum.takeIf{load==DraftSetLoad.ExplicitBodyweight})
             fun validate(profile:ReviewedAthleteSetup,selected:CustomAuthoredSet=set)=
                 CustomExerciseAuthoringDomain.reviewFreshSets(review(profile),
                     listOf(move),move.exerciseId,listOf(selected))
@@ -277,7 +283,8 @@ class StarterCatalogPrescribingAcceptanceTest {
                         listOf(0,2,4).map{day->
                             CustomTrainingDay(day,"Day $day",ComposerSessionPurpose.HYPERTROPHY,
                                 listOf(CustomExerciseSlot("slot-$day",move.exerciseId,
-                                    move.role,listOf(set),attachmentId=move.attachmentId)))
+                                    move.role,listOf(set),attachmentId=move.attachmentId,
+                                    progressionMethod=method)))
                         })))
             val preview=CustomWorkoutSnapshotDomain.preview(cycle,review(athlete),
                 listOf(move),1,1,0)
@@ -301,7 +308,10 @@ class StarterCatalogPrescribingAcceptanceTest {
             val key=CustomWorkoutVisitKey(target.setKey,CustomWorkoutVisitPart.MAIN)
             accept(CustomWorkoutJournalOperation.Record("catalog-actual",0,key,
                 KotlinJournalSetOutcome.COMPLETED,actual))
-            val corrected=actual.copy(actualRir=1)
+            // The original visit earns nothing above the rep floor. Correct
+            // the actual to the attained target, without rewriting the issue.
+            val corrected=actual.copy(reps=if(load==DraftSetLoad.ExplicitBodyweight)
+                band.minimum else band.maximum,actualRir=2)
             accept(CustomWorkoutJournalOperation.Record("catalog-correction",1,key,
                 KotlinJournalSetOutcome.COMPLETED,corrected,"catalog-actual"))
             accept(CustomWorkoutJournalOperation.Finish("catalog-finish",2))
@@ -316,6 +326,43 @@ class StarterCatalogPrescribingAcceptanceTest {
             assertEquals(corrected,fact.actual)
             assertEquals("catalog-correction",fact.effectiveEventId)
             assertEquals(snapshot,journal.originalSnapshot)
+            val nextResult=CustomWorkoutSnapshotDomain.preview(cycle,review(athlete),listOf(move),1,2,0)
+            assertTrue("${move.exerciseId}: $nextResult",nextResult is CustomWorkoutSnapshotResult.Preview)
+            val next=(nextResult as CustomWorkoutSnapshotResult.Preview).snapshot
+            val stock=move.equipmentId?.let{gym.confirmedStock.getValue(it)}
+            val progression=CustomBasicHistoryProgressionDomain.review(
+                CustomBasicHistoryRequest(cycle,next,"catalog-next","slot-0",
+                    listOf(CustomCoachingHistoricalSession(1,snapshot,history.evidence)),
+                    null,stock,n("10"),mapOf(move.exerciseId to move),athlete.experience))
+            if(load==DraftSetLoad.ExplicitBodyweight) {
+                assertTrue("${move.exerciseId}: $progression",
+                    progression is CustomBasicHistoryResult.UnloadedReviewed)
+                val proposed=(progression as CustomBasicHistoryResult.UnloadedReviewed)
+                assertEquals("catalog-workout",proposed.historyWorkoutId)
+                assertEquals(listOf((band.minimum+1).coerceAtMost(band.maximum)),
+                    proposed.candidate.proposedExactReps)
+                assertFalse(proposed.mayIssueWorkout)
+                assertFalse(proposed.maySaveProgram)
+                assertFalse(proposed.mayModifyHistory)
+            } else {
+                val weighted=load as DraftSetLoad.Verified
+                assertTrue("${move.exerciseId}: $progression",
+                    progression is CustomBasicHistoryResult.Reviewed)
+                val proposed=(progression as CustomBasicHistoryResult.Reviewed)
+                assertEquals("catalog-workout",proposed.historyWorkoutId)
+                val physical=EquipmentLoadDomain.inspect(checkNotNull(stock),weighted.value,weighted.unit)
+                    as LoadInspection.Confirmed
+                val expected=if(weighted.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+                    physical.nextBelow else physical.nextAbove
+                assertNotNull(move.exerciseId,expected)
+                assertEquals(move.exerciseId,listOf(checkNotNull(expected)),proposed.candidate.proposedWorkingLoads)
+                assertEquals(BasicProgressionDecision.EARNED_INCREMENT,proposed.candidate.decision)
+                assertFalse(proposed.mayIssueWorkout)
+                assertFalse(proposed.maySaveProgram)
+                assertFalse(proposed.mayModifyHistory)
+            }
+            assertEquals(set,next.slots.single().sets.single().prescription)
+            assertEquals(corrected,fact.actual)
             assertEquals(move.exerciseId,CustomAuthoringRefusal.EXERCISE_UNAVAILABLE,
                 validate(athlete.copy(excludedExerciseIds=setOf(move.exerciseId))))
             if(load is DraftSetLoad.Verified) {

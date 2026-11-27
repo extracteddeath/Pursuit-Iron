@@ -129,9 +129,12 @@ class NativeKotlinGeneratedProgramJourneyTest {
         includeHipMachines:Boolean=false,includeTrapBar:Boolean=false,
         includeNewTargets:Boolean=false,blockWeeks:Int=4,
         includeMyoFinisher:Boolean=false,
-        optionalFinisher:CustomAmplifierKind?=null
+        optionalFinisher:CustomAmplifierKind?=null,
+        allowSupersets:Boolean=false
     ):Pair<CustomTrainingCycle,CustomCoachAuditInputs> {
         val baseInput=request(split,phase,includeHipMachines,includeTrapBar,includeNewTargets).copy(policyVersion=policyVersion)
+            .let{requested->if(!allowSupersets)requested else requested.copy(
+                setup=requested.setup.copy(reviewed=checkNotNull(requested.setup.reviewed).copy(allowSupersets=true)))}
         // Explicitly calibrate a stable, stretch-position calf machine for
         // the partials opt-in. Do not force an unsuitable generated exercise.
         val input=if(optionalFinisher==CustomAmplifierKind.LENGTHENED_PARTIALS){
@@ -1112,6 +1115,100 @@ class NativeKotlinGeneratedProgramJourneyTest {
             Disk().next(inputs))
         assertEquals(cycle,(Disk().drafts.read(owner,cycleId)
             as NativeCustomDraftReadResult.Found).draft)
+    }
+
+    @Test fun generatedProgramReviewedSupersetRequiresNewConsentAndPreservesRoundHistory() {
+        val (base,inputs)=saveGenerated(allowSupersets=true)
+        val disk=Disk()
+        val block=base.blocks.single()
+        val source=(disk.sources.read(owner) as NativeAuthoringSourceRead.Found).source
+        val available=CustomExerciseAuthoringDomain.picker(source.setup,source.catalog)
+        val selected=block.days.sortedBy{it.weekday}.flatMap{day->
+            day.slots.mapNotNull{anchor->
+                val ranked=CustomSupersetPartnerRankingDomain.rank(day,available,anchor.slotId,null,true,true)
+                ranked.partners.firstOrNull()?.let{Triple(day,anchor,it)}
+            }
+        }.firstOrNull()
+        assertNotNull("Generated program must offer a compatible reviewed accessory pair",selected)
+        val (day,anchor,partner)=checkNotNull(selected)
+        assertEquals(CustomSupersetIdeasStatus.SUPERSETS_OFF,CustomSupersetPartnerRankingDomain.rank(
+            day,available,anchor.slotId,null,false,true).status)
+        val ids=listOf(anchor.slotId,partner.slotId)
+        val group="generated-reviewed-pair"
+        assertTrue(CustomCycleBuilderDomain.setSupersetMembers(base,base.revision,block.blockId,
+            day.weekday,group,ids,false) is CustomCycleBuilderResult.Rejected)
+        val linked=CustomCycleBuilderDomain.setSupersetMembers(base,base.revision,block.blockId,
+            day.weekday,group,ids,true) as CustomCycleBuilderResult.Proposed
+        assertEquals(base.weekOverrides,linked.draft.weekOverrides)
+        val linkedDay=linked.draft.blocks.single().days.single{it.weekday==day.weekday}
+        assertEquals(day.slots,linkedDay.slots.map{slot->if(slot.slotId in ids)slot.copy(supersetGroup=null)else slot})
+        assertEquals(base,(Disk().drafts.read(owner,cycleId) as NativeCustomDraftReadResult.Found).draft)
+        val editor=NativeKotlinCustomAuthoringDraftCoordinator(disk.sources,disk.drafts,disk.fence,identity)
+        val saved=editor.saveVerifiedExerciseEdit(owner,linked.draft,base.revision,source.revision)
+        assertTrue(saved.toString(),saved is NativeCustomDraftWriteResult.Committed)
+        val previous=(Disk().consent.read(owner,cycleId,inputs) as NativeCustomSignoffRead.Found)
+        assertFalse(previous.isCurrent)
+        val workout="generated-linked-round"
+        assertTrue(Disk().prepared.prepare(owner,workout,cycleId,1,day.weekday,inputs)
+            is NativeCustomPrepareResult.Rejected)
+        assertEquals(NativeCustomPreparedRead.Missing,Disk().prepared.open(owner,workout))
+        val signed=Disk().consent.confirm(owner,cycleId,linked.draft.revision,source.revision,
+            previous.receipt.recordRevision,inputs,true)
+        assertTrue(signed.toString(),signed is NativeCustomSignoffWrite.Committed)
+        val prepared=Disk().prepared.prepare(owner,workout,cycleId,1,day.weekday,inputs)
+        assertTrue(prepared.toString(),prepared is NativeCustomPrepareResult.Prepared)
+        var journal=(Disk().journals.issue(owner,workout,cycleId,1,day.weekday,inputs)
+            as NativeCustomJournalResult.Durable).issued.journal
+        val snapshot=journal.originalSnapshot
+        val members=snapshot.slots.filter{it.supersetGroup==group}
+        assertEquals(ids.toSet(),members.map{it.slotId}.toSet())
+        val working=members.map{slot->slot.sets.filter{it.prescription.type==DraftSetType.WORKING}}
+        val expectedRoundKeys=(0 until working.maxOf{it.size}).flatMap{i->working.mapNotNull{it.getOrNull(i)?.setKey}}
+        val warmKeys=members.flatMap{it.sets.filter{row->row.prescription.type==DraftSetType.WARMUP}}.map{it.setKey}
+        val memberKeys=(warmKeys+expectedRoundKeys).toSet()
+        val steps=CustomWorkoutExecutionDomain.orderedSets(snapshot)
+        assertEquals(snapshot.slots.flatMap{it.sets}.map{it.setKey}.toSet(),steps.map{it.set.setKey}.toSet())
+        assertEquals(snapshot.slots.sumOf{it.sets.size},steps.size)
+        assertEquals(warmKeys+expectedRoundKeys,steps.map{it.set.setKey}.filter{it in memberKeys})
+        val visits=mutableListOf<String>()
+        val actuals=linkedMapOf<String,KotlinPerformedSet>()
+        for(step in steps){
+            val target=step.set
+            val visit=CustomWorkoutVisitKey(target.setKey,CustomWorkoutVisitPart.MAIN)
+            assertEquals(visit,CustomWorkoutJournalDomain.nextUnresolvedVisit(journal))
+            val load=target.prescription.load as? DraftSetLoad.Verified
+            val actual=KotlinPerformedSet(load?.value,load?.unit,
+                target.prescription.exactRepTarget?:target.prescription.reps.minimum,null)
+            val record=CustomWorkoutJournalOperation.Record("round-${journal.revision}",journal.revision,
+                visit,KotlinJournalSetOutcome.COMPLETED,actual)
+            val committed=Disk().journals.record(owner,workout,record)
+            assertTrue(committed.toString(),committed is NativeCustomJournalResult.Durable)
+            journal=(Disk().journals.open(owner,workout) as NativeCustomJournalResult.Durable).issued.journal
+            assertEquals((committed as NativeCustomJournalResult.Durable).issued.journal,journal)
+            assertEquals(snapshot,journal.snapshot)
+            visits+=target.setKey
+            actuals[target.setKey]=actual
+            val next=CustomWorkoutJournalDomain.nextUnresolvedVisit(journal)
+            val pause=KotlinWorkoutRestDomain.inspect(journal,next).automaticCue?.seconds
+            val round=step.round
+            val expectedPause=if(next==null)null else if(round!=null &&
+                !round.setKeys.all{it in visits})0 else target.prescription.restSeconds
+            assertEquals(expectedPause,pause)
+        }
+        assertEquals(steps.map{it.set.setKey},visits)
+        assertEquals(0,journal.unresolvedVisitCount)
+        val finish=CustomWorkoutJournalOperation.Finish("generated-linked-finish",journal.revision)
+        fun complete()=Disk().let{d->NativeKotlinCustomHistoryTransaction(d.history,d.journals,d.fence,identity)
+            .complete(owner,athlete,workout,finish)}
+        val done=complete()
+        assertTrue(done.toString(),done is NativeCustomFinishResult.Committed)
+        assertTrue(complete() is NativeCustomFinishResult.Committed)
+        val cold=(Disk().journals.open(owner,workout) as NativeCustomJournalResult.Durable).issued.journal
+        val facts=(CustomWorkoutHistoryEvidenceDomain.project(cold) as CustomHistoryEvidenceResult.Candidate).evidence
+        assertEquals(actuals,facts.visits.associate{it.setKey to it.actual})
+        assertEquals(actuals.size,facts.visits.size)
+        assertEquals(snapshot,cold.originalSnapshot)
+        assertEquals(linked.draft,(Disk().drafts.read(owner,cycleId) as NativeCustomDraftReadResult.Found).draft)
     }
 
     @Test fun generatedTwentyMinuteChoiceProtectsEssentialWorkAndNeverInventsFit() =

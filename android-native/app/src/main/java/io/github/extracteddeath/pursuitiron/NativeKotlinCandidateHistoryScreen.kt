@@ -592,11 +592,9 @@ internal fun NativeKotlinCandidateHistoryScreen(
                                 NativeKotlinMeasuredHistoryRows(entry)
                             is NativeKotlinMixedHistoryCompletion.Freestyle ->
                                 entry.workout.observations().forEach{(exercise,record)->
-                                    Text(kotlinExerciseLabel(exercise.exerciseId),
-                                        style=MaterialTheme.typography.titleSmall)
-                                    Text(record.type.name.lowercase().replaceFirstChar{it.uppercase()}+
-                                        " · "+nativeFreestyleHistoryActual(record.actual,exercise.basis,record.outcome),
-                                        style=MaterialTheme.typography.bodyMedium)
+                                    key(record.setKey,record.eventId) {
+                                        NativeKotlinSavedFreestyleRow(host,entry,exercise,record,onChanged={reload()})
+                                    }
                                 }
                         }
                         if(expanded)when(entry) {
@@ -1208,5 +1206,77 @@ internal fun NativeKotlinMeasuredHistoryRows(
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         HorizontalDivider()
+    }
+}
+
+/** Actual-only saved-set correction. The exact predecessor and revision
+ * are checked by the same owner-fenced History redo transaction. */
+@Composable
+private fun NativeKotlinSavedFreestyleRow(
+    host:NativeKotlinCandidateHost,entry:NativeKotlinMixedHistoryCompletion.Freestyle,
+    exercise:KotlinFreestyleExercise,record:KotlinFreestyleOperation.Record,
+    onChanged:()->Unit
+) {
+    Text(kotlinExerciseLabel(exercise.exerciseId),style=MaterialTheme.typography.titleSmall)
+    Text(record.type.name.lowercase().replaceFirstChar{it.uppercase()}+" · "+
+        nativeFreestyleHistoryActual(record.actual,exercise.basis,record.outcome),
+        style=MaterialTheme.typography.bodyMedium)
+    val scope=rememberCoroutineScope()
+    var editing by remember(record.eventId){mutableStateOf(false)}
+    var submitting by remember{mutableStateOf(false)}
+    var error by remember{mutableStateOf<String?>(null)}
+    var weight by remember(record.eventId){mutableStateOf(record.actual?.load?.toPlainString().orEmpty())}
+    var reps by remember(record.eventId){mutableStateOf(record.actual?.reps?.toString().orEmpty())}
+    var rir by remember(record.eventId){mutableStateOf(record.actual?.actualRir?.toString().orEmpty())}
+    var outcome by remember(record.eventId){mutableStateOf(record.outcome)}
+    TextButton(enabled=!submitting,onClick={editing=!editing;error=null}) {
+        Text(if(editing)"Cancel correction" else "Correct saved set")
+    }
+    if(editing) {
+        Text("Only the observed result changes. The original completion stays in History.",
+            style=MaterialTheme.typography.bodySmall)
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement=Arrangement.spacedBy(8.dp)){
+            KotlinJournalSetOutcome.entries.forEach{choice->
+                FilterChip(selected=choice==outcome,enabled=!submitting,
+                    onClick={outcome=choice},label={Text(choice.name.lowercase().replace('_',' '))})
+            }
+        }
+        val unit=exercise.unit
+        if(outcome!=KotlinJournalSetOutcome.SKIPPED) {
+            if(unit!=null)OutlinedTextField(weight,{weight=it},enabled=!submitting,
+                label={Text("Actual weight (${unit.name.lowercase()})")},
+                singleLine=true,modifier=Modifier.fillMaxWidth())
+            if(outcome==KotlinJournalSetOutcome.COMPLETED) {
+                Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                    OutlinedTextField(reps,{reps=it},enabled=!submitting,label={Text("Actual reps")},
+                        singleLine=true,modifier=Modifier.weight(1f))
+                    OutlinedTextField(rir,{rir=it},enabled=!submitting,label={Text("Actual RIR (optional)")},
+                        singleLine=true,modifier=Modifier.weight(1f))
+                }
+            }
+        }
+        val parsed=KotlinWorkoutEntryDomain.parseUnplanned(unit,weight,reps,rir,
+            outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT)
+        val actual=if(outcome==KotlinJournalSetOutcome.SKIPPED)null
+            else (parsed as? KotlinSetEntryResult.Accepted)?.performed?.copy(
+                machineInstanceId=record.actual?.machineInstanceId)
+        Button(enabled=!submitting && (outcome==KotlinJournalSetOutcome.SKIPPED || actual!=null),
+            onClick={
+                submitting=true;error=null
+                val operation=KotlinFreestyleOperation.CorrectSaved(record.copy(
+                    eventId="correct-"+java.util.UUID.randomUUID().toString().replace("-",""),
+                    expectedRevision=entry.workout.revision,outcome=outcome,actual=actual,
+                    correctsEventId=record.eventId))
+                scope.launch {
+                    try {
+                        val result=withContext(Dispatchers.IO){
+                            host.correctFinishedFreestyle(entry.manifest.workoutId,operation)}
+                        if(result is NativeFreestyleResult.Durable)onChanged()
+                        else error="Correction not verified. Refresh History and try again."
+                    }finally{submitting=false}
+                }
+            }){Text("Save corrected actual")}
+        error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
     }
 }

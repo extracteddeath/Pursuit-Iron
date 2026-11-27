@@ -244,6 +244,37 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
             NativeKotlinMixedHistoryRefusal.UNVERIFIED_FREESTYLE),reader().read("owner-1","athlete-1"))
         Files.write(file,valid)
         assertEquals(after,reader().read("owner-1","athlete-1"))
+        val oldEntry=ledger().completions.first()
+        val originalRecord=done.effectiveSets.getValue("set-a")
+        val correction=KotlinFreestyleOperation.CorrectSaved(originalRecord.copy(
+            eventId="saved-correction",expectedRevision=done.revision,
+            actual=originalRecord.actual?.copy(load=n("27.125"),reps=9,actualRir=1),
+            correctsEventId=originalRecord.eventId))
+        val corrected=saved(freestyle().correctFinished("owner-1","one",correction))
+        assertEquals(done,KotlinFreestyleWorkoutDomain.originalFinished(corrected))
+        assertEquals(1L,corrected.savedCorrectionRevision)
+        assertEquals(oldEntry.copy(savedCorrectionRevision=1),ledger().completions.first())
+        assertEquals(corrected,saved(freestyle().open("owner-1","one")))
+        assertTrue((freestyle().correctFinished("owner-1","one",correction) as NativeFreestyleResult.Durable).replayed)
+        val stale=correction.copy(record=correction.record.copy(eventId="stale",expectedRevision=corrected.revision))
+        assertEquals(NativeFreestyleResult.Rejected(NativeFreestyleRefusal.INVALID_RECEIPT,
+            KotlinFreestyleRefusal.INVALID_CORRECTION),freestyle().correctFinished("owner-1","one",stale))
+        val secondCorrection=KotlinFreestyleOperation.CorrectSaved(correction.record.copy(
+            eventId="second-correction",expectedRevision=corrected.revision,
+            correctsEventId=correction.eventId,actual=correction.record.actual?.copy(reps=10)))
+        val redo=NativeHistoryWriteIntent.FreestyleCorrect("one",secondCorrection)
+        assertTrue(history.prepare("owner-1","athlete-1",ledger().revision,redo) is NativeHistoryLedgerResult.Durable)
+        assertEquals(redo,ledger().pending)
+        assertEquals(NativeKotlinMixedHistoryReadResult.Rejected(
+            NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION),reader().read("owner-1","athlete-1"))
+        val recoveredEdit=saved(freestyle().recover("owner-1","one"))
+        assertEquals(2L,recoveredEdit.savedCorrectionRevision)
+        assertEquals(done,KotlinFreestyleWorkoutDomain.originalFinished(recoveredEdit))
+        assertEquals(oldEntry.copy(savedCorrectionRevision=2),ledger().completions.first())
+        val correctedTimeline=(reader().read("owner-1","athlete-1") as NativeKotlinMixedHistoryReadResult.Review).timeline
+        assertEquals(recoveredEdit,(correctedTimeline.completions.first() as NativeKotlinMixedHistoryCompletion.Freestyle).workout)
+        assertEquals(10,recoveredEdit.effectiveSets.getValue("set-a").actual?.reps)
+        assertEquals(2,ledger().completions.size)
         assertEquals(NativeFreestyleResult.Rejected(NativeFreestyleRefusal.HISTORY_NOT_READY),
             freestyle().recover("owner-1","two"))
     }

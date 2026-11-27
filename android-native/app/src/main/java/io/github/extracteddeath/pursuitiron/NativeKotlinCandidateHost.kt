@@ -1695,6 +1695,21 @@ internal class NativeKotlinCandidateHost(context:Context) {
         }
     }
 
+    fun correctFinishedFreestyle(workoutId:String,operation:KotlinFreestyleOperation.CorrectSaved):NativeFreestyleResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFreestyleResult.Rejected(NativeFreestyleRefusal.NOT_AUTHORIZED)
+        return revisionFence.withOwnerTransaction(owner.ownerKey) {
+            val result=freestyleStore.correctFinished(owner.ownerKey,workoutId,operation)
+            if(result !is NativeFreestyleResult.Durable)return@withOwnerTransaction result
+            val read=mixedHistoryReader.read(owner.ownerKey,owner.athleteId)
+                as? NativeKotlinMixedHistoryReadResult.Review
+            val entry=read?.timeline?.completions?.filterIsInstance<NativeKotlinMixedHistoryCompletion.Freestyle>()
+                ?.singleOrNull{it.manifest.workoutId==workoutId}
+            if(entry?.workout==result.workout && localAthlete.signedInIdentity()==owner)result
+            else NativeFreestyleResult.Rejected(NativeFreestyleRefusal.HISTORY_NOT_READY)
+        }
+    }
+
     fun verifyFinishedFreestyle(workoutId:String):Boolean {
         val owner=localAthlete.signedInIdentity()?:return false
         return revisionFence.withOwnerTransaction(owner.ownerKey) {

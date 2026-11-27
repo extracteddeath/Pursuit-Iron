@@ -58,9 +58,9 @@ const custom=readFileSync(
     'android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomExerciseSwapRankingDomain.kt','utf8');
 const customUi=readFileSync(
     'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomExerciseSheet.kt','utf8');
-for(const domain of [engine,custom]) {
+for(const [domain,identity] of [[engine,'option.exerciseId'],[custom,'choice.exerciseId']]) {
     assert.ok(domain.includes('CoachExerciseChoiceSearchDomain.tokens(search)'));
-    assert.ok(domain.includes('CoachExerciseChoiceSearchDomain.matches(terms)'));
+    assert.ok(domain.includes('CoachExerciseChoiceSearchDomain.matches(terms,'+identity+')'));
 }
 assert.ok(customUi.includes('available,replacing?.exerciseId,search=search'));
 assert.ok(customUi.includes('displayLabel=::kotlinExerciseLabel'));

@@ -105,7 +105,7 @@ object CustomExerciseSwapRankingDomain {
         val sorted=available.asSequence()
             .filter{it.exerciseId!=sourceExerciseId}
             .filter {choice->
-                CoachExerciseChoiceSearchDomain.matches(terms){
+                CoachExerciseChoiceSearchDomain.matches(terms,choice.exerciseId){
                     listOfNotNull(choice.exerciseId,choice.familyId,
                         choice.variantId,choice.attachmentId,displayLabel(choice.exerciseId),
                         choice.pattern?.name,choice.role?.name) +

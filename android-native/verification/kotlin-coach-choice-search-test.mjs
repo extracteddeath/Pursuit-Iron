@@ -14,7 +14,7 @@ assert.match(ui,/CoachExerciseChoiceSearchDomain\.filter\(\s*exerciseChoices,exe
 assert.match(domain,/return approved\.distinct\(\)\.filter/);
 assert.match(domain,/tokens\.all\s*\{\s*searchable\.contains\(it\)\s*\}/);
 assert.match(domain,/val terms=tokens\(query\)/);
-assert.match(domain,/matches\(terms\)\{listOf\(label\(id\),id\)\}/);
+assert.match(domain,/matches\(terms,id\)\{listOf\(label\(id\),id\)\}/);
 
 // Touch-safe full-width results, explicit selection, searchable pagination.
 assert.match(ui,/label=\{Text\("Search approved exercises"\)\}/);

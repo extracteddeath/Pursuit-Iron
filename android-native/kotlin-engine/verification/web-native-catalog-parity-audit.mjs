@@ -225,6 +225,50 @@ function reviewEquipmentDifference(id,oldEquipment,newEquipment,nativeEntry,meas
   return 'UNWEIGHTED_CONTEXT_REQUIRED';
 }
 
+// Legacy primary-muscle labels are broad UI groups, not native set-credit
+// authority. Pin deliberate differences, and require a review for any new
+// divergence instead of silently copying the old category into volume totals.
+const historicalMuscleGroups=new Map(Object.entries({
+  chest:['CHEST'],lats:['LATS'],upper_back:['UPPER_BACK'],
+  lower_back:['SPINAL_ERECTORS'],shoulders:['FRONT_DELTS','SIDE_DELTS','REAR_DELTS'],
+  biceps:['BICEPS','BRACHIALIS'],triceps:['TRICEPS'],quads:['QUADS'],
+  hamstrings:['HAMSTRINGS'],glutes:['GLUTES'],calves:['CALVES'],
+  abs:['ABS'],traps:['TRAPS'],forearms:['WRIST_FLEXORS','WRIST_EXTENSORS'],
+  abductors:['HIP_ABDUCTORS'],adductors:['HIP_ADDUCTORS'],
+  neck:['NECK_FLEXORS','NECK_EXTENSORS','NECK_LATERAL_FLEXORS']
+}));
+const historicalMuscleDifferences=new Map([
+  ['serratus-pushup',['abs','SERRATUS_ANTERIOR','SEPARATE_SERRATUS_LEDGER']],
+  ['cable-serratus',['abs','SERRATUS_ANTERIOR','SEPARATE_SERRATUS_LEDGER']],
+  ['banded-tib-raise',['calves','TIBIALIS_ANTERIOR','SEPARATE_DORSIFLEXION_LEDGER']],
+  ['tibialis-raise',['calves','TIBIALIS_ANTERIOR','SEPARATE_DORSIFLEXION_LEDGER']],
+  ['kroc-row',['upper_back','LATS','REVIEWED_ROW_STIMULUS']],
+  ['close-cable-row',['lats','UPPER_BACK','REVIEWED_ROW_STIMULUS']],
+  ['underhand-cable-row',['lats','UPPER_BACK','REVIEWED_ROW_STIMULUS']],
+  ['helms-row',['lats','UPPER_BACK','REVIEWED_ROW_STIMULUS']],
+  ['prone-y-raise',['shoulders','TRAPS','REVIEWED_SCAPULAR_ROTATION']]
+]);
+function reviewHistoricalMuscle(id,legacyMuscle,nativeEntry,typed) {
+  const group=historicalMuscleGroups.get(legacyMuscle);
+  assert.ok(group,'Unknown legacy primary muscle: '+id);
+  if(typed) {
+    assert.equal(nativeEntry,undefined,'Typed identity must not also issue ordinary reps: '+id);
+    return {direct:[],review:'TYPED_NO_ORDINARY_MUSCLE_CREDIT'};
+  }
+  const direct=[...(nativeEntry?.match(/direct\(([^)]*)\)/)?.[1]??'')
+    .matchAll(/TrainingMuscle\.([A-Z_]+)/g)].map(m=>m[1]);
+  assert.ok(direct.length,'Missing native direct muscle metadata: '+id);
+  const difference=historicalMuscleDifferences.get(id);
+  if(difference) {
+    assert.equal(legacyMuscle,difference[0],'Legacy muscle exception drift: '+id);
+    assert.deepEqual(direct,[difference[1]],'Native muscle exception drift: '+id);
+    return {direct,review:difference[2]};
+  }
+  assert.ok(direct.some(muscle=>group.includes(muscle)),
+    'Unreviewed legacy primary muscle divergence: '+id);
+  return {direct,review:'BROAD_GROUP_RECONCILED'};
+}
+
 export function reviewHistoricalShellCoverage(shell,rawSource,projection,
   frozenMissing,canonical,nativeIds,measured,nativeSource) {
   assert.equal(frozenMissing.webCommit,shell.webCommit);
@@ -289,7 +333,9 @@ export function reviewHistoricalShellCoverage(shell,rawSource,projection,
     }
     const equipmentTokensDiffer=JSON.stringify(raw[4])!==JSON.stringify(active.equipment);
     const equipmentReview=equipmentTokensDiffer?reviewEquipmentDifference(row.shellId,raw[4],active.equipment,nativeEntry,measured.find(x=>x.id===nativeId)):null;
+    const muscle=reviewHistoricalMuscle(row.shellId,raw[2],nativeEntry,measuredSet.has(nativeId));
     return {shellId:row.shellId,shellName:raw[1],pinnedSourceLine:row.line,
+      shellPrimaryMuscle:raw[2],nativeDirectMuscles:muscle.direct,muscleReview:muscle.review,
       shellEquipment:raw[4],shellRepBand:raw.slice(5,7),
       canonicalCandidateId:row.candidateWebId,canonicalEquipment:active.equipment,
       nativeCandidateId:nativeId,match:row.match,equipmentTokensDiffer,
@@ -310,6 +356,15 @@ export function reviewHistoricalShellCoverage(shell,rawSource,projection,
     assert.ok(nativeSet.has(nativeId)&&!currentById.has(nativeId),
       'Distinct historical candidate cannot collapse into canonical current-web ID');
   }
+  assert.equal(new Set(candidates.map(x=>x.nativeCandidateId)).size,candidates.length,
+    'Distinct historical identities must not collapse onto one native identity');
+  assert.deepEqual(new Set(candidates.filter(x=>historicalMuscleDifferences.has(x.shellId))
+    .map(x=>x.shellId)),new Set(historicalMuscleDifferences.keys()),
+    'Frozen muscle divergence coverage drift');
+  const muscleReviewCounts={};
+  for(const item of candidates)
+    muscleReviewCounts[item.muscleReview]=(muscleReviewCounts[item.muscleReview]??0)+1;
+  assert.equal(muscleReviewCounts.TYPED_NO_ORDINARY_MUSCLE_CREDIT,14);
   const equipmentReviewCounts={};
   for(const item of candidates.filter(x=>x.equipmentTokensDiffer)) {
     assert.ok(item.equipmentReview,'Missing equipment review: '+item.shellId);
@@ -320,7 +375,7 @@ export function reviewHistoricalShellCoverage(shell,rawSource,projection,
   assert.equal(equipmentReviewCounts.DISTINCT_EXTERNAL_RESISTANCE,3);
   assert.equal(equipmentReviewCounts.INCLINE_SUPPORT_REQUIRED,1);
   assert.equal(equipmentReviewCounts.ORIGINAL_DURATION_AND_SETUP_REQUIRED,7);
-  return {total:candidates.length,equipmentReviewCounts,distinctPhysicalVariants:historicalPhysicalVariants.size,
+  return {total:candidates.length,equipmentReviewCounts,muscleReviewCounts,distinctPhysicalVariants:historicalPhysicalVariants.size,
     equipmentTokenDifferences:candidates.filter(x=>x.equipmentTokensDiffer).length,
     nameFallbacks:candidates.filter(x=>x.match==='web-name-fallback-review').length,
     independentlyAccepted:0,automaticHistoryTransfers:0,candidates};
@@ -378,6 +433,17 @@ function selfTest() {
   assert.equal(historical.distinctPhysicalVariants,3);
   assert.equal(historical.equipmentTokenDifferences,71);
   assert.equal(historical.nameFallbacks,4);
+  assert.deepEqual(historical.muscleReviewCounts,{
+    BROAD_GROUP_RECONCILED:349,TYPED_NO_ORDINARY_MUSCLE_CREDIT:14,
+    SEPARATE_SERRATUS_LEDGER:2,SEPARATE_DORSIFLEXION_LEDGER:2,
+    REVIEWED_ROW_STIMULUS:4,REVIEWED_SCAPULAR_ROTATION:1
+  });
+  assert.throws(()=>reviewHistoricalMuscle('serratus-pushup','abs',
+    'direct(TrainingMuscle.ABS)',false),/Native muscle exception drift/);
+  assert.throws(()=>reviewHistoricalMuscle('bb-bench','chest',
+    'direct(TrainingMuscle.TRICEPS)',false),/Unreviewed legacy primary muscle divergence/);
+  assert.throws(()=>reviewHistoricalMuscle('plank','abs',
+    'direct(TrainingMuscle.ABS)',true),/Typed identity must not also issue ordinary reps/);
   assert.ok(historical.candidates.every(x=>!x.mayTransferHistory&&!x.independentlyAccepted));
   const byShell=new Map(historical.candidates.map(x=>[x.shellId,x]));
   assert.equal(byShell.get('wrist-roller').equipmentReview,'EXPLICIT_IMPLEMENT_AND_LOAD_REQUIRED');
@@ -514,6 +580,7 @@ else {
       equipmentTokenDifferences:report.historicalShellReview.equipmentTokenDifferences,
       nameFallbacks:report.historicalShellReview.nameFallbacks,
       equipmentReviewCounts:report.historicalShellReview.equipmentReviewCounts,
+      muscleReviewCounts:report.historicalShellReview.muscleReviewCounts,
       independentlyAccepted:report.historicalShellReview.independentlyAccepted
     },
     missingByMeasurementSemantics:report.missingByMeasurementSemantics

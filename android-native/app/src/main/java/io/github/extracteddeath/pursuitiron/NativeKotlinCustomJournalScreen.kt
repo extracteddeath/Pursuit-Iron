@@ -106,6 +106,7 @@ internal fun NativeKotlinCustomJournalScreen(
         mutableStateOf<String?>(null)
     }
     var undoSwapConfirmEventId by remember(workoutId){mutableStateOf<String?>(null)}
+    var adjustment by remember(workoutId){mutableStateOf<NativeRemainingEditAnchor?>(null)}
     var swapChoices by remember(workoutId) {
         mutableStateOf<List<CustomExercisePickerOption>>(emptyList())
     }
@@ -428,6 +429,29 @@ internal fun NativeKotlinCustomJournalScreen(
                 swapChoices=emptyList()
             }
             busy=false
+        }
+    }
+    fun submitRemainingEdit(operation:CustomWorkoutJournalOperation) {
+        if(busy)return
+        val current=journal?:return
+        if(current.finishedByEventId!=null || operation.expectedRevision!=current.revision)return
+        busy=true;error=null
+        scope.launch {
+            try {
+                val result=withContext(Dispatchers.IO){
+                    host.adjustIssuedCustomRemaining(workoutId,operation,true)
+                }
+                if(result is NativeCustomJournalResult.Durable)journal=result.issued.journal
+                else {
+                    error="Adjustment not saved. Current equipment, training limits or workout revision may have changed."
+                    val restored=withContext(Dispatchers.IO){host.openIssuedCustomWorkout(workoutId)}
+                    journal=(restored as? NativeCustomJournalResult.Durable)?.issued?.journal
+                }
+            }catch(cancelled:CancellationException){throw cancelled}
+            catch(_:Exception){
+                error="Could not verify the adjustment. Reopen the saved workout."
+                journal=null
+            }finally{busy=false}
         }
     }
     fun confirmUndoSwap(swapEventId:String) {
@@ -1506,6 +1530,16 @@ internal fun NativeKotlinCustomJournalScreen(
     }
     // Info reads only the current owner-recovered issued snapshot.
     // Closing it cannot write a set, alter a target or discard editor drafts.
+    adjustment?.let{anchor->
+        val active=journal
+        NativeRemainingEditSheet(anchor,active?.revision,busy,
+            review={request->active?.let{MidSessionWorkingEditDomain.custom(it,request)}},
+            onApply={request->
+                adjustment=null
+                submitRemainingEdit(CustomWorkoutJournalOperation.AdjustRemaining(
+                    "adjust-"+UUID.randomUUID(),request.expectedRevision,request))
+            },onDismiss={adjustment=null})
+    }
     infoSlotId?.let { slotId ->
         journal?.snapshot?.slots?.firstOrNull{it.slotId==slotId}
             ?.let { slot ->
@@ -1585,6 +1619,28 @@ internal fun NativeKotlinCustomJournalScreen(
                             pendingExerciseSkip=NativeExerciseSkipRequest(
                                 slot.slotId,revision)
                         })
+                    }else null,
+                    onAdjustRemaining=if(!infoWarmupsOnly && !busy && !finished)journal?.let{current->
+                        val working=slot.sets.filter{it.prescription.type==DraftSetType.WORKING}
+                        val pending=working.filter{set->current.effectiveVisits.keys.none{it.setKey==set.setKey}}
+                        pending.lastOrNull()?.let{last->
+                            ({
+                                adjustment=NativeRemainingEditAnchor(workoutId,current.revision,slot.slotId,
+                                    slot.exerciseId,working.size,working.size-pending.size,
+                                    last.prescription.reps,last.prescription.restSeconds)
+                                infoSlotId=null
+                            })
+                        }
+                    }else null,
+                    onUndoAdjustment=if(!infoWarmupsOnly && !busy && !finished)journal?.let{current->
+                        current.lastAdjustment?.let{undo->
+                            val edit=current.receipts.lastOrNull()?.operation as? CustomWorkoutJournalOperation.AdjustRemaining
+                            if(edit?.request?.occurrenceId==slot.slotId)({
+                                infoSlotId=null
+                                submitRemainingEdit(CustomWorkoutJournalOperation.UndoAdjustment(
+                                    "undo-adjust-"+UUID.randomUUID(),current.revision,undo.eventId))
+                            })else null
+                        }
                     }else null,
                     onUndoWorkoutSwap=if(!infoWarmupsOnly &&
                         infoActions.mayRequestUndoSwap)infoUndo?.let{swap->

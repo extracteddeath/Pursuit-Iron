@@ -264,6 +264,26 @@ internal class NativeKotlinSessionController(
         },recoverOnReject=true)
     }
 
+    fun adjustRemaining(request:MidSessionWorkingEdit) {
+        val prior=mutable.value
+        val workoutId=prior.workoutId?:return
+        val journal=prior.journal?:return
+        if(prior.busy || journal.finishedByEventId!=null || request.workoutId!=workoutId ||
+            request.expectedRevision!=journal.revision)return
+        val op=KotlinJournalOperation.AdjustRemaining("adjust-"+UUID.randomUUID(),request.expectedRevision,request)
+        run(workoutId,{host.adjustIssuedComposerRemaining(workoutId,op,true)},recoverOnReject=true)
+    }
+
+    fun undoRemainingAdjustment(eventId:String,reviewedRevision:Long) {
+        val prior=mutable.value
+        val workoutId=prior.workoutId?:return
+        val journal=prior.journal?:return
+        if(prior.busy || journal.finishedByEventId!=null || journal.revision!=reviewedRevision ||
+            journal.lastAdjustment?.eventId!=eventId)return
+        val op=KotlinJournalOperation.UndoAdjustment("undo-adjust-"+UUID.randomUUID(),reviewedRevision,eventId)
+        run(workoutId,{host.adjustIssuedComposerRemaining(workoutId,op,true)},recoverOnReject=true)
+    }
+
     fun undoExerciseSwap(swapEventId:String) {
         val prior=mutable.value
         val workoutId=prior.workoutId ?:return

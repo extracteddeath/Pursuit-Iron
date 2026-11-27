@@ -202,3 +202,34 @@ assert.equal(refreshPendingSetTargets(loggedLateral,issuedRows.slice(0,3))[3],lo
 const editedLateral=[...issuedRows.slice(0,3),{...issuedRows[3],weightOwner:'user'}];
 assert.equal(refreshPendingSetTargets(editedLateral,issuedRows.slice(0,3))[3],editedLateral[3]);
 console.log('PASS B1059: positional mixed-load hold, verified earned increment, count mismatch and safe restored issued row repair.');
+
+// The plan, pre-start summary and new workout must have one working-set denominator.
+// The removed direct Home launcher used to inject +2 autoBias into a private custom copy.
+const { readFileSync } = await import('node:fs');
+const { buildSessionReview } = await import('../modules/session-tools.js');
+const { summarizeSession } = await import('../modules/engine-api.js');
+const hipDay = { id: 'lower', label: 'Lower', primaryIndex: 0, exercises: ['machine-hip-thrust'] };
+const hipPlan = { id: 'prestart-set-authority', custom: true, engineV: 4,
+    config: { weeks: 4, unit: 'lb', goal: 'both', progression: 'auto', experience: 'intermediate' },
+    days: [hipDay], overrides: { 'lower:0': { sets: 3, reps: '10-15', techOverride: null } } };
+const hip = EX_BY_ID['machine-hip-thrust'];
+const planBefore = JSON.stringify(hipPlan);
+for (const week of [1, 2, 3, 4]) {
+    const cell = computeCell(hipPlan, hipDay, hip.id, 0, week);
+    const preview = buildSessionReview(hipPlan, hipDay, week, 'lb', [], {});
+    const rows = prescribeSets(hipPlan, hipDay, hip, 0, week, 'lb', null, {}, {}, [], true);
+    assert.equal(cell.sets, 3);
+    assert.equal(summarizeSession(hipPlan, hipDay, week).sets, 3);
+    assert.equal(preview.exercises[0].effective.length, 3);
+    assert.equal(rows.filter(row => !row.warm && !row.sub).length, 3);
+    assert.ok(rows.filter(row => !row.warm && !row.sub).every(row => row.target.decisionTrace.issuedWorkingSetCount === 3));
+}
+assert.equal(JSON.stringify(hipPlan), planBefore);
+const legacyLaunchCopy = { ...hipPlan, autoBias: { 'lower:0': 2 } };
+assert.equal(computeCell(legacyLaunchCopy, hipDay, hip.id, 0, 1).sets, 5, 'reproduces the old private start-time override');
+const source = readFileSync('modules/App.js', 'utf8');
+const launch = source.slice(source.indexOf('    const startUpNext = () => {'), source.indexOf('    const openActive = () => {'));
+assert.match(launch, /startSession\(upNext\.day, upNext\.weekIndex, upNext\.program\)/);
+assert.doesNotMatch(launch, /autoregulate|autoBias|distributeVolBias/);
+assert.doesNotMatch(source, /const volBiasFromHistory\s*=/);
+console.log('PASS pre-start authoritative set count: Plan, summary, preview, working rows and issued denominator agree.');

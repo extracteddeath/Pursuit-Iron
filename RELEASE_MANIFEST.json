@@ -162,7 +162,7 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "c219019dc65d3b1ba78413c2070cd1584d6e0f4c835f838d40d07dff583b85fb",
+    "modules/App.js": "23f6f51272dc08f6934d5d720fa5e6b914200d9a3d8b42ee3a735ac5e896c426",
     "index.html": "dae98449e68b931fb514748db0aded81a9549c5c4d7fda35de26ade037883de7",
     "sw.js": "72dd118f6889235683b0fc332c8322571c9b9c58749349404dd4c55f3d693764",
     "BUILD_PROFILE.json": "011c38c658a36b326d5b3187dc54b702947700ee454bc838ce54090bcfe05838",
@@ -175,5 +175,5 @@
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
   "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1059-r321f17b0a943179e",
-  "uiMilestone": "Build 1059 · Set-specific targets and cleaner workout review"
+  "uiMilestone": "Build 1059 · Set-specific targets, authoritative pre-start plan and cleaner workout review"
 }

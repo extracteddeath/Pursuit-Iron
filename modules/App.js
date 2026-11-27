@@ -20066,35 +20066,6 @@ function App() {
         return nb;
     };
     const setBanFor = (id, on) => (on ? addBan(id) : removeBan(id));
-    /* Takes the PROGRAM it is biasing, so `volumeAdvice` can tell "you trained more than the plan
-       asked" from "you did exactly what the plan asked and the plan is over its own ceiling". It was
-       a zero-argument closure, which is precisely why the plan had no vote here. */
-
-
-    const volBiasFromHistory = (prog) => {
-        if (!history.length)
-            return null;
-        const bias = {};
-        /* THE MUTATING PATH. `autoregulate()` folds this into `autoBias` on every session start, so
-           this is the call site his report is actually about — pass the program or the plan has no vote. */
-        volumeAdvice(history, { program: prog }).forEach(a => { if (a.delta)
-            bias[a.part] = a.delta; });
-        // blend in the most recent subjective recovery feedback per muscle (RP-style titration)
-        const seen = {};
-        history.forEach(h => {
-            if (!h.feedback)
-                return;
-            Object.entries(h.feedback).forEach(([part, v]) => {
-                if (v == null || (seen[part] || 0) >= 2)
-                    return; // average the 2 most recent signals
-                seen[part] = (seen[part] || 0) + 1;
-                bias[part] = (bias[part] || 0) + v;
-            });
-        });
-        Object.keys(bias).forEach(p => { bias[p] = clamp(Math.round(bias[p]), -2, 2); if (!bias[p])
-            delete bias[p]; });
-        return Object.keys(bias).length ? bias : null;
-    };
     /* REBUILD A PREVIOUS-ENGINE PROGRAM on the Next engine, through the SAME path the wizard uses (generateNextWithShadow:
        shadow, canary and fail-closed handling included) — never a second route.
        Three promises: (1) the original is never destroyed — it is stored whole as `rebuiltFrom.program`, so the step is
@@ -21383,33 +21354,13 @@ function App() {
         const dp = { ...upNext.program, config: { ...upNext.program.config, deload: true } };
         startSession(day, weeksOf(dp) + 1, dp); // deload-intensity = light, reduced-volume session
     };
-    // Fold the latest performance + recovery feedback into a program's set volume right before it's
-    // trained, so each session is autoregulated to how you've actually been recovering — not frozen
-    // at whatever the bias was when the program was last generated. This is the closed loop that
-    // titrates volume toward your individual MAV/MRV instead of a fixed calendar ramp.
-    const autoregulate = (p) => {
-        if (!p || p.config?.progression === "manual" || p.config?.percentScheme)
-            return p;
-        const bias = volBiasFromHistory(p);
-        // Rebuild the per-session tweak from scratch in the dedicated `autoBias` field so it's applied to
-        // the designed slotBias baseline and can NEVER compound. Clearing autoBias first also means a
-        // session where recovery is neutral drops the previous session's tweak instead of inheriting it.
-        const next = { ...p, autoBias: undefined, days: p.days.map(d => ({ ...d })) };
-        if (!bias)
-            return next;
-        distributeVolBias(next, bias, "autoBias");
-        // summarise the adjustment so the session can briefly show that volume adapted to recovery
-        const up = Object.entries(bias).filter(([, v]) => v > 0).map(([k]) => PART_LABEL[k] || k);
-        const down = Object.entries(bias).filter(([, v]) => v < 0).map(([k]) => PART_LABEL[k] || k);
-        if (up.length || down.length)
-            next.autoTuned = { up, down };
-        return next;
-    };
+    // The saved week/slot prescription is authoritative before Start. Recovery advice and
+    // explicit program revisions may change it upstream; launching a workout cannot add or
+    // remove sets through a private legacy autoBias copy. Preview and direct launch agree.
     const startUpNext = () => {
         if (!upNext)
             return;
-        const p = autoregulate(upNext.program);
-        startSession(upNext.day, upNext.weekIndex, p);
+        startSession(upNext.day, upNext.weekIndex, upNext.program);
     };
     const openActive = () => {
         if (!upNext)

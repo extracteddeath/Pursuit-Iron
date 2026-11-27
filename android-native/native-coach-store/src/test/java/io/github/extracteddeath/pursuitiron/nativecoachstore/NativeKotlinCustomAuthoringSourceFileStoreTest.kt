@@ -153,6 +153,33 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
         assertTrue((freestyle().complete("owner-1","one",finish) as NativeFreestyleResult.Durable).replayed)
         assertEquals(listOf(entry),ledger().completions)
         assertEquals(done,saved(freestyle().readCommitted("owner-1","athlete-1",entry)))
+        val blankLibrary=NativeFreestyleRoutineResult.Ready(NativeFreestyleRoutineLibrary(0,emptyList()))
+        assertEquals(blankLibrary,freestyle().routines("owner-1"))
+        val library=(freestyle().saveRoutine("owner-1","one","routine-a","  Arms  ",0)
+            as NativeFreestyleRoutineResult.Ready).library
+        assertEquals(1L,library.revision)
+        assertEquals("Arms",library.routines.single().name)
+        assertEquals(NativeFreestyleRoutineResult.Ready(library),freestyle().routines("owner-1"))
+        assertEquals(NativeFreestyleRoutineResult.Rejected(NativeFreestyleRefusal.ROUTINE_CHANGED),
+            freestyle().saveRoutine("owner-1","one","routine-b","Arms",0))
+        val restarted=saved(freestyle().startSavedRoutine("owner-1","replay","routine-a",1))
+        assertEquals(listOf("rope-pushdown"),restarted.exercises.map{it.exerciseId})
+        assertEquals(listOf(DraftSetType.WORKING),restarted.exercises.single().routineSetTypes)
+        assertTrue(restarted.effectiveSets.isEmpty())
+        assertEquals(restarted,saved(freestyle().open("owner-1","replay")))
+        assertEquals(NativeFreestyleRoutineResult.Rejected(NativeFreestyleRefusal.HISTORY_NOT_READY),
+            freestyle().saveRoutine("owner-1","replay","not-finished","Unfinished",1))
+        val removed=(freestyle().deleteRoutine("owner-1","routine-a",1)
+            as NativeFreestyleRoutineResult.Ready).library
+        assertEquals(2L,removed.revision)
+        assertTrue(removed.routines.isEmpty())
+        assertEquals(NativeFreestyleRoutineResult.Ready(removed),freestyle().routines("owner-1"))
+        assertEquals(NativeFreestyleResult.Rejected(NativeFreestyleRefusal.ROUTINE_CHANGED),
+            freestyle().startSavedRoutine("owner-1","new","routine-a",1))
+        assertEquals(NativeFreestyleResult.Rejected(NativeFreestyleRefusal.ROUTINE_NOT_FOUND),
+            freestyle().startSavedRoutine("owner-1","new","routine-a",2))
+        assertEquals(done,saved(freestyle().readCommitted("owner-1","athlete-1",entry)))
+        assertEquals(restarted,saved(freestyle().open("owner-1","replay")))
         val read=reader().read("owner-1","athlete-1") as NativeKotlinMixedHistoryReadResult.Review
         val timeline=read.timeline
         assertEquals(NativeKotlinMixedHistoryCompletion.Freestyle(entry,done),timeline.completions.single())

@@ -209,16 +209,23 @@ object KotlinFreestyleWorkoutDomain {
             Collections.unmodifiableList(slots))
     }
 
+    /** Single structural rule for saved/replayed routines. No gym approval
+     * is inferred from a structurally valid routine. */
+    fun validRoutine(routine:KotlinFreestyleRoutine):Boolean =
+        id.matches(routine.routineId) && id.matches(routine.athleteId) &&
+            routine.name.isNotEmpty() && routine.name.length<=80 &&
+            routine.name==routine.name.trim() && routine.name.none{it.code<32} &&
+            routine.slots.size in 1..MAX_EXERCISES &&
+            routine.slots.all{id.matches(it.exerciseId) && it.setTypes.size in 1..MAX_SETS_PER_SLOT} &&
+            routine.slots.sumOf{it.setTypes.size}<=MAX_SETS
+
     /** Re-select each saved exercise in today's gym. Refuse the entire
      * routine if any exercise is unavailable; never silently substitute.
      * Returned workout has no facts; saved set types are only routine shape. */
     fun startRoutine(workoutId:String,routine:KotlinFreestyleRoutine,setup:AthleteSetupReview,
         gymRevision:Long,catalog:List<CatalogMovement>):KotlinFreestyleWorkout? {
         val current=source(setup,gymRevision)?:return null
-        if(routine.athleteId!=current.athleteId || !id.matches(routine.routineId) ||
-            routine.slots.size !in 1..MAX_EXERCISES ||
-            routine.slots.any{it.setTypes.size !in 1..MAX_SETS_PER_SLOT} ||
-            routine.slots.sumOf{it.setTypes.size}>MAX_SETS)return null
+        if(routine.athleteId!=current.athleteId || !validRoutine(routine))return null
         var workout=begin(workoutId,current)?:return null
         for((index,slot) in routine.slots.withIndex()) {
             val exercise=selectedExercise(workout,setup,gymRevision,catalog,

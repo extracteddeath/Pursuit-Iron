@@ -129,7 +129,17 @@ class NativeKotlinGeneratedProgramJourneyTest {
         includeMyoFinisher:Boolean=false,
         optionalFinisher:CustomAmplifierKind?=null
     ):Pair<CustomTrainingCycle,CustomCoachAuditInputs> {
-        val input=request(split,phase,includeHipMachines,includeTrapBar,includeNewTargets).copy(policyVersion=policyVersion)
+        val baseInput=request(split,phase,includeHipMachines,includeTrapBar,includeNewTargets).copy(policyVersion=policyVersion)
+        // Explicitly calibrate a stable, stretch-position calf machine for
+        // the partials opt-in. Do not force an unsuitable generated exercise.
+        val input=if(optionalFinisher==CustomAmplifierKind.LENGTHENED_PARTIALS){
+            val profile=checkNotNull(baseInput.setup.reviewed)
+            baseInput.copy(setup=baseInput.setup.copy(reviewed=profile.copy(
+                gym=profile.gym.copy(confirmedStock=profile.gym.confirmedStock+mapOf(
+                    "seated-calf-machine" to VerifiedLoadStock.Totals(LoadUnit.LB,
+                        LoadBasis.EXERCISE_OVERRIDE,listOf(n("15"),n("20"),n("25"))))))),
+                startingLoads=(baseInput.startingLoads-"db_calf_raise")+("seated-calf" to n("20")))
+        }else baseInput
         assertEquals(AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW,input.setup.status)
         val generated=CoachFirstProgramStartDomain.review(input)
         val draft=generated.generation?.candidate?.catalogReview?.draft
@@ -913,6 +923,9 @@ class NativeKotlinGeneratedProgramJourneyTest {
     @Test fun generatedOptInDropUsesExactSeedAndColdHistoryWithoutManualReauthoring() =
         generatedTechniqueJourney(CustomAmplifierKind.DROP_SET,directOptIn=true)
 
+    @Test fun generatedOptInPartialsUseExactSeedAndColdHistoryWithoutManualReauthoring() =
+        generatedTechniqueJourney(CustomAmplifierKind.LENGTHENED_PARTIALS,directOptIn=true)
+
     private fun generatedTechniqueJourney(kind:CustomAmplifierKind,directOptIn:Boolean=false) {
         val (generated,inputs)=saveGenerated(includeHipMachines=true,
             includeMyoFinisher=!directOptIn,optionalFinisher=kind.takeIf{directOptIn})
@@ -964,7 +977,10 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(!directOptIn,seed.includeMyoFinisher)
         assertEquals(kind.takeIf{directOptIn},seed.optionalFinisher)
         if(directOptIn) {
-            val replayInput=request(includeHipMachines=true).copy(policyVersion=seed.policyVersion)
+            val source=(disk.sources.read(owner) as NativeAuthoringSourceRead.Found).source
+            val replayInput=FirstProgramStartRequest(source.setup,source.catalog,seed.startingLoads,
+                seed.bodyweightExercises,seed.phase,seed.extraFocuses,
+                seed.nonSetSeconds,seed.policyVersion)
             val replay=CoachFirstProgramDraftConversionDomain.propose(
                 CoachFirstProgramStartDomain.review(replayInput),replayInput.setup,catalog,
                 seed.cycleId,seed.title,seed.blockWeeks,optionalFinisher=seed.optionalFinisher)
@@ -1024,7 +1040,8 @@ class NativeKotlinGeneratedProgramJourneyTest {
                 assertEquals(listOf(first),CustomWorkoutExecutionDomain.followUpVisits(journal,set))
                 assertEquals(amp.followUpRestSeconds,
                     KotlinWorkoutRestDomain.inspect(journal,first).automaticCue?.seconds)
-                val stageWeight=if(kind==CustomAmplifierKind.DROP_SET)n("15") else n("25")
+                val stageWeight=if(kind==CustomAmplifierKind.DROP_SET)
+                    (amp.followUpLoad as DraftSetLoad.Verified).value else n("25")
                 val wrongWeight=if(kind==CustomAmplifierKind.DROP_SET)n("25") else n("20")
                 val mini=CustomWorkoutJournalOperation.Record("mini-$index",journal.revision,
                     first,KotlinJournalSetOutcome.COMPLETED,
@@ -1077,8 +1094,9 @@ class NativeKotlinGeneratedProgramJourneyTest {
                 assertEquals(n("25"),activation.actual?.load)
                 assertEquals(if(kind==CustomAmplifierKind.MYO_REPS)2 else 1,followUps.size)
                 assertTrue(followUps.all{it.setKey==activation.setKey && it.amplifierKind==kind})
-                assertEquals(if(kind==CustomAmplifierKind.DROP_SET)n("15") else n("25"),
-                    followUps.first().actual?.load)
+                val expectedFollowUp=if(kind==CustomAmplifierKind.DROP_SET)
+                    (finishers.single().amplifier?.followUpLoad as DraftSetLoad.Verified).value else n("25")
+                assertEquals(expectedFollowUp,followUps.first().actual?.load)
                 assertEquals(0,followUps.first().actual?.actualRir)
                 assertEquals(KotlinJournalSetOutcome.COMPLETED,followUps.first().outcome)
                 if(kind==CustomAmplifierKind.MYO_REPS) {

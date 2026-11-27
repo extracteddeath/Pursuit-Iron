@@ -1744,6 +1744,71 @@ class NativeKotlinGeneratedProgramJourneyTest {
         completeGeneratedWeek(ComposerSplit.FULL_BODY,includeTrapBar=true)
     }
 
+    @Test fun generatedProgramGymSwitchPreservesIssuedWorkoutAndRequiresFreshApproval() {
+        val (cycle,inputs)=saveGenerated()
+        val days=cycle.blocks.single().days.sortedBy{it.weekday}
+        val first=days[0]
+        val next=days[1]
+        val id="generated-gym-a"
+        val disk=Disk()
+        val prior=(disk.consent.read(owner,cycleId,inputs) as NativeCustomSignoffRead.Found).receipt
+        val originalSource=(disk.sources.read(owner) as NativeAuthoringSourceRead.Found).source
+        val originalGym=checkNotNull(originalSource.setup.reviewed).gym
+        val prepared=disk.prepared.prepare(owner,id,cycleId,1,first.weekday,inputs)
+            as NativeCustomPrepareResult.Prepared
+        val issued=disk.journals.issue(owner,id,cycleId,1,first.weekday,inputs)
+            as NativeCustomJournalResult.Durable
+        val original=issued.issued.journal.originalSnapshot
+        assertEquals(prepared.workout.snapshot,original)
+        // A separately saved gym with independently confirmed, compatible
+        // stock may use the same prescription only after a fresh approval.
+        val alternate=GymProfileDraft("gym-2",originalGym.unit,
+            originalGym.confirmedStock,originalGym.availableFacilities,originalGym.availableAttachments)
+        assertEquals(NativeAuthoringSourceWrite.Committed(2),
+            Disk().sources.addAndSelectGym(owner,1,alternate,true))
+        val gyms=Disk().sources.readSavedGyms(owner) as NativeSavedGymRead.Ready
+        assertEquals("gym-2",gyms.active.gymId)
+        assertEquals(listOf(originalGym),gyms.inactive)
+        assertEquals(NativeCustomSignoffRead.Found(prior,false),Disk().consent.read(owner,cycleId,inputs))
+        assertTrue(Disk().prepared.prepare(owner,"unsigned-gym-b",cycleId,1,next.weekday,inputs)
+            is NativeCustomPrepareResult.Rejected)
+        assertEquals(issued.issued,(Disk().journals.issue(owner,id,cycleId,1,first.weekday,inputs)
+            as NativeCustomJournalResult.Durable).issued)
+        var journal=issued.issued.journal
+        for((index,set) in original.slots.flatMap{it.sets}.withIndex()) {
+            val target=set.prescription
+            val load=target.load as? DraftSetLoad.Verified
+            val actual=KotlinPerformedSet(load?.value,load?.unit,target.reps.minimum,null)
+            journal=(Disk().journals.record(owner,id,CustomWorkoutJournalOperation.Record(
+                "old-gym-set-$index",journal.revision,
+                CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,actual))
+                as NativeCustomJournalResult.Durable).issued.journal
+            assertEquals(original,journal.originalSnapshot)
+        }
+        val complete=Disk()
+        val result=NativeKotlinCustomHistoryTransaction(complete.history,complete.journals,
+            complete.fence,identity).complete(owner,athlete,id,
+            CustomWorkoutJournalOperation.Finish("old-gym-finish",journal.revision))
+        assertTrue(result.toString(),result is NativeCustomFinishResult.Committed)
+        val before=(Disk().timeline.read(owner,athlete) as NativeKotlinMixedHistoryReadResult.Review).timeline
+        assertEquals("gym-1",(before.completions.single() as NativeKotlinMixedHistoryCompletion.Custom).gymId)
+        val fresh=Disk().consent.confirm(owner,cycleId,cycle.revision,2,prior.recordRevision,inputs,true)
+        assertTrue(fresh.toString(),fresh is NativeCustomSignoffWrite.Committed)
+        val b=Disk().prepared.prepare(owner,"generated-gym-b",cycleId,1,next.weekday,inputs)
+        assertTrue(b.toString(),b is NativeCustomPrepareResult.Prepared)
+        val newSnapshot=(b as NativeCustomPrepareResult.Prepared).workout.snapshot
+        assertEquals("gym-2",newSnapshot.stamp.gymId)
+        assertEquals(2L,newSnapshot.stamp.gymCatalogSourceRevision)
+        val newIssued=Disk().journals.issue(owner,"generated-gym-b",cycleId,1,next.weekday,inputs)
+        assertTrue(newIssued.toString(),newIssued is NativeCustomJournalResult.Durable)
+        assertEquals(newSnapshot,(newIssued as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
+        assertEquals(cycle,(Disk().drafts.read(owner,cycleId) as NativeCustomDraftReadResult.Found).draft)
+        assertEquals(before,(Disk().timeline.read(owner,athlete) as NativeKotlinMixedHistoryReadResult.Review).timeline)
+        assertEquals(original,(Disk().journals.open(owner,id)
+            as NativeCustomJournalResult.Durable).issued.journal.originalSnapshot)
+    }
+
     @Test fun generatedFourDayProgramCompletesAllSetsAndColdReturnsToNextWeek() {
         completeGeneratedWeek(ComposerSplit.UPPER_LOWER)
     }

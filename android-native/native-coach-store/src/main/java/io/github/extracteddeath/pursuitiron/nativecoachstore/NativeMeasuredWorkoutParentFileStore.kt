@@ -204,6 +204,9 @@ class NativeMeasuredWorkoutParentFileStore(
                 if(prior !is NativeMeasuredWorkoutStoreResult.Rejected ||
                     prior.reason!=NativeMeasuredWorkoutStoreRefusal.NOT_ISSUED)
                     return@withOwnerTransaction prior
+                if(NativeMeasuredWorkoutIdClaim.freestyleClaimed(root,ownerKey,workoutId))
+                    return@withOwnerTransaction NativeMeasuredWorkoutStoreResult.Rejected(
+                        NativeMeasuredWorkoutStoreRefusal.APPROVAL_UNAVAILABLE)
                 if(history!=null) {
                     val ledger=(history.open(ownerKey,athlete.athleteId)
                         as? NativeHistoryLedgerResult.Durable)?.ledger

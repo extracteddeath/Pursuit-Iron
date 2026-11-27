@@ -111,6 +111,45 @@ object KotlinSetNumberAuthorityDomain {
             else ->a==b
         }
 
+    /**
+     * Validate actual-only entries without a fabricated target. The unit is
+     * taken from a verified physical exercise context; null means explicitly
+     * unweighted bodyweight, NOT an unknown unit. This is numeric validation,
+     * not gym authorization, issued-target creation or a progression decision.
+     * Historical off-grid actuals remain facts, not prescribed increments.
+     */
+    fun actualRefusal(
+        expectedUnit:LoadUnit?,
+        outcome:KotlinJournalSetOutcome?,
+        actual:KotlinPerformedSet?
+    ):KotlinSetNumberRefusal? {
+        if(outcome==null)
+            return if(actual==null)null else KotlinSetNumberRefusal.MISSING_ACTUAL
+        if(outcome==KotlinJournalSetOutcome.SKIPPED)
+            return if(actual==null)null else KotlinSetNumberRefusal.SKIP_CONTAINS_ACTUAL
+        val performed=actual ?:return KotlinSetNumberRefusal.MISSING_ACTUAL
+        if(performed.machineInstanceId!=null &&
+            !KotlinMachineAlternativesDomain.validInstanceId(performed.machineInstanceId))
+            return KotlinSetNumberRefusal.INVALID_MACHINE_ID
+        if(!validRir(performed.actualRir))return KotlinSetNumberRefusal.INVALID_ACTUAL_RIR
+        if(outcome==KotlinJournalSetOutcome.COMPLETED && !validCompletedReps(performed.reps))
+            return KotlinSetNumberRefusal.INVALID_COMPLETED_REPS
+        if(outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT &&
+            (performed.reps!=0 || performed.actualRir!=null))
+            return KotlinSetNumberRefusal.INVALID_FAILED_ATTEMPT
+        if(expectedUnit==null) {
+            if(performed.load!=null || performed.unit!=null)
+                return KotlinSetNumberRefusal.WEIGHT_NOT_APPLICABLE_TO_BODYWEIGHT
+        } else {
+            val load=performed.load
+            if(load==null || performed.unit!=expectedUnit)
+                return KotlinSetNumberRefusal.MISSING_OR_MISMATCHED_WEIGHT
+            if(!validPhysicalLoadValue(load))
+                return KotlinSetNumberRefusal.INVALID_WEIGHT_RANGE_OR_PRECISION
+        }
+        return null
+    }
+
     fun review(
         issuedLoad:DraftSetLoad,
         outcome:KotlinJournalSetOutcome?,
@@ -137,34 +176,13 @@ object KotlinSetNumberAuthorityDomain {
         // without fabricating completed work.
         if(!validIssuedLoad(issuedLoad))
             return rejected(KotlinSetNumberRefusal.INVALID_ISSUED_LOAD)
-        val performed=actual ?:return rejected(KotlinSetNumberRefusal.MISSING_ACTUAL)
-        if(performed.machineInstanceId!=null &&
-            !KotlinMachineAlternativesDomain.validInstanceId(performed.machineInstanceId))
-            return rejected(KotlinSetNumberRefusal.INVALID_MACHINE_ID)
-        if(!validRir(performed.actualRir))
-            return rejected(KotlinSetNumberRefusal.INVALID_ACTUAL_RIR)
-        if(outcome==KotlinJournalSetOutcome.COMPLETED &&
-            !validCompletedReps(performed.reps))
-            return rejected(KotlinSetNumberRefusal.INVALID_COMPLETED_REPS)
-        if(outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT &&
-            (performed.reps!=0 || performed.actualRir!=null))
-            return rejected(KotlinSetNumberRefusal.INVALID_FAILED_ATTEMPT)
+        val unit=(issuedLoad as? DraftSetLoad.Verified)?.unit
+        val refusal=actualRefusal(unit,outcome,actual)
+        if(refusal!=null)return rejected(refusal)
+        val performed=checkNotNull(actual)
         val sameLoad=when(issuedLoad) {
-            DraftSetLoad.ExplicitBodyweight -> {
-                if(performed.load!=null || performed.unit!=null)
-                    return rejected(
-                        KotlinSetNumberRefusal.WEIGHT_NOT_APPLICABLE_TO_BODYWEIGHT)
-                true
-            }
-            is DraftSetLoad.Verified -> {
-                val load=performed.load
-                if(load==null || performed.unit!=issuedLoad.unit)
-                    return rejected(KotlinSetNumberRefusal.MISSING_OR_MISMATCHED_WEIGHT)
-                if(!validPhysicalLoadValue(load))
-                    return rejected(
-                        KotlinSetNumberRefusal.INVALID_WEIGHT_RANGE_OR_PRECISION)
-                load.compareTo(issuedLoad.value)==0
-            }
+            DraftSetLoad.ExplicitBodyweight -> true
+            is DraftSetLoad.Verified -> checkNotNull(performed.load).compareTo(issuedLoad.value)==0
         }
         return KotlinSetNumberReview.Accepted(KotlinSetNumberFact(
             issuedLoad,outcome,performed,

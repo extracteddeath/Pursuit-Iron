@@ -32,7 +32,7 @@ assert.match(facts,/completion\.evidence\.source\.gymId/);
 assert.match(facts,/completion\.gymId/);
 assert.match(facts,/KotlinMachineAlternativesDomain\.validInstanceId\(machineId\)/);
 const loadAuthority=read('kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinSetNumberAuthorityDomain.kt');
-assert.match(facts,/if\(!KotlinSetNumberAuthorityDomain\.machineTagContradictsFreeBarbell\(\s*target\.basis,machineId\)\)/);
+assert.match(facts,/if\(!KotlinSetNumberAuthorityDomain\.machineTagContradictsFreeBarbell\(\s*basis,machineId\)\)/);
 assert.match(loadAuthority,/fun machineTagContradictsFreeBarbell\(basis:LoadBasis,machineInstanceId:String\?\):Boolean/);
 assert.match(loadAuthority,/basis==LoadBasis\.BARBELL_TOTAL && machineInstanceId!=null/);
 assert.match(facts,/Collections\.unmodifiableMap\(highestByMachine\)/);

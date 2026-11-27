@@ -456,9 +456,11 @@ assert.ok(exerciseTrendDomain.includes('timeline.completions') &&
   exerciseTrendDomain.includes('DraftSetType.WORKING') &&
   exerciseTrendDomain.includes('KotlinJournalSetOutcome.COMPLETED') &&
   exerciseTrendDomain.includes('StrengthStandardsMeasurementDomain.convert(') &&
-  exerciseTrendDomain.includes('issued.basis,window') &&
+  exerciseTrendDomain.includes('NativeExerciseTrendKey(basis,window') &&
+  exerciseTrendDomain.includes('NativeKotlinMixedHistoryCompletion.Freestyle') &&
+  exerciseTrendDomain.includes('Visit(exercise.unit,exercise.basis,record.actual,entry.workout.source.gymId)') &&
   exerciseTrendDomain.includes('NativeExerciseTrendKey(null,window)') &&
-  exerciseTrendDomain.includes('actual.unit!=issued.unit') &&
+  exerciseTrendDomain.includes('actual.unit!=unit') &&
   exerciseTrendDomain.includes('val canPrescribeWorkout:Boolean get()=false') &&
   exerciseTrendUi.includes('NativeExercisePerformanceTrendDomain.project(') &&
   exerciseTrendUi.includes('PursuitFactualLinePlot(') &&
@@ -1030,3 +1032,16 @@ assert.ok(cycleWeekEdit.includes('state.preparedWorkout==null') &&
   editorUi.includes('forms = reviewed.map { it.toFields() }') &&
   editorUi.includes('Check the resulting sets and compare full-cycle effects before separately approving a change'),
   'Review-to-edit must retain explicit athlete copy, signed-source recheck and separate full-cycle approval');
+
+// Freestyle uses the same Train navigation, number parser, timer and verified History.
+const freestyle=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinFreestyleWorkoutScreen.kt');
+assert.ok(journey.includes('NativeKotlinFreestyleWorkoutScreen(host,') &&
+  journey.includes('currentGeneratedId==null && !measuredOpen && !freestyleOpen') &&
+  freestyle.includes('KotlinWorkoutEntryDomain.parseUnplanned(') &&
+  freestyle.includes('NativeRestTimer(state.workoutId,restSeconds,!busy,ownerId=state.source.athleteId)') &&
+  freestyle.includes('host.openFreestyle(item.workoutId)') &&
+  freestyle.includes('host.verifyFinishedFreestyle(result.workout.workoutId)') &&
+  freestyle.includes('host.startFreestyle(id,routine.routineId,rev)') &&
+  freestyle.includes('host.recoverPendingNativeHistory()') &&
+  freestyle.includes('host.finishFreestyle(id,finish)'),
+  'Freestyle must use explicit native Start/Resume, actual input, shared timer and canonical Finish recovery');

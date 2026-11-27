@@ -911,7 +911,8 @@ for(const phrase of [
   'entry.evidence.source.gymId',
   'entry.gymId',
   'actual.machineInstanceId!=null',
-  'NativeExerciseTrendKey(issued.basis,window,'
+  'NativeExerciseTrendKey(basis,window,',
+  'Visit(exercise.unit,exercise.basis,record.actual,entry.workout.source.gymId)'
 ])assert.ok(trendDomain.includes(phrase),'Missing machine-isolated factual trend: '+phrase);
 for(const phrase of [
   'var stationGym by rememberSaveable(exerciseId)',
@@ -1795,14 +1796,18 @@ const numberTests=read('android-native/kotlin-engine/src/test/java/io/github/ext
 assert.ok(
   numberAuthority.includes('object KotlinSetNumberAuthorityDomain') &&
   numberAuthority.includes('KotlinSetLoadRelation.COMPLETED_DIFFERENT_ACTUAL') &&
-  numberAuthority.includes('load.compareTo(issuedLoad.value)==0') &&
+  numberAuthority.includes('checkNotNull(performed.load).compareTo(issuedLoad.value)==0') &&
   numberAuthority.includes('KotlinMachineAlternativesDomain.validInstanceId') &&
   numberAuthority.includes('fun validRir(rir:Int?):Boolean = rir==null || rir in 0..10') &&
   numberAuthority.includes('if(!validRir(performed.actualRir))') &&
   numberAuthority.includes('!validCompletedReps(performed.reps)') &&
   numberGenerated.includes('KotlinSetNumberAuthorityDomain.valid(target.load,outcome,performed)') &&
   numberCustom.includes('KotlinSetNumberAuthorityDomain.valid(target,outcome,performed)') &&
-  numberEditor.includes('KotlinSetNumberAuthorityDomain.valid(load,') &&
+  numberEditor.includes('KotlinSetNumberAuthorityDomain.actualRefusal(expectedUnit,') &&
+  numberEditor.includes('KotlinSetNumberAuthorityDomain.validIssuedLoad(load)') &&
+  numberEditor.includes('fun parseUnplanned(') &&
+  numberAuthority.includes('val refusal=actualRefusal(unit,outcome,actual)') &&
+  numberTests.includes('unplannedEntriesRequireExplicitActualsAndNeverInventTargets') &&
   numberTests.includes('generatedCustomAndParserAcceptExactlyTheSameActualNumberMatrix') &&
   numberTests.includes('generatedAndCustomColdHistoryContainsCorrectionsNotPhantomNumbers'),
   'Kotlin generated, custom and entry parsing must share one numeric acceptance and History contract'

@@ -56,6 +56,7 @@ internal object NativeKotlinWorkoutRecapDomain {
                     completion.evidence.visits)
             // This recap computes ordinary working-set repetition stats.
             // Measured holds/carries are rendered by typed History instead.
+            is NativeKotlinMixedHistoryCompletion.Freestyle,
             is NativeKotlinMixedHistoryCompletion.Measured -> return null
         }
         val rows=when(completion) {
@@ -64,6 +65,7 @@ internal object NativeKotlinWorkoutRecapDomain {
                     NativeKotlinRecapVisit(
                         it.exerciseId,it.type,false,it.outcome)
                 }
+            is NativeKotlinMixedHistoryCompletion.Freestyle,
             is NativeKotlinMixedHistoryCompletion.Measured -> return null
             is NativeKotlinMixedHistoryCompletion.Custom ->
                 completion.evidence.visits.map {

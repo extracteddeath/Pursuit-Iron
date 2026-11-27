@@ -40,16 +40,21 @@ private fun profileSplit(split:ComposerSplit):String=when(split) {
 
 private fun verifiedWorkingCount(timeline:NativeKotlinMixedHistoryTimeline):Int =
     timeline.completions.sumOf { entry ->
-        val summary=when(entry) {
+        when(entry) {
             is NativeKotlinMixedHistoryCompletion.Composer ->
-                KotlinHistoryPerformanceSummaryDomain.fromComposer(entry.evidence.sets)
+                KotlinHistoryPerformanceSummaryDomain.fromComposer(entry.evidence.sets).completedWorkingSets
             is NativeKotlinMixedHistoryCompletion.Custom ->
-                KotlinHistoryPerformanceSummaryDomain.fromCustom(entry.evidence.visits)
+                KotlinHistoryPerformanceSummaryDomain.fromCustom(entry.evidence.visits).completedWorkingSets
             // Profile's working-set counter is repetition-only; the typed
             // measurements have their own truthful completion counts.
-            is NativeKotlinMixedHistoryCompletion.Measured -> return@sumOf 0
+            is NativeKotlinMixedHistoryCompletion.Measured -> 0
+            is NativeKotlinMixedHistoryCompletion.Freestyle ->
+                entry.workout.observations().count{(_,record)->
+                    record.type==DraftSetType.WORKING &&
+                        record.outcome==KotlinJournalSetOutcome.COMPLETED &&
+                        record.actual!=null
+                }
         }
-        summary.completedWorkingSets
     }
 
 /**

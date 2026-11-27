@@ -66,10 +66,15 @@ object NativeExercisePerformanceTrendDomain {
     private val max=BigDecimal("100000")
 
     private data class Visit(
-        val issued:DraftSetLoad,
+        val unit:LoadUnit?,
+        val basis:LoadBasis?,
         val actual:KotlinPerformedSet?,
         val gymId:String
-    )
+    ) {
+        constructor(issued:DraftSetLoad,actual:KotlinPerformedSet?,gymId:String):
+            this((issued as? DraftSetLoad.Verified)?.unit,
+                (issued as? DraftSetLoad.Verified)?.basis,actual,gymId)
+    }
     /**
      * Only an actual COMPLETED, non-amplifier, WORKING visit may enter the
      * projection. Warmups, failed attempts, skipped sets and planned-only
@@ -96,6 +101,13 @@ object NativeExercisePerformanceTrendDomain {
                 // Typed holds, distance, carry time and band outcomes are
                 // never repetition observations or candidates for a load PR.
                 is NativeKotlinMixedHistoryCompletion.Measured -> emptyList()
+                is NativeKotlinMixedHistoryCompletion.Freestyle ->
+                    entry.workout.observations().filter{(exercise,record)->
+                        exercise.exerciseId==exerciseId && record.type==DraftSetType.WORKING &&
+                            record.outcome==KotlinJournalSetOutcome.COMPLETED
+                    }.map{(exercise,record)->
+                        Visit(exercise.unit,exercise.basis,record.actual,entry.workout.source.gymId)
+                    }
                 is NativeKotlinMixedHistoryCompletion.Custom ->
                     entry.evidence.visits.filter {
                         it.exerciseId==exerciseId &&
@@ -109,34 +121,31 @@ object NativeExercisePerformanceTrendDomain {
                 val window=NativeExerciseRepWindow.forReps(actual.reps) ?:continue
                 val key:NativeExerciseTrendKey
                 val weight:BigDecimal?
-                when(val issued=visit.issued) {
-                    is DraftSetLoad.Verified -> {
+                when(val basis=visit.basis) {
+                    null -> {
+                        if(actual.load!=null || actual.unit!=null)continue
+                        key=NativeExerciseTrendKey(null,window)
+                        weight=null
+                    }
+                    else -> {
+                        val unit=visit.unit ?:continue
                         val performed=actual.load ?:continue
-                        val assistance=issued.basis==
+                        val assistance=basis==
                             LoadBasis.ASSISTANCE_COUNTERWEIGHT
-                        if(actual.unit!=issued.unit ||
+                        if(actual.unit!=unit ||
                             (if(assistance)performed<zero else performed<=zero) ||
                             performed>max ||
                             performed.stripTrailingZeros().scale()>3)continue
                         val stationScoped=actual.machineInstanceId!=null ||
-                            issued.basis in setOf(LoadBasis.MACHINE_STACK,
+                            basis in setOf(LoadBasis.MACHINE_STACK,
                                 LoadBasis.CABLE_STACK,LoadBasis.SMITH_TOTAL,
                                 LoadBasis.EXERCISE_OVERRIDE,
                                 LoadBasis.ASSISTANCE_COUNTERWEIGHT)
-                        key=NativeExerciseTrendKey(issued.basis,window,
+                        key=NativeExerciseTrendKey(basis,window,
                             if(stationScoped)visit.gymId else null,
                             actual.machineInstanceId)
                         weight=StrengthStandardsMeasurementDomain.convert(
-                            performed,issued.unit,displayUnit)
-                    }
-                    DraftSetLoad.ExplicitBodyweight -> {
-                        // A completed unweighted rep set is comparable only
-                        // with other unweighted sets of this exact movement.
-                        // Weighted/assisted bodyweight is not quietly treated
-                        // as an external positive gym load.
-                        if(actual.load!=null || actual.unit!=null)continue
-                        key=NativeExerciseTrendKey(null,window)
-                        weight=null
+                            performed,unit,displayUnit)
                     }
                 }
                 val sample=NativeExerciseTrendPoint(order,weight,actual.reps,actual.actualRir)

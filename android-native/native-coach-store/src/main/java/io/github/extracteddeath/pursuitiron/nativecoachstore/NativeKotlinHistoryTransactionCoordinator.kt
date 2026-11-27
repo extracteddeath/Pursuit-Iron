@@ -254,6 +254,8 @@ class NativeKotlinHistoryTransactionCoordinator(
                     intent.operation.eventId, result.revision, 0,intent.completedAtEpochMillis
                 )
             }
+            is NativeHistoryWriteIntent.FreestyleCorrect,
+            is NativeHistoryWriteIntent.FreestyleFinish,
             is NativeHistoryWriteIntent.MeasuredFinish -> {
                 // A measured parent Finish belongs only to the registered
                 // typed parent coordinator. Never replay it as Composer sets.

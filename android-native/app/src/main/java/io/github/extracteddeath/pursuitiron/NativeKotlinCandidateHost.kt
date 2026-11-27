@@ -165,10 +165,13 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val measuredHistoryTransactions=NativeKotlinMeasuredHistoryTransaction(
         historyStore,measuredParentHistoryStore,revisionFence,localAthlete,
         NativeHistoryCompletionClock.System)
+    private val freestyleStore=NativeFreestyleWorkoutFileStore(
+        root,revisionFence,localAthlete,authoringSourceStore,historyStore,
+        NativeHistoryCompletionClock.System)
     private val mixedHistoryReader=NativeKotlinMixedHistoryReadCoordinator(
         historyStore,journalStore,correctionStore,customIssuedStore,
         approvalStore,localAthlete,revisionFence,customSavedCorrections,
-        measuredParentHistoryStore)
+        measuredParentHistoryStore,freestyleStore)
     private val outstandingCustomInventory=NativeKotlinCustomOutstandingWorkoutInventory(
         customPreparedStore,customIssuedStore)
     private val fixedNamedDraftReview=NativeKotlinNamedPercentageDraftReview(
@@ -1644,6 +1647,92 @@ internal class NativeKotlinCandidateHost(context:Context) {
      * No raw legacy practical-reps conversion or user-created source grant. */
     /** Read only current authenticated native gym/catalog facts, never an
      * issuance grant. The consent owner independently rechecks every fact. */
+    fun reviewFreestyleRoutines():NativeFreestyleRoutineResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFreestyleRoutineResult.Rejected(NativeFreestyleRefusal.NOT_AUTHORIZED)
+        return freestyleStore.routines(owner.ownerKey)
+    }
+
+    fun reviewUnfinishedFreestyle():NativeFreestyleInventoryResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFreestyleInventoryResult.Rejected(NativeFreestyleRefusal.NOT_AUTHORIZED)
+        return freestyleStore.reviewUnfinished(owner.ownerKey)
+    }
+
+    fun startFreestyle(workoutId:String,routineId:String?=null,libraryRevision:Long=0):NativeFreestyleResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFreestyleResult.Rejected(NativeFreestyleRefusal.NOT_AUTHORIZED)
+        return if(routineId==null)freestyleStore.start(owner.ownerKey,workoutId)
+            else freestyleStore.startSavedRoutine(owner.ownerKey,workoutId,routineId,libraryRevision)
+    }
+
+    fun openFreestyle(workoutId:String):NativeFreestyleResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFreestyleResult.Rejected(NativeFreestyleRefusal.NOT_AUTHORIZED)
+        return freestyleStore.open(owner.ownerKey,workoutId)
+    }
+
+    fun applyFreestyle(workoutId:String,operation:KotlinFreestyleOperation):NativeFreestyleResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFreestyleResult.Rejected(NativeFreestyleRefusal.NOT_AUTHORIZED)
+        return freestyleStore.apply(owner.ownerKey,workoutId,operation)
+    }
+
+    fun finishFreestyle(workoutId:String,operation:KotlinFreestyleOperation.Finish):NativeFreestyleResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFreestyleResult.Rejected(NativeFreestyleRefusal.NOT_AUTHORIZED)
+        return revisionFence.withOwnerTransaction(owner.ownerKey) {
+            val result=freestyleStore.complete(owner.ownerKey,workoutId,operation)
+            if(result !is NativeFreestyleResult.Durable)return@withOwnerTransaction result
+            val verified=mixedHistoryReader.read(owner.ownerKey,owner.athleteId)
+                as? NativeKotlinMixedHistoryReadResult.Review
+            val completion=verified?.timeline?.completions
+                ?.filterIsInstance<NativeKotlinMixedHistoryCompletion.Freestyle>()
+                ?.singleOrNull{it.manifest.workoutId==workoutId}
+            if(completion?.workout==result.workout && localAthlete.signedInIdentity()==owner)
+                result
+            else NativeFreestyleResult.Rejected(NativeFreestyleRefusal.HISTORY_NOT_READY)
+        }
+    }
+
+    fun correctFinishedFreestyle(workoutId:String,operation:KotlinFreestyleOperation.CorrectSaved):NativeFreestyleResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFreestyleResult.Rejected(NativeFreestyleRefusal.NOT_AUTHORIZED)
+        return revisionFence.withOwnerTransaction(owner.ownerKey) {
+            val result=freestyleStore.correctFinished(owner.ownerKey,workoutId,operation)
+            if(result !is NativeFreestyleResult.Durable)return@withOwnerTransaction result
+            val read=mixedHistoryReader.read(owner.ownerKey,owner.athleteId)
+                as? NativeKotlinMixedHistoryReadResult.Review
+            val entry=read?.timeline?.completions?.filterIsInstance<NativeKotlinMixedHistoryCompletion.Freestyle>()
+                ?.singleOrNull{it.manifest.workoutId==workoutId}
+            if(entry?.workout==result.workout && localAthlete.signedInIdentity()==owner)result
+            else NativeFreestyleResult.Rejected(NativeFreestyleRefusal.HISTORY_NOT_READY)
+        }
+    }
+
+    fun verifyFinishedFreestyle(workoutId:String):Boolean {
+        val owner=localAthlete.signedInIdentity()?:return false
+        return revisionFence.withOwnerTransaction(owner.ownerKey) {
+            val read=mixedHistoryReader.read(owner.ownerKey,owner.athleteId)
+                as? NativeKotlinMixedHistoryReadResult.Review
+            read?.timeline?.completions?.any{
+                it is NativeKotlinMixedHistoryCompletion.Freestyle && it.manifest.workoutId==workoutId
+            }==true && localAthlete.signedInIdentity()==owner
+        }
+    }
+
+    fun saveFreestyleRoutine(workoutId:String,routineId:String,name:String,expectedRevision:Long):NativeFreestyleRoutineResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFreestyleRoutineResult.Rejected(NativeFreestyleRefusal.NOT_AUTHORIZED)
+        return freestyleStore.saveRoutine(owner.ownerKey,workoutId,routineId,name,expectedRevision)
+    }
+
+    fun deleteFreestyleRoutine(routineId:String,expectedRevision:Long):NativeFreestyleRoutineResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFreestyleRoutineResult.Rejected(NativeFreestyleRefusal.NOT_AUTHORIZED)
+        return freestyleStore.deleteRoutine(owner.ownerKey,routineId,expectedRevision)
+    }
+
     fun reviewMeasuredAuthoringSource():NativeAuthoringSourceRead {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeAuthoringSourceRead.Rejected(
@@ -1786,6 +1875,9 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val pending=(historyStore.open(signed.ownerKey,signed.athleteId)
             as? NativeHistoryLedgerResult.Durable)?.ledger?.pending
         when(pending) {
+            is NativeHistoryWriteIntent.FreestyleCorrect,
+            is NativeHistoryWriteIntent.FreestyleFinish ->
+                freestyleStore.recover(signed.ownerKey,pending.workoutId)
             is NativeHistoryWriteIntent.MeasuredFinish ->
                 measuredHistoryTransactions.recover(signed.ownerKey,signed.athleteId)
             is NativeHistoryWriteIntent.CustomFinish ->

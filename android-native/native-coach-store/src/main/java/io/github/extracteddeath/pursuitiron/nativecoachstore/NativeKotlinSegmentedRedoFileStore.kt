@@ -150,6 +150,8 @@ class NativeKotlinSegmentedRedoFileStore(
         when (value) {
             // A separate authenticated typed schema must be designed before
             // any segmented redo could preserve seconds/meters/side facts.
+            is NativeHistoryWriteIntent.FreestyleCorrect,
+            is NativeHistoryWriteIntent.FreestyleFinish,
             is NativeHistoryWriteIntent.MeasuredFinish ->
                 throw IOException("measured History has no segmented redo schema")
             is NativeHistoryWriteIntent.Finish -> {

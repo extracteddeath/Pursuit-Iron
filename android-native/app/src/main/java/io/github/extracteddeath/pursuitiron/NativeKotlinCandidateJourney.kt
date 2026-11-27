@@ -94,6 +94,7 @@ internal fun kotlinHistoryReadNeedsRecovery(
         NativeKotlinMixedHistoryRefusal.UNVERIFIED_COMPOSER,
         NativeKotlinMixedHistoryRefusal.UNVERIFIED_CUSTOM,
         NativeKotlinMixedHistoryRefusal.UNVERIFIED_MEASURED,
+        NativeKotlinMixedHistoryRefusal.UNVERIFIED_FREESTYLE,
         NativeKotlinMixedHistoryRefusal.MANIFEST_CHANGED,
         NativeKotlinMixedHistoryRefusal.STORAGE_UNAVAILABLE -> true
         NativeKotlinMixedHistoryRefusal.INVALID_SCOPE,
@@ -598,6 +599,7 @@ private fun NativeKotlinCandidateTrainEntry(
 ) {
     var entryId by rememberSaveable { mutableStateOf("") }
     var measuredOpen by rememberSaveable { mutableStateOf(false) }
+    var freestyleOpen by rememberSaveable { mutableStateOf(false) }
     var measuredResumeId by rememberSaveable {mutableStateOf<String?>(null)}
     var measuredEntryVersion by rememberSaveable {mutableIntStateOf(0)}
     var measuredError by rememberSaveable {mutableStateOf<String?>(null)}
@@ -624,8 +626,8 @@ private fun NativeKotlinCandidateTrainEntry(
     }
     var resumeChecking by remember(host) {mutableStateOf(false)}
     val sessionState by controller.state.collectAsStateWithLifecycle()
-    LaunchedEffect(customWorkoutId,selectedId,measuredOpen) {
-        onActiveWorkoutChanged(customWorkoutId!=null || selectedId!=null || measuredOpen)
+    LaunchedEffect(customWorkoutId,selectedId,measuredOpen,freestyleOpen) {
+        onActiveWorkoutChanged(customWorkoutId!=null || selectedId!=null || measuredOpen || freestyleOpen)
     }
     LaunchedEffect(generatedWorkoutId) {
         if(generatedWorkoutId!=null && selectedId!=generatedWorkoutId)
@@ -680,7 +682,7 @@ private fun NativeKotlinCandidateTrainEntry(
     val currentCustomId by rememberUpdatedState(customWorkoutId)
     val currentGeneratedId by rememberUpdatedState(generatedWorkoutId)
     fun noCompetingWorkout()=selectedId==null && currentCustomId==null &&
-        currentGeneratedId==null && !measuredOpen
+        currentGeneratedId==null && !measuredOpen && !freestyleOpen
     fun canVerifyGeneratedResume()=NativeKotlinTrainResumeGate.mayVerifyGenerated(
         resumeChecking=resumeChecking,manualLookupBusy=searching,
         anotherWorkoutOpen=!noCompetingWorkout(),
@@ -756,7 +758,13 @@ private fun NativeKotlinCandidateTrainEntry(
             refreshUnfinishedWorkouts()
         }
     }
-    if(measuredOpen) {
+    if(freestyleOpen) {
+        workoutScreens.SaveableStateProvider("freestyle") {
+            NativeKotlinFreestyleWorkoutScreen(host,
+                onClose={freestyleOpen=false;scope.launch{refreshUnfinishedWorkouts()}},
+                onViewHistory={id->freestyleOpen=false;onViewFinishedHistory(id)})
+        }
+    } else if(measuredOpen) {
         workoutScreens.SaveableStateProvider(
             "measured:${measuredResumeId ?: "new-$measuredEntryVersion"}") {
             NativeKotlinMeasuredWorkoutScreen(host,
@@ -946,6 +954,14 @@ private fun NativeKotlinCandidateTrainEntry(
                         "Custom workout inventory could not be read. Refresh to try again.",
                         color=MaterialTheme.colorScheme.error,
                         style=MaterialTheme.typography.bodySmall)
+                }
+            }
+            PursuitCard {
+                PursuitSectionHeading("Freestyle workouts",
+                    "Start an empty workout, resume saved sets or use a routine without changing your program.")
+                PursuitPrimaryAction("Open freestyle workouts",
+                    enabled=canVerifyGeneratedResume()) {
+                    if(canVerifyGeneratedResume())freestyleOpen=true
                 }
             }
             PursuitCard {

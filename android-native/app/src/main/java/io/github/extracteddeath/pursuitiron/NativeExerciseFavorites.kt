@@ -2,6 +2,7 @@ package io.github.extracteddeath.pursuitiron
 
 import android.content.SharedPreferences
 import io.github.extracteddeath.pursuitiron.nativecoachstore.*
+import io.github.extracteddeath.pursuitiron.rebuild.observations
 
 /**
  * Athlete-scoped presentation pins for ANY exercise found in the complete,
@@ -27,6 +28,8 @@ internal object NativeExerciseFavorites {
                 // Favorites feed repetition-based exercise history/charts.
                 // Typed holds and carries belong to the measured History UI.
                 is NativeKotlinMixedHistoryCompletion.Measured -> emptyList()
+                is NativeKotlinMixedHistoryCompletion.Freestyle ->
+                    entry.workout.observations().map{it.exercise.exerciseId}
             }
         }.filter(validId::matches).distinct().sortedBy(::kotlinExerciseLabel)
 

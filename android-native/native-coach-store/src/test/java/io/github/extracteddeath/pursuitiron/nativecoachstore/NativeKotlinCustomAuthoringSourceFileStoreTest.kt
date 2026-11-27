@@ -125,7 +125,24 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
                 "set-1",1,"slot-a","set-a",DraftSetType.WORKING,
                 KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(n("25.00"),LoadUnit.LB,8,null))))
         }
+        val composer=KotlinNativeJournalFileStore(root)
+        val authoring=store()
+        val drafts=NativeCustomCycleDraftFileStore(root,fence,identity)
+        val signoffs=NativeKotlinCustomCycleSignoffFileStore(root,fence,identity,drafts,authoring)
+        val preflight=NativeKotlinCustomWorkoutPreflight(fence,identity,drafts,authoring,signoffs)
+        val prepared=NativeKotlinCustomWorkoutPreparedStore(root,fence,identity,preflight)
+        val custom=NativeKotlinCustomWorkoutJournalFileStore(root,fence,identity,
+            prepared,preflight,history,composer)
+        val authority=object:NativeKotlinWorkoutAuthority {
+            override fun currentApprovedWorkout(ownerKey:String,workoutId:String):NativeKotlinWorkoutApproval?=null
+            override fun canAccessIssuedWorkout(ownerKey:String,source:KotlinTrainingSourceRevision)=false
+        }
+        fun reader()=NativeKotlinMixedHistoryReadCoordinator(history,composer,
+            KotlinNativeSavedCorrectionFileStore(root,composer),custom,authority,identity,fence,
+            freestyleStore=freestyle())
         val one=logged("one")
+        assertTrue((reader().read("owner-1","athlete-1") as NativeKotlinMixedHistoryReadResult.Review)
+            .timeline.completions.isEmpty())
         val finish=KotlinFreestyleOperation.Finish("finish",one.revision)
         val done=saved(freestyle().complete("owner-1","one",finish))
         assertEquals("finish",done.finishedByEventId)
@@ -135,6 +152,35 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
         assertEquals(done,saved(freestyle().open("owner-1","one")))
         assertTrue((freestyle().complete("owner-1","one",finish) as NativeFreestyleResult.Durable).replayed)
         assertEquals(listOf(entry),ledger().completions)
+        assertEquals(done,saved(freestyle().readCommitted("owner-1","athlete-1",entry)))
+        val read=reader().read("owner-1","athlete-1") as NativeKotlinMixedHistoryReadResult.Review
+        val timeline=read.timeline
+        assertEquals(NativeKotlinMixedHistoryCompletion.Freestyle(entry,done),timeline.completions.single())
+        val facts=(reader().readFacts("owner-1","athlete-1") as NativeKotlinMixedFactsReadResult.Review).facts
+        val last=facts.lastByExercise.getValue("rope-pushdown").workingSets.single()
+        assertNull(last.issuedLoad)
+        assertEquals(LoadBasis.CABLE_STACK,last.physicalBasis)
+        assertEquals(LoadUnit.LB,last.physicalUnit)
+        assertEquals(n("25.00"),last.actual?.load)
+        assertNull(last.actual?.actualRir)
+        assertEquals(n("25"),facts.highestCompletedLoad.values.single().actualLoad)
+        assertFalse(facts.canIssueProgression)
+        assertTrue(reader().readForCustomCoaching("owner-1","athlete-1").second.isEmpty())
+        val trend=NativeExercisePerformanceTrendDomain.project(timeline,"rope-pushdown",LoadUnit.LB)
+        assertEquals(LoadBasis.CABLE_STACK,trend.series.single().key.basis)
+        assertEquals(8,trend.series.single().points.single().performedReps)
+        val csv=NativeKotlinVerifiedHistoryCsvExport.prepare(timeline) as NativeKotlinHistoryCsvResult.Ready
+        val lines=csv.csv.trim().lines()
+        val header=lines.first().split(",").map{it.trim('"')}
+        val cells=lines.last().split(",").map{it.trim('"')}
+        val row=header.zip(cells).toMap()
+        assertEquals(header.size,cells.size)
+        assertEquals("FREESTYLE",row["workout_kind"])
+        assertEquals("CABLE_STACK",row["actual_load_basis"])
+        assertEquals("25",row["actual_load"])
+        assertEquals("8",row["actual_reps"])
+        for(field in listOf("target_load","target_unit","target_basis","target_reps_min","target_reps_max","target_rir","actual_rir"))
+            assertEquals(field,"",row[field])
         assertEquals(NativeFreestyleResult.Rejected(NativeFreestyleRefusal.FINISH_MISMATCH),
             freestyle().complete("owner-1","one",finish.copy(eventId="different")))
         val two=logged("two")
@@ -143,6 +189,8 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
         assertTrue(history.prepare("owner-1","athlete-1",ledger().revision,intent) is NativeHistoryLedgerResult.Durable)
         assertEquals(intent,ledger().pending)
         assertFalse(ledger().readyForHistoryReads)
+        assertEquals(NativeKotlinMixedHistoryReadResult.Rejected(
+            NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION),reader().read("owner-1","athlete-1"))
         assertNull(saved(freestyle().open("owner-1","two")).finishedByEventId)
         signedIn=NativeKotlinOwnerIdentity("foreign","athlete-2")
         assertEquals(NativeFreestyleResult.Rejected(NativeFreestyleRefusal.NOT_AUTHORIZED),
@@ -154,6 +202,15 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
         assertNull(ledger().pending)
         assertEquals(listOf("one","two"),ledger().completions.map{it.workoutId})
         assertEquals(intent.completedAtEpochMillis,ledger().completions.last().completedAtEpochMillis)
+        val after=reader().read("owner-1","athlete-1") as NativeKotlinMixedHistoryReadResult.Review
+        assertEquals(listOf("one","two"),after.timeline.completions.map{it.manifest.workoutId})
+        val file=NativeMeasuredWorkoutIdClaim.freestylePath(root,"owner-1","two")
+        val valid=Files.readAllBytes(file)
+        Files.write(file,byteArrayOf(1,2,3))
+        assertEquals(NativeKotlinMixedHistoryReadResult.Rejected(
+            NativeKotlinMixedHistoryRefusal.UNVERIFIED_FREESTYLE),reader().read("owner-1","athlete-1"))
+        Files.write(file,valid)
+        assertEquals(after,reader().read("owner-1","athlete-1"))
         assertEquals(NativeFreestyleResult.Rejected(NativeFreestyleRefusal.HISTORY_NOT_READY),
             freestyle().recover("owner-1","two"))
     }

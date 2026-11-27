@@ -351,6 +351,42 @@ class NativeKotlinCustomWorkoutPreflight(
         return true
     }
 
+    /** Same signed ordinary-cycle source, policy and exact physical stock
+     * as first issuance. This audit never persists its transient override. */
+    internal fun permitsRemainingEdit(ownerKey:String,issued:NativeCustomIssuedJournal,
+        request:MidSessionWorkingEdit):Boolean = runCatching {
+        fence.withOwnerTransaction(ownerKey) {
+            val owner=identity.signedInIdentity()?.takeIf{
+                it.ownerKey==ownerKey && it.athleteId==issued.athleteId
+            }?:return@withOwnerTransaction false
+            val journal=issued.journal
+            val stamp=journal.originalSnapshot.stamp
+            val signed=consents.recoverReviewedInputs(ownerKey,stamp.cycleId)
+                as? NativeCustomSavedCoachReview.Ready ?:return@withOwnerTransaction false
+            if(signed.receipt.recordRevision!=issued.consentRevision ||
+                signed.receipt.fingerprintSha256!=journal.preparedConsentFingerprint)
+                return@withOwnerTransaction false
+            val source=(sources.read(ownerKey) as? NativeAuthoringSourceRead.Found)?.source
+                ?:return@withOwnerTransaction false
+            val cycle=(drafts.read(ownerKey,stamp.cycleId) as? NativeCustomDraftReadResult.Found)?.draft
+                ?:return@withOwnerTransaction false
+            if(source.ownerKey!=ownerKey || source.athleteId!=owner.athleteId ||
+                source.revision!=stamp.gymCatalogSourceRevision)
+                return@withOwnerTransaction false
+            val review=MidSessionWorkingEditDomain.custom(journal,request)
+                as? MidSessionWorkingEditReview.Reviewed ?:return@withOwnerTransaction false
+            val updated=journal.snapshot.copy(slots=journal.snapshot.slots.map{slot->
+                if(slot.slotId==request.occurrenceId)slot.copy(sets=review.after) else slot
+            })
+            val roster=if(machineRosters==null)null else
+                (machineRosters.read(ownerKey) as? NativeMachineRosterResult.Saved)?.snapshot
+                    ?:return@withOwnerTransaction false
+            verifiedSpecialistStock(ownerKey,updated,source,roster) &&
+                MidSessionWorkingEditDomain.approvedCustom(journal,request,cycle,source.setup,
+                    source.catalog,signed.inputs) && identity.signedInIdentity()==owner
+        }
+    }.getOrDefault(false)
+
     fun inspect(
         ownerKey:String,
         cycleId:String,

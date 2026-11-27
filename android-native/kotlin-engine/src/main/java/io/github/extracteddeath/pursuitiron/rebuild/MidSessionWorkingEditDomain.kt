@@ -229,6 +229,62 @@ object MidSessionWorkingEditDomain {
         return state.snapshot.copy(slots=Collections.unmodifiableList(slots),knownSetAndRestSeconds=seconds)
     }
 
+    /** Audit a transient override of exactly the already issued day.
+     * No draft revision, cycle consent or persistent program is changed. */
+    fun approvedCustom(
+        state:CustomWorkoutJournalDraft,request:MidSessionWorkingEdit,
+        cycle:CustomTrainingCycle,setup:AthleteSetupReview,
+        catalog:List<CatalogMovement>,inputs:CustomCoachAuditInputs
+    ):Boolean = runCatching {
+        val stamp=state.originalSnapshot.stamp
+        if(cycle.cycleId!=stamp.cycleId || cycle.revision!=stamp.cycleRevision ||
+            cycle.athleteId!=stamp.athleteId ||
+            state.receipts.any{it.operation is CustomWorkoutJournalOperation.Swap ||
+                it.operation is CustomWorkoutJournalOperation.UndoSwap})
+            return@runCatching false
+        val profile=setup.reviewed?:return@runCatching false
+        if(profile.athleteProfileId!=stamp.athleteId ||
+            profile.profileRevision!=stamp.athleteProfileRevision || profile.gym.gymId!=stamp.gymId)
+            return@runCatching false
+        val next=customSnapshot(state,request)?:return@runCatching false
+        val baseline=CustomCycleCoachAuditDomain.review(cycle,setup,catalog,inputs)
+        if(baseline.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW)
+            return@runCatching false
+        val week=CustomTrainingCycleDomain.week(
+            baseline.structuralReview?:return@runCatching false,next.absoluteWeek)
+            ?:return@runCatching false
+        if(week.blockId!=next.blockId || week.weekInBlock!=next.weekInBlock ||
+            week.phase!=next.phase || week.purpose!=next.blockPurpose)
+            return@runCatching false
+        val day=week.days.singleOrNull{it.weekday==next.weekday}?:return@runCatching false
+        if(day.purpose!=next.sessionPurpose || day.slots.map{it.slotId}!=next.slots.map{it.slotId})
+            return@runCatching false
+        for((original,slot) in day.slots.zip(next.slots)) {
+            if(original.exerciseId!=slot.exerciseId || original.attachmentId!=slot.attachmentId ||
+                original.role!=slot.role || original.supersetGroup!=slot.supersetGroup ||
+                original.pinned!=slot.pinned || original.machineInstanceId!=slot.machineInstanceId)
+                return@runCatching false
+            if(slot.slotId==request.occurrenceId) {
+                val issued=state.originalSnapshot.slots.singleOrNull{it.slotId==slot.slotId}
+                    ?:return@runCatching false
+                val originalWorking=issued.sets.filter{it.prescription.type==DraftSetType.WORKING}
+                if(originalWorking.isEmpty())return@runCatching false
+                val maxReps=originalWorking.maxOf{it.prescription.reps.maximum}
+                val restFloor=originalWorking.minOf{it.prescription.restSeconds}
+                if(slot.sets.any{it.prescription.type==DraftSetType.WORKING &&
+                        (it.prescription.reps.maximum>maxReps || it.prescription.restSeconds<restFloor)})
+                    return@runCatching false
+            }
+        }
+        val overrides=cycle.weekOverrides[week.blockId].orEmpty().filterNot{
+            it.weekInBlock==week.weekInBlock && it.weekday==day.weekday
+        }+next.slots.map{slot->CustomWeekSlotOverride(
+            week.weekInBlock,day.weekday,slot.slotId,slot.sets.map{it.prescription})}
+        val transient=cycle.copy(weekOverrides=cycle.weekOverrides+(week.blockId to overrides))
+        CustomCycleCoachAuditDomain.review(transient,setup,catalog,inputs).status==
+            CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW
+    }.getOrDefault(false)
+
     fun custom(state:CustomWorkoutJournalDraft,request:MidSessionWorkingEdit):
         MidSessionWorkingEditReview<CustomWorkoutSetSnapshot> {
         if(state.workoutId!=request.workoutId || state.revision!=request.expectedRevision ||

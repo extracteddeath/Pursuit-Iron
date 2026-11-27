@@ -922,6 +922,44 @@ class NativeKotlinCustomWorkoutJournalFileStore(
      * The shared history transaction coordinator commits Finish through
      * manifest redo before making any completed session visible.
      */
+    fun adjustRemaining(ownerKey:String,workoutId:String,
+        operation:CustomWorkoutJournalOperation,athleteConfirmed:Boolean):NativeCustomJournalResult {
+        fun denied()=NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.SWAP_SOURCE_UNAVAILABLE)
+        if(!athleteConfirmed || !id.matches(workoutId) ||
+            (operation !is CustomWorkoutJournalOperation.AdjustRemaining &&
+                operation !is CustomWorkoutJournalOperation.UndoAdjustment))return denied()
+        return runCatching {
+            fence.withOwnerTransaction(ownerKey) {
+                val current=owner(ownerKey)?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                    NativeCustomJournalRefusal.NOT_AUTHORIZED)
+                val existing=read(ownerKey,workoutId,current)
+                if(existing !is NativeCustomJournalResult.Durable)return@withOwnerTransaction existing
+                val ledger=history.open(ownerKey,current.athleteId)
+                if(ledger !is NativeHistoryLedgerResult.Durable || !ledger.ledger.readyForHistoryReads)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.HISTORY_NOT_READY)
+                val journal=existing.issued.journal
+                val decision=CustomWorkoutJournalDomain.reduce(journal,operation)
+                if(decision !is CustomWorkoutJournalDecision.Proposed)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.STALE_OR_INVALID_SET,
+                        (decision as CustomWorkoutJournalDecision.Rejected).reason)
+                if(decision.replayed)return@withOwnerTransaction existing
+                if(operation is CustomWorkoutJournalOperation.AdjustRemaining) {
+                    val plan=(prepared.open(ownerKey,workoutId) as? NativeCustomPreparedRead.Found)?.workout
+                        ?:return@withOwnerTransaction denied()
+                    if(plan.authority!=NativeCustomPreparationAuthority.CUSTOM_CYCLE ||
+                        !preflight.permitsRemainingEdit(ownerKey,existing.issued,operation.request))
+                        return@withOwnerTransaction denied()
+                }
+                if(owner(ownerKey)!=current)return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                    NativeCustomJournalRefusal.NOT_AUTHORIZED)
+                val saved=existing.issued.copy(journal=decision.draft)
+                atomic(path(ownerKey,workoutId),encode(saved))
+                NativeCustomJournalResult.Durable(saved,false)
+            }
+        }.getOrElse{NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.STORAGE_UNAVAILABLE)}
+    }
+
     fun record(
         ownerKey:String,workoutId:String,
         operation:CustomWorkoutJournalOperation.Record

@@ -116,7 +116,9 @@ const guardFiles=[
   ['CustomSameBlockLoadContinuityDomain.kt','ASSISTANCE_NEEDS_SEPARATE_RECOVERY_REVIEW'],
   ['ReviewedFutureWeekProgressionDomain.kt','exercise.expectedLoadBasis==LoadBasis.ASSISTANCE_COUNTERWEIGHT'],
   ['CoachSessionPrescriptionDomain.kt','if(assistance && p.scheme==SetLoadScheme.LAST_SET_BACKOFF)return null'],
-  ['CoachFirstProgramStartDomain.kt','val warmupLoad=if(assisted)inspected?.nextAbove']
+  ['CoachFirstProgramStartDomain.kt','CoachSessionPrescriptionDomain.stockAwareWarmupLoad(stock,working,athlete.gym.unit)'],
+  ['CoachSessionPrescriptionDomain.kt','val candidate=if(assisted)inspected?.nextAbove'],
+  ['CoachSessionPrescriptionDomain.kt','(if(assisted)it>working else it<working)']
 ];
 for(const [file,needle] of guardFiles) {
   const implementation=readFileSync(kotlinRoot+file,'utf8');

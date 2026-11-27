@@ -1552,7 +1552,10 @@ assert.match(firstUi,/includeMyoFinisher=before\.includeMyoFinisher/);
 assert.match(firstHost,/includeMyoFinisher=seed\.includeMyoFinisher/);
 assert.match(firstHost,/includeMyoFinisher=includeMyoFinisher/);
 assert.match(firstSeed,/if\(seed\.includeMyoFinisher\)version else originalVersion/);
-assert.match(firstSeed,/if\(storedVersion>=2\)data\.readBoolean\(\) else false/);
+assert.match(firstSeed,/if\(storedVersion==version\)data\.readBoolean\(\) else false/);
+assert.match(firstSeed,/val technique=if\(storedVersion==techniqueVersion\)CustomAmplifierKind\.valueOf\(data\.readUTF\(\)\) else null/);
+assert.match(firstSeed,/private val version=2/);
+assert.match(firstSeed,/private val techniqueVersion=3/);
 assert.doesNotMatch(firstUi,/includeMyoFinisher:Boolean=true/);
 
 

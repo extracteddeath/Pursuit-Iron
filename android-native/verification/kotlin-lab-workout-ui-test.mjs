@@ -1802,7 +1802,11 @@ assert.ok(
   numberAuthority.includes('!validCompletedReps(performed.reps)') &&
   numberGenerated.includes('KotlinSetNumberAuthorityDomain.valid(target.load,outcome,performed)') &&
   numberCustom.includes('KotlinSetNumberAuthorityDomain.valid(target,outcome,performed)') &&
-  numberEditor.includes('KotlinSetNumberAuthorityDomain.valid(load,') &&
+  numberEditor.includes('KotlinSetNumberAuthorityDomain.actualRefusal(expectedUnit,') &&
+  numberEditor.includes('KotlinSetNumberAuthorityDomain.validIssuedLoad(load)') &&
+  numberEditor.includes('fun parseUnplanned(') &&
+  numberAuthority.includes('val refusal=actualRefusal(unit,outcome,actual)') &&
+  numberTests.includes('unplannedEntriesRequireExplicitActualsAndNeverInventTargets') &&
   numberTests.includes('generatedCustomAndParserAcceptExactlyTheSameActualNumberMatrix') &&
   numberTests.includes('generatedAndCustomColdHistoryContainsCorrectionsNotPhantomNumbers'),
   'Kotlin generated, custom and entry parsing must share one numeric acceptance and History contract'

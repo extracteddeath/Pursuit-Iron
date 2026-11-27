@@ -41,7 +41,10 @@ data class CustomWorkoutHistoricalEvidence(
     val visits: List<CustomHistoricalVisitFact>,
     val shortSessionLimitMinutes:Int?=null,
     val shortSessionOmittedSetKeys:List<String> =emptyList(),
-    val sessionAdjusted:Boolean=false
+    val sessionAdjusted:Boolean=false,
+    /** A warm-up-only edit can preserve every original working prescription.
+     * Unclassified older callers retain the conservative adjustment gate. */
+    val workingPrescriptionAdjusted:Boolean=sessionAdjusted
 ) {
     val prescriptionEditedForTime:Boolean
         get()=shortSessionOmittedSetKeys.isNotEmpty()
@@ -58,7 +61,7 @@ data class CustomWorkoutHistoricalEvidence(
                 it.setType==DraftSetType.WORKING
         }
         return shortSessionLimitMinutes==null &&
-            !prescriptionEditedForTime && !sessionAdjusted && mains.isNotEmpty() &&
+            !prescriptionEditedForTime && !workingPrescriptionAdjusted && mains.isNotEmpty() &&
             mains.all{
                 it.outcome==KotlinJournalSetOutcome.COMPLETED &&
                     it.actual!=null
@@ -145,6 +148,19 @@ object CustomWorkoutHistoryEvidenceDomain {
                 }
             }
         }
+        val adjustments=journal.receipts.mapNotNull{
+            it.operation as? CustomWorkoutJournalOperation.AdjustRemaining
+        }
+        // Warm-up insertion/removal shifts ordinals but must not change a
+        // single original working identity, prescription or slot metadata.
+        // An actual working edit remains conservative even after Undo.
+        fun workingProjection(snapshot:CustomWorkoutDaySnapshot)=snapshot.slots.map{slot->
+            slot.copy(sets=slot.sets.filter{it.prescription.type==DraftSetType.WORKING}
+                .mapIndexed{index,set->set.copy(ordinalInSlot=index+1)})
+        }
+        val warmupOnly=adjustments.isNotEmpty() &&
+            adjustments.all{it.request.warmupChange!=null} &&
+            workingProjection(journal.originalSnapshot)==workingProjection(journal.snapshot)
         return CustomHistoryEvidenceResult.Candidate(
             CustomWorkoutHistoricalEvidence(
                 journal.snapshot.stamp.athleteId,journal.workoutId,
@@ -155,6 +171,7 @@ object CustomWorkoutHistoryEvidenceDomain {
                 journal.originalSnapshot.shortSessionLimitMinutes,
                 Collections.unmodifiableList(
                     journal.originalSnapshot.shortSessionOmittedSetKeys.toList()),
-                sessionAdjusted=journal.receipts.any{it.operation is CustomWorkoutJournalOperation.AdjustRemaining}))
+                sessionAdjusted=adjustments.isNotEmpty(),
+                workingPrescriptionAdjusted=adjustments.isNotEmpty() && !warmupOnly))
     }
 }

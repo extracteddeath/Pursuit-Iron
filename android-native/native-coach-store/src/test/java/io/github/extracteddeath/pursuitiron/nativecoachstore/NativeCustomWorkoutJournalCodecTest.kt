@@ -82,6 +82,7 @@ class NativeCustomWorkoutJournalCodecTest {
         state=accept(state,CustomWorkoutJournalOperation.Finish("finish",state.revision))
         val facts=(CustomWorkoutHistoryEvidenceDomain.project(state) as CustomHistoryEvidenceResult.Candidate).evidence
         assertTrue(facts.sessionAdjusted)
+        assertTrue(facts.workingPrescriptionAdjusted)
         assertFalse(facts.allIssuedMainWorkingSetsCompleted)
         assertEquals(listOf(10,12,12),facts.visits.map{it.actual?.reps})
         assertEquals(state,NativeCustomWorkoutJournalCodec.decode(NativeCustomWorkoutJournalCodec.encode(record(state))).journal)
@@ -170,6 +171,8 @@ class NativeCustomWorkoutJournalCodecTest {
         assertEquals(listOf(DraftSetType.WARMUP,DraftSetType.WORKING),evidence.visits.map{it.setType})
         assertEquals(listOf(5,10),evidence.visits.map{it.actual?.reps})
         assertTrue(evidence.sessionAdjusted)
+        assertFalse(evidence.workingPrescriptionAdjusted)
+        assertTrue(evidence.allIssuedMainWorkingSetsCompleted)
     }
 
     @Test fun fullLegacyJournalCanResolveAnAmplifierAndColdReopenFinished() {

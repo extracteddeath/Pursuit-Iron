@@ -48,6 +48,12 @@ private fun verifiedWorkingCount(timeline:NativeKotlinMixedHistoryTimeline):Int 
             // Profile's working-set counter is repetition-only; the typed
             // measurements have their own truthful completion counts.
             is NativeKotlinMixedHistoryCompletion.Measured -> return@sumOf 0
+            is NativeKotlinMixedHistoryCompletion.Freestyle -> return@sumOf
+                entry.workout.observations().count{(_,record)->
+                    record.type==DraftSetType.WORKING &&
+                        record.outcome==KotlinJournalSetOutcome.COMPLETED &&
+                        record.actual!=null
+                }
         }
         summary.completedWorkingSets
     }

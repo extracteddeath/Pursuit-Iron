@@ -94,6 +94,7 @@ internal fun kotlinHistoryReadNeedsRecovery(
         NativeKotlinMixedHistoryRefusal.UNVERIFIED_COMPOSER,
         NativeKotlinMixedHistoryRefusal.UNVERIFIED_CUSTOM,
         NativeKotlinMixedHistoryRefusal.UNVERIFIED_MEASURED,
+        NativeKotlinMixedHistoryRefusal.UNVERIFIED_FREESTYLE,
         NativeKotlinMixedHistoryRefusal.MANIFEST_CHANGED,
         NativeKotlinMixedHistoryRefusal.STORAGE_UNAVAILABLE -> true
         NativeKotlinMixedHistoryRefusal.INVALID_SCOPE,

@@ -100,7 +100,8 @@ internal data class NativeKotlinProgramProgressionHandoff(
     val issuedCycleRevision:Long,
     val blockId:String,
     val weekday:Int,
-    val originalSlots:List<Pair<String,String>>
+    val originalSlots:List<Pair<String,String>>,
+    val sessionChoices:Map<String,SavedProgressionMethod>
 )
 internal object NativeKotlinProgramProgressionHandoffDomain {
     fun review(journal:CustomWorkoutJournalDraft):NativeKotlinProgramProgressionHandoff? {
@@ -110,7 +111,8 @@ internal object NativeKotlinProgramProgressionHandoffDomain {
             return null
         return NativeKotlinProgramProgressionHandoff(original.stamp.cycleId,
             original.stamp.athleteId,original.stamp.cycleRevision,original.blockId,
-            original.weekday,original.slots.map{it.slotId to it.exerciseId})
+            original.weekday,original.slots.map{it.slotId to it.exerciseId},
+            journal.sessionProgressionChoices)
     }
     fun canOpenExactEdit(request:NativeKotlinProgramProgressionHandoff,
         draft:CustomTrainingCycle):Boolean {

@@ -22,7 +22,9 @@ internal data class NativeRemainingEditAnchor(
 internal fun NativeRemainingEditSheet(
     anchor:NativeRemainingEditAnchor,currentRevision:Long?,busy:Boolean,
     review:(MidSessionWorkingEdit)->MidSessionWorkingEditReview<*>?,
-    onApply:(MidSessionWorkingEdit)->Unit,onDismiss:()->Unit
+    onApply:(MidSessionWorkingEdit)->Unit,onDismiss:()->Unit,
+    progressionChoices:Set<SavedProgressionMethod> = emptySet(),
+    currentSessionMethod:SavedProgressionMethod?=null
 ) {
     var count by rememberSaveable(anchor.workoutId,anchor.revision,anchor.occurrenceId){
         mutableStateOf(anchor.workingCount.toString())
@@ -36,9 +38,17 @@ internal fun NativeRemainingEditSheet(
     var rest by rememberSaveable(anchor.workoutId,anchor.revision,anchor.occurrenceId){
         mutableStateOf(anchor.restSeconds.toString())
     }
+    var chosenName by rememberSaveable(anchor.workoutId,anchor.revision,anchor.occurrenceId){
+        mutableStateOf<String?>(null)
+    }
+    val chosenMethod=progressionChoices.singleOrNull{it.name==chosenName && it!=currentSessionMethod}
     val min=minimum.toIntOrNull();val max=maximum.toIntOrNull()
     val n=count.toIntOrNull();val seconds=rest.toIntOrNull()
-    val request=if(n!=null && min!=null && max!=null && seconds!=null &&
+    val request=if(chosenMethod!=null)
+        MidSessionWorkingEdit(anchor.workoutId,anchor.revision,anchor.occurrenceId,
+            anchor.workingCount,progressionMethod=chosenMethod)
+    else if(chosenName!=null)null
+    else if(n!=null && min!=null && max!=null && seconds!=null &&
         n in 1..20 && min in 1..100 && max in min..100 && seconds in 0..3600)
         MidSessionWorkingEdit(anchor.workoutId,anchor.revision,anchor.occurrenceId,n,
             RepBand(min,max).takeUnless{it==anchor.reps},seconds.takeUnless{it==anchor.restSeconds})
@@ -52,23 +62,33 @@ internal fun NativeRemainingEditSheet(
         Text("This workout only. Completed work, warm-ups and your saved program stay unchanged.",
             style=MaterialTheme.typography.bodyMedium)
         Text("${anchor.resolvedCount} of ${anchor.workingCount} working sets already resolved")
+        if(progressionChoices.isNotEmpty() || currentSessionMethod!=null) {
+            Text("Session progression",style=MaterialTheme.typography.titleMedium)
+            currentSessionMethod?.let{Text("Current session choice: "+it.name.lowercase().replace('_',' '))}
+            Text("Choose one method separately from set, rep or rest changes. Issued targets stay the same; review future program progression after Finish.",
+                style=MaterialTheme.typography.bodySmall)
+            progressionChoices.filter{it!=currentSessionMethod}.sortedBy{it.name}.forEach{method->
+                FilterChip(selected=chosenName==method.name,onClick={chosenName=if(chosenName==method.name)null else method.name},
+                    enabled=!busy && !stale,label={Text(method.name.lowercase().replace('_',' '))})
+            }
+        }
         OutlinedTextField(count,{count=it.take(2)},label={Text("Total working sets")},
-            singleLine=true,enabled=!busy,modifier=Modifier.fillMaxWidth(),
+            singleLine=true,enabled=!busy && chosenName==null,modifier=Modifier.fillMaxWidth(),
             keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number))
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
             OutlinedTextField(minimum,{minimum=it.take(3)},label={Text("Min reps")},
-                modifier=Modifier.weight(1f),enabled=!busy,singleLine=true,
+                modifier=Modifier.weight(1f),enabled=!busy && chosenName==null,singleLine=true,
                 keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number))
             OutlinedTextField(maximum,{maximum=it.take(3)},label={Text("Max reps")},
-                modifier=Modifier.weight(1f),enabled=!busy,singleLine=true,
+                modifier=Modifier.weight(1f),enabled=!busy && chosenName==null,singleLine=true,
                 keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number))
         }
         OutlinedTextField(rest,{rest=it.take(4)},label={Text("Rest (seconds)")},
-            singleLine=true,enabled=!busy,modifier=Modifier.fillMaxWidth(),
+            singleLine=true,enabled=!busy && chosenName==null,modifier=Modifier.fillMaxWidth(),
             keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number))
         when {
             stale -> Text("Workout changed. Close and review again.",color=MaterialTheme.colorScheme.error)
-            request==null ->Text("Enter a valid set count, rep range and rest period.")
+            request==null ->Text("Choose an available method or enter a valid set count, rep range and rest period.")
             preview!=null -> {
                 Text("${preview.addedSetKeys.size} added · ${preview.omittedSetKeys.size} removed · ${preview.resolvedSetKeys.size} resolved rows preserved")
                 Text("Saving requires current equipment and full training-limit verification. Undo is available before the next saved action.",

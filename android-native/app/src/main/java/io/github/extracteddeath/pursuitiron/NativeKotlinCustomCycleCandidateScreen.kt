@@ -611,6 +611,11 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     Text("Review future progression",style=MaterialTheme.typography.titleMedium)
                     Text("Choose a progression method in the existing program day editor. Saved workout targets and actuals will not change. Review and approve the updated cycle before issuing another workout.",
                         style=MaterialTheme.typography.bodySmall)
+                    if(matched)request.sessionChoices.forEach{(slotId,method)->
+                        val source=request.originalSlots.singleOrNull{it.first==slotId}
+                        if(source!=null)Text(kotlinExerciseLabel(source.second)+": "+
+                            method.name.lowercase().replace('_',' '),style=MaterialTheme.typography.bodyMedium)
+                    }
                     if(matched)Button(enabled=!busy,modifier=Modifier.fillMaxWidth(),
                         onClick={
                             showProgramEditor=true

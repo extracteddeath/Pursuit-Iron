@@ -137,7 +137,27 @@ export function reconcilePendingRepTargets(sets, cell) {
 // not permission to silently change the scheduled dose. Never add sets here.
 export function reconcileSurplusWorkingRows(sets, fresh) {
     if (!Array.isArray(sets) || !Array.isArray(fresh)) return sets;
-    const count = fresh.filter(s => s && !s.warm && !s.sub && !s.added).length;
+    const freshCount = fresh.filter(s => s && !s.warm && !s.sub && !s.added).length;
+    const work = sets.filter(s => s && !s.warm && !s.sub && !s.added);
+    const first = work[0]?.target?.decisionTrace;
+    const issuedCount = first?.issuedWorkingSetCount;
+    // New snapshots carry a single occurrence-scoped issuance denominator.
+    // Accept only a consistent cohort of unique, ordered source ordinals.
+    // Legacy rows without this proof still use the existing surplus repair.
+    const verified = first?.schemaVersion === 1 && Number.isInteger(issuedCount)
+        && issuedCount > 0 && work.length <= issuedCount
+        && work.every((row, i) => {
+            const trace = row.target?.decisionTrace;
+            return trace?.schemaVersion === 1 && trace.issuedWorkingSetCount === issuedCount
+                && trace.programId === first.programId && trace.dayId === first.dayId
+                && trace.exerciseId === first.exerciseId && trace.slot === first.slot
+                && trace.weekIndex === first.weekIndex
+                && Number.isInteger(trace.workingSetIndex)
+                && trace.workingSetIndex >= 0 && trace.workingSetIndex < issuedCount
+                && (i === 0 || trace.workingSetIndex > work[i - 1].target.decisionTrace.workingSetIndex);
+        });
+    if (verified) return sets;
+    const count = freshCount;
     let ordinal = 0;
     const kept = sets.filter(s => {
         if (!s || s.warm || s.sub || s.added) return true;

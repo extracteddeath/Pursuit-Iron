@@ -5664,15 +5664,13 @@
         "focus": "lower",
         "implement": "straight-bar",
         "basis": "BARBELL_TOTAL",
-        "fixtures": [
-          "step-platform"
-        ],
+        "fixtures": [],
         "direct": "HAMSTRINGS",
         "indirect": [
           "GLUTES:0.5"
         ],
         "attachment": null,
-        "note": "Deficit deadlift needs a stable raised platform and full barbell stock; unmodeled spinal and trap credits remain excluded."
+        "note": "Deficit deadlift uses a stable flat non-slip plate or suitable raised stance confirmed by the athlete, plus verified barbell stock. Unmodeled spinal and trap credits remain excluded."
       }
     },
     {
@@ -5727,16 +5725,14 @@
         "focus": "lower",
         "implement": "dumbbell-rack",
         "basis": "DUMBBELL_PER_HAND",
-        "fixtures": [
-          "step-platform"
-        ],
+        "fixtures": [],
         "direct": "QUADS",
         "indirect": [
           "GLUTES:0.25",
           "HAMSTRINGS:0.25"
         ],
         "attachment": null,
-        "note": "Deficit reverse lunge needs a stable step platform and explicit per-hand dumbbell weights, never standard lunge history."
+        "note": "Deficit reverse lunge uses a stable flat non-slip plate or suitable raised surface confirmed for the stance and step-back movement, plus explicit per-hand dumbbell weights. Never reuse standard lunge history."
       }
     },
     {
@@ -5795,15 +5791,13 @@
         "focus": "lower",
         "implement": "dumbbell-rack",
         "basis": "DUMBBELL_PER_HAND",
-        "fixtures": [
-          "step-platform"
-        ],
+        "fixtures": [],
         "direct": "HAMSTRINGS",
         "indirect": [
           "GLUTES:0.5"
         ],
         "attachment": null,
-        "note": "Deficit Romanian dumbbell deadlift requires a stable raised stance and per-hand stock; spinal credits are not invented."
+        "note": "Deficit Romanian dumbbell deadlift uses a stable flat non-slip plate or suitable raised stance confirmed by the athlete, plus verified per-hand stock. Spinal credits are not invented."
       }
     },
     {

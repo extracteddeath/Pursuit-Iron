@@ -1032,3 +1032,17 @@ assert.ok(cycleWeekEdit.includes('state.preparedWorkout==null') &&
   editorUi.includes('forms = reviewed.map { it.toFields() }') &&
   editorUi.includes('Check the resulting sets and compare full-cycle effects before separately approving a change'),
   'Review-to-edit must retain explicit athlete copy, signed-source recheck and separate full-cycle approval');
+
+// Both native workout surfaces use the same revision-bound session edit.
+const remainingEditUi=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeRemainingEditSheet.kt');
+const generatedEditUi=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutCandidateScreen.kt');
+const remainingEditHost=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt');
+assert.ok(remainingEditUi.includes('currentRevision!=anchor.revision') &&
+  remainingEditUi.includes('Confirm workout-only change') &&
+  remainingEditUi.includes('preview!=null') &&
+  generatedEditUi.includes('MidSessionWorkingEditDomain.generated(it,request)') &&
+  liveWorkout.includes('MidSessionWorkingEditDomain.custom(it,request)') &&
+  remainingEditHost.includes('trackedWorkout.adjustRemaining(') &&
+  remainingEditHost.includes('customIssuedStore.adjustRemaining(') &&
+  liveJournalStore.includes('preflight.permitsRemainingEdit(ownerKey,existing.issued,operation.request)'),
+  'Remaining-work edits must use a revision-bound review and authenticated journal route, not direct UI mutation');

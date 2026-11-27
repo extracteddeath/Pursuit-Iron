@@ -157,6 +157,7 @@ internal fun NativeKotlinCustomJournalScreen(
     var liveCoach by remember(host,workoutId){
         mutableStateOf<LiveSetCoachResult.Reviewed?>(null)
     }
+    var sessionBasic by remember(host,workoutId){mutableStateOf<NativeCustomSessionBasicReview?>(null)}
     // Reveal success only after the independent committed-History read.
     LaunchedEffect(workoutId,verifiedFinishedInHistory) {
         if(verifiedFinishedInHistory)workoutScroll.animateScrollTo(0)
@@ -555,6 +556,7 @@ internal fun NativeKotlinCustomJournalScreen(
                     readiness,movementRestricted,busy,
                     machineChoices.encoded,machineChoices.ready,machineChoices.busy) {
                     liveCoach=null
+                    sessionBasic=null
                     if(busy || !machineChoices.ready || machineChoices.busy ||
                         current.finishedByEventId!=null ||
                         nextVisit?.part!=CustomWorkoutVisitPart.MAIN)
@@ -565,18 +567,23 @@ internal fun NativeKotlinCustomJournalScreen(
                     // not publish a delayed coaching result after navigation.
                     val result=try {
                         withContext(Dispatchers.IO) {
-                            host.reviewLiveCustomNextSet(workoutId,nextVisit.setKey,
-                                readiness,movementRestricted,BigDecimal("5"))
-                        } as? LiveSetCoachResult.Reviewed
+                            Pair(host.reviewLiveCustomNextSet(workoutId,nextVisit.setKey,
+                                readiness,movementRestricted,BigDecimal("5")) as? LiveSetCoachResult.Reviewed,
+                                host.reviewSessionCustomProgression(workoutId,nextVisit.setKey))
+                        }
                     } catch(cancelled:CancellationException) {
                         throw cancelled
                     } catch(_:Exception) {
                         null
                     }
                     if(journal?.revision==current.revision && !busy &&
-                        result?.journalRevision==current.revision &&
-                        result.setKey==nextVisit.setKey)
-                        liveCoach=result
+                        result?.first?.journalRevision==current.revision &&
+                        result.first?.setKey==nextVisit.setKey)
+                        liveCoach=result.first
+                    if(journal?.revision==current.revision && !busy &&
+                        result?.second?.journalRevision==current.revision &&
+                        result.second?.setKey==nextVisit.setKey)
+                        sessionBasic=result.second
                 }
                 PageHeading("TODAY'S TRAINING",
                     current.snapshot.dayLabel,
@@ -1228,6 +1235,43 @@ internal fun NativeKotlinCustomJournalScreen(
                                 Text("Unsaved set edits preserved · live advice uses recorded sets, not this draft.",
                                     style=MaterialTheme.typography.labelSmall,
                                     color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            val methodReview=sessionBasic?.takeIf{
+                                !busy && !finished && !movementRestricted && machineChoices.ready &&
+                                    !machineChoices.busy && !hasUnsubmittedCurrentEdit &&
+                                    mainKey==nextVisit && it.workoutId==workoutId &&
+                                    it.journalRevision==current.revision && it.setKey==set.setKey &&
+                                    it.method==current.sessionProgressionChoices[slot.slotId] &&
+                                    it.machineInstanceId==selectedMachineId
+                            }
+                            if(methodReview!=null) {
+                                Text("Session progression · "+methodReview.method.name.lowercase().replace('_',' '),
+                                    style=MaterialTheme.typography.titleSmall)
+                                val index=slot.sets.filter{it.prescription.type==DraftSetType.WORKING}
+                                    .indexOfFirst{it.setKey==set.setKey}
+                                val projection=methodReview.projection
+                                val message=when(projection){
+                                    is CustomBasicHistoryResult.Reviewed->{
+                                        val candidate=projection.candidate
+                                        val proposed=candidate.proposedWorkingLoads.getOrNull(index)
+                                        val reps=candidate.proposedRepTargets?.getOrNull(index)
+                                        if(candidate.decision==BasicProgressionDecision.MANUAL_REPEAT)
+                                            "Manual logging · keep your chosen set values."
+                                        else if(proposed==null)"No comparable recommendation."
+                                        else "Review "+proposed.toPlainString()+" "+
+                                            (set.prescription.load as? DraftSetLoad.Verified)?.unit?.name?.lowercase().orEmpty()+
+                                            (reps?.let{" × $it"}?:"")+" · "+
+                                            candidate.decision.name.lowercase().replace('_',' ')
+                                    }
+                                    is CustomBasicHistoryResult.ManualBodyweight->"Manual bodyweight logging."
+                                    is CustomBasicHistoryResult.UnloadedReviewed->
+                                        "Bodyweight progression reviewed from verified history."
+                                    is CustomBasicHistoryResult.Rejected->
+                                        "No verified comparable history for this method; keep the issued target."
+                                }
+                                Text(message,style=MaterialTheme.typography.bodyMedium)
+                                Text("Review only. Choose any change in the set fields; program consent is separate.",
+                                    style=MaterialTheme.typography.bodySmall)
                             }
                             if(advice!=null) {
                                 Text("Coach · next set",

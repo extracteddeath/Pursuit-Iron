@@ -114,6 +114,8 @@ class NativeKotlinGeneratedProgramJourneyTest {
         val timeline=NativeKotlinMixedHistoryReadCoordinator(
             history,composer,KotlinNativeSavedCorrectionFileStore(root,composer),
             journals,authority,identity,fence,corrections)
+        val sessionBasic=NativeKotlinCustomBasicNextReview(
+            fence,identity,drafts,sources,preflight,timeline,machines,journals,consent,choices)
         fun next(inputs:CustomCoachAuditInputs)=NativeKotlinCustomNextCycleSessionReview(
             fence,identity,drafts,sources,consent,timeline,
             NativeKotlinCustomOutstandingWorkoutInventory(prepared,journals),prepared
@@ -1196,6 +1198,22 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(frozen,journal.snapshot)
         assertEquals(prior.effectiveVisits,journal.effectiveVisits)
         assertEquals(mapOf(selected.slotId to SavedProgressionMethod.MANUAL),journal.sessionProgressionChoices)
+        val pending=selected.sets.first{set->
+            set.prescription.type==DraftSetType.WORKING &&
+                CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN) !in journal.effectiveVisits}
+        val sessionReview=checkNotNull(Disk().sessionBasic.reviewSession(owner,id,pending.setKey,n("5")))
+        assertEquals(journal.revision,sessionReview.journalRevision)
+        assertEquals(SavedProgressionMethod.MANUAL,sessionReview.method)
+        when(val projection=sessionReview.projection){
+            is CustomBasicHistoryResult.Reviewed->{
+                assertEquals(BasicProgressionDecision.MANUAL_REPEAT,projection.candidate.decision)
+                assertTrue(projection.candidate.increasedOrdinals.isEmpty())
+                assertFalse(projection.maySaveProgram)
+            }
+            is CustomBasicHistoryResult.ManualBodyweight->assertEquals(selected.slotId,projection.slotId)
+            else->fail("Expected actual manual evaluator result, got $projection")
+        }
+        assertNull(Disk().sessionBasic.reviewSession("foreign",id,pending.setKey,n("5")))
         assertEquals(journal,(Disk().journals.open(owner,id) as NativeCustomJournalResult.Durable).issued.journal)
         assertEquals(cycle,(Disk().drafts.read(owner,cycleId) as NativeCustomDraftReadResult.Found).draft)
         assertEquals(originalConsent,Disk().consent.read(owner,cycleId,inputs))
@@ -1588,8 +1606,12 @@ class NativeKotlinGeneratedProgramJourneyTest {
         completeBasicOrManualWeek(manual=false,exceptional=true)
     }
 
+    @Test fun durableSessionDoubleAndDynamicUseDifferentNumbersFromSameVerifiedHistory() =
+        completeBasicOrManualWeek(false,sessionMethodComparison=true)
+
     private fun completeBasicOrManualWeek(manual:Boolean,correctBeforeApproval:Boolean=false,
-        repMethod:SavedProgressionMethod?=null,exceptional:Boolean=false) {
+        repMethod:SavedProgressionMethod?=null,exceptional:Boolean=false,
+        sessionMethodComparison:Boolean=false) {
         require(!exceptional || !manual && !correctBeforeApproval && repMethod==null)
         require(repMethod==null || repMethod in setOf(SavedProgressionMethod.REP_TARGETS,
             SavedProgressionMethod.LADDER,SavedProgressionMethod.BODYWEIGHT_REPS,
@@ -1617,14 +1639,14 @@ class NativeKotlinGeneratedProgramJourneyTest {
                         val load = it.load as? DraftSetLoad.Verified
                         load?.basis == LoadBasis.DUMBBELL_PER_HAND &&
                             it.amplifier == null &&
-                            (!(correctBeforeApproval || repMethod!=null) ||
+                            (!(correctBeforeApproval || repMethod!=null || sessionMethodComparison) ||
                                 it.reps.minimum<it.reps.maximum)
-                    } && (!(correctBeforeApproval || repMethod!=null) ||
+                    } && (!(correctBeforeApproval || repMethod!=null || sessionMethodComparison) ||
                         work.map{it.load}.distinct().size==1 &&
                         work.map{it.reps}.distinct().size==1)
                 }
         }
-        val cycle=if(!manual && !correctBeforeApproval && repMethod==null)base else {
+        val cycle=if(!manual && !correctBeforeApproval && repMethod==null && !sessionMethodComparison)base else {
             val block=base.blocks.single()
             val changed=base.copy(revision=base.revision+1,blocks=listOf(block.copy(
                 days=block.days.map{day->if(day.weekday!=firstDay.weekday)day else
@@ -1653,12 +1675,15 @@ class NativeKotlinGeneratedProgramJourneyTest {
                 1, day.weekday, inputs) as NativeCustomJournalResult.Durable).issued.journal
             val immutable = journal.snapshot
             var exceptionalOrdinal=0
+            var earnedOrdinal=0
             for ((setIndex, set) in immutable.slots.flatMap { it.sets }.withIndex()) {
                 val prescription = set.prescription
                 val earned = day.weekday == firstDay.weekday &&
                     set.slotId == selected.slotId &&
                     prescription.type == DraftSetType.WORKING
-                val performedReps = if (earned && repMethod!=SavedProgressionMethod.LINEAR)
+                val performedReps = if (earned && sessionMethodComparison)
+                    if(earnedOrdinal++==0)prescription.reps.maximum else prescription.reps.minimum
+                    else if (earned && repMethod!=SavedProgressionMethod.LINEAR)
                     prescription.exactRepTarget ?: prescription.reps.maximum
                     else prescription.exactRepTarget ?: prescription.reps.minimum
                 val performed = when (val load = prescription.load) {
@@ -1712,6 +1737,56 @@ class NativeKotlinGeneratedProgramJourneyTest {
             2, firstDay.weekday, selected.slotId, "earned-basic-future",
             if(unloaded)BigDecimal.ZERO else n("5")) as NativeCustomBasicNextReadResult.Reviewed
         assertEquals(cycle.revision, review.next.stamp.cycleRevision)
+        if(sessionMethodComparison) {
+            val id="session-method-w2"
+            val expected=review.next.slots.single{it.slotId==selected.slotId}.sets
+                .filter{it.prescription.type==DraftSetType.WORKING}
+            val originalLoads=expected.map{(it.prescription.load as DraftSetLoad.Verified).value}
+            val held=review.projection as CustomBasicHistoryResult.Reviewed
+            assertEquals(BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,held.candidate.strategy)
+            assertEquals(originalLoads,held.candidate.proposedWorkingLoads)
+            assertTrue(held.candidate.increasedOrdinals.isEmpty())
+            assertTrue(Disk().prepared.prepare(owner,id,cycleId,2,firstDay.weekday,inputs)
+                is NativeCustomPrepareResult.Prepared)
+            var journal=(Disk().journals.issue(owner,id,cycleId,2,firstDay.weekday,inputs)
+                as NativeCustomJournalResult.Durable).issued.journal
+            val frozen=journal.snapshot
+            val savedConsent=Disk().consent.read(owner,cycleId,inputs)
+            val savedHistory=Disk().timeline.read(owner,athlete)
+            fun choose(method:SavedProgressionMethod) {
+                assertTrue(method in MidSessionWorkingEditDomain.availableCustomProgressionMethods(
+                    journal,cycle,id,journal.revision,selected.slotId))
+                val request=MidSessionWorkingEdit(id,journal.revision,selected.slotId,expected.size,
+                    progressionMethod=method)
+                journal=(Disk().journals.adjustRemaining(owner,id,
+                    CustomWorkoutJournalOperation.AdjustRemaining("choice-${journal.revision}",journal.revision,request),true)
+                    as NativeCustomJournalResult.Durable).issued.journal
+            }
+            fun projection():BasicProgressionResult.Candidate {
+                val cold=Disk()
+                val actual=checkNotNull(cold.sessionBasic.reviewSession(owner,id,expected.first().setKey,n("5")))
+                assertEquals(journal.revision,actual.journalRevision)
+                assertEquals(journal.sessionProgressionChoices[selected.slotId],actual.method)
+                assertEquals(frozen,(cold.journals.open(owner,id) as NativeCustomJournalResult.Durable).issued.journal.snapshot)
+                assertEquals(cycle,(cold.drafts.read(owner,cycleId) as NativeCustomDraftReadResult.Found).draft)
+                assertEquals(savedConsent,cold.consent.read(owner,cycleId,inputs))
+                assertEquals(savedHistory,cold.timeline.read(owner,athlete))
+                return (actual.projection as CustomBasicHistoryResult.Reviewed).candidate
+            }
+            choose(SavedProgressionMethod.DYNAMIC)
+            val dynamic=projection()
+            assertEquals(BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION,dynamic.strategy)
+            assertEquals(setOf(0),dynamic.increasedOrdinals)
+            assertTrue(dynamic.proposedWorkingLoads.first()>originalLoads.first())
+            assertEquals(originalLoads.drop(1),dynamic.proposedWorkingLoads.drop(1))
+            choose(SavedProgressionMethod.DOUBLE)
+            val double=projection()
+            assertEquals(BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,double.strategy)
+            assertEquals(originalLoads,double.proposedWorkingLoads)
+            assertTrue(double.increasedOrdinals.isEmpty())
+            assertTrue(journal.effectiveVisits.isEmpty())
+            return
+        }
         if(exceptional) {
             val refusal=review.projection as CustomBasicHistoryResult.Rejected
             assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,refusal.reason)

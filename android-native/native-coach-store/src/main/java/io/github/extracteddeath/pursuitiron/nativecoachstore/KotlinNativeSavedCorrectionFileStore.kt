@@ -111,7 +111,8 @@ internal object SavedCorrectionBinary {
             // Legacy journals keep identical fingerprints. Replacement
             // journals must also bind their immutable pre-swap issuance.
             if(journal.receipts.any{
-                it.operation is KotlinJournalOperation.SwapExercise
+                it.operation is KotlinJournalOperation.SwapExercise ||
+                    it.operation is KotlinJournalOperation.AdjustRemaining
             }){
                 val original=KotlinIssuedSnapshotCodec.encode(
                     journal.originalSnapshot)
@@ -145,6 +146,14 @@ internal object SavedCorrectionBinary {
                     is KotlinJournalOperation.UndoSwap -> {
                         out.writeByte(4)
                         out.writeUTF(operation.swapEventId)
+                    }
+                    is KotlinJournalOperation.AdjustRemaining -> {
+                        out.writeByte(6)
+                        NativeMidSessionWorkingEditCodec.write(out,operation.request)
+                    }
+                    is KotlinJournalOperation.UndoAdjustment -> {
+                        out.writeByte(7)
+                        out.writeUTF(operation.adjustmentEventId)
                     }
                     is KotlinJournalOperation.SessionNote -> {
                         // Bind correction history to the exact original text

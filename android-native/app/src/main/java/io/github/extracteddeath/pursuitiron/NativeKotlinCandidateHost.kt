@@ -4281,6 +4281,31 @@ internal class NativeKotlinCandidateHost(context:Context) {
         athleteConfirmed:Boolean):NativeCustomJournalResult {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.NOT_AUTHORIZED)
+        // Warm-up edits reuse an exact issued target, not an independently
+        // calibrated new station. Check the durable session choice inside
+        // the same owner fence used by the journal approval and station writes.
+        if(operation is CustomWorkoutJournalOperation.AdjustRemaining &&
+            operation.request.warmupChange!=null) {
+            fun unavailable()=NativeCustomJournalResult.Rejected(
+                NativeCustomJournalRefusal.SWAP_SOURCE_UNAVAILABLE)
+            return runCatching { revisionFence.withOwnerTransaction(owner.ownerKey) {
+                if(localAthlete.signedInIdentity()!=owner)
+                    return@withOwnerTransaction unavailable()
+                val journal=(customIssuedStore.open(owner.ownerKey,workoutId)
+                    as? NativeCustomJournalResult.Durable)?.issued?.journal
+                    ?:return@withOwnerTransaction unavailable()
+                val slot=journal.snapshot.slots.singleOrNull{
+                    it.slotId==operation.request.occurrenceId
+                }?:return@withOwnerTransaction unavailable()
+                val gym=journal.originalSnapshot.stamp.gymId
+                val choices=(workoutMachineChoices.read(owner.ownerKey,workoutId,true,gym)
+                    as? NativeWorkoutMachineChoiceResult.Saved)?.snapshot
+                    ?:return@withOwnerTransaction unavailable()
+                if(choices.revision<=0 || choices.machines[slot.exerciseId]!=slot.machineInstanceId)
+                    return@withOwnerTransaction unavailable()
+                customIssuedStore.adjustRemaining(owner.ownerKey,workoutId,operation,athleteConfirmed)
+            }}.getOrElse{unavailable()}
+        }
         return customIssuedStore.adjustRemaining(owner.ownerKey,workoutId,operation,athleteConfirmed)
     }
 

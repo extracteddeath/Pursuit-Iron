@@ -12,9 +12,10 @@ object CoachExerciseChoiceSearchDomain {
     fun tokens(query:String):List<String> = normalize(query.trim().take(80))
         .split(Regex("\\s+")).filter{it.isNotBlank()}
 
-    fun matches(tokens:List<String>,fields:()->List<String>):Boolean {
+    fun matches(tokens:List<String>,exerciseId:String?=null,fields:()->List<String>):Boolean {
         if(tokens.isEmpty())return true
-        val searchable=normalize(fields().joinToString(" "))
+        val searchable=normalize((fields()+exerciseId?.let(
+            HistoricalExerciseIdentityDomain::searchAliases).orEmpty()).joinToString(" "))
         return tokens.all{searchable.contains(it)}
     }
 
@@ -23,7 +24,7 @@ object CoachExerciseChoiceSearchDomain {
     ):List<String> {
         val terms=tokens(query)
         return approved.distinct().filter {id->
-            matches(terms){listOf(label(id),id)}
+            matches(terms,id){listOf(label(id),id)}
         }
     }
 }

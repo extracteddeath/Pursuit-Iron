@@ -27,7 +27,7 @@ object KotlinComposerSwapRankingDomain {
      */
     private fun matchesSearch(
         option:ComposerExerciseOption,terms:List<String>,displayLabel:String?=null
-    ):Boolean = CoachExerciseChoiceSearchDomain.matches(terms){
+    ):Boolean = CoachExerciseChoiceSearchDomain.matches(terms,option.exerciseId){
         listOfNotNull(option.exerciseId,option.pattern.name,
             option.role.name,displayLabel) +
             option.credits.filter{it.fractionalSet.signum()>0}.map{it.muscle.name}

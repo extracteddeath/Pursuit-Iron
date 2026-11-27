@@ -174,6 +174,38 @@ class NativeKotlinTrackedWorkoutGateway(
             expectedRevision,exerciseId)
     }
 
+    private fun concernCredits(owner:String,athlete:String,journal:KotlinWorkoutJournalState):
+        Map<String,List<DeclaredMuscleCredit>>? {
+        val approval=ownerAuthority.currentApprovedWorkout(owner,journal.snapshot.workoutId)
+            ?:return null
+        if(approval.athleteId!=athlete || approval.approvedSource!=journal.originalSnapshot.source ||
+            approval.currentSource!=approval.approvedSource)return null
+        val exercises=approval.program.exercises
+        if(exercises.map{it.exerciseId}.distinct().size!=exercises.size)return null
+        return exercises.associate{it.exerciseId to it.credits}
+    }
+
+    fun reviewMuscleConcerns(owner:String,athlete:String,workoutId:String):
+        List<WorkoutConcernReview<String>> = fenced(owner,athlete,emptyList()) {
+        if(!verifyHistory(owner,athlete))return@fenced emptyList()
+        val opened=workout.open(owner,workoutId) as? NativeJournalFileResult.Durable
+            ?:return@fenced emptyList()
+        if(!authorized(owner,athlete,opened.journal))return@fenced emptyList()
+        val credits=concernCredits(owner,athlete,opened.journal)?:return@fenced emptyList()
+        WorkoutRemainingExerciseDomain.generatedConcerns(opened.journal,credits)
+    }
+
+    fun applyMuscleConcern(owner:String,athlete:String,workoutId:String,
+        shown:WorkoutConcernReview<String>):NativeJournalFileResult = fenced(owner,athlete,unavailable()) {
+        if(!verifyHistory(owner,athlete))return@fenced unavailable()
+        val opened=workout.open(owner,workoutId) as? NativeJournalFileResult.Durable
+            ?:return@fenced unavailable()
+        if(!authorized(owner,athlete,opened.journal))return@fenced unavailable()
+        val credits=concernCredits(owner,athlete,opened.journal)?:return@fenced unavailable()
+        // The store rederives the exact selection again under its journal lock.
+        workout.applyMuscleConcern(owner,athlete,workoutId,shown,credits)
+    }
+
     /**
      * Replace an unstarted Composer exercise only after verified History,
      * current athlete access, and full source-based target review.

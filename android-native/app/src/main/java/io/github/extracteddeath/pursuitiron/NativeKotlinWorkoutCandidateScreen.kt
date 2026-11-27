@@ -218,6 +218,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     var pendingConcern by remember(workoutId) {
         mutableStateOf<NativeMovementConcernRequest?>(null)
     }
+    var muscleConcernRevision by remember(workoutId){mutableStateOf<Long?>(null)}
     var pendingFail by remember(workoutId) {
         mutableStateOf<Pair<String,KotlinPerformedSet>?>(null)
     }
@@ -1344,8 +1345,18 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                     pendingConcern=null
                     reviewSwap(candidate)
                 }
-            },onDismiss={pendingConcern=null}
+            },onDismiss={pendingConcern=null},
+            onReviewMuscles={
+                pendingConcern=null
+                muscleConcernRevision=request.journalRevision
+            }
         )
+    }
+    muscleConcernRevision?.let{revision->
+        NativeKotlinMuscleConcernDialog(workoutId,revision,journal?.revision,state.busy,
+            load={host.reviewGeneratedMuscleConcerns(workoutId)},
+            onConfirm={shown->muscleConcernRevision=null;controller.applyMuscleConcern(shown)},
+            onDismiss={muscleConcernRevision=null})
     }
     pendingExerciseSkip?.let {request->
         val review=journal?.let {

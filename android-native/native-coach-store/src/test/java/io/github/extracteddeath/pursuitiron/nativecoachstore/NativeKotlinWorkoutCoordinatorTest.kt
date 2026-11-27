@@ -96,6 +96,86 @@ class NativeKotlinWorkoutCoordinatorTest {
         return result as NativeJournalFileResult.Durable
     }
 
+    @Test fun muscleReviewReducesOnlyIssuedAffectedTailAndPreservesActualsAcrossColdFinish() {
+        val auth=FakeAuthority(approval())
+        val root=temporary.root.toPath()
+        fun journals()=KotlinNativeJournalFileStore(root)
+        fun ledger()=NativeKotlinHistoryManifestFileStore(root)
+        fun corrections()=KotlinNativeSavedCorrectionFileStore(root,journals())
+        fun transactions()=NativeKotlinHistoryTransactionCoordinator(
+            ledger(),journals(),corrections(),auth,fence())
+        fun gateway()=NativeKotlinTrackedWorkoutGateway(
+            coordinator(auth),transactions(),ledger(),corrections(),auth,fence())
+        assertTrue(transactions().enroll("owner-1","athlete-1"){o,a->
+            o=="owner-1" && a=="athlete-1"
+        } is NativeHistoryTransactionResult.Durable)
+        val initial=issued(gateway().issue("owner-1","athlete-1","session-1")).journal
+        fun cold()=durable(gateway().open("owner-1","athlete-1","session-1")).journal
+        val working=initial.snapshot.targets.filter{
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }
+        assertTrue(working.size>=2)
+        val warmup=initial.snapshot.targets.first{it.exerciseId=="db-press" && it.type==DraftSetType.WARMUP}
+        val recorded=working.first()
+        // Record an actual in the retained half; the tail must still be skipped.
+        val late=KotlinJournalOperation.RecordSet("late",0,recorded.setKey,
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet((recorded.load as DraftSetLoad.Verified).value,LoadUnit.LB,3,0))
+        val saved=durable(gateway().append("owner-1","athlete-1","session-1",late)).journal
+        val shown=gateway().reviewMuscleConcerns("owner-1","athlete-1","session-1")
+            .single{it.muscle==TrainingMuscle.CHEST && it.action==WorkoutConcernAction.SKIP}
+        assertEquals(initial.snapshot.targets.filter{it.exerciseId=="db-press" &&
+            it.setKey!=recorded.setKey}.map{it.setKey},shown.entries)
+        assertTrue(shown.entries.contains(warmup.setKey))
+        assertEquals(1,shown.groups.single().recordedCount)
+        assertTrue(gateway().applyMuscleConcern("owner-1","athlete-1","session-1",
+            shown.copy(groups=shown.groups.map{it.copy(entries=it.entries.dropLast(1))}))
+            is NativeJournalFileResult.Rejected)
+        auth.approved=approval().copy(currentSource=source.copy(gymRevision=source.gymRevision+1))
+        assertTrue(gateway().reviewMuscleConcerns("owner-1","athlete-1","session-1").isEmpty())
+        assertTrue(gateway().applyMuscleConcern("owner-1","athlete-1","session-1",shown)
+            is NativeJournalFileResult.Rejected)
+        auth.approved=approval()
+        assertEquals(saved,cold())
+        val kept=working.take((working.size+1)/2)
+        val expectedTail=(if(kept.size==1)listOf(warmup.setKey) else emptyList())+
+            working.drop(kept.size).map{it.setKey}
+        assertTrue(expectedTail.isNotEmpty())
+        val reduce=gateway().reviewMuscleConcerns("owner-1","athlete-1","session-1")
+            .single{it.muscle==TrainingMuscle.CHEST && it.action==WorkoutConcernAction.REDUCE}
+        assertEquals(expectedTail,reduce.entries)
+        var current=durable(gateway().applyMuscleConcern("owner-1","athlete-1","session-1",reduce)).journal
+        assertEquals(current,cold())
+        assertEquals(expectedTail.toSet()+recorded.setKey,current.effectiveSets.keys)
+        assertTrue(gateway().applyMuscleConcern("owner-1","athlete-1","session-1",reduce)
+            is NativeJournalFileResult.Rejected)
+        assertTrue(gateway().reviewMuscleConcerns("owner-1","athlete-1","session-1").none{
+            it.muscle==TrainingMuscle.CHEST && it.action==WorkoutConcernAction.REDUCE
+        })
+        val latest=gateway().reviewMuscleConcerns("owner-1","athlete-1","session-1")
+            .singleOrNull{it.muscle==TrainingMuscle.CHEST && it.action==WorkoutConcernAction.SKIP}
+        if(latest!=null)current=durable(gateway().applyMuscleConcern("owner-1","athlete-1","session-1",latest)).journal
+        assertTrue(initial.snapshot.targets.filter{it.exerciseId=="db-press"}.all{it.setKey in current.effectiveSets})
+        assertEquals(saved.effectiveSets[recorded.setKey],current.effectiveSets[recorded.setKey])
+        assertEquals(initial.snapshot,current.snapshot)
+        assertEquals(initial.snapshot,current.originalSnapshot)
+        assertTrue(current.effectiveSets.keys.all{key->
+            initial.snapshot.targets.single{it.setKey==key}.exerciseId=="db-press"
+        })
+        assertEquals(current,cold())
+        for(target in initial.snapshot.targets.filter{it.setKey !in current.effectiveSets}) {
+            current=durable(gateway().append("owner-1","athlete-1","session-1",
+                KotlinJournalOperation.RecordSet("rest-"+target.setKey.replace(':','-').takeLast(60),
+                    current.revision,target.setKey,KotlinJournalSetOutcome.SKIPPED,null))).journal
+        }
+        assertTrue(current.canProposeFinish)
+        val finish=KotlinJournalOperation.Finish("muscle-finish",current.revision)
+        val done=durable(gateway().append("owner-1","athlete-1","session-1",finish))
+        assertEquals(done.journal,cold())
+        assertEquals(1,(ledger().open("owner-1","athlete-1") as NativeHistoryLedgerResult.Durable).ledger.completions.size)
+        assertTrue(gateway().reviewMuscleConcerns("owner-1","athlete-1","session-1").isEmpty())
+    }
+
     @Test fun approvedFullWeekStagesAndAtomicallyIssuesRealKotlinSession() {
         val auth=FakeAuthority(approval())
         val service=coordinator(auth)

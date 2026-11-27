@@ -27,6 +27,11 @@ sealed interface KotlinFreestyleOperation {
         val slotId:String,val setKey:String,val type:DraftSetType,
         val outcome:KotlinJournalSetOutcome,val actual:KotlinPerformedSet?,
         val correctsEventId:String?=null):KotlinFreestyleOperation
+    /** Explicit post-Finish replacement of an existing factual record. */
+    data class CorrectSaved(val record:Record):KotlinFreestyleOperation {
+        override val eventId:String get()=record.eventId
+        override val expectedRevision:Long get()=record.expectedRevision
+    }
     data class Finish(override val eventId:String,override val expectedRevision:Long):
         KotlinFreestyleOperation
 }
@@ -38,6 +43,9 @@ data class KotlinFreestyleWorkout(
     val effectiveSets:Map<String,KotlinFreestyleOperation.Record>,
     val finishedByEventId:String?
 ) {
+    val originalFinishRevision:Long? get()=
+        receipts.firstOrNull{it.operation is KotlinFreestyleOperation.Finish}?.revision
+    val savedCorrectionRevision:Long get()=originalFinishRevision?.let{revision-it}?:0
     val mayPublishHistory:Boolean get()=false
     val mayChangeProgram:Boolean get()=false
 }
@@ -125,16 +133,19 @@ object KotlinFreestyleWorkoutDomain {
         if(old!=null)return if(old.operation==op)KotlinFreestyleDecision.Proposed(prior,true)
             else reject(KotlinFreestyleRefusal.EVENT_COLLISION)
         if(prior.revision!=op.expectedRevision)return reject(KotlinFreestyleRefusal.STALE_REVISION)
-        if(prior.finishedByEventId!=null)return reject(KotlinFreestyleRefusal.FINISHED)
+        val saved=op is KotlinFreestyleOperation.CorrectSaved
+        if((prior.finishedByEventId!=null)!=saved)
+            return reject(if(saved)KotlinFreestyleRefusal.INVALID_CORRECTION else KotlinFreestyleRefusal.FINISHED)
+        if(saved && prior.savedCorrectionRevision>=512)return reject(KotlinFreestyleRefusal.LIMIT)
         // Reserve room for Finish even when the athlete has exhausted edits.
         if(prior.receipts.size>=KotlinWorkoutJournalDomain.MAX_RECEIPTS ||
-            (prior.receipts.size>=KotlinWorkoutJournalDomain.EDIT_LIMIT &&
+            (!saved && prior.receipts.size>=KotlinWorkoutJournalDomain.EDIT_LIMIT &&
                 op !is KotlinFreestyleOperation.Finish &&
                 !(op is KotlinFreestyleOperation.Record && op.setKey !in prior.effectiveSets)))
             return reject(KotlinFreestyleRefusal.LIMIT)
         var exercises=prior.exercises
         var sets=prior.effectiveSets
-        var finish:String?=null
+        var finish=prior.finishedByEventId
         when(op) {
             is KotlinFreestyleOperation.Add -> {
                 if(!validExercise(op.exercise) || exercises.any{it.slotId==op.exercise.slotId})
@@ -150,20 +161,22 @@ object KotlinFreestyleWorkoutDomain {
                     return reject(KotlinFreestyleRefusal.INVALID_ORDER)
                 exercises=Collections.unmodifiableList(op.slotIds.map(byId::getValue))
             }
-            is KotlinFreestyleOperation.Record -> {
-                val exercise=exercises.singleOrNull{it.slotId==op.slotId}
+            is KotlinFreestyleOperation.Record, is KotlinFreestyleOperation.CorrectSaved -> {
+                val record=if(op is KotlinFreestyleOperation.CorrectSaved)op.record
+                    else op as KotlinFreestyleOperation.Record
+                val exercise=exercises.singleOrNull{it.slotId==record.slotId}
                     ?:return reject(KotlinFreestyleRefusal.UNKNOWN_SLOT)
-                if(!id.matches(op.setKey) ||
-                    KotlinSetNumberAuthorityDomain.actualRefusal(exercise.unit,op.outcome,op.actual)!=null)
+                if(!id.matches(record.setKey) ||
+                    KotlinSetNumberAuthorityDomain.actualRefusal(exercise.unit,record.outcome,record.actual)!=null)
                     return reject(KotlinFreestyleRefusal.INVALID_SET)
-                val previous=sets[op.setKey]
+                val previous=sets[record.setKey]
                 if(previous==null) {
-                    if(op.correctsEventId!=null)return reject(KotlinFreestyleRefusal.INVALID_CORRECTION)
-                    if(sets.size>=MAX_SETS || sets.values.count{it.slotId==op.slotId}>=MAX_SETS_PER_SLOT)
+                    if(saved || record.correctsEventId!=null)return reject(KotlinFreestyleRefusal.INVALID_CORRECTION)
+                    if(sets.size>=MAX_SETS || sets.values.count{it.slotId==record.slotId}>=MAX_SETS_PER_SLOT)
                         return reject(KotlinFreestyleRefusal.LIMIT)
-                } else if(previous.eventId!=op.correctsEventId || previous.slotId!=op.slotId ||
-                    previous.type!=op.type)return reject(KotlinFreestyleRefusal.INVALID_CORRECTION)
-                sets=Collections.unmodifiableMap(LinkedHashMap(sets).apply{put(op.setKey,op)})
+                } else if(previous.eventId!=record.correctsEventId || previous.slotId!=record.slotId ||
+                    previous.type!=record.type)return reject(KotlinFreestyleRefusal.INVALID_CORRECTION)
+                sets=Collections.unmodifiableMap(LinkedHashMap(sets).apply{put(record.setKey,record)})
             }
             is KotlinFreestyleOperation.Finish -> {
                 // No unperformed planned rows to resolve. A fully empty or
@@ -189,6 +202,14 @@ object KotlinFreestyleWorkoutDomain {
             state=next.workout
         }
         return state
+    }
+
+    /** Exact immutable Finish prefix; later corrections never change its digest. */
+    fun originalFinished(workout:KotlinFreestyleWorkout):KotlinFreestyleWorkout? {
+        val revision=workout.originalFinishRevision?:return null
+        if(revision !in 1..workout.receipts.size.toLong())return null
+        return replay(workout.workoutId,workout.source,workout.receipts.take(revision.toInt()))
+            ?.takeIf{it.finishedByEventId==workout.finishedByEventId}
     }
 
     /** Save only reusable shape; no old facts, machine IDs, loads, RIR,

@@ -115,7 +115,8 @@ class NativeFreestyleWorkoutFileStore(
         require(workout.finishedByEventId!=null)
         val digest=MessageDigest.getInstance("SHA-256")
         digest.update("pursuit-freestyle-finish-v1".toByteArray(Charsets.UTF_8))
-        digest.update(NativeFreestyleWorkoutCodec.encode(owner,workout))
+        val original=checkNotNull(KotlinFreestyleWorkoutDomain.originalFinished(workout))
+        digest.update(NativeFreestyleWorkoutCodec.encode(owner,original))
         return "freestyle-v1-"+digest.digest().joinToString(""){"%02x".format(it.toInt() and 255)}
     }
     private fun ledger(owner:NativeKotlinOwnerIdentity):NativeHistoryLedger? =
@@ -127,7 +128,8 @@ class NativeFreestyleWorkoutFileStore(
         val saved=read(owner.ownerKey,owner.athleteId,entry.workoutId)
         val state=(saved as? NativeFreestyleResult.Durable)?.workout?:return saved
         if(state.finishedByEventId!=entry.finishEventId ||
-            state.revision!=entry.originalJournalRevision || entry.savedCorrectionRevision!=0L ||
+            state.originalFinishRevision!=entry.originalJournalRevision ||
+            state.savedCorrectionRevision!=entry.savedCorrectionRevision ||
             finishReceipt(owner.ownerKey,state)!=entry.storedReceiptId)
             return reject(NativeFreestyleRefusal.FINISH_MISMATCH)
         return NativeFreestyleResult.Durable(state,replayed)
@@ -218,11 +220,77 @@ class NativeFreestyleWorkoutFileStore(
         replayFinish(current,prepared.ledger)
     }
 
+    private fun replayCorrection(owner:NativeKotlinOwnerIdentity,manifest:NativeHistoryLedger):NativeFreestyleResult {
+        val intent=manifest.pending as? NativeHistoryWriteIntent.FreestyleCorrect
+            ?:return reject(NativeFreestyleRefusal.HISTORY_NOT_READY)
+        val entry=manifest.completions.singleOrNull{it.workoutId==intent.workoutId &&
+            it.storedReceiptId.startsWith("freestyle-v1-")}
+            ?:return reject(NativeFreestyleRefusal.FINISH_MISMATCH)
+        val opened=read(owner.ownerKey,owner.athleteId,entry.workoutId)
+        val state=(opened as? NativeFreestyleResult.Durable)?.workout?:return opened
+        if(state.finishedByEventId!=entry.finishEventId ||
+            state.originalFinishRevision!=entry.originalJournalRevision ||
+            finishReceipt(owner.ownerKey,state)!=entry.storedReceiptId)
+            return reject(NativeFreestyleRefusal.FINISH_MISMATCH)
+        if(state.savedCorrectionRevision !in entry.savedCorrectionRevision..entry.savedCorrectionRevision+1)
+            return reject(NativeFreestyleRefusal.FINISH_MISMATCH)
+        val next=KotlinFreestyleWorkoutDomain.reduce(state,intent.operation)
+            as? KotlinFreestyleDecision.Proposed?:return reject(NativeFreestyleRefusal.FINISH_MISMATCH)
+        if(next.workout.savedCorrectionRevision!=entry.savedCorrectionRevision+1 ||
+            next.workout.receipts.lastOrNull()?.operation!=intent.operation)
+            return reject(NativeFreestyleRefusal.FINISH_MISMATCH)
+        if(!next.replayed) {
+            val written=save(owner,next.workout)
+            if(written !is NativeFreestyleResult.Durable)return written
+        }
+        if(identity.signedInIdentity()!=owner)return reject(NativeFreestyleRefusal.NOT_AUTHORIZED)
+        val resolved=entry.copy(savedCorrectionRevision=entry.savedCorrectionRevision+1)
+        val finalized=history.finalize(owner.ownerKey,owner.athleteId,intent,resolved)
+            as? NativeHistoryLedgerResult.Durable?:return reject(NativeFreestyleRefusal.HISTORY_NOT_READY)
+        if(finalized.ledger.pending!=null ||
+            finalized.ledger.completions.singleOrNull{it.workoutId==entry.workoutId}!=resolved)
+            return reject(NativeFreestyleRefusal.HISTORY_NOT_READY)
+        return committed(owner,resolved,next.replayed)
+    }
+
+    /** Explicit correction, not re-Finish. Original receipt and completion
+     * ordinal/time remain immutable; pending redo hides stale History. */
+    fun correctFinished(owner:String,workout:String,operation:KotlinFreestyleOperation.CorrectSaved)
+        :NativeFreestyleResult=guarded(owner,workout){current->
+        var manifest=ledger(current)?:return@guarded reject(NativeFreestyleRefusal.HISTORY_NOT_READY)
+        if(manifest.pending!=null) {
+            if(manifest.pending !is NativeHistoryWriteIntent.FreestyleCorrect)
+                return@guarded reject(NativeFreestyleRefusal.HISTORY_NOT_READY)
+            val recovered=replayCorrection(current,manifest)
+            if(recovered !is NativeFreestyleResult.Durable)return@guarded recovered
+            manifest=ledger(current)?:return@guarded reject(NativeFreestyleRefusal.HISTORY_NOT_READY)
+        }
+        val entry=manifest.completions.singleOrNull{it.workoutId==workout &&
+            it.storedReceiptId.startsWith("freestyle-v1-")}
+            ?:return@guarded reject(NativeFreestyleRefusal.FINISH_MISMATCH)
+        val opened=committed(current,entry,true)
+        val prior=(opened as? NativeFreestyleResult.Durable)?.workout?:return@guarded opened
+        val decision=KotlinFreestyleWorkoutDomain.reduce(prior,operation)
+        if(decision is KotlinFreestyleDecision.Rejected)
+            return@guarded NativeFreestyleResult.Rejected(NativeFreestyleRefusal.INVALID_RECEIPT,decision.reason)
+        decision as KotlinFreestyleDecision.Proposed
+        if(decision.replayed)return@guarded NativeFreestyleResult.Durable(prior,true)
+        NativeFreestyleWorkoutCodec.encode(owner,decision.workout)
+        val intent=NativeHistoryWriteIntent.FreestyleCorrect(workout,operation)
+        val prepared=history.prepare(owner,current.athleteId,manifest.revision,intent)
+            as? NativeHistoryLedgerResult.Durable?:return@guarded reject(NativeFreestyleRefusal.HISTORY_NOT_READY)
+        replayCorrection(current,prepared.ledger)
+    }
+
     fun recover(owner:String,workout:String):NativeFreestyleResult=guarded(owner,workout){current->
         val manifest=ledger(current)?:return@guarded reject(NativeFreestyleRefusal.HISTORY_NOT_READY)
         if(manifest.pending?.workoutId!=workout)
             return@guarded reject(NativeFreestyleRefusal.HISTORY_NOT_READY)
-        replayFinish(current,manifest)
+        when(manifest.pending) {
+            is NativeHistoryWriteIntent.FreestyleFinish ->replayFinish(current,manifest)
+            is NativeHistoryWriteIntent.FreestyleCorrect ->replayCorrection(current,manifest)
+            else ->reject(NativeFreestyleRefusal.HISTORY_NOT_READY)
+        }
     }
 
     private fun routinePath(owner:NativeKotlinOwnerIdentity):Path {
@@ -391,7 +459,7 @@ class NativeFreestyleWorkoutFileStore(
         guarded(owner,workout){current->
             val existing=read(owner,current.athleteId,workout)
             val old=(existing as? NativeFreestyleResult.Durable)?.workout?:return@guarded existing
-            if(operation is KotlinFreestyleOperation.Finish)
+            if(operation is KotlinFreestyleOperation.Finish || operation is KotlinFreestyleOperation.CorrectSaved)
                 return@guarded reject(NativeFreestyleRefusal.FINISH_REQUIRES_HISTORY)
             val result=KotlinFreestyleWorkoutDomain.reduce(old,operation)
             if(result is KotlinFreestyleDecision.Rejected)

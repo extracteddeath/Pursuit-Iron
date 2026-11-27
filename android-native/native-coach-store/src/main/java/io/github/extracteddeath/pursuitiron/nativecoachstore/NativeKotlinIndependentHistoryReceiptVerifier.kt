@@ -87,6 +87,7 @@ class NativeKotlinIndependentHistoryReceiptVerifier(
                     // Typed seconds/distance/side receipts must never be
                     // forged by the Composer/custom independent verifier.
                     // The measured ledger verifier is a separate typed gate.
+                    is NativeHistoryWriteIntent.FreestyleCorrect,
                     is NativeHistoryWriteIntent.FreestyleFinish,
                     is NativeHistoryWriteIntent.MeasuredFinish ->
                         deny(NativeIndependentReceiptRefusal.JOURNAL_NOT_VERIFIED)

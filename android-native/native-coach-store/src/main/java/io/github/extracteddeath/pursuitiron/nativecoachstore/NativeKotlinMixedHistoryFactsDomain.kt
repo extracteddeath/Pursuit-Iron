@@ -154,8 +154,8 @@ object NativeKotlinMixedHistoryFactsDomain {
                         return reject(NativeMixedFactsRefusal.CROSS_ATHLETE)
                     if(workout.workoutId!=manifest.workoutId ||
                         workout.finishedByEventId!=manifest.finishEventId ||
-                        workout.revision!=manifest.originalJournalRevision ||
-                        manifest.savedCorrectionRevision!=0L ||
+                        workout.originalFinishRevision!=manifest.originalJournalRevision ||
+                        workout.savedCorrectionRevision!=manifest.savedCorrectionRevision ||
                         KotlinFreestyleWorkoutDomain.replay(workout.workoutId,workout.source,
                             workout.receipts)!=workout)
                         return reject(NativeMixedFactsRefusal.MANIFEST_MISMATCH)

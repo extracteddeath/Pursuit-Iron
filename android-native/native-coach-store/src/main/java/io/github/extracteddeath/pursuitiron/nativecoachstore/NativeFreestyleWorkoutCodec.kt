@@ -33,6 +33,7 @@ internal object NativeFreestyleWorkoutCodec {
             is KotlinFreestyleOperation.Reorder->2
             is KotlinFreestyleOperation.Record->3
             is KotlinFreestyleOperation.Finish->4
+            is KotlinFreestyleOperation.CorrectSaved->5
         })
         writeUTF(op.eventId);writeLong(op.expectedRevision)
         when(op) {
@@ -42,15 +43,22 @@ internal object NativeFreestyleWorkoutCodec {
                 strings(routineSetTypes.map{it.name})
             }
             is KotlinFreestyleOperation.Reorder->strings(op.slotIds)
-            is KotlinFreestyleOperation.Record->{
-                writeUTF(op.slotId);writeUTF(op.setKey);writeUTF(op.type.name)
-                writeUTF(op.outcome.name)
-                NativeCustomWorkoutJournalCodec.writeActual(this,op.actual)
-                optional(op.correctsEventId)
-            }
+            is KotlinFreestyleOperation.Record->writeRecord(op)
+            is KotlinFreestyleOperation.CorrectSaved->writeRecord(op.record)
             is KotlinFreestyleOperation.Finish->Unit
         }
     }
+    private fun DataOutputStream.writeRecord(op:KotlinFreestyleOperation.Record) {
+        writeUTF(op.slotId);writeUTF(op.setKey);writeUTF(op.type.name)
+        writeUTF(op.outcome.name)
+        NativeCustomWorkoutJournalCodec.writeActual(this,op.actual)
+        optional(op.correctsEventId)
+    }
+    private fun DataInputStream.readRecord(event:String,revision:Long)=
+        KotlinFreestyleOperation.Record(event,revision,readUTF(),readUTF(),
+            DraftSetType.valueOf(readUTF()),KotlinJournalSetOutcome.valueOf(readUTF()),
+            NativeCustomWorkoutJournalCodec.readActual(this),optional())
+
     private fun DataInputStream.operation():KotlinFreestyleOperation {
         val tag=readUnsignedByte();val event=readUTF();val revision=readLong()
         return when(tag) {
@@ -59,9 +67,8 @@ internal object NativeFreestyleWorkoutCodec {
                 optional()?.let{LoadUnit.valueOf(it)},optional()?.let{LoadBasis.valueOf(it)},
                 strings(20).map{DraftSetType.valueOf(it)}))
             2->KotlinFreestyleOperation.Reorder(event,revision,strings(32))
-            3->KotlinFreestyleOperation.Record(event,revision,readUTF(),readUTF(),
-                DraftSetType.valueOf(readUTF()),KotlinJournalSetOutcome.valueOf(readUTF()),
-                NativeCustomWorkoutJournalCodec.readActual(this),optional())
+            3->readRecord(event,revision)
+            5->KotlinFreestyleOperation.CorrectSaved(readRecord(event,revision))
             4->KotlinFreestyleOperation.Finish(event,revision)
             else->throw IOException("unknown freestyle receipt")
         }

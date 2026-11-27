@@ -1860,6 +1860,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val pending=(historyStore.open(signed.ownerKey,signed.athleteId)
             as? NativeHistoryLedgerResult.Durable)?.ledger?.pending
         when(pending) {
+            is NativeHistoryWriteIntent.FreestyleCorrect,
             is NativeHistoryWriteIntent.FreestyleFinish ->
                 freestyleStore.recover(signed.ownerKey,pending.workoutId)
             is NativeHistoryWriteIntent.MeasuredFinish ->

@@ -167,8 +167,8 @@ object NativeKotlinVerifiedHistoryCsvExport {
                     if(workout.source.athleteId!=history.athleteId ||
                         workout.workoutId!=manifest.workoutId ||
                         workout.finishedByEventId!=manifest.finishEventId ||
-                        workout.revision!=manifest.originalJournalRevision ||
-                        manifest.savedCorrectionRevision!=0L ||
+                        workout.originalFinishRevision!=manifest.originalJournalRevision ||
+                        workout.savedCorrectionRevision!=manifest.savedCorrectionRevision ||
                         KotlinFreestyleWorkoutDomain.replay(workout.workoutId,workout.source,
                             workout.receipts)!=workout)
                         return NativeKotlinHistoryCsvResult.InvalidHistory

@@ -68,6 +68,11 @@ sealed interface NativeHistoryWriteIntent {
         val completedAtEpochMillis:Long?=null
     ):NativeHistoryWriteIntent
 
+    data class FreestyleCorrect(
+        override val workoutId:String,
+        val operation:KotlinFreestyleOperation.CorrectSaved
+    ):NativeHistoryWriteIntent
+
     /** Durable post-Finish correction of one factual custom visit. */
     data class CustomCorrect(
         override val workoutId: String,
@@ -133,6 +138,7 @@ private object NativeHistoryLedgerBinary {
         when(intent) {
             is NativeHistoryWriteIntent.Correct -> intent.operation.actual
             is NativeHistoryWriteIntent.CustomCorrect -> intent.operation.performed
+            is NativeHistoryWriteIntent.FreestyleCorrect -> intent.operation.record.actual
             else -> null
         }
 
@@ -182,6 +188,16 @@ private object NativeHistoryLedgerBinary {
                     validId(intent.operation.eventId) &&
                     intent.operation.expectedRevision >= 0 &&
                     state.completions.none { it.workoutId == intent.workoutId }
+            )
+            is NativeHistoryWriteIntent.FreestyleCorrect -> require(
+                validId(intent.workoutId) && validId(intent.operation.eventId) &&
+                    validId(intent.operation.record.slotId) && validId(intent.operation.record.setKey) &&
+                    intent.operation.record.correctsEventId?.let(::validId)==true &&
+                    state.completions.any{
+                        it.workoutId==intent.workoutId && it.storedReceiptId.startsWith("freestyle-v1-") &&
+                            it.originalJournalRevision<=MAX_REV-it.savedCorrectionRevision &&
+                            it.originalJournalRevision+it.savedCorrectionRevision==intent.operation.expectedRevision
+                    }
             )
             is NativeHistoryWriteIntent.FreestyleFinish -> require(
                 KotlinHistoryCompletionTime.valid(intent.completedAtEpochMillis) &&
@@ -273,7 +289,8 @@ private object NativeHistoryLedgerBinary {
         val visit=(state.pending as? NativeHistoryWriteIntent.CustomCorrect)?.operation?.visit
         val needsExactRedo=actual?.machineInstanceId!=null ||
             (visit!=null && visit.stage!=1) || actual?.load?.toString()?.contains('E')==true
-        val freestyle=state.pending is NativeHistoryWriteIntent.FreestyleFinish ||
+        val freestyle=state.pending is NativeHistoryWriteIntent.FreestyleCorrect ||
+            state.pending is NativeHistoryWriteIntent.FreestyleFinish ||
             state.completions.any{it.storedReceiptId.startsWith("freestyle-")}
         val format=if(freestyle)6 else if(needsExactRedo)5 else if(measured)4 else if(dated)3 else 2
         val body = ByteArrayOutputStream()
@@ -306,6 +323,14 @@ private object NativeHistoryLedgerBinary {
                     out.writeUTF(intent.operation.eventId)
                     out.writeLong(intent.operation.expectedRevision)
                     if(format>=3)out.time(intent.completedAtEpochMillis)
+                }
+                is NativeHistoryWriteIntent.FreestyleCorrect -> {
+                    out.writeByte(7);out.writeUTF(intent.workoutId)
+                    val record=intent.operation.record
+                    out.writeUTF(record.eventId);out.writeLong(record.expectedRevision)
+                    out.writeUTF(record.slotId);out.writeUTF(record.setKey);out.writeUTF(record.type.name)
+                    out.writeUTF(record.outcome.name);out.writeUTF(checkNotNull(record.correctsEventId))
+                    out.actual(record.actual,format)
                 }
                 is NativeHistoryWriteIntent.FreestyleFinish -> {
                     out.writeByte(6)
@@ -451,6 +476,17 @@ private object NativeHistoryLedgerBinary {
                         if(format<6)throw IOException("freestyle Finish requires ledger v6")
                         NativeHistoryWriteIntent.FreestyleFinish(data.readUTF(),
                             KotlinFreestyleOperation.Finish(data.readUTF(),data.readLong()),data.time())
+                    }
+                    7 -> {
+                        if(format<6)throw IOException("freestyle correction requires ledger v6")
+                        val workout=data.readUTF();val event=data.readUTF();val revision=data.readLong()
+                        val slot=data.readUTF();val key=data.readUTF()
+                        val type=DraftSetType.valueOf(data.readUTF())
+                        val outcome=KotlinJournalSetOutcome.valueOf(data.readUTF())
+                        val predecessor=data.readUTF()
+                        NativeHistoryWriteIntent.FreestyleCorrect(workout,
+                            KotlinFreestyleOperation.CorrectSaved(KotlinFreestyleOperation.Record(
+                                event,revision,slot,key,type,outcome,data.actual(format),predecessor)))
                     }
                     else -> throw IOException("unknown intent kind")
                 }
@@ -631,6 +667,7 @@ class NativeKotlinHistoryManifestFileStore(private val directory: Path) {
             is NativeHistoryWriteIntent.MeasuredFinish,
             is NativeHistoryWriteIntent.FreestyleFinish -> true
             is NativeHistoryWriteIntent.Correct,
+            is NativeHistoryWriteIntent.FreestyleCorrect,
             is NativeHistoryWriteIntent.CustomCorrect -> false
         }
         if (old.revision >= NativeHistoryLedgerBinary.MAX_REV ||
@@ -690,6 +727,16 @@ class NativeKotlinHistoryManifestFileStore(private val directory: Path) {
                     return@transition NativeHistoryLedgerResult.Rejected(
                         NativeHistoryLedgerRefusal.INVALID_MANIFEST_TRANSITION)
                 old.completions + resolved
+            }
+            is NativeHistoryWriteIntent.FreestyleCorrect -> {
+                val entry=old.completions.singleOrNull{it.workoutId==intent.workoutId &&
+                    it.storedReceiptId.startsWith("freestyle-v1-")}
+                    ?:return@transition NativeHistoryLedgerResult.Rejected(
+                        NativeHistoryLedgerRefusal.INVALID_MANIFEST_TRANSITION)
+                if(resolved!=entry.copy(savedCorrectionRevision=entry.savedCorrectionRevision+1))
+                    return@transition NativeHistoryLedgerResult.Rejected(
+                        NativeHistoryLedgerRefusal.INVALID_MANIFEST_TRANSITION)
+                old.completions.map{if(it.workoutId==resolved.workoutId)resolved else it}
             }
             is NativeHistoryWriteIntent.FreestyleFinish -> {
                 val ordinal=old.completions.size.toLong()+1

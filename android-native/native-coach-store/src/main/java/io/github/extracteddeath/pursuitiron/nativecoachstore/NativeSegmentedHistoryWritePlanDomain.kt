@@ -86,6 +86,7 @@ object NativeSegmentedHistoryWritePlanDomain {
         id.matches(intent.workoutId) && when (intent) {
             // Refuse, do not misclassify as Composer/custom Finished facts.
             // Canonical History v4 is currently the only measured authority.
+            is NativeHistoryWriteIntent.FreestyleCorrect,
             is NativeHistoryWriteIntent.FreestyleFinish,
             is NativeHistoryWriteIntent.MeasuredFinish -> false
             is NativeHistoryWriteIntent.Finish ->

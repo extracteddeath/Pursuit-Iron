@@ -233,3 +233,13 @@ assert.match(launch, /startSession\(upNext\.day, upNext\.weekIndex, upNext\.prog
 assert.doesNotMatch(launch, /autoregulate|autoBias|distributeVolBias/);
 assert.doesNotMatch(source, /const volBiasFromHistory\s*=/);
 console.log('PASS pre-start authoritative set count: Plan, summary, preview, working rows and issued denominator agree.');
+
+// A skipped middle set is not a completed observation, and an already-issued
+// evaluator target at a verified same-exercise load must not be silently cut.
+const skippedMiddle = retainComparableWorkingTargets({action:'hold',weight:60,setTargets:[
+    {weight:60,reps:20},{weight:60,reps:20},{weight:55,reps:18}
+]},[{weight:60,reps:20},null,{weight:55,reps:18}],3,[15,25]);
+assert.deepEqual(skippedMiddle.setTargets.map(t=>t.weight),[60,60,55]);
+const missingFourth = retainComparableWorkingTargets(skippedMiddle,
+    [{weight:60,reps:20},null,{weight:55,reps:18}],4,[15,25]);
+assert.deepEqual(missingFourth.setTargets.map(t=>t.weight),[60,60,55,55]);

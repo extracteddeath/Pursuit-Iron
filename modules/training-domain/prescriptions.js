@@ -825,9 +825,13 @@ export function retainComparableWorkingTargets(suggestion, previous, count, rang
             && target?.earnedLoadIncrease === true && Number(target.previousLoad) === actual
             && Number(target.weight) > actual && Number(prior.reps) >= hi;
         if (earned) return target;
-        // A position without an observation has no earned increase. Use the
-        // lowest verified same-exercise reference, not the heaviest set.
-        const weight = actual ?? fallback;
+        // An unlogged position has no earned increase. Preserve a bounded
+        // existing evaluator target (e.g. a skipped middle working set),
+        // but do not fabricate a heavier target when the evaluator omitted it.
+        const proposed = Number(target?.weight);
+        const verifiedReference = target && !target.earnedLoadIncrease
+            && observed.some(row => Number(row.weight) === proposed);
+        const weight = actual ?? (verifiedReference ? proposed : fallback);
         if (target && Number(target.weight) === weight && !target.earnedLoadIncrease) return target;
         changed = true;
         const reps = Math.max(lo, Math.min(hi, Math.round(Number(target?.reps ?? prior?.reps) || lo)));

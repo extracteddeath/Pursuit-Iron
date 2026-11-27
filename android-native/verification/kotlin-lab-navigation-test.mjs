@@ -1044,5 +1044,7 @@ assert.ok(remainingEditUi.includes('currentRevision!=anchor.revision') &&
   liveWorkout.includes('MidSessionWorkingEditDomain.custom(it,request)') &&
   remainingEditHost.includes('trackedWorkout.adjustRemaining(') &&
   remainingEditHost.includes('customIssuedStore.adjustRemaining(') &&
-  liveJournalStore.includes('preflight.permitsRemainingEdit(ownerKey,existing.issued,operation.request)'),
+  liveJournalStore.includes('val census=inventory(ownerKey) as? NativeIssuedInventoryResult.Found') &&
+  liveJournalStore.includes('val all=census.workouts.map{it.journal}') &&
+  liveJournalStore.includes('preflight.permitsRemainingEdit(ownerKey,existing.issued,operation.request,all)'),
   'Remaining-work edits must use a revision-bound review and authenticated journal route, not direct UI mutation');

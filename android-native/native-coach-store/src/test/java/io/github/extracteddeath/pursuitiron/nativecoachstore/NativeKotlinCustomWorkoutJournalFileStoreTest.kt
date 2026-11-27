@@ -889,6 +889,14 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
             CustomWorkoutJournalOperation.AdjustRemaining(id,state.revision,
                 MidSessionWorkingEdit("workout-2",state.revision,"slot-0",1,warmupChange=change))
         val add=edit("repeat-warm",original,SessionWarmupChange.REPEAT_APPROVED)
+        val choices=NativeKotlinWorkoutMachineChoiceFileStore(temp.root.toPath())
+        // Production pins the real workout choice before opening Focus.
+        assertTrue(store().adjustRemaining("owner-1","workout-2",add,true) is NativeCustomJournalResult.Rejected)
+        assertTrue(choices.save("owner-1","workout-2",true,"gym-1",0,
+            mapOf("bodyweight_crunch" to "machine_wrong")) is NativeWorkoutMachineChoiceResult.Saved)
+        assertTrue(store().adjustRemaining("owner-1","workout-2",add,true) is NativeCustomJournalResult.Rejected)
+        assertTrue(choices.save("owner-1","workout-2",true,"gym-1",1,emptyMap())
+            is NativeWorkoutMachineChoiceResult.Saved)
         assertTrue(store().adjustRemaining("owner-1","workout-2",add,false) is NativeCustomJournalResult.Rejected)
         current=NativeKotlinOwnerIdentity("owner-2","athlete-2")
         assertTrue(store().adjustRemaining("owner-1","workout-2",add,true) is NativeCustomJournalResult.Rejected)

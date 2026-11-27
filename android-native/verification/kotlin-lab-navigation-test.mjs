@@ -557,6 +557,8 @@ assert.ok(
   liveJournalCodec.includes('allowWarmupEditKeys=warmupTagged') &&
   liveJournalCodec.includes('allowWarmupEditKeys=version>=9') &&
   liveJournalCodec.includes('if(result.snapshot!=snapshot)') &&
+  liveJournalStore.includes('NativeKotlinWorkoutMachineChoiceFileStore(root).read(') &&
+  liveJournalStore.includes('choices.machines[slot.exerciseId]!=slot.machineInstanceId') &&
   liveJournalStore.includes('preflight.permitsRemainingEdit(ownerKey,existing.issued,operation.request,all)'),
   'Warm-up editing must remain revision-fenced, stock-reviewed and replay-verified');
 

@@ -234,7 +234,8 @@ object MidSessionWorkingEditDomain {
     fun approvedCustom(
         state:CustomWorkoutJournalDraft,request:MidSessionWorkingEdit,
         cycle:CustomTrainingCycle,setup:AthleteSetupReview,
-        catalog:List<CatalogMovement>,inputs:CustomCoachAuditInputs
+        catalog:List<CatalogMovement>,inputs:CustomCoachAuditInputs,
+        sameWeekPeers:List<CustomWorkoutJournalDraft>
     ):Boolean = runCatching {
         val stamp=state.originalSnapshot.stamp
         if(cycle.cycleId!=stamp.cycleId || cycle.revision!=stamp.cycleRevision ||
@@ -276,9 +277,57 @@ object MidSessionWorkingEditDomain {
                     return@runCatching false
             }
         }
+        // Reuse the reviewed weekly dose and timing audit for all issued
+        // days, not only this day's new edit. Keep the planned full dose for
+        // shortened peers; never use a skipped or omitted set as a credit to
+        // authorize extra workload elsewhere. Unissued days stay in the plan.
+        val peers=sameWeekPeers.filter{it.workoutId!=state.workoutId &&
+            it.originalSnapshot.stamp.cycleId==stamp.cycleId &&
+            it.originalSnapshot.absoluteWeek==next.absoluteWeek}
+        if(peers.map{it.originalSnapshot.weekday}.distinct().size!=peers.size ||
+            peers.any{it.originalSnapshot.weekday==next.weekday})
+            return@runCatching false
+        val peerOverrides=mutableListOf<CustomWeekSlotOverride>()
+        val replacedDays=mutableSetOf(day.weekday)
+        for(peer in peers) {
+            val prior=peer.snapshot
+            if(peer.originalSnapshot.stamp!=stamp || prior.stamp!=stamp ||
+                prior.absoluteWeek!=next.absoluteWeek || prior.blockId!=week.blockId ||
+                prior.weekInBlock!=week.weekInBlock || prior.phase!=week.phase ||
+                prior.blockPurpose!=week.purpose)
+                return@runCatching false
+            // Existing shortened sessions are counted at their full signed
+            // dose. Swapped/otherwise incompatible rosters need reconciliation,
+            // not an assumed baseline or an invented muscle credit.
+            if(prior.shortSessionLimitMinutes!=null) {
+                if(prior.slots!=peer.originalSnapshot.slots)return@runCatching false
+                continue
+            }
+            val planned=week.days.singleOrNull{it.weekday==prior.weekday}
+                ?:return@runCatching false
+            if(planned.purpose!=prior.sessionPurpose ||
+                planned.slots.map{it.slotId}!=prior.slots.map{it.slotId})
+                return@runCatching false
+            for((original,slot) in planned.slots.zip(prior.slots)) {
+                if(original.exerciseId!=slot.exerciseId || original.attachmentId!=slot.attachmentId ||
+                    original.role!=slot.role || original.supersetGroup!=slot.supersetGroup ||
+                    original.pinned!=slot.pinned || original.machineInstanceId!=slot.machineInstanceId)
+                    return@runCatching false
+                // Retain the original signed dose when a peer cut sets. This
+                // initial audit never spends earlier cuts as extra capacity.
+                val effective=slot.sets.map{it.prescription}
+                if(effective.count{it.type==DraftSetType.WORKING}<
+                    original.sets.count{it.type==DraftSetType.WORKING})
+                    peerOverrides.add(CustomWeekSlotOverride(week.weekInBlock,prior.weekday,
+                        slot.slotId,original.sets))
+                else peerOverrides.add(CustomWeekSlotOverride(week.weekInBlock,prior.weekday,
+                    slot.slotId,effective))
+            }
+            replacedDays.add(prior.weekday)
+        }
         val overrides=cycle.weekOverrides[week.blockId].orEmpty().filterNot{
-            it.weekInBlock==week.weekInBlock && it.weekday==day.weekday
-        }+next.slots.map{slot->CustomWeekSlotOverride(
+            it.weekInBlock==week.weekInBlock && it.weekday in replacedDays
+        }+peerOverrides+next.slots.map{slot->CustomWeekSlotOverride(
             week.weekInBlock,day.weekday,slot.slotId,slot.sets.map{it.prescription})}
         val transient=cycle.copy(weekOverrides=cycle.weekOverrides+(week.blockId to overrides))
         CustomCycleCoachAuditDomain.review(transient,setup,catalog,inputs).status==

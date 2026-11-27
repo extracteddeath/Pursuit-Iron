@@ -947,8 +947,23 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                 if(operation is CustomWorkoutJournalOperation.AdjustRemaining) {
                     val plan=(prepared.open(ownerKey,workoutId) as? NativeCustomPreparedRead.Found)?.workout
                         ?:return@withOwnerTransaction denied()
+                    val census=inventory(ownerKey) as? NativeIssuedInventoryResult.Found
+                        ?:return@withOwnerTransaction denied()
+                    val customCompletions=ledger.ledger.completions.filter{
+                        it.storedReceiptId.startsWith("custom-")
+                    }.associateBy{it.workoutId}
+                    val all=census.workouts.map{it.journal}
+                    if(all.none{it==journal} ||
+                        customCompletions.keys.any{id->all.none{it.workoutId==id}} ||
+                        all.any{peer->
+                            val completion=customCompletions[peer.workoutId]
+                            (peer.finishedByEventId==null)!=(completion==null) ||
+                                (completion!=null && (completion.finishEventId!=peer.finishedByEventId ||
+                                    completion.originalJournalRevision!=peer.revision))
+                        })
+                        return@withOwnerTransaction denied()
                     if(plan.authority!=NativeCustomPreparationAuthority.CUSTOM_CYCLE ||
-                        !preflight.permitsRemainingEdit(ownerKey,existing.issued,operation.request))
+                        !preflight.permitsRemainingEdit(ownerKey,existing.issued,operation.request,all))
                         return@withOwnerTransaction denied()
                 }
                 if(owner(ownerKey)!=current)return@withOwnerTransaction NativeCustomJournalResult.Rejected(

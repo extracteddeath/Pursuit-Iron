@@ -860,6 +860,48 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
         assertEquals(draftBefore,(drafts.read("owner-1","cycle-1") as NativeCustomDraftReadResult.Found).draft)
     }
 
+    @Test fun earlierAdjustedDayConsumesWeeklyCapacityAndRemainsInTheColdInventory() {
+        initialize();approve();prepareWeek();enroll()
+        val original=issueWeek().issued.journal
+        val changed=issued.adjustRemaining("owner-1","workout-2",
+            CustomWorkoutJournalOperation.AdjustRemaining("extra-first",0,
+                MidSessionWorkingEdit("workout-2",0,"slot-0",3)),true)
+        assertTrue(changed.toString(),changed is NativeCustomJournalResult.Durable)
+        var first=(changed as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals(3,first.snapshot.slots.single().sets.size)
+        assertEquals(original.originalSnapshot,first.originalSnapshot)
+        for((index,row) in first.snapshot.slots.single().sets.withIndex()) {
+            first=(issued.record("owner-1","workout-2",CustomWorkoutJournalOperation.Record(
+                "extra-actual-$index",first.revision,CustomWorkoutVisitKey(row.setKey,
+                    CustomWorkoutVisitPart.MAIN),KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(null,null,16,1))) as NativeCustomJournalResult.Durable).issued.journal
+        }
+        val finished=NativeKotlinCustomHistoryTransaction(history,issued,fence,identity).complete(
+            "owner-1","athlete-1","workout-2",
+            CustomWorkoutJournalOperation.Finish("extra-finish",first.revision))
+        assertTrue(finished.toString(),finished is NativeCustomFinishResult.Committed)
+        assertTrue(prepared.prepare("owner-1","workout-2-day-2","cycle-1",2,2,input())
+            is NativeCustomPrepareResult.Prepared)
+        val second=issued.issue("owner-1","workout-2-day-2","cycle-1",2,2,input())
+            as NativeCustomJournalResult.Durable
+        val cold=NativeKotlinCustomWorkoutJournalFileStore(temp.root.toPath(),
+            NativeKotlinApprovalRevisionFence(temp.root.toPath()),identity,prepared,preflight,
+            history,composerJournal,null,sources)
+        val reviewed=NativeKotlinCustomOutstandingWorkoutInventory(prepared,cold).inspect(
+            "owner-1","athlete-1",setOf("workout-2"))
+        assertTrue(reviewed.toString(),reviewed is NativeCustomInventoryReview.Reviewed)
+        // Three signed sets for the week; first day added two, leaving no
+        // room below the five-set ceiling for this individually feasible edit.
+        val rejected=cold.adjustRemaining("owner-1","workout-2-day-2",
+            CustomWorkoutJournalOperation.AdjustRemaining("extra-second",0,
+                MidSessionWorkingEdit("workout-2-day-2",0,"slot-2",2)),true)
+        assertTrue(rejected.toString(),rejected is NativeCustomJournalResult.Rejected)
+        assertEquals(second.issued.journal,(cold.open("owner-1","workout-2-day-2")
+            as NativeCustomJournalResult.Durable).issued.journal)
+        assertEquals(cycle(),(drafts.read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft)
+    }
+
     @Test fun customSessionNoteIsOwnerFencedAtomicAndReplayable() {
         initialize();approve();prepareWeek();enroll();issueWeek()
         val note=CustomWorkoutJournalOperation.SessionNote(

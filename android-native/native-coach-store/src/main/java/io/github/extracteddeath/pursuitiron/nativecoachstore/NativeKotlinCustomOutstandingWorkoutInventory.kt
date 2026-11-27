@@ -72,7 +72,7 @@ internal object NativeKotlinCustomInventoryDomain {
             val preparedSession=p[record.journal.workoutId]
                 ?:return reject(NativeCustomInventoryRefusal.ISSUED_WITHOUT_PREPARATION)
             if(record.consentRevision!=preparedSession.consentRevision ||
-                record.journal.snapshot!=preparedSession.snapshot ||
+                record.journal.originalSnapshot!=preparedSession.snapshot ||
                 record.journal.preparedConsentFingerprint!=
                     preparedSession.consentFingerprint)
                 return reject(NativeCustomInventoryRefusal.ISSUED_CONTENT_MISMATCH)

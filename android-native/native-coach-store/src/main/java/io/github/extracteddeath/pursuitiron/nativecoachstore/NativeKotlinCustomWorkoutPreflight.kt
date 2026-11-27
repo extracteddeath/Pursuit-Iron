@@ -354,7 +354,7 @@ class NativeKotlinCustomWorkoutPreflight(
     /** Same signed ordinary-cycle source, policy and exact physical stock
      * as first issuance. This audit never persists its transient override. */
     internal fun permitsRemainingEdit(ownerKey:String,issued:NativeCustomIssuedJournal,
-        request:MidSessionWorkingEdit):Boolean = runCatching {
+        request:MidSessionWorkingEdit,sameWeekPeers:List<CustomWorkoutJournalDraft>):Boolean = runCatching {
         fence.withOwnerTransaction(ownerKey) {
             val owner=identity.signedInIdentity()?.takeIf{
                 it.ownerKey==ownerKey && it.athleteId==issued.athleteId
@@ -383,7 +383,7 @@ class NativeKotlinCustomWorkoutPreflight(
                     ?:return@withOwnerTransaction false
             verifiedSpecialistStock(ownerKey,updated,source,roster) &&
                 MidSessionWorkingEditDomain.approvedCustom(journal,request,cycle,source.setup,
-                    source.catalog,signed.inputs) && identity.signedInIdentity()==owner
+                    source.catalog,signed.inputs,sameWeekPeers) && identity.signedInIdentity()==owner
         }
     }.getOrDefault(false)
 

@@ -21,6 +21,8 @@ internal fun NativeKotlinWorkoutExerciseInfoSheet(
     warmupsOnly:Boolean=false,
     outcomes:Map<String,KotlinJournalSetOutcome> = emptyMap(),
     onSelectWarmup:((String)->Unit)?=null,
+    onRepeatWarmup:(()->Unit)?=null,
+    onRemoveWarmup:(()->Unit)?=null,
     busy:Boolean=false,
     machineLabel:String?=null,
     onChooseMachine:(()->Unit)?=null,
@@ -113,6 +115,21 @@ internal fun NativeKotlinWorkoutExerciseInfoSheet(
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+        }
+        if(warmupsOnly) {
+            onRepeatWarmup?.let{repeat->
+                OutlinedButton(onClick=repeat,enabled=!busy,modifier=Modifier.fillMaxWidth()){
+                    Text("Repeat approved warm-up…")
+                }
+            }
+            onRemoveWarmup?.let{remove->
+                OutlinedButton(onClick=remove,enabled=!busy,modifier=Modifier.fillMaxWidth()){
+                    Text("Remove last unlogged warm-up…")
+                }
+            }
+            if(onRepeatWarmup!=null || onRemoveWarmup!=null)
+                Text("Only this workout changes. Recorded sets and your saved program stay unchanged.",
+                    style=MaterialTheme.typography.bodySmall)
         }
         if(warmupsOnly && visible.isNotEmpty()) {
             val next=visible.firstOrNull{it.setKey !in outcomes}

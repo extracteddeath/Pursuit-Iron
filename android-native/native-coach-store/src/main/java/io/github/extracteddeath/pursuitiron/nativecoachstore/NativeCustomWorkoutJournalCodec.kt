@@ -25,7 +25,7 @@ internal data class NativeCustomWorkoutJournalRecord(
 
 internal object NativeCustomWorkoutJournalCodec {
     private const val MAGIC=0x5049434A // PICJ
-    private const val VERSION=8
+    private const val VERSION=9
     const val MAX_BYTES=2_000_000
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
@@ -112,7 +112,7 @@ internal object NativeCustomWorkoutJournalCodec {
             }
             is CustomWorkoutJournalOperation.AdjustRemaining->{
                 writeByte(6);writeUTF(event.eventId);writeLong(event.expectedRevision)
-                NativeMidSessionWorkingEditCodec.write(this,event.request,withMethod=version>=8)
+                NativeMidSessionWorkingEditCodec.write(this,event.request,withMethod=version>=8,withWarmup=version>=9)
             }
             is CustomWorkoutJournalOperation.UndoAdjustment->{
                 writeByte(7);writeUTF(event.eventId);writeLong(event.expectedRevision)
@@ -177,7 +177,7 @@ internal object NativeCustomWorkoutJournalCodec {
             6->{
                 if(version<7)throw IOException("adjustment in legacy journal")
                 CustomWorkoutJournalOperation.AdjustRemaining(readUTF(),readLong(),
-                    NativeMidSessionWorkingEditCodec.read(this,withMethod=version>=8))
+                    NativeMidSessionWorkingEditCodec.read(this,withMethod=version>=8,withWarmup=version>=9))
             }
             7->{
                 if(version<7)throw IOException("adjustment undo in legacy journal")
@@ -211,6 +211,18 @@ internal object NativeCustomWorkoutJournalCodec {
             current.finishedByEventId!=claimedFinished)
             throw IOException("journal revision or finish mismatch")
         return current
+    }
+
+    /** Internal transport shared by journal and Finish receipt hashing.
+     * Callers must first verify the complete receipt replay through encode;
+     * this never grants issuance or independently trusts a shifted key. */
+    internal fun encodeEffectiveSnapshot(state:CustomWorkoutJournalDraft):ByteArray {
+        val adjusted=state.receipts.any{it.operation is CustomWorkoutJournalOperation.AdjustRemaining}
+        val warmupTagged=state.receipts.any{
+            (it.operation as? CustomWorkoutJournalOperation.AdjustRemaining)?.request?.warmupChange!=null
+        }
+        return NativeKotlinCustomWorkoutSnapshotCodec.encode(state.snapshot,
+            allowMidSessionKeys=adjusted,allowWarmupEditKeys=warmupTagged)
     }
 
     fun encode(record:NativeCustomWorkoutJournalRecord):ByteArray {
@@ -260,9 +272,12 @@ internal object NativeCustomWorkoutJournalCodec {
             (it.operation as? CustomWorkoutJournalOperation.AdjustRemaining)
                 ?.request?.progressionMethod!=null
         }
-        val version=if(methodTagged) VERSION else if(adjusted) 7 else if(exactDecimal) 6 else if(stageTagged) 5 else if(machineTagged) 4
+        val warmupTagged=state.receipts.any{
+            (it.operation as? CustomWorkoutJournalOperation.AdjustRemaining)?.request?.warmupChange!=null
+        }
+        val version=if(warmupTagged) VERSION else if(methodTagged) 8 else if(adjusted) 7 else if(exactDecimal) 6 else if(stageTagged) 5 else if(machineTagged) 4
             else if(notes) 3 else if(swapped) 2 else 1
-        val snapshot=NativeKotlinCustomWorkoutSnapshotCodec.encode(state.snapshot,allowMidSessionKeys=adjusted)
+        val snapshot=encodeEffectiveSnapshot(state)
         val original=if(swapped || adjusted)
             NativeKotlinCustomWorkoutSnapshotCodec.encode(state.originalSnapshot)
             else snapshot
@@ -319,7 +334,7 @@ internal object NativeCustomWorkoutJournalCodec {
                         throw IOException("invalid effective journal target")
                     val content=ByteArray(size)
                     data.readFully(content)
-                    NativeKotlinCustomWorkoutSnapshotCodec.decode(content,allowMidSessionKeys=version>=7)
+                    NativeKotlinCustomWorkoutSnapshotCodec.decode(content,allowMidSessionKeys=version>=7,allowWarmupEditKeys=version>=9)
                 } else original
                 val revision=data.readLong()
                 val finish=data.textOptional()

@@ -20,7 +20,7 @@ import java.util.Collections
  */
 internal object NativeKotlinCustomWorkoutSnapshotCodec {
     private const val MAGIC=0x50494357 // PICW
-    private const val VERSION=10
+    private const val VERSION=11
     private const val SLOT_MAGIC=0x50495333 // PIS3
     const val MAX_BYTES=256_000
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
@@ -127,7 +127,8 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
         else->throw IOException("unknown custom split")
     }
 
-    private fun validate(snapshot:CustomWorkoutDaySnapshot,allowMidSessionKeys:Boolean=false) {
+    private fun validate(snapshot:CustomWorkoutDaySnapshot,allowMidSessionKeys:Boolean=false,
+        allowWarmupEditKeys:Boolean=false) {
         val stamp=snapshot.stamp
         require(listOf(stamp.athleteId,stamp.cycleId,stamp.gymId,
             snapshot.blockId).all(id::matches))
@@ -183,8 +184,13 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
             for((index,set) in slot.sets.withIndex()) {
                 require(set.slotId==slot.slotId)
                 require(set.ordinalInSlot==index+1)
-                require(set.setKey=="${stamp.cycleId}:w${snapshot.absoluteWeek}:d${snapshot.weekday}:${slot.slotId}:s${index+1}" ||
-                    (allowMidSessionKeys && set.prescription.type==DraftSetType.WORKING &&
+                val prefix="${stamp.cycleId}:w${snapshot.absoluteWeek}:d${snapshot.weekday}:${slot.slotId}:s"
+                val shiftedOriginal=allowWarmupEditKeys && set.setKey.startsWith(prefix) &&
+                    set.setKey.removePrefix(prefix).let{suffix->
+                        suffix.toIntOrNull()?.let{it in 1..20 && it.toString()==suffix}==true
+                    }
+                require(set.setKey==prefix+(index+1) || shiftedOriginal ||
+                    (allowMidSessionKeys && (set.prescription.type==DraftSetType.WORKING || allowWarmupEditKeys) &&
                         MidSessionWorkingEditDomain.isAddedSetKey(set.setKey)))
                 require(set.setKey.length<=256 && seen.add(set.setKey))
                 val p=set.prescription
@@ -249,12 +255,23 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
             require(snapshot.slots.count{it.supersetGroup==group} in 2..3)
         }
     }
-    fun encode(snapshot:CustomWorkoutDaySnapshot,allowMidSessionKeys:Boolean=false):ByteArray {
-        validate(snapshot,allowMidSessionKeys)
+    fun encode(snapshot:CustomWorkoutDaySnapshot,allowMidSessionKeys:Boolean=false,
+        allowWarmupEditKeys:Boolean=false):ByteArray {
+        require(!allowWarmupEditKeys || allowMidSessionKeys)
+        validate(snapshot,allowMidSessionKeys,allowWarmupEditKeys)
         val output=ByteArrayOutputStream()
         DataOutputStream(output).use{out->
             out.writeInt(MAGIC)
-            val version=if(snapshot.slots.any{slot->slot.sets.any{MidSessionWorkingEditDomain.isAddedSetKey(it.setKey)}}) VERSION
+            // Only the journal receipt replay may authorize shifted pending
+            // ordinals. Original prepared/issued snapshot formats stay fixed.
+            val warmupKeys=allowWarmupEditKeys && snapshot.slots.any{slot->slot.sets.any{set->
+                val prefix="${snapshot.stamp.cycleId}:w${snapshot.absoluteWeek}:d${snapshot.weekday}:${slot.slotId}:s"
+                if(MidSessionWorkingEditDomain.isAddedSetKey(set.setKey))
+                    set.prescription.type==DraftSetType.WARMUP
+                else set.setKey!=prefix+set.ordinalInSlot
+            }}
+            val version=if(warmupKeys) VERSION
+                else if(snapshot.slots.any{slot->slot.sets.any{MidSessionWorkingEditDomain.isAddedSetKey(it.setKey)}}) 10
                 else if(snapshot.slots.any{slot->slot.sets.any{it.prescription.percentageIntent!=null}}) 9 else 8
             out.writeInt(version)
             val stamp=snapshot.stamp
@@ -285,14 +302,16 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
             require(it.size in 16..MAX_BYTES)
         }
     }
-    fun decode(bytes:ByteArray,allowMidSessionKeys:Boolean=false):CustomWorkoutDaySnapshot {
+    fun decode(bytes:ByteArray,allowMidSessionKeys:Boolean=false,
+        allowWarmupEditKeys:Boolean=false):CustomWorkoutDaySnapshot {
         require(bytes.size in 16..MAX_BYTES)
         return try {
             DataInputStream(ByteArrayInputStream(bytes)).use{input->
                 if(input.readInt()!=MAGIC)
                     throw IOException("unsupported custom session magic")
                 val version=input.readInt()
-                if(version !in 7..VERSION || version==VERSION && !allowMidSessionKeys)
+                if(version !in 7..VERSION || version>=10 && !allowMidSessionKeys ||
+                    version==VERSION && !allowWarmupEditKeys)
                     throw IOException("unsupported custom session snapshot")
                 val stamp=CustomWorkoutSourceStamp(
                     input.readUTF(),input.readUTF(),input.readUTF(),
@@ -329,7 +348,7 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
                     phase,purpose,split,weekday,dayLabel,sessionPurpose,
                     Collections.unmodifiableList(slots),duration,declared,
                     timeLimit,omissions
-                ).also{validate(it,allowMidSessionKeys && version==VERSION)}
+                ).also{validate(it,allowMidSessionKeys && version>=10,allowWarmupEditKeys && version==VERSION)}
             }
         }catch(error:Exception){
             throw IOException("invalid custom workout snapshot",error)

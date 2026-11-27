@@ -68,6 +68,14 @@ internal object NativeCustomWorkoutJournalCodec {
             throw IOException("invalid physical machine")
         return KotlinPerformedSet(weight,unit,reps,rir,machine)
     }
+    // The newest factual set representation is also used by freestyle.
+    // Preserve all existing custom byte versions and the physical number.
+    internal fun writeActual(out:DataOutputStream,value:KotlinPerformedSet?) {
+        with(out){performed(value,6)}
+    }
+    internal fun readActual(input:DataInputStream):KotlinPerformedSet? =
+        with(input){performed(6)}
+
     private fun DataOutputStream.operation(event:CustomWorkoutJournalOperation,version:Int) {
         when(event) {
             is CustomWorkoutJournalOperation.Record->{

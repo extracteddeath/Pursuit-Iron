@@ -19,8 +19,23 @@ internal object NativeMeasuredWorkoutIdClaim {
             .joinToString(""){"%02x".format(it.toInt() and 255)}
         return root.resolve("measured-parent-$hash.bin")
     }
-    fun claimed(root:Path,owner:String,workout:String):Boolean {
-        val file=path(root,owner,workout)
-        return Files.exists(file) || Files.isSymbolicLink(file)
+    fun freestylePath(root:Path,owner:String,workout:String):Path {
+        val measured=path(root,owner,workout)
+        return measured.resolveSibling(measured.fileName.toString()
+            .replaceFirst("measured-parent-","freestyle-"))
+    }
+    private fun exists(file:Path):Boolean=Files.exists(file) || Files.isSymbolicLink(file)
+    fun freestyleClaimed(root:Path,owner:String,workout:String):Boolean =
+        exists(freestylePath(root,owner,workout))
+    fun claimed(root:Path,owner:String,workout:String):Boolean =
+        exists(path(root,owner,workout)) || freestyleClaimed(root,owner,workout)
+    /** Same immutable ID digest and actual existing filenames. Corrupt files
+     * are claims as well, so an unrelated workout cannot replace their facts. */
+    fun anyClaimed(root:Path,owner:String,workout:String):Boolean {
+        val measured=path(root,owner,workout)
+        val suffix=measured.fileName.toString().removePrefix("measured-parent-")
+        return claimed(root,owner,workout) ||
+            exists(root.resolve("journal-$suffix")) ||
+            exists(root.resolve("issued-custom-$suffix"))
     }
 }

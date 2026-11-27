@@ -50,6 +50,60 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
         temp.root.toPath(),NativeKotlinApprovalRevisionFence(temp.root.toPath()),
         NativeKotlinCurrentIdentity {signedIn})
 
+    @Test fun freestyleActualsColdReopenUnderSameOwnerAndSourceWithoutFalseFinish() {
+        val root=temp.root.toPath()
+        val fence=NativeKotlinApprovalRevisionFence(root)
+        val identity=NativeKotlinCurrentIdentity{signedIn}
+        val history=NativeKotlinHistoryManifestFileStore(root)
+        assertTrue(history.enroll("owner-1","athlete-1"){o,a->
+            signedIn==NativeKotlinOwnerIdentity(o,a)
+        } is NativeHistoryLedgerResult.Durable)
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),store().publish("owner-1",0,source()))
+        fun freestyle()=NativeFreestyleWorkoutFileStore(root,fence,identity,store(),history)
+        fun saved(result:NativeFreestyleResult):KotlinFreestyleWorkout =
+            (result as NativeFreestyleResult.Durable).workout
+        val empty=saved(freestyle().start("owner-1","free-1"))
+        val exercise=checkNotNull(KotlinFreestyleWorkoutDomain.selectedExercise(
+            empty,review(),1,listOf(movement),"slot-a","rope-pushdown"))
+        val added=saved(freestyle().apply("owner-1","free-1",
+            KotlinFreestyleOperation.Add("add",0,exercise)))
+        assertEquals(added,saved(freestyle().open("owner-1","free-1")))
+        val entry=KotlinFreestyleOperation.Record("set-1",1,"slot-a","set-a",
+            DraftSetType.WORKING,KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(n("27.125"),LoadUnit.LB,9,null,"machine-B"))
+        val logged=saved(freestyle().apply("owner-1","free-1",entry))
+        assertEquals(logged,saved(freestyle().open("owner-1","free-1")))
+        assertTrue((freestyle().apply("owner-1","free-1",entry) as NativeFreestyleResult.Durable).replayed)
+        val correction=entry.copy(eventId="correction",expectedRevision=2,
+            actual=entry.actual?.copy(load=n("25.00")),correctsEventId="set-1")
+        val corrected=saved(freestyle().apply("owner-1","free-1",correction))
+        assertEquals(correction,corrected.effectiveSets["set-a"])
+        assertEquals(corrected,saved(freestyle().open("owner-1","free-1")))
+        assertTrue(NativeMeasuredWorkoutIdClaim.claimed(root,"owner-1","free-1"))
+        assertEquals(NativeFreestyleResult.Rejected(NativeFreestyleRefusal.FINISH_REQUIRES_HISTORY),
+            freestyle().apply("owner-1","free-1",KotlinFreestyleOperation.Finish("finish",3)))
+        assertNull(saved(freestyle().open("owner-1","free-1")).finishedByEventId)
+        assertTrue((history.open("owner-1","athlete-1") as NativeHistoryLedgerResult.Durable)
+            .ledger.completions.isEmpty())
+        assertEquals(NativeAuthoringSourceWrite.Committed(2),store().publish("owner-1",1,source(2)))
+        assertEquals(NativeFreestyleResult.Rejected(NativeFreestyleRefusal.SOURCE_UNAVAILABLE),
+            freestyle().apply("owner-1","free-1",KotlinFreestyleOperation.Add(
+                "new-slot",3,exercise.copy(slotId="slot-b"))))
+        val next=saved(freestyle().apply("owner-1","free-1",entry.copy(
+            eventId="second",expectedRevision=3,setKey="set-b")))
+        assertEquals(2,next.effectiveSets.size)
+        signedIn=NativeKotlinOwnerIdentity("owner-2","athlete-2")
+        assertEquals(NativeFreestyleResult.Rejected(NativeFreestyleRefusal.NOT_AUTHORIZED),
+            freestyle().open("owner-1","free-1"))
+        signedIn=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        assertEquals(next,saved(freestyle().open("owner-1","free-1")))
+        val file=NativeMeasuredWorkoutIdClaim.freestylePath(root,"owner-1","free-1")
+        Files.write(file,byteArrayOf(1,2,3))
+        assertEquals(NativeFreestyleResult.Rejected(NativeFreestyleRefusal.CORRUPT),
+            freestyle().start("owner-1","free-1"))
+        assertTrue(NativeMeasuredWorkoutIdClaim.claimed(root,"owner-1","free-1"))
+    }
+
     @Test fun sourceCodecColdRestoresExactReviewedGymCatalogAndAttachment() {
         val expected=source()
         assertEquals(AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW,

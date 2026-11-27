@@ -269,6 +269,29 @@ function reviewHistoricalMuscle(id,legacyMuscle,nativeEntry,typed) {
   return {direct,review:'BROAD_GROUP_RECONCILED'};
 }
 
+// Legacy practical ranges are prescription hints, never a conversion rule
+// for actual historical repetitions, duration, distance or resistance.
+function reviewHistoricalRepBand(id,legacy,nativeEntry,measurement) {
+  assert.ok(legacy.length===2&&legacy.every(Number.isInteger)&&
+    legacy[0]>=1&&legacy[1]>=legacy[0],'Invalid historical rep band: '+id);
+  if(measurement) return {native:null,review:'TYPED_ORIGINAL_MEASUREMENT_REQUIRED'};
+  const parsed=nativeEntry?.match(/,\s*(\d+)\.\.(\d+),/);
+  assert.ok(parsed,'Missing standard practical rep range: '+id);
+  const native=parsed.slice(1).map(Number);
+  assert.ok(native[0]>=1&&native[1]>=native[0]&&native[1]<=100,
+    'Invalid native practical range: '+id);
+  if(native[0]===legacy[0]&&native[1]===legacy[1])
+    return {native,review:'EXACT_PRACTICAL_RANGE'};
+  if(id==='deficit-pendlay-row') {
+    assert.deepEqual(legacy,[6,10],'Legacy deficit row range drift');
+    assert.deepEqual(native,[5,8],'Native deficit row range drift');
+    return {native,review:'REVIEWED_DISTINCT_PRACTICAL_RANGE'};
+  }
+  assert.ok(native[0]<=legacy[0]&&native[1]>=legacy[1],
+    'Unreviewed practical rep range narrowing: '+id);
+  return {native,review:'NATIVE_RANGE_INCLUDES_LEGACY'};
+}
+
 export function reviewHistoricalShellCoverage(shell,rawSource,projection,
   frozenMissing,canonical,nativeIds,measured,nativeSource) {
   assert.equal(frozenMissing.webCommit,shell.webCommit);
@@ -334,9 +357,11 @@ export function reviewHistoricalShellCoverage(shell,rawSource,projection,
     const equipmentTokensDiffer=JSON.stringify(raw[4])!==JSON.stringify(active.equipment);
     const equipmentReview=equipmentTokensDiffer?reviewEquipmentDifference(row.shellId,raw[4],active.equipment,nativeEntry,measured.find(x=>x.id===nativeId)):null;
     const muscle=reviewHistoricalMuscle(row.shellId,raw[2],nativeEntry,measuredSet.has(nativeId));
+    const band=reviewHistoricalRepBand(row.shellId,raw.slice(5,7),nativeEntry,measured.find(x=>x.id===nativeId));
     return {shellId:row.shellId,shellName:raw[1],pinnedSourceLine:row.line,
       shellPrimaryMuscle:raw[2],nativeDirectMuscles:muscle.direct,muscleReview:muscle.review,
       shellEquipment:raw[4],shellRepBand:raw.slice(5,7),
+      nativePracticalRepBand:band.native,repBandReview:band.review,
       canonicalCandidateId:row.candidateWebId,canonicalEquipment:active.equipment,
       nativeCandidateId:nativeId,match:row.match,equipmentTokensDiffer,
       nativeAttachment:attachment,fallbackContext,equipmentReview,
@@ -365,6 +390,9 @@ export function reviewHistoricalShellCoverage(shell,rawSource,projection,
   for(const item of candidates)
     muscleReviewCounts[item.muscleReview]=(muscleReviewCounts[item.muscleReview]??0)+1;
   assert.equal(muscleReviewCounts.TYPED_NO_ORDINARY_MUSCLE_CREDIT,14);
+  const repBandReviewCounts={};
+  for(const item of candidates)
+    repBandReviewCounts[item.repBandReview]=(repBandReviewCounts[item.repBandReview]??0)+1;
   const equipmentReviewCounts={};
   for(const item of candidates.filter(x=>x.equipmentTokensDiffer)) {
     assert.ok(item.equipmentReview,'Missing equipment review: '+item.shellId);
@@ -375,7 +403,7 @@ export function reviewHistoricalShellCoverage(shell,rawSource,projection,
   assert.equal(equipmentReviewCounts.DISTINCT_EXTERNAL_RESISTANCE,3);
   assert.equal(equipmentReviewCounts.INCLINE_SUPPORT_REQUIRED,1);
   assert.equal(equipmentReviewCounts.ORIGINAL_DURATION_AND_SETUP_REQUIRED,7);
-  return {total:candidates.length,equipmentReviewCounts,muscleReviewCounts,distinctPhysicalVariants:historicalPhysicalVariants.size,
+  return {total:candidates.length,equipmentReviewCounts,muscleReviewCounts,repBandReviewCounts,distinctPhysicalVariants:historicalPhysicalVariants.size,
     equipmentTokenDifferences:candidates.filter(x=>x.equipmentTokensDiffer).length,
     nameFallbacks:candidates.filter(x=>x.match==='web-name-fallback-review').length,
     independentlyAccepted:0,automaticHistoryTransfers:0,candidates};
@@ -433,6 +461,16 @@ function selfTest() {
   assert.equal(historical.distinctPhysicalVariants,3);
   assert.equal(historical.equipmentTokenDifferences,71);
   assert.equal(historical.nameFallbacks,4);
+  assert.deepEqual(historical.repBandReviewCounts,{
+    EXACT_PRACTICAL_RANGE:332,NATIVE_RANGE_INCLUDES_LEGACY:25,
+    REVIEWED_DISTINCT_PRACTICAL_RANGE:1,TYPED_ORIGINAL_MEASUREMENT_REQUIRED:14
+  });
+  assert.throws(()=>reviewHistoricalRepBand('bb-bench',[5,10],',8..12,',null),
+    /Unreviewed practical rep range narrowing/);
+  assert.throws(()=>reviewHistoricalRepBand('deficit-pendlay-row',[6,10],',5..7,',null),
+    /Native deficit row range drift/);
+  assert.deepEqual(reviewHistoricalRepBand('plank',[12,20],undefined,{kind:'HOLD_SECONDS'}),
+    {native:null,review:'TYPED_ORIGINAL_MEASUREMENT_REQUIRED'});
   assert.deepEqual(historical.muscleReviewCounts,{
     BROAD_GROUP_RECONCILED:349,TYPED_NO_ORDINARY_MUSCLE_CREDIT:14,
     SEPARATE_SERRATUS_LEDGER:2,SEPARATE_DORSIFLEXION_LEDGER:2,
@@ -581,6 +619,7 @@ else {
       nameFallbacks:report.historicalShellReview.nameFallbacks,
       equipmentReviewCounts:report.historicalShellReview.equipmentReviewCounts,
       muscleReviewCounts:report.historicalShellReview.muscleReviewCounts,
+      repBandReviewCounts:report.historicalShellReview.repBandReviewCounts,
       independentlyAccepted:report.historicalShellReview.independentlyAccepted
     },
     missingByMeasurementSemantics:report.missingByMeasurementSemantics

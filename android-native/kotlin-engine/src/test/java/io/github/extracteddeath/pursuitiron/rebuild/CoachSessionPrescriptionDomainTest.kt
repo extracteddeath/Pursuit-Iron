@@ -71,6 +71,19 @@ class CoachSessionPrescriptionDomainTest {
             reps=RepBand(10,15),rir=null,rest=120)
     )
 
+    @Test fun stockAwareWarmupChoosesOnlyPhysicalLighterLoadOrMoreAssistance() {
+        val ordinary=VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.MACHINE_STACK,
+            listOf(n("20"),n("25"),n("30")))
+        val assisted=VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.ASSISTANCE_COUNTERWEIGHT,
+            listOf(n("20"),n("25"),n("30")))
+        assertEquals(n("20"),CoachSessionPrescriptionDomain.stockAwareWarmupLoad(ordinary,n("25"),LoadUnit.LB))
+        assertEquals(n("30"),CoachSessionPrescriptionDomain.stockAwareWarmupLoad(assisted,n("25"),LoadUnit.LB))
+        assertNull(CoachSessionPrescriptionDomain.stockAwareWarmupLoad(ordinary,n("20"),LoadUnit.LB))
+        assertNull(CoachSessionPrescriptionDomain.stockAwareWarmupLoad(assisted,n("30"),LoadUnit.LB))
+        assertNull(CoachSessionPrescriptionDomain.stockAwareWarmupLoad(null,n("25"),LoadUnit.LB))
+        assertNull(CoachSessionPrescriptionDomain.stockAwareWarmupLoad(ordinary,n("25"),LoadUnit.KG))
+    }
+
     @Test fun exactZeroMachineWarmupCannotBecomeACompletedPrescriptionDraft() {
         val machine=VerifiedLoadStock.Totals(
             LoadUnit.LB,LoadBasis.MACHINE_STACK,

@@ -90,6 +90,19 @@ object CoachSessionPrescriptionDomain {
     private fun validLoad(v:BigDecimal)=
         KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(v)
 
+    /** Same physical ramp choice for automatic generation and explicit live
+     * first warm-up review. Never invent a load or reverse external resistance. */
+    fun stockAwareWarmupLoad(stock:VerifiedLoadStock?,working:BigDecimal,unit:LoadUnit):BigDecimal? {
+        val assisted=stock?.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT
+        val inspected=EquipmentLoadDomain.inspect(stock,
+            if(assisted)working else working*BigDecimal("0.8"),unit) as? LoadInspection.Confirmed
+        val candidate=if(assisted)inspected?.nextAbove else inspected?.atOrBelow
+        return candidate?.takeIf{
+            (if(assisted)it>working else it<working) &&
+                (it>zero || stock?.basis?.permitsZeroAddedLoad==true && it.signum()==0)
+        }
+    }
+
     /** One timing projection for generation, composition and native replay.
      * It deliberately has no authority to alter sets, loads, reps or RIR. */
     fun timingsForPolicies(policies:List<ExercisePrescriptionPolicy>):List<ComposerVisitTiming> =

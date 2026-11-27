@@ -68,6 +68,56 @@ class RequestedWebVariantTrancheTest {
             expected.map{byId.getValue(it).practicalRepBand})
     }
 
+    @Test fun allPinnedShellDiscoveryCandidatesResolveToDistinctSupportedNativeIdentities() {
+        // The independent frozen shell audit enumerates the exact 372 source
+        // rows and checks the Kotlin declarations against them. Here exercise
+        // the real runtime lookup over the existing native standard/typed IDs
+        // plus the reverse discovery aliases; no second alias table.
+        val standard=StarterExerciseTranche.movements().associateBy{it.exerciseId}
+        val measured=MeasuredExerciseCatalogDomain.all.associateBy{it.exerciseId}
+        assertTrue(standard.keys.intersect(measured.keys).isEmpty())
+        val native=standard.keys+measured.keys
+        val pin=HistoricalExerciseIdentityDomain.PINNED_SHELL_COMMIT
+        val aliases=native.flatMap{HistoricalExerciseIdentityDomain.searchAliases(it)}
+        assertEquals(27,aliases.size)
+        assertEquals(aliases.size,aliases.toSet().size)
+        val candidates=(native+aliases).mapNotNull{
+            HistoricalExerciseIdentityDomain.candidateForPinnedShell(pin,it)
+        }
+        assertEquals(372,candidates.size)
+        assertEquals(372,candidates.map{it.originalShellId}.distinct().size)
+        assertEquals(372,candidates.map{it.nativeExerciseId}.distinct().size)
+        val mapped=candidates.associateBy{it.originalShellId}
+        for(candidate in candidates){
+            val id=candidate.originalShellId
+            val target=candidate.nativeExerciseId
+            assertTrue("$id -> $target",target in native)
+            assertEquals(candidate,HistoricalExerciseIdentityDomain.candidateForPinnedShell(pin,id))
+            assertNull(HistoricalExerciseIdentityDomain.candidateForPinnedShell("unknown",id))
+            assertNull(HistoricalExerciseIdentityDomain.candidateForPinnedShell(pin," $id"))
+            if(id!=target)assertTrue(id in HistoricalExerciseIdentityDomain.searchAliases(target))
+        }
+        assertNull(HistoricalExerciseIdentityDomain.candidateForPinnedShell(pin,"not-a-real-exercise"))
+        assertEquals("weighted-pullup",mapped.getValue("pullup").nativeExerciseId)
+        assertEquals("pullup",mapped.getValue("bw-pullup").nativeExerciseId)
+        assertEquals("chest-supported-machine-row",mapped.getValue("chest-row").nativeExerciseId)
+        assertEquals("ez-bar-preacher-curl",mapped.getValue("preacher").nativeExerciseId)
+        assertNull(standard.getValue("pullup").expectedLoadBasis)
+        assertEquals(LoadBasis.EXERCISE_OVERRIDE,standard.getValue("weighted-pullup").expectedLoadBasis)
+        assertEquals("cable_curl",mapped.getValue("cable-curl").nativeExerciseId)
+        assertEquals("straight-bar",standard.getValue("cable_curl").attachmentId)
+        assertEquals("rope",standard.getValue("cable_crunch").attachmentId)
+        for(id in listOf("plank","farmers","band-pushup")){
+            assertEquals(id,mapped.getValue(id).nativeExerciseId)
+            assertTrue(id in measured)
+            assertFalse(id in standard)
+        }
+        // Discovery is NOT authority to transfer a previous load or issue a
+        // workout. The typed or standard candidate must still pass its own
+        // gym/stock/attachment review, and import remains separately owned.
+        assertTrue(StarterExerciseTranche.entries().all{!it.mayTransferPreviousLoad})
+    }
+
     @Test fun physicalLoadingAndBenchesMustBeExactNotGuessed() {
         val fixtures=mapOf(
             "high-inc-db-press" to setOf("incline-bench"),

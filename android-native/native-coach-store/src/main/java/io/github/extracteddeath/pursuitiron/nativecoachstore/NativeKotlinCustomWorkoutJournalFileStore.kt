@@ -922,6 +922,27 @@ class NativeKotlinCustomWorkoutJournalFileStore(
      * The shared history transaction coordinator commits Finish through
      * manifest redo before making any completed session visible.
      */
+    private fun warmupStationMatches(ownerKey:String,workoutId:String,
+        journal:CustomWorkoutJournalDraft,slotId:String):Boolean {
+        val slot=journal.snapshot.slots.singleOrNull{it.slotId==slotId}?:return false
+        val choices=(NativeKotlinWorkoutMachineChoiceFileStore(root).read(
+            ownerKey,workoutId,true,journal.originalSnapshot.stamp.gymId)
+            as? NativeWorkoutMachineChoiceResult.Saved)?.snapshot?:return false
+        return choices.revision>0 && choices.machines[slot.exerciseId]==slot.machineInstanceId
+    }
+
+    fun reviewFirstWarmup(ownerKey:String,workoutId:String,slotId:String):MidSessionWorkingEdit? =
+        runCatching {
+            fence.withOwnerTransaction(ownerKey) {
+                val current=owner(ownerKey)?:return@withOwnerTransaction null
+                val issued=(read(ownerKey,workoutId,current) as? NativeCustomJournalResult.Durable)?.issued
+                    ?:return@withOwnerTransaction null
+                if(!warmupStationMatches(ownerKey,workoutId,issued.journal,slotId))
+                    return@withOwnerTransaction null
+                preflight.reviewFirstWarmup(ownerKey,issued,slotId)
+            }
+        }.getOrNull()
+
     fun adjustRemaining(ownerKey:String,workoutId:String,
         operation:CustomWorkoutJournalOperation,athleteConfirmed:Boolean):NativeCustomJournalResult {
         fun denied()=NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.SWAP_SOURCE_UNAVAILABLE)
@@ -954,16 +975,9 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                     else ->null
                 }
                 val request=adjustment?.request
-                if(request?.warmupChange!=null) {
-                    val slot=journal.snapshot.slots.singleOrNull{it.slotId==request.occurrenceId}
-                        ?:return@withOwnerTransaction denied()
-                    val choices=(NativeKotlinWorkoutMachineChoiceFileStore(root).read(
-                        ownerKey,workoutId,true,journal.originalSnapshot.stamp.gymId)
-                        as? NativeWorkoutMachineChoiceResult.Saved)?.snapshot
-                        ?:return@withOwnerTransaction denied()
-                    if(choices.revision<=0 || choices.machines[slot.exerciseId]!=slot.machineInstanceId)
-                        return@withOwnerTransaction denied()
-                }
+                if(request?.warmupChange!=null &&
+                    !warmupStationMatches(ownerKey,workoutId,journal,request.occurrenceId))
+                    return@withOwnerTransaction denied()
                 if(operation is CustomWorkoutJournalOperation.AdjustRemaining) {
                     val plan=(prepared.open(ownerKey,workoutId) as? NativeCustomPreparedRead.Found)?.workout
                         ?:return@withOwnerTransaction denied()

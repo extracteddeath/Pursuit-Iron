@@ -575,20 +575,8 @@ object CoachFirstProgramStartDomain {
             val warmup=if(input.policyVersion!=LEGACY_POLICY_VERSION &&
                 source.role!=ComposerRole.ACCESSORY && working!=null) {
                 val stock=athlete.gym.confirmedStock[source.equipmentId]
-                val assisted=stock?.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT
-                // Warm-up with MORE assistance (lower effective difficulty).
-                // All values must be actually selectable on the same machine.
-                // The reverse direction is only for this exact load basis;
-                // never silently soften normal barbell/machine warmups.
-                val inspected=EquipmentLoadDomain.inspect(stock,
-                    if(assisted)working else working*BigDecimal("0.8"),
-                    athlete.gym.unit) as? LoadInspection.Confirmed
-                val warmupLoad=if(assisted)inspected?.nextAbove
-                    else inspected?.atOrBelow
-                if(warmupLoad!=null &&
-                    (if(assisted)warmupLoad>working else warmupLoad<working) &&
-                    (warmupLoad>zero || stock?.basis?.permitsZeroAddedLoad==true &&
-                        warmupLoad.signum()==0))
+                val warmupLoad=CoachSessionPrescriptionDomain.stockAwareWarmupLoad(stock,working,athlete.gym.unit)
+                if(warmupLoad!=null)
                     listOf(DeclaredWarmupStep(warmupLoad,
                         if(input.phase==TrainingPhase.HYPERTROPHY)5 else 3,30,60))
                 else emptyList()

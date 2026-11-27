@@ -351,6 +351,55 @@ class NativeKotlinCustomWorkoutPreflight(
         return true
     }
 
+    private fun firstWarmupRequest(journal:CustomWorkoutJournalDraft,slotId:String,
+        source:NativeCustomAuthoringSnapshot,roster:NativeMachineRosterSnapshot?):MidSessionWorkingEdit? {
+        val slot=journal.snapshot.slots.singleOrNull{it.slotId==slotId}?:return null
+        val working=slot.sets.filter{it.prescription.type==DraftSetType.WORKING}
+        val target=working.firstOrNull()?.prescription?:return null
+        val physical=NativeKotlinCustomSelectedStockDomain.resolve(source,slot,roster)?:return null
+        if(physical.machineInstanceId!=slot.machineInstanceId)return null
+        val load=when(val work=target.load){
+            DraftSetLoad.ExplicitBodyweight -> null
+            is DraftSetLoad.Verified -> {
+                val stock=physical.stock?:return null
+                val inspected=EquipmentLoadDomain.inspect(stock,work.value,work.unit)
+                    as? LoadInspection.Confirmed?:return null
+                if(!inspected.exact || inspected.basis!=work.basis)return null
+                val mass=CoachSessionPrescriptionDomain.stockAwareWarmupLoad(stock,work.value,work.unit)
+                    ?:return null
+                work.copy(value=mass)
+            }
+        }
+        val request=MidSessionWorkingEdit(journal.workoutId,journal.revision,slotId,working.size,
+            warmupChange=SessionWarmupChange.ADD_FIRST_VERIFIED,firstWarmupLoad=load)
+        return request.takeIf{MidSessionWorkingEditDomain.custom(journal,it) is MidSessionWorkingEditReview.Reviewed}
+    }
+
+    /** Read-only candidate derived from the same signed source and stock
+     * used again at commit. Not a permission to change the journal. */
+    internal fun reviewFirstWarmup(ownerKey:String,issued:NativeCustomIssuedJournal,slotId:String):MidSessionWorkingEdit? =
+        runCatching {
+            fence.withOwnerTransaction(ownerKey) {
+                val owner=identity.signedInIdentity()?.takeIf{it.ownerKey==ownerKey && it.athleteId==issued.athleteId}
+                    ?:return@withOwnerTransaction null
+                val journal=issued.journal
+                val stamp=journal.originalSnapshot.stamp
+                val signed=consents.recoverReviewedInputs(ownerKey,stamp.cycleId)
+                    as? NativeCustomSavedCoachReview.Ready?:return@withOwnerTransaction null
+                if(signed.receipt.recordRevision!=issued.consentRevision ||
+                    signed.receipt.fingerprintSha256!=journal.preparedConsentFingerprint)
+                    return@withOwnerTransaction null
+                val source=(sources.read(ownerKey) as? NativeAuthoringSourceRead.Found)?.source
+                    ?:return@withOwnerTransaction null
+                if(source.ownerKey!=ownerKey || source.athleteId!=owner.athleteId ||
+                    source.revision!=stamp.gymCatalogSourceRevision)return@withOwnerTransaction null
+                val roster=if(machineRosters==null)null else
+                    (machineRosters.read(ownerKey) as? NativeMachineRosterResult.Saved)?.snapshot
+                        ?:return@withOwnerTransaction null
+                firstWarmupRequest(journal,slotId,source,roster).takeIf{identity.signedInIdentity()==owner}
+            }
+        }.getOrNull()
+
     /** Same signed ordinary-cycle source, policy and exact physical stock
      * as first issuance. This audit never persists its transient override. */
     internal fun permitsRemainingEdit(ownerKey:String,issued:NativeCustomIssuedJournal,
@@ -381,6 +430,9 @@ class NativeKotlinCustomWorkoutPreflight(
             val roster=if(machineRosters==null)null else
                 (machineRosters.read(ownerKey) as? NativeMachineRosterResult.Saved)?.snapshot
                     ?:return@withOwnerTransaction false
+            if(request.warmupChange==SessionWarmupChange.ADD_FIRST_VERIFIED &&
+                firstWarmupRequest(journal,request.occurrenceId,source,roster)!=request)
+                return@withOwnerTransaction false
             verifiedSpecialistStock(ownerKey,updated,source,roster) &&
                 MidSessionWorkingEditDomain.approvedCustom(journal,request,cycle,source.setup,
                     source.catalog,signed.inputs,sameWeekPeers) && identity.signedInIdentity()==owner

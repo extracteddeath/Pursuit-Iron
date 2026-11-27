@@ -17,9 +17,11 @@ data class MidSessionWorkingEdit(
     /** Explicit session-only method intent; never itself changes issued numbers. */
     val progressionMethod:SavedProgressionMethod?=null,
     /** Explicit warm-up-only edit, never a new working-set target. */
-    val warmupChange:SessionWarmupChange?=null
+    val warmupChange:SessionWarmupChange?=null,
+    /** Exact reviewed first warm-up mass; null only for unloaded bodyweight. */
+    val firstWarmupLoad:DraftSetLoad.Verified?=null
 )
-enum class SessionWarmupChange { REPEAT_APPROVED, REMOVE_PENDING }
+enum class SessionWarmupChange { REPEAT_APPROVED, REMOVE_PENDING, ADD_FIRST_VERIFIED }
 enum class MidSessionWorkingEditRefusal {
     STALE_WORKOUT, FINISHED, UNKNOWN_OCCURRENCE, INVALID_REQUEST,
     PROTECTED_PROTOCOL, RESOLVED_WORK, NO_PENDING_WORK, SESSION_LIMIT, NO_CHANGE
@@ -127,7 +129,7 @@ object MidSessionWorkingEditDomain {
             request.expectedRevision !in 0 until 9_007_199_254_740_991L)
             return refused(MidSessionWorkingEditRefusal.STALE_WORKOUT)
         if(state.finishedByEventId!=null)return refused(MidSessionWorkingEditRefusal.FINISHED)
-        if(request.progressionMethod!=null || request.warmupChange!=null)
+        if(request.progressionMethod!=null || request.warmupChange!=null || request.firstWarmupLoad!=null)
             return refused(MidSessionWorkingEditRefusal.PROTECTED_PROTOCOL)
         val rows=state.snapshot.targets.filter{it.exerciseId==request.occurrenceId}
         return review(request,rows.map{Row(it,it.setKey,it.type,it.ordinal,it.load,
@@ -461,7 +463,46 @@ object MidSessionWorkingEditDomain {
         val added=mutableListOf<String>()
         val omitted=mutableListOf<String>()
         val nextWarm=warm.toMutableList()
+        if(request.firstWarmupLoad!=null && request.warmupChange!=SessionWarmupChange.ADD_FIRST_VERIFIED)
+            return refused(MidSessionWorkingEditRefusal.INVALID_REQUEST)
         when(request.warmupChange) {
+            SessionWarmupChange.ADD_FIRST_VERIFIED -> {
+                // Replay consumes the exact stock-reviewed mass in the receipt.
+                // Live owner preflight independently rederives it from current stock.
+                val original=state.originalSnapshot.slots.singleOrNull{it.slotId==slot.slotId}
+                    ?:return refused(MidSessionWorkingEditRefusal.UNKNOWN_OCCURRENCE)
+                if(warm.isNotEmpty() || original.sets.any{it.prescription.type==DraftSetType.WARMUP} ||
+                    working.any{it.prescription.percentageIntent!=null || it.prescription.amplifier!=null} ||
+                    slot.sets.size>=20 || state.snapshot.slots.sumOf{it.sets.size}>=256)
+                    return refused(MidSessionWorkingEditRefusal.PROTECTED_PROTOCOL)
+                val target=working.first().prescription
+                val load=when(val work=target.load) {
+                    DraftSetLoad.ExplicitBodyweight -> {
+                        if(request.firstWarmupLoad!=null || target.reps.minimum<=3)
+                            return refused(MidSessionWorkingEditRefusal.PROTECTED_PROTOCOL)
+                        DraftSetLoad.ExplicitBodyweight
+                    }
+                    is DraftSetLoad.Verified -> {
+                        val proposed=request.firstWarmupLoad
+                            ?:return refused(MidSessionWorkingEditRefusal.INVALID_REQUEST)
+                        if(proposed.basis!=work.basis || proposed.unit!=work.unit ||
+                            !KotlinSetNumberAuthorityDomain.validIssuedLoad(proposed) ||
+                            (if(work.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+                                proposed.value<=work.value else proposed.value>=work.value))
+                            return refused(MidSessionWorkingEditRefusal.PROTECTED_PROTOCOL)
+                        proposed
+                    }
+                }
+                val reps=if(load==DraftSetLoad.ExplicitBodyweight)
+                    minOf(5,target.reps.minimum-1) else
+                    if(state.snapshot.phase==TrainingPhase.HYPERTROPHY)5 else 3
+                val key="mid-${request.expectedRevision+1}-1"
+                if((state.originalSnapshot.slots+state.snapshot.slots).any{s->s.sets.any{it.setKey==key}})
+                    return refused(MidSessionWorkingEditRefusal.INVALID_REQUEST)
+                added.add(key)
+                nextWarm.add(working.first().copy(setKey=key,ordinalInSlot=1,
+                    prescription=CustomAuthoredSet(DraftSetType.WARMUP,load,RepBand(reps,reps),null,30,60)))
+            }
             SessionWarmupChange.REPEAT_APPROVED -> {
                 val approved=state.originalSnapshot.slots.singleOrNull{it.slotId==slot.slotId}
                     ?.sets?.lastOrNull{it.prescription.type==DraftSetType.WARMUP}
@@ -506,6 +547,7 @@ object MidSessionWorkingEditDomain {
         val slot=state.snapshot.slots.singleOrNull{it.slotId==request.occurrenceId}
             ?:return refused(MidSessionWorkingEditRefusal.UNKNOWN_OCCURRENCE)
         if(request.warmupChange!=null)return warmupReview(state,request,slot)
+        if(request.firstWarmupLoad!=null)return refused(MidSessionWorkingEditRefusal.INVALID_REQUEST)
         val method=request.progressionMethod
         if(method!=null) {
             // A method-only receipt leaves the approved numbers untouched.

@@ -1,5 +1,5 @@
 # Pursuit Iron — execution status v2
-**As of:** 2026-11-27. **Target:** architecture/kotlin-engine-rebuild. **Latest observed integrated SHA:** `062c69389798e6afd77ddef155a50086618cbdd5` (#1191).
+**As of:** 2026-11-27. **Target:** architecture/kotlin-engine-rebuild. **Latest observed integrated SHA:** `f516cb544c1a886b1692675f47166b4a28fe2b1a` (#1201).
 Authority: [MASTER_DEVELOPMENT_PLAN.md](MASTER_DEVELOPMENT_PLAN.md) and [EXECUTION_MILESTONES_V2.json](EXECUTION_MILESTONES_V2.json). Original inventories are immutable v1 provenance, not current stage assignments.
 
 ## Honest baseline
@@ -227,3 +227,14 @@ S3C: `NativeKotlinCustomWorkoutJournalFileStoreTest.approvedWarmupRepeatAndRemov
 S3D: the generated-program 20/30/45-minute regression candidate #1199 uses the same signed preparation and journal owners. Initial head `e44e03de96aa37db980abe897829bb2523f7ccd9` failed test compilation (two positional Boolean arguments to acceptTimeUndo); correct to named athleteConfirmed and run exact integrated CI. Do not infer a pass from the previous authored test. Verify every applicable original acceptance layer before closing the stage.
 
 Web main #1194: exact head `aa5a0128926493ed2420f6ecd49839a0a022695b`, squash `32fc5aa168d6a9ad65f8927b3410f0522aa8dde2`; strictly descending physically feasible drop targets, shared issuance/sync rule. All five premerge workflows passed; no claim that full native station provenance or every session-edit improvement was ported. Keep parity follow-up separate from native gate status. No APK or device acceptance.
+
+
+## Stage 3 final combined candidate — 2026-11-27
+
+- #1199 exact head `7b3b15da183fe656ffff8efddccd22b9212ca816` passed engine 46077711582 and Compose 46077711594; squash `2d69ba1ef646c12365f5793ae9fe628e4e1be70a` has identical tree `50012332e668dd4ea31617252c5983271d9e3294`. Generated Full/45/30/20 preparation and Undo, protection and actual Finish. The test compilation failure on the previous head was corrected without weakening the authority.
+- #1201 exact head `71411b13bd02e9b5f1c30e9bac78e2d71ea4e157` passed engine 46079229172 and Compose 46079229178; squash `f516cb544c1a886b1692675f47166b4a28fe2b1a` has identical tree `64483f339c0b8960645a48c037480a025d77b249`. Generated-origin compatible pair selection, opt-out refusal, revisioned consent, ordered visits, round rest, exact actuals, cold Finish and retry. No new runtime owner.
+- #1200 exact prior head `160659a55998268e6b2adb7f872b4b6377a7ec8d` passed engine 46079394631 and Compose 46079394572. First-time warmup stock review, consent, owner/station gate, cold Finish, exact weighted receipt and bodyweight lifecycle; warmup-only changes preserve original working prescription completion, actual working edits remain guarded. Prior failure was a source contract referencing pre-extraction calculation, not a reason to weaken assistance safety.
+- #1202 exact first head `d38209cd5651459df9b734ccc697ec50670037be` passed engine 46079735708 and Compose 46079735632. Actual Kotlin runtime discovery verifies all 372 pinned historical identities, distinct targets and wrong-pin rejection; independent frozen-shell audit still owns provenance. Its integrated test blob is identical to the initial successful head. No historical receipt transfer granted.
+- Consolidate #1200 and #1202 into one candidate on #1201; changed paths are disjoint. Both exact combined workflows must pass before merge. This avoids repeatedly restarting equivalent independent CI.
+
+S3B source exit still requires explicit per-profile and supplementary assertion disposition, including physical-context-required historical candidates. Historical receipt import belongs to S7B, not authorized by discovery. S3C pending exact combined verification; no claim of arbitrary warmup authoring in protected protocols/short sessions. S3D shorter-session journey now merged; remaining exit review includes exact permanent-vs-session consent and restrictions. No APK or device acceptance.

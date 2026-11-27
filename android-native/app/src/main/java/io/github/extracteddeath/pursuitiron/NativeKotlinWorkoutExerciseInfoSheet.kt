@@ -21,6 +21,7 @@ internal fun NativeKotlinWorkoutExerciseInfoSheet(
     warmupsOnly:Boolean=false,
     outcomes:Map<String,KotlinJournalSetOutcome> = emptyMap(),
     onSelectWarmup:((String)->Unit)?=null,
+    onAddFirstWarmup:(()->Unit)?=null,
     onRepeatWarmup:(()->Unit)?=null,
     onRemoveWarmup:(()->Unit)?=null,
     busy:Boolean=false,
@@ -117,6 +118,11 @@ internal fun NativeKotlinWorkoutExerciseInfoSheet(
             }
         }
         if(warmupsOnly) {
+            onAddFirstWarmup?.let{add->
+                OutlinedButton(onClick=add,enabled=!busy,modifier=Modifier.fillMaxWidth()){
+                    Text("Review first warm-up…")
+                }
+            }
             onRepeatWarmup?.let{repeat->
                 OutlinedButton(onClick=repeat,enabled=!busy,modifier=Modifier.fillMaxWidth()){
                     Text("Repeat approved warm-up…")
@@ -127,7 +133,7 @@ internal fun NativeKotlinWorkoutExerciseInfoSheet(
                     Text("Remove last unlogged warm-up…")
                 }
             }
-            if(onRepeatWarmup!=null || onRemoveWarmup!=null)
+            if(onAddFirstWarmup!=null || onRepeatWarmup!=null || onRemoveWarmup!=null)
                 Text("Only this workout changes. Recorded sets and your saved program stay unchanged.",
                     style=MaterialTheme.typography.bodySmall)
         }

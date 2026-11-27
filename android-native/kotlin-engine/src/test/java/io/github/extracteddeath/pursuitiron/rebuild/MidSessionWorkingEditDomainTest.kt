@@ -67,6 +67,44 @@ class MidSessionWorkingEditDomainTest {
         assertEquals(5,cr.after.last().ordinalInSlot)
         assertEquals(180,cr.after.last().prescription.restSeconds)
     }
+    @Test fun customSessionProgressionChoicesReuseExactSavedMethodPolicyWithoutWriting() {
+        val journal=custom()
+        val original=journal.originalSnapshot
+        val slot=original.slots.single()
+        val authored=CustomExerciseSlot(slot.slotId,slot.exerciseId,slot.role,
+            slot.sets.map{it.prescription},attachmentId=slot.attachmentId,
+            pinned=slot.pinned,supersetGroup=slot.supersetGroup)
+        val day=CustomTrainingDay(original.weekday,original.dayLabel,
+            original.sessionPurpose,listOf(authored))
+        val block=CustomTrainingBlock(original.blockId,"Base",original.phase,
+            original.blockPurpose,4,original.split,listOf(day))
+        val cycle=CustomTrainingCycle(original.stamp.cycleId,original.stamp.cycleRevision,
+            original.stamp.athleteId,AthleteTrainingGoal.POWERBUILDING,"Cycle",listOf(block))
+        fun choices(state:CustomWorkoutJournalDraft=journal,source:CustomTrainingCycle=cycle,
+            revision:Long=journal.revision,workout:String=journal.workoutId,id:String=slot.slotId)=
+            MidSessionWorkingEditDomain.availableCustomProgressionMethods(state,source,workout,revision,id)
+        val expected=CustomCycleBuilderDomain.availableProgressionMethods(
+            cycle,ProgramProgressionSlotKey(block.blockId,day.weekday,slot.slotId))
+        assertTrue(expected.isNotEmpty())
+        assertEquals(expected,choices())
+        assertTrue(SavedProgressionMethod.DOUBLE in expected)
+        assertFalse(SavedProgressionMethod.BODYWEIGHT_REPS in expected)
+        assertTrue(choices(revision=0).isEmpty())
+        assertTrue(choices(workout="foreign").isEmpty())
+        assertTrue(choices(id="foreign").isEmpty())
+        for(other in listOf(cycle.copy(cycleId="foreign"),cycle.copy(athleteId="foreign"),
+            cycle.copy(revision=cycle.revision+1),
+            cycle.copy(blocks=listOf(block.copy(days=listOf(day.copy(
+                slots=listOf(authored.copy(exerciseId="foreign"))))))))) {
+            assertTrue(choices(source=other).isEmpty())
+        }
+        assertTrue(choices(state=custom(amp=true)).isEmpty())
+        assertTrue(choices(state=custom(group="pair")).isEmpty())
+        assertNull(cycle.blocks.single().days.single().slots.single().progressionMethod)
+        assertEquals(original,journal.originalSnapshot)
+        assertEquals(1L,journal.revision)
+    }
+
     @Test fun refusalBoundariesPreserveProtectedAndResolvedWork() {
         val g=generated()
         val request=MidSessionWorkingEdit("workout",1,"curl",2,restSeconds=150)

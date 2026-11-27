@@ -25,7 +25,7 @@ internal data class NativeCustomWorkoutJournalRecord(
 
 internal object NativeCustomWorkoutJournalCodec {
     private const val MAGIC=0x5049434A // PICJ
-    private const val VERSION=7
+    private const val VERSION=8
     const val MAX_BYTES=2_000_000
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
@@ -112,7 +112,7 @@ internal object NativeCustomWorkoutJournalCodec {
             }
             is CustomWorkoutJournalOperation.AdjustRemaining->{
                 writeByte(6);writeUTF(event.eventId);writeLong(event.expectedRevision)
-                NativeMidSessionWorkingEditCodec.write(this,event.request)
+                NativeMidSessionWorkingEditCodec.write(this,event.request,withMethod=version>=8)
             }
             is CustomWorkoutJournalOperation.UndoAdjustment->{
                 writeByte(7);writeUTF(event.eventId);writeLong(event.expectedRevision)
@@ -177,7 +177,7 @@ internal object NativeCustomWorkoutJournalCodec {
             6->{
                 if(version<7)throw IOException("adjustment in legacy journal")
                 CustomWorkoutJournalOperation.AdjustRemaining(readUTF(),readLong(),
-                    NativeMidSessionWorkingEditCodec.read(this))
+                    NativeMidSessionWorkingEditCodec.read(this,withMethod=version>=8))
             }
             7->{
                 if(version<7)throw IOException("adjustment undo in legacy journal")
@@ -256,7 +256,11 @@ internal object NativeCustomWorkoutJournalCodec {
             ((it.operation as? CustomWorkoutJournalOperation.Record)
                 ?.performed?.load?.scale() ?: 0)<0
         }
-        val version=if(adjusted) VERSION else if(exactDecimal) 6 else if(stageTagged) 5 else if(machineTagged) 4
+        val methodTagged=state.receipts.any{
+            (it.operation as? CustomWorkoutJournalOperation.AdjustRemaining)
+                ?.request?.progressionMethod!=null
+        }
+        val version=if(methodTagged) VERSION else if(adjusted) 7 else if(exactDecimal) 6 else if(stageTagged) 5 else if(machineTagged) 4
             else if(notes) 3 else if(swapped) 2 else 1
         val snapshot=NativeKotlinCustomWorkoutSnapshotCodec.encode(state.snapshot,allowMidSessionKeys=adjusted)
         val original=if(swapped || adjusted)

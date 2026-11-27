@@ -103,6 +103,21 @@ data class CustomWorkoutJournalDraft(
     val originalSnapshot:CustomWorkoutDaySnapshot=snapshot,
     val lastAdjustment:MidSessionUndo<CustomWorkoutDaySnapshot>?=null
 ) {
+    /** Session-only choices are reconstructed from exact receipts, not a
+     * second persisted preference or a modification of saved program intent. */
+    val sessionProgressionChoices:Map<String,SavedProgressionMethod> get() {
+        val undone=receipts.mapNotNull{
+            (it.operation as? CustomWorkoutJournalOperation.UndoAdjustment)?.adjustmentEventId
+        }.toSet()
+        val choices=linkedMapOf<String,SavedProgressionMethod>()
+        for(receipt in receipts) {
+            val edit=receipt.operation as? CustomWorkoutJournalOperation.AdjustRemaining ?:continue
+            if(edit.eventId in undone)continue
+            val method=edit.request.progressionMethod ?:continue
+            choices[edit.request.occurrenceId]=method
+        }
+        return Collections.unmodifiableMap(choices)
+    }
     /** A note never leaks into the next workout's issued targets or coach. */
     val sessionNote:String get()=receipts.asReversed().firstNotNullOfOrNull{
         (it.operation as? CustomWorkoutJournalOperation.SessionNote)?.text

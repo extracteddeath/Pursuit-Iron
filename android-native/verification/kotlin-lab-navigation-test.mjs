@@ -519,10 +519,11 @@ assert.ok(
   liveJournalDomain.includes('CustomWorkoutJournalRefusal.SWAP_ALREADY_STARTED') &&
   liveJournalDomain.includes('CustomWorkoutJournalRefusal.SWAP_PROTECTED') &&
   liveJournalDomain.includes('prior.receipts.any') &&
-  liveJournalCodec.includes('private const val VERSION=7') &&
-  liveJournalCodec.includes('val version=if(adjusted) VERSION else if(exactDecimal) 6 else if(stageTagged) 5 else if(machineTagged) 4') &&
+  liveJournalCodec.includes('private const val VERSION=8') &&
+  liveJournalCodec.includes('val version=if(methodTagged) VERSION else if(adjusted) 7 else if(exactDecimal) 6 else if(stageTagged) 5 else if(machineTagged) 4') &&
   liveJournalCodec.includes('is CustomWorkoutJournalOperation.AdjustRemaining->') &&
-  liveJournalCodec.includes('NativeMidSessionWorkingEditCodec.read(this)') &&
+  liveJournalCodec.includes('NativeMidSessionWorkingEditCodec.read(this,withMethod=version>=8)') &&
+  liveJournalCodec.includes('NativeMidSessionWorkingEditCodec.write(this,event.request,withMethod=version>=8)') &&
   liveJournalCodec.includes('if(version>=5)writeInt(event.visit.stage)') &&
   liveJournalCodec.includes('if(version>=5)readInt() else 1') &&
   liveJournalCodec.includes('if(version>=4)textOptional(value.machineInstanceId)') &&
@@ -1075,3 +1076,11 @@ assert.ok(liveWorkout.includes('NativeKotlinProgramProgressionHandoffDomain.revi
   cycleUi.includes('controller.chooseExerciseProgression(') &&
   cycleUi.includes('Keep my saved progression'),
   'Verified custom Finish must offer exact-source future progression review without writing program or history');
+
+assert.ok(remainingEditUi.includes('progressionMethod=chosenMethod') &&
+  liveWorkout.includes('MidSessionWorkingEditDomain.availableCustomProgressionMethods(') &&
+  liveWorkout.includes('host.readCustomCycleDraft(') &&
+  liveJournalDomain.includes('val sessionProgressionChoices:Map<String,SavedProgressionMethod>') &&
+  customFinishProgressionHandoff.includes('journal.sessionProgressionChoices') &&
+  cycleUi.includes('request.sessionChoices'),
+  'Workout method choice must use exact-cycle review, durable receipt and separate post-Finish review');

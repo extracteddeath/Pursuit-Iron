@@ -1544,13 +1544,25 @@ internal fun NativeKotlinCustomJournalScreen(
     // Closing it cannot write a set, alter a target or discard editor drafts.
     adjustment?.let{anchor->
         val active=journal
+        var methods by remember(host,anchor){mutableStateOf<Set<SavedProgressionMethod>>(emptySet())}
+        LaunchedEffect(host,anchor,active?.revision){
+            methods=emptySet()
+            val current=active?.takeIf{it.revision==anchor.revision}?:return@LaunchedEffect
+            methods=withContext(Dispatchers.IO){
+                val cycle=(host.readCustomCycleDraft(current.originalSnapshot.stamp.cycleId)
+                    as? NativeCustomDraftReadResult.Found)?.draft ?:return@withContext emptySet()
+                MidSessionWorkingEditDomain.availableCustomProgressionMethods(current,cycle,
+                    anchor.workoutId,anchor.revision,anchor.occurrenceId)
+            }
+        }
         NativeRemainingEditSheet(anchor,active?.revision,busy,
             review={request->active?.let{MidSessionWorkingEditDomain.custom(it,request)}},
             onApply={request->
                 adjustment=null
                 submitRemainingEdit(CustomWorkoutJournalOperation.AdjustRemaining(
                     "adjust-"+UUID.randomUUID(),request.expectedRevision,request))
-            },onDismiss={adjustment=null})
+            },onDismiss={adjustment=null},progressionChoices=methods,
+            currentSessionMethod=active?.sessionProgressionChoices?.get(anchor.occurrenceId))
     }
     infoSlotId?.let { slotId ->
         journal?.snapshot?.slots?.firstOrNull{it.slotId==slotId}

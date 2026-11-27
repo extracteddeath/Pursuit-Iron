@@ -232,6 +232,9 @@ internal fun NativeKotlinCandidateJourney(
     var pendingProgramSwapReview by remember {
         mutableStateOf<NativeKotlinProgramSwapHandoff?>(null)
     }
+    var pendingProgramProgressionReview by remember {
+        mutableStateOf<NativeKotlinProgramProgressionHandoff?>(null)
+    }
     // Resume the owned native journey after process death; do not send a
     // returning lifter through onboarding again. No silent workout issuance
     // or journal opening: TRAIN independently revalidates saved receipts.
@@ -312,6 +315,8 @@ internal fun NativeKotlinCandidateJourney(
                     handoff.first,handoff.second)
             else if(pendingProgramSwapReview!=null)
                 cycleController.open(checkNotNull(pendingProgramSwapReview).cycleId)
+            else if(pendingProgramProgressionReview!=null)
+                cycleController.open(checkNotNull(pendingProgramProgressionReview).cycleId)
             else cycleController.openSavedTraining()
         }
     }
@@ -436,6 +441,8 @@ internal fun NativeKotlinCandidateJourney(
                             })
                     KotlinCandidateDestination.PROGRAM ->
                         NativeKotlinCustomCycleCandidateScreen(cycleController,
+                            programProgressionReview=pendingProgramProgressionReview,
+                            onProgramProgressionReviewDismiss={pendingProgramProgressionReview=null},
                             programSwapReview=pendingProgramSwapReview,
                             onProgramSwapReviewDismiss={
                                 pendingProgramSwapReview=null
@@ -558,7 +565,15 @@ internal fun NativeKotlinCandidateJourney(
                             onReviewSwapInProgram={request->
                                 selectedGeneratedWorkoutId=null
                                 selectedCustomWorkoutId=null
+                                pendingProgramProgressionReview=null
                                 pendingProgramSwapReview=request
+                                navigate(KotlinCandidateDestination.PROGRAM)
+                            },
+                            onReviewProgressionInProgram={request->
+                                selectedGeneratedWorkoutId=null
+                                selectedCustomWorkoutId=null
+                                pendingProgramSwapReview=null
+                                pendingProgramProgressionReview=request
                                 navigate(KotlinCandidateDestination.PROGRAM)
                             })
                 }
@@ -595,7 +610,8 @@ private fun NativeKotlinCandidateTrainEntry(
     onViewFinishedHistory:(String)->Unit,
     onReviewNext:(String)->Unit,
     onReturnToProgram:()->Unit,
-    onReviewSwapInProgram:(NativeKotlinProgramSwapHandoff)->Unit
+    onReviewSwapInProgram:(NativeKotlinProgramSwapHandoff)->Unit,
+    onReviewProgressionInProgram:(NativeKotlinProgramProgressionHandoff)->Unit
 ) {
     var entryId by rememberSaveable { mutableStateOf("") }
     var measuredOpen by rememberSaveable { mutableStateOf(false) }
@@ -787,7 +803,8 @@ private fun NativeKotlinCandidateTrainEntry(
             onClose={onOpenCustomWorkout(null)},
             onViewHistory={onViewFinishedHistory(customWorkoutId)},
             onReturnToProgram=onReturnToProgram,
-            onReviewSwapInProgram=onReviewSwapInProgram)
+            onReviewSwapInProgram=onReviewSwapInProgram,
+            onReviewProgressionInProgram=onReviewProgressionInProgram)
         }
     } else if(selectedId == null) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())

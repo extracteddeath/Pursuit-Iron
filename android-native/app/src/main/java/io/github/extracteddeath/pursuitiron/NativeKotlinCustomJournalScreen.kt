@@ -41,7 +41,8 @@ internal fun NativeKotlinCustomJournalScreen(
     onClose:()->Unit,
     onViewHistory:()->Unit={},
     onReturnToProgram:()->Unit={},
-    onReviewSwapInProgram:(NativeKotlinProgramSwapHandoff)->Unit={}
+    onReviewSwapInProgram:(NativeKotlinProgramSwapHandoff)->Unit={},
+    onReviewProgressionInProgram:((NativeKotlinProgramProgressionHandoff)->Unit)?=null
 ) {
     val displayPreferences=rememberNativeWorkoutDisplayStore()
     val display by displayPreferences.state.collectAsState()
@@ -639,6 +640,17 @@ internal fun NativeKotlinCustomJournalScreen(
                         OutlinedButton(onClick=onReturnToProgram,enabled=!busy,
                             modifier=Modifier.fillMaxWidth()) {
                             Text("Continue to my next workout")
+                        }
+                        onReviewProgressionInProgram?.let{open->
+                            NativeKotlinProgramProgressionHandoffDomain.review(current)?.let{request->
+                                OutlinedButton(onClick={open(request)},enabled=!busy,
+                                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){
+                                    Text("Review future progression in Plan")
+                                }
+                                Text("Your completed workout stays unchanged. Changing progression requires a separate program edit and approval.",
+                                    style=MaterialTheme.typography.bodySmall,
+                                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
                         val programReviews=NativeKotlinProgramSwapHandoffDomain
                             .review(current)

@@ -1063,3 +1063,15 @@ assert.ok(remainingEditUi.includes('currentRevision!=anchor.revision') &&
   liveJournalStore.includes('val all=census.workouts.map{it.journal}') &&
   liveJournalStore.includes('preflight.permitsRemainingEdit(ownerKey,existing.issued,operation.request,all)'),
   'Remaining-work edits must use a revision-bound review and authenticated journal route, not direct UI mutation');
+
+const progressionHandoff=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinProgramSwapHandoff.kt');
+assert.ok(liveWorkout.includes('NativeKotlinProgramProgressionHandoffDomain.review(current)') &&
+  liveWorkout.includes('Review future progression in Plan') &&
+  progressionHandoff.includes('journal.finishedByEventId==null') &&
+  progressionHandoff.includes('draft.revision!=request.issuedCycleRevision') &&
+  progressionHandoff.includes('draft.athleteId!=request.athleteId') &&
+  journey.includes('cycleController.open(checkNotNull(pendingProgramProgressionReview).cycleId)') &&
+  cycleUi.includes('NativeKotlinProgramProgressionHandoffDomain.canOpenExactEdit(request,draft)') &&
+  cycleUi.includes('controller.chooseExerciseProgression(') &&
+  cycleUi.includes('Keep my saved progression'),
+  'Verified custom Finish must offer exact-source future progression review without writing program or history');

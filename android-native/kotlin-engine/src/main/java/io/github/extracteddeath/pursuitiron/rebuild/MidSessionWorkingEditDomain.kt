@@ -145,7 +145,8 @@ object MidSessionWorkingEditDomain {
      * No mixed-swap or specialist-day adjustments in this initial lane. */
     fun approvedGenerated(
         state:KotlinWorkoutJournalState,request:MidSessionWorkingEdit,
-        program:ComposerRequest,policies:List<ExercisePrescriptionPolicy>
+        program:ComposerRequest,policies:List<ExercisePrescriptionPolicy>,
+        sameSourcePeers:List<KotlinWorkoutJournalState>
     ):Boolean = runCatching {
         if(state.receipts.any{it.operation is KotlinJournalOperation.SwapExercise ||
                 it.operation is KotlinJournalOperation.UndoSwap} ||
@@ -195,7 +196,57 @@ object MidSessionWorkingEditDomain {
             original.copy(sets=rows.map{row->DraftPrescribedSet(row.setKey,row.type,row.ordinal,row.load,
                 row.reps,row.targetRir,row.activeSeconds,row.restSeconds)})
         }
-        val sessions=approved.sessions.map{if(it.dayIndex==day.dayIndex)day.copy(exercises=revised) else it}
+        // Generated grants identify a reviewed week by program/source
+        // revision, rather than the custom-cycle absolute-week field.
+        // Never infer a second occurrence of the same day to be another week.
+        val peers=sameSourcePeers.filter{it.snapshot.workoutId!=state.snapshot.workoutId}
+        if(peers.any{it.originalSnapshot.source!=state.originalSnapshot.source ||
+                it.snapshot.source!=state.originalSnapshot.source ||
+                it.snapshot.dayIndex==day.dayIndex ||
+                it.receipts.any{receipt->receipt.operation is KotlinJournalOperation.SwapExercise ||
+                    receipt.operation is KotlinJournalOperation.UndoSwap}} ||
+            peers.map{it.snapshot.dayIndex}.distinct().size!=peers.size)
+            return@runCatching false
+        val peerDays=peers.associateBy{it.snapshot.dayIndex}
+        if(peerDays.keys.any{key->approved.sessions.none{it.dayIndex==key}})
+            return@runCatching false
+        val sessions=approved.sessions.map{planned->
+            if(planned.dayIndex==day.dayIndex)day.copy(exercises=revised)
+            else {
+                val peer=peerDays[planned.dayIndex]
+                if(peer==null)planned
+                else {
+                    val prior=peer.snapshot
+                    if(prior.purpose!=planned.purpose ||
+                        program.days.getOrNull(prior.dayIndex)?.calendarDay!=prior.calendarDay)
+                        return@runCatching false
+                    // A short day cannot supply extra capacity; use the
+                    // full planned dose. A changed shortened snapshot is
+                    // not supported by this ordinary-workout audit.
+                    if(prior.shortSessionLimitMinutes!=null) {
+                        if(prior!=peer.originalSnapshot)return@runCatching false
+                        planned
+                    } else {
+                        val priorGroups=prior.targets.groupBy{it.exerciseId}
+                        if(priorGroups.keys.toList()!=planned.exercises.map{it.exerciseId})
+                            return@runCatching false
+                        planned.copy(exercises=planned.exercises.map{original->
+                            val rows=priorGroups.getValue(original.exerciseId)
+                            val option=options[original.exerciseId]?:return@runCatching false
+                            val working=rows.count{it.type==DraftSetType.WORKING}
+                            if(rows.any{it.role!=option.role || it.purpose!=planned.purpose} ||
+                                working>option.maximumSetsPerVisit)return@runCatching false
+                            // Do not spend prior reductions or skipped work
+                            // as newly available weekly training capacity.
+                            if(working<original.sets.count{it.type==DraftSetType.WORKING})original
+                            else original.copy(sets=rows.map{row->DraftPrescribedSet(
+                                row.setKey,row.type,row.ordinal,row.load,row.reps,
+                                row.targetRir,row.activeSeconds,row.restSeconds)})
+                        })
+                    }
+                }
+            }
+        }
         CoachSessionPrescriptionDomain.auditPrescription(approved.composer,options,sessions)
             .satisfiesDeclaredHardConstraints
     }.getOrDefault(false)

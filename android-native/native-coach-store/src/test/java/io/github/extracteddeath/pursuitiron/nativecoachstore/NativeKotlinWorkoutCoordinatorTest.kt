@@ -176,6 +176,37 @@ class NativeKotlinWorkoutCoordinatorTest {
         assertTrue(gateway().reviewMuscleConcerns("owner-1","athlete-1","session-1").isEmpty())
     }
 
+    @Test fun sameSourceGeneratedPeersCannotBeIgnoredOrDoubleClaimOneDay() {
+        val base=program()
+        val allHypertrophy=base.copy(
+            phase=TrainingPhase.HYPERTROPHY,
+            sessionIntents=base.days.indices.map{
+                ComposerSessionIntent(it,ComposerSessionPurpose.HYPERTROPHY)
+            })
+        val workingPolicies=policies().filter{it.purpose==ComposerSessionPurpose.HYPERTROPHY}
+        fun state(id:String,day:Int):KotlinWorkoutJournalState {
+            val selection=KotlinWorkoutSelectionGrant("grant-$id",id,source,day)
+            val result=KotlinWorkoutSnapshotDomain.stage(KotlinWorkoutSnapshotRequest(
+                source,source,selection,allHypertrophy,workingPolicies))
+            assertTrue(result.toString(),result is KotlinWorkoutSnapshotResult.Staged)
+            val snapshot=(result as KotlinWorkoutSnapshotResult.Staged).snapshot
+            return KotlinWorkoutJournalDomain.begin(snapshot,KotlinStoredWorkoutIdentity(
+                "receipt-$id",id,source,1))
+        }
+        val current=state("current",1)
+        val other=state("other",2)
+        val targets=current.snapshot.targets.filter{it.exerciseId=="db-row" && it.type==DraftSetType.WORKING}
+        assertTrue(targets.isNotEmpty())
+        val edit=MidSessionWorkingEdit("current",0,"db-row",targets.size,
+            restSeconds=targets.first().restSeconds+15)
+        assertTrue(MidSessionWorkingEditDomain.approvedGenerated(current,edit,
+            allHypertrophy,workingPolicies,listOf(other)))
+        assertFalse(MidSessionWorkingEditDomain.approvedGenerated(current,edit,
+            allHypertrophy,workingPolicies,listOf(other,state("duplicate",2))))
+        assertFalse(MidSessionWorkingEditDomain.approvedGenerated(current,edit,
+            allHypertrophy,workingPolicies,listOf(state("same-day",1))))
+    }
+
     @Test fun approvedFullWeekStagesAndAtomicallyIssuesRealKotlinSession() {
         val auth=FakeAuthority(approval())
         val service=coordinator(auth)

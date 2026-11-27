@@ -255,7 +255,10 @@ class NativeKotlinTrackedWorkoutGateway(
         if(opened !is NativeJournalFileResult.Durable)return@fenced opened
         if(!authorized(owner,athlete,opened.journal))
             return@fenced NativeJournalFileResult.Rejected(NativeJournalFileRefusal.NOT_AUTHORIZED)
-        workout.adjustRemaining(owner,workoutId,operation)
+        val manifest=(ledger.open(owner,athlete) as? NativeHistoryLedgerResult.Durable)?.ledger
+            ?:return@fenced unavailable()
+        if(!manifest.readyForHistoryReads)return@fenced unavailable()
+        workout.adjustRemaining(owner,workoutId,operation,manifest.completions)
     }
 
     fun undoSwap(

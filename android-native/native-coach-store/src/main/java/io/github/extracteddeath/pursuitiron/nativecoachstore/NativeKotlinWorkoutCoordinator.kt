@@ -364,9 +364,42 @@ class NativeKotlinWorkoutCoordinator(
         NativeJournalFileRefusal.STORAGE_UNAVAILABLE)}
 
     internal fun adjustRemaining(
-        ownerKey:String,workoutId:String,operation:KotlinJournalOperation
+        ownerKey:String,workoutId:String,operation:KotlinJournalOperation,
+        completions:List<KotlinHistoryManifestEntry>
     ):NativeJournalFileResult=runCatching {
         revisionFence.withOwnerTransaction(ownerKey) {
+            // Scan before the per-workout file lock: inventory cold-opens
+            // journals itself. The surrounding owner fence prevents writes.
+            val current=store.openStored(ownerKey,workoutId){owner,source->
+                authority.canAccessIssuedWorkout(owner,source)
+            }
+            if(current !is NativeJournalFileResult.Durable)return@withOwnerTransaction current
+            val peers=if(operation is KotlinJournalOperation.AdjustRemaining &&
+                current.journal.receipts.none{it.operation.eventId==operation.eventId}) {
+                val source=current.journal.originalSnapshot.source
+                val inventory=store.inventoryOwner(ownerKey,source.athleteId){owner,issuedSource->
+                    authority.canAccessIssuedWorkout(owner,issuedSource)
+                } as? NativeKotlinJournalInventoryResult.Verified
+                    ?:return@withOwnerTransaction NativeJournalFileResult.Rejected(
+                        NativeJournalFileRefusal.HISTORY_NOT_READY)
+                val sameProgram=inventory.journals.filter{
+                    it.originalSnapshot.source.programId==source.programId &&
+                        it.originalSnapshot.source.programRevision==source.programRevision
+                }
+                val byId=completions.associateBy{it.workoutId}
+                if(sameProgram.none{it==current.journal} ||
+                    sameProgram.any{peer->
+                        val finish=byId[peer.snapshot.workoutId]
+                        peer.originalSnapshot.source!=source ||
+                            (peer.finishedByEventId==null)!=(finish==null) ||
+                            (finish!=null && (finish.finishEventId!=peer.finishedByEventId ||
+                                finish.originalJournalRevision!=peer.revision ||
+                                finish.storedReceiptId!=peer.storedIdentity.storageReceiptId))
+                    })
+                    return@withOwnerTransaction NativeJournalFileResult.Rejected(
+                        NativeJournalFileRefusal.HISTORY_NOT_READY)
+                sameProgram
+            } else emptyList()
             store.appendReviewedWorkoutAdjustment(ownerKey,workoutId,{owner,source->
                 runCatching{authority.canAccessIssuedWorkout(owner,source)}.getOrDefault(false)
             }) { journal->
@@ -387,7 +420,8 @@ class NativeKotlinWorkoutCoordinator(
                     approved.grant.workoutId!=workoutId || approved.grant.dayIndex!=journal.snapshot.dayIndex)
                     return@appendReviewedWorkoutAdjustment null
                 operation.takeIf{
-                    MidSessionWorkingEditDomain.approvedGenerated(journal,edit.request,approved.program,approved.policies)
+                    journal==current.journal && MidSessionWorkingEditDomain.approvedGenerated(
+                        journal,edit.request,approved.program,approved.policies,peers)
                 }
             }
         }

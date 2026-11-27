@@ -1226,6 +1226,9 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
         return {
             schemaVersion: 1, programId: String(program.id), dayId: String(day.id),
             exerciseId: ex.id, slot, weekIndex, workingSetIndex: index,
+            // Freeze the canonical working-set denominator at issuance. A
+            // later Plan edit is not authorization to delete pending work.
+            issuedWorkingSetCount: percentage ? percentage.sets.length : Number(cell.sets),
             source: previous ? { load: comparableLoad, reps: previous.r,
                 originalLoad: previous.w, originalUnit: priorUnit, unit,
                 ...(sug?.sourceEntryId != null ? { historyEntryId: String(sug.sourceEntryId) } : {}),

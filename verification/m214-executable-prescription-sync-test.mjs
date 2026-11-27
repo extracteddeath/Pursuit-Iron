@@ -9,6 +9,7 @@ import { analyzeShellHistoryForNextEngine, nextWorkoutSuggestionForShell,
 import { captureShellVolumeSnapshot, repairShellVolume } from '../modules/next-engine/volume-repair.js';
 import { convertProgramToNextCycleForShell, advanceNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { withProgressionChoices, buildSessionReview } from '../modules/session-tools.js';
+import { reconcileSurplusWorkingRows, refreshPendingSetTargets } from '../modules/next-engine/workout-runtime.js';
 
 const fixture = JSON.parse(fs.readFileSync('verification/m205-generation-parity-results.json')).rows[3];
 const original = generateNextProgramForShell({ config: fixture.config, legacyExercises: EXERCISES,
@@ -324,3 +325,38 @@ console.log('PASS M214 executable synchronization: user prescription/method owne
     }
     console.log('PASS M214 review: edited 3/5/3 hip-thrust prescription agrees with live issuance.');
  }
+
+// Native Stage 3 receipt invariant: a newly issued denominator belongs to
+// the workout, not to a later re-read of the editable program. Keep the
+// established legacy ghost-set repair for snapshots without that proof.
+{
+    const ex = EX_BY_ID['machine-hip-thrust'];
+    const day = {id:'lower',label:'Lower',primaryIndex:-1,exercises:[ex.id]};
+    const program = {id:'issued-count-parity',custom:true,weeks:10,days:[day],
+        config:{unit:'lb',weeks:10,goal:'both',experience:'intermediate',progression:'auto',
+            deload:false,equipment:['machine']},
+        overrides:{'lower:0':{sets:5,reps:'8-12',rir:'2',techOverride:null}},ss:{}};
+    const issue = () => prescribeSets(program,day,ex,0,1,'lb',
+        {weight:100,action:'hold'}, {},{},[],false);
+    const old = issue();
+    assert.equal(old.length,5);
+    assert.ok(old.every(s=>s.target.decisionTrace.issuedWorkingSetCount===5));
+    program.overrides['lower:0'].sets=3;
+    const fresh=issue();
+    assert.equal(fresh.length,3);
+    const cold=JSON.parse(JSON.stringify(old));
+    assert.deepEqual(refreshPendingSetTargets(cold,fresh),cold,
+        'A later program edit must not remove the original issued working sets');
+    assert.equal(reconcileSurplusWorkingRows(fresh,old),fresh,
+        'A larger fresh prescription must not silently add work');
+    const legacy=clone(old);
+    legacy.forEach(s=>delete s.target.decisionTrace.issuedWorkingSetCount);
+    assert.equal(reconcileSurplusWorkingRows(legacy,fresh).length,3,
+        'Legacy untouched surplus rows still use the established repair');
+    legacy[4].done=true;
+    const repaired=reconcileSurplusWorkingRows(legacy,fresh);
+    assert.equal(repaired.length,4);
+    assert.equal(repaired.at(-1),legacy[4],'Completed work is never deleted');
+    assert.equal(old.length,5);
+    console.log('PASS M214: issued set denominator, legacy surplus repair and completed-work preservation');
+}

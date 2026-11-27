@@ -215,6 +215,24 @@ object KotlinGlobalHistoryIndexDomain {
                 out.writeByte(4)
                 out.writeUTF(operation.swapEventId)
             }
+            is KotlinJournalOperation.AdjustRemaining -> {
+                // Receipt semantics are included even if a later Undo restores
+                // every target. Neither operation constitutes an actual set.
+                out.writeByte(6)
+                val request=operation.request
+                out.writeUTF(request.workoutId)
+                out.writeLong(request.expectedRevision)
+                out.writeUTF(request.occurrenceId)
+                out.writeInt(request.workingSetCount)
+                out.writeBoolean(request.reps!=null)
+                request.reps?.let{out.writeInt(it.minimum);out.writeInt(it.maximum)}
+                out.writeBoolean(request.restSeconds!=null)
+                request.restSeconds?.let{out.writeInt(it)}
+            }
+            is KotlinJournalOperation.UndoAdjustment -> {
+                out.writeByte(7)
+                out.writeUTF(operation.adjustmentEventId)
+            }
             is KotlinJournalOperation.SessionNote -> {
                 // A note is part of the original factual receipt stream but
                 // never a completed set, progression signal or rest trigger.

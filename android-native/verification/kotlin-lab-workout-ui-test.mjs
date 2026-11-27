@@ -911,7 +911,8 @@ for(const phrase of [
   'entry.evidence.source.gymId',
   'entry.gymId',
   'actual.machineInstanceId!=null',
-  'NativeExerciseTrendKey(issued.basis,window,'
+  'NativeExerciseTrendKey(basis,window,',
+  'Visit(exercise.unit,exercise.basis,record.actual,entry.workout.source.gymId)'
 ])assert.ok(trendDomain.includes(phrase),'Missing machine-isolated factual trend: '+phrase);
 for(const phrase of [
   'var stationGym by rememberSaveable(exerciseId)',

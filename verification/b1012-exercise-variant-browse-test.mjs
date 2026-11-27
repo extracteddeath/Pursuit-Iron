@@ -1,5 +1,25 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {EX_BY_ID} from '../modules/training-domain/catalog.js';
+import {EXERCISE_MAP} from '../modules/next-engine/exercise-db.js';
+
+// Native Stage 3B #1178/#1179: small deficits can use an ordinary stable
+// raised stance; actual step-ups require a suitable support. The current
+// web equipment vocabulary uses bench for the existing step-up support.
+for (const [id,implement] of [
+    ['deficit-pendlay-row','barbell'],['deficit-barbell-deadlift','barbell'],
+    ['db-deficit-lunge','dumbbell'],['deficit-db-rdl','dumbbell']
+]) {
+    assert.deepEqual(EX_BY_ID[id].equip,[implement],id+' shell');
+    assert.deepEqual(EXERCISE_MAP.get(id).equipment,[implement],id+' engine');
+}
+for (const id of ['step-up','db-deficit-step-up']) {
+    assert.deepEqual(EX_BY_ID[id].equip,['dumbbell','bench'],id+' shell');
+    assert.deepEqual(EXERCISE_MAP.get(id).equipment,['dumbbell','bench'],id+' engine');
+}
+assert.deepEqual(EX_BY_ID['deficit-pendlay-row'].rep,[5,8]);
+assert.deepEqual(EXERCISE_MAP.get('deficit-pendlay-row').practicalReps,[5,8]);
+
 import {exerciseBenchLevel,exerciseAttachmentFacet,
     availableVariantFacets,matchesVariantFacets} from '../modules/exercise-variant-browse.js';
 

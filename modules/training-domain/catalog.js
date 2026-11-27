@@ -230,7 +230,7 @@ const RAW = [
     ["belt-squat", "Belt Squat", "quads", "compound", ["beltsquat"], 10, 15],
     ["box-squat", "Box Squat", "quads", "compound", ["barbell", "rack"], 5, 8],
     ["split-squat", "Split Squat", "quads", "compound", ["dumbbell"], 8, 12],
-    ["step-up", "Dumbbell Step-Up", "quads", "compound", ["dumbbell"], 10, 15],
+    ["step-up", "Dumbbell Step-Up", "quads", "compound", ["dumbbell", "bench"], 10, 15],
     ["reverse-lunge", "Reverse Lunge", "quads", "compound", ["dumbbell"], 10, 15],
     ["single-leg-press", "Single-Leg Press", "quads", "compound", ["legpress"], 10, 15],
     ["sissy-squat", "Sissy Squat", "quads", "isolation", [], 10, 20],
@@ -478,7 +478,7 @@ const RAW = [
     // APPEND ONLY: exercise priority/index and previously issued programs must remain stable.
     ["high-inc-db-press", "High-Incline Dumbbell Press", "chest", "compound", ["dumbbell", "inclinebench"], 8, 12, null, "incline-push"],
     ["bottom-half-db-fly", "Bottom-Half Dumbbell Fly", "chest", "isolation", ["dumbbell", "bench"], 12, 18, null, "shoulder-horizontal-adduction"],
-    ["deficit-pendlay-row", "Deficit Pendlay Row", "upper_back", "compound", ["barbell"], 6, 10, null, "horizontal-pull"],
+    ["deficit-pendlay-row", "Deficit Pendlay Row", "upper_back", "compound", ["barbell"], 5, 8, null, "horizontal-pull"],
     ["low-to-high-face-pull", "Low-to-High Face Pull", "shoulders", "isolation", ["cable"], 12, 20, "rear_delts", "shoulder-horizontal-abduction"],
     ["leaning-cable-ohext", "Leaning Cable Overhead Triceps Extension", "triceps", "isolation", ["cable"], 10, 15, null, "elbow-extension-overhead"],
     ["ad-press-barbell", "AD Press (Barbell)", "shoulders", "compound", ["barbell", "inclinebench", "rack"], 6, 12, "front_delts", "vertical-push"],

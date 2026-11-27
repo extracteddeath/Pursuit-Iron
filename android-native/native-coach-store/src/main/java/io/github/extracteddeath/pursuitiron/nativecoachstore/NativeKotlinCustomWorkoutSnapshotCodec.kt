@@ -92,7 +92,7 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
         ByteArrayOutputStream().also{bytes->
             DataOutputStream(bytes).use { out->
                 out.writeInt(SLOT_MAGIC)
-                val version=if(value.sets.any{it.prescription.percentageIntent!=null}) VERSION else 8
+                val version=if(value.sets.any{it.prescription.percentageIntent!=null}) 9 else 8
                 out.writeInt(version)
                 out.slot(value,version)
             }
@@ -103,7 +103,7 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
             if (input.readInt() != SLOT_MAGIC)
                 throw IOException("unsupported swap slot magic")
             val version=input.readInt()
-            if(version !in 7..VERSION)
+            if(version !in 7..9)
                 throw IOException("unsupported swap slot version")
             val slot=input.slot(version)
             if(input.available()!=0)throw IOException("trailing swap slot bytes")

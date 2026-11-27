@@ -44,6 +44,49 @@ class NativeCustomWorkoutJournalCodecTest {
     private fun record(state:CustomWorkoutJournalDraft)=
         NativeCustomWorkoutJournalRecord("owner-1",state)
 
+    @Test fun adjustedCustomJournalReplaysAddedRowsButIssuedCodecStillRejectsThem() {
+        val base=snapshot()
+        val slot=base.slots.single()
+        val first=slot.sets.single().copy(prescription=slot.sets.single().prescription.copy(amplifier=null))
+        val second=first.copy(setKey="cycle-1:w1:d0:raise-1:s2",ordinalInSlot=2)
+        val source=base.copy(slots=listOf(slot.copy(pinned=false,sets=listOf(first,second))),knownSetAndRestSeconds=270)
+        var state=CustomWorkoutJournalDomain.begin("workout-1",source,"a".repeat(64))
+        state=accept(state,event("main",0,CustomWorkoutVisitPart.MAIN,10))
+        val before=state
+        val edit=CustomWorkoutJournalOperation.AdjustRemaining("adjust",1,
+            MidSessionWorkingEdit("workout-1",1,"raise-1",3,RepBand(10,15),150))
+        val adjusted=accept(state,edit)
+        assertEquals(source,adjusted.originalSnapshot)
+        assertEquals(before.effectiveVisits,adjusted.effectiveVisits)
+        assertEquals(first,adjusted.snapshot.slots.single().sets.first())
+        assertEquals("mid-2-1",adjusted.snapshot.slots.single().sets.last().setKey)
+        assertEquals(525L,adjusted.snapshot.knownSetAndRestSeconds)
+        assertTrue(runCatching{NativeKotlinCustomWorkoutSnapshotCodec.encode(adjusted.snapshot)}.isFailure)
+        val bytes=NativeCustomWorkoutJournalCodec.encode(record(adjusted))
+        assertEquals(7,java.nio.ByteBuffer.wrap(bytes,4,4).int)
+        val reopened=NativeCustomWorkoutJournalCodec.decode(bytes).journal
+        assertEquals(adjusted,reopened)
+        assertEquals(CustomWorkoutJournalDecision.Proposed(reopened,true),CustomWorkoutJournalDomain.reduce(reopened,edit))
+        val restored=accept(reopened,CustomWorkoutJournalOperation.UndoAdjustment("undo",2,"adjust"))
+        assertEquals(source,restored.snapshot)
+        assertEquals(before.effectiveVisits,restored.effectiveVisits)
+        assertEquals(restored,NativeCustomWorkoutJournalCodec.decode(NativeCustomWorkoutJournalCodec.encode(record(restored))).journal)
+        val again=edit.copy(eventId="again",expectedRevision=3,request=edit.request.copy(expectedRevision=3))
+        state=accept(restored,again)
+        for(set in state.snapshot.slots.single().sets.drop(1)) {
+            state=accept(state,CustomWorkoutJournalOperation.Record("record-${set.ordinalInSlot}",state.revision,
+                CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN),KotlinJournalSetOutcome.COMPLETED,actual(12)))
+        }
+        assertEquals(CustomWorkoutJournalDecision.Rejected(CustomWorkoutJournalRefusal.INVALID_ADJUSTMENT),
+            CustomWorkoutJournalDomain.reduce(state,CustomWorkoutJournalOperation.UndoAdjustment("late",state.revision,"again")))
+        state=accept(state,CustomWorkoutJournalOperation.Finish("finish",state.revision))
+        val facts=(CustomWorkoutHistoryEvidenceDomain.project(state) as CustomHistoryEvidenceResult.Candidate).evidence
+        assertTrue(facts.sessionAdjusted)
+        assertFalse(facts.allIssuedMainWorkingSetsCompleted)
+        assertEquals(listOf(10,12,12),facts.visits.map{it.actual?.reps})
+        assertEquals(state,NativeCustomWorkoutJournalCodec.decode(NativeCustomWorkoutJournalCodec.encode(record(state))).journal)
+    }
+
     @Test fun fullLegacyJournalCanResolveAnAmplifierAndColdReopenFinished() {
         var draft=initial()
         repeat(2048) { index ->

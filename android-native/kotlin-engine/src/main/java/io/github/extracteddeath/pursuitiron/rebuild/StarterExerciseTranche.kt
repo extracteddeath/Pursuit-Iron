@@ -2104,7 +2104,7 @@ object StarterExerciseTranche {
         entry("deficit-pendlay-row","row","deficit-pendlay-barbell",
             ComposerPattern.HORIZONTAL_PULL,ComposerRole.SECONDARY,pull,
             BAR,LoadBasis.BARBELL_TOTAL,emptySet(),5..8,
-            "Deficit Pendlay row is a distinct floor-reset, altered-range barbell lift; its deficit setup must be checked by the athlete, not inferred from gym equipment. Do not reuse standard Pendlay row weights.",
+            "Deficit Pendlay row is a distinct floor-reset, altered-range barbell lift. Use a stable, flat, non-slip weight plate or suitable raised surface for the stance; a dedicated step platform is not required. Check the setup before lifting. Do not reuse standard Pendlay row weights.",
             direct(TrainingMuscle.UPPER_BACK),
             indirect(TrainingMuscle.LATS,"0.5"),
             indirect(TrainingMuscle.BICEPS,"0.25"),

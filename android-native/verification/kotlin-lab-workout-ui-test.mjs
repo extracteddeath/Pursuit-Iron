@@ -2038,3 +2038,7 @@ assert.ok(basicPreviewScreen.includes('controller.previewTieredTransition(false,
   machineChoiceHost.includes('tieredTransitions.previewMultiScheduled') &&
   machineChoiceHost.includes('tieredTransitions.confirmMultiScheduled'),
   'Multi-root transitions must review each slot and explicitly confirm reset/recovery through the shared scheduled workflow');
+
+assert.match(firstUi,/controller\.chooseOptionalFinisher\(/);
+assert.match(firstHost,/optionalFinisher=seed\.optionalFinisher/);
+assert.match(firstSeed,/if\(seed\.optionalFinisher!=null\)techniqueVersion/);

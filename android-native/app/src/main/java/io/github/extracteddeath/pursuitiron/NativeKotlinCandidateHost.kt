@@ -3663,7 +3663,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
         title:String,
         weeks:Int,
         confirmed:Boolean,
-        includeMyoFinisher:Boolean=false
+        includeMyoFinisher:Boolean=false,
+        optionalFinisher:CustomAmplifierKind?=null
     ):NativeCustomDraftWriteResult {
         if(!confirmed)return NativeCustomDraftWriteResult.Rejected(
             NativeCustomDraftRefusal.INVALID_DRAFT)
@@ -3695,7 +3696,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
                         NativeCustomDraftRefusal.STALE_REVISION)
                 val candidate=CoachFirstProgramDraftConversionDomain.propose(
                     replay,source.setup,source.catalog,cycleId,title,weeks,
-                    includeMyoFinisher=includeMyoFinisher)
+                    includeMyoFinisher=includeMyoFinisher,optionalFinisher=optionalFinisher)
                 val cycle=candidate.cycle?.takeIf {
                     candidate.status==FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT
                 } ?:return@withOwnerTransaction NativeCustomDraftWriteResult.Rejected(
@@ -3704,7 +3705,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
                     source.revision,input.policyVersion,
                     input.phase,input.startingLoads,
                     input.selectedBodyweightExerciseIds,input.extraFocuses,
-                    input.nonSetSecondsPerDay,includeMyoFinisher)
+                    input.nonSetSecondsPerDay,includeMyoFinisher,optionalFinisher)
                 // Write immutable calibration FIRST under the same owner
                 // lock. If interrupted, an orphan cannot issue or be listed
                 // as a program; the draft only appears after this succeeds.
@@ -3764,7 +3765,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 val candidate=replay?.let {
                     CoachFirstProgramDraftConversionDomain.propose(
                         it,source.setup,source.catalog,cycleId,seed.title,
-                        seed.blockWeeks,includeMyoFinisher=seed.includeMyoFinisher)
+                        seed.blockWeeks,includeMyoFinisher=seed.includeMyoFinisher,optionalFinisher=seed.optionalFinisher)
                 }
                 if(candidate?.status!=FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT ||
                     candidate.cycle!=draft)

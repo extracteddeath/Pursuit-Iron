@@ -175,7 +175,7 @@ class StarterCatalogPrescribingAcceptanceTest {
         }
     }
 
-    @Test fun everyRealStandardIdentityIsDiscoverableAndAuthorableOnlyWithItsOwnPhysicalStock() {
+    @Test fun everyRealStandardIdentityIsAuthorableAndProjectsCorrectedActualsWithItsOwnStock() {
         val allStock=stockFor(catalog.map{it.exerciseId})
         val gym=ReviewedGymProfile("full-catalog-gym",LoadUnit.LB,
             allStock.confirmedStock,allStock.availableFacilityIds,allStock.availableAttachmentIds)
@@ -209,6 +209,54 @@ class StarterCatalogPrescribingAcceptanceTest {
                 CustomExerciseAuthoringDomain.reviewFreshSets(review(profile),
                     listOf(move),move.exerciseId,listOf(selected))
             assertNull(move.exerciseId,validate(athlete))
+            // Traverse the same validated snapshot/reducer/history owners used
+            // after native consent. No fake zero for bodyweight or inferred RIR.
+            val cycle=CustomTrainingCycle("catalog-cycle",1,"athlete-1",
+                AthleteTrainingGoal.HYPERTROPHY,"Catalog acceptance",listOf(
+                    CustomTrainingBlock("base","Hypertrophy",TrainingPhase.HYPERTROPHY,
+                        CustomBlockPurpose.TRAINING,3,CustomSplitIdentity.Freeform("Catalog"),
+                        listOf(0,2,4).map{day->
+                            CustomTrainingDay(day,"Day $day",ComposerSessionPurpose.HYPERTROPHY,
+                                listOf(CustomExerciseSlot("slot-$day",move.exerciseId,
+                                    move.role,listOf(set),attachmentId=move.attachmentId)))
+                        })))
+            val preview=CustomWorkoutSnapshotDomain.preview(cycle,review(athlete),
+                listOf(move),1,1,0)
+            assertTrue("${move.exerciseId}: $preview",preview is CustomWorkoutSnapshotResult.Preview)
+            val snapshot=(preview as CustomWorkoutSnapshotResult.Preview).snapshot
+            val slot=snapshot.slots.single()
+            val target=slot.sets.single()
+            assertEquals(move.exerciseId,slot.exerciseId)
+            assertEquals(move.familyId,slot.familyId)
+            assertEquals(move.variantId,slot.variantId)
+            assertEquals(move.attachmentId,slot.attachmentId)
+            assertEquals(set,target.prescription)
+            var journal=CustomWorkoutJournalDomain.begin("catalog-workout",snapshot,"a".repeat(64))
+            fun accept(operation:CustomWorkoutJournalOperation) {
+                val result=CustomWorkoutJournalDomain.reduce(journal,operation)
+                assertTrue("${move.exerciseId}: $result",result is CustomWorkoutJournalDecision.Proposed)
+                journal=(result as CustomWorkoutJournalDecision.Proposed).draft
+            }
+            val actual=KotlinPerformedSet((load as? DraftSetLoad.Verified)?.value,
+                (load as? DraftSetLoad.Verified)?.unit,set.reps.minimum,null)
+            val key=CustomWorkoutVisitKey(target.setKey,CustomWorkoutVisitPart.MAIN)
+            accept(CustomWorkoutJournalOperation.Record("catalog-actual",0,key,
+                KotlinJournalSetOutcome.COMPLETED,actual))
+            val corrected=actual.copy(rir=1)
+            accept(CustomWorkoutJournalOperation.Record("catalog-correction",1,key,
+                KotlinJournalSetOutcome.COMPLETED,corrected,"catalog-actual"))
+            accept(CustomWorkoutJournalOperation.Finish("catalog-finish",2))
+            val history=CustomWorkoutHistoryEvidenceDomain.project(journal)
+            assertTrue("${move.exerciseId}: $history",history is CustomHistoryEvidenceResult.Candidate)
+            val fact=(history as CustomHistoryEvidenceResult.Candidate).evidence.visits.single()
+            assertEquals(move.exerciseId,fact.exerciseId)
+            assertEquals(target.setKey,fact.setKey)
+            assertEquals(load,fact.prescribedLoad)
+            assertEquals(set.reps,fact.prescribedReps)
+            assertEquals(2,fact.prescribedRir)
+            assertEquals(corrected,fact.actual)
+            assertEquals("catalog-correction",fact.effectiveEventId)
+            assertEquals(snapshot,journal.originalSnapshot)
             assertEquals(move.exerciseId,CustomAuthoringRefusal.EXERCISE_UNAVAILABLE,
                 validate(athlete.copy(excludedExerciseIds=setOf(move.exerciseId))))
             if(load is DraftSetLoad.Verified) {

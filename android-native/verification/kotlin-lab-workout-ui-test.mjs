@@ -1795,7 +1795,7 @@ const numberTests=read('android-native/kotlin-engine/src/test/java/io/github/ext
 assert.ok(
   numberAuthority.includes('object KotlinSetNumberAuthorityDomain') &&
   numberAuthority.includes('KotlinSetLoadRelation.COMPLETED_DIFFERENT_ACTUAL') &&
-  numberAuthority.includes('load.compareTo(issuedLoad.value)==0') &&
+  numberAuthority.includes('checkNotNull(performed.load).compareTo(issuedLoad.value)==0') &&
   numberAuthority.includes('KotlinMachineAlternativesDomain.validInstanceId') &&
   numberAuthority.includes('fun validRir(rir:Int?):Boolean = rir==null || rir in 0..10') &&
   numberAuthority.includes('if(!validRir(performed.actualRir))') &&

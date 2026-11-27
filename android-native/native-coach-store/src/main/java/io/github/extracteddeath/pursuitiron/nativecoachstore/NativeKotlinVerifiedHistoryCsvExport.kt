@@ -63,14 +63,17 @@ object NativeKotlinVerifiedHistoryCsvExport {
         val measuredColumns=listOf("measurement_kind","measurement_unit",
             "measured_sides","physical_setup_id","band_id",
             "target_measurement","actual_carry_seconds")
+        val freestyle=history.completions.any{it is NativeKotlinMixedHistoryCompletion.Freestyle}
         val staged=history.completions.filterIsInstance<
             NativeKotlinMixedHistoryCompletion.Custom>().any {completion ->
             completion.evidence.visits.any{it.stage>1}
         }
         val header=columns+(if(staged)listOf("amplifier_stage") else emptyList())+
             (if(dated)listOf("completed_at_utc") else emptyList())+
-            (if(measured)measuredColumns else emptyList())
-        val format=if(measured)"pursuit-iron-history-v4"
+            (if(measured)measuredColumns else emptyList())+
+            (if(freestyle)listOf("actual_load_basis") else emptyList())
+        val format=if(freestyle)"pursuit-iron-history-v5"
+            else if(measured)"pursuit-iron-history-v4"
             else if(staged)"pursuit-iron-history-v3"
             else if(dated)"pursuit-iron-history-v2" else VERSION
         val csv=StringBuilder(header.joinToString(","){cell(it)}).append('\n')
@@ -78,19 +81,20 @@ object NativeKotlinVerifiedHistoryCsvExport {
         fun add(
             order:Long,kind:String,workoutId:String,gymId:String,
             exerciseId:String,slotId:String,setKey:String,part:String,type:DraftSetType,
-            outcome:KotlinJournalSetOutcome,prescription:DraftSetLoad,
-            reps:RepBand,rir:Int?,actual:KotlinPerformedSet?,
+            outcome:KotlinJournalSetOutcome,prescription:DraftSetLoad?,
+            reps:RepBand?,rir:Int?,actual:KotlinPerformedSet?,
             amplifier:String="",amplifierStage:Int=1,
-            completedAtEpochMillis:Long?=null
+            completedAtEpochMillis:Long?=null,
+            physicalBasis:LoadBasis?=(prescription as? DraftSetLoad.Verified)?.basis
         ):Boolean {
             if(rows>=MAX_ROWS)return false
-            val (targetLoad,targetUnit,targetBasis)=load(prescription)
+            val (targetLoad,targetUnit,targetBasis)=prescription?.let(::load)?:Triple("","","")
             val fields=listOf(
                 format,order.toString(),kind,workoutId,gymId,
                 exerciseId,slotId,
                 setKey,part,type.name,outcome.name,
-                targetLoad,targetUnit,targetBasis,reps.minimum.toString(),
-                reps.maximum.toString(),rir?.toString().orEmpty(),
+                targetLoad,targetUnit,targetBasis,reps?.minimum?.toString().orEmpty(),
+                reps?.maximum?.toString().orEmpty(),rir?.toString().orEmpty(),
                 number(actual?.load),actual?.unit?.name.orEmpty(),
                 actual?.reps?.toString().orEmpty(),
                 actual?.actualRir?.toString().orEmpty(),
@@ -102,7 +106,8 @@ object NativeKotlinVerifiedHistoryCsvExport {
                 (if(dated)listOf(completedAtEpochMillis?.let{
                     java.time.Instant.ofEpochMilli(it).toString()}.orEmpty())
                 else emptyList())+
-                (if(measured)List(measuredColumns.size){""} else emptyList())
+                (if(measured)List(measuredColumns.size){""} else emptyList())+
+                (if(freestyle)listOf(if(actual==null)"" else physicalBasis?.name?:"BODYWEIGHT") else emptyList())
             csv.append(values.joinToString(","){cell(it)}).append('\n')
             rows++
             return csv.length<=MAX_CHARS
@@ -144,7 +149,7 @@ object NativeKotlinVerifiedHistoryCsvExport {
                 (if(dated)listOf(completion.manifest.completedAtEpochMillis?.let{
                     java.time.Instant.ofEpochMilli(it).toString()}.orEmpty())
                     else emptyList())+
-                details
+                details+(if(freestyle)listOf("") else emptyList())
             if(full.size!=header.size)return false
             csv.append(full.joinToString(","){cell(it)}).append('\n')
             rows++
@@ -157,6 +162,24 @@ object NativeKotlinVerifiedHistoryCsvExport {
                 !ids.add(manifest.workoutId))
                 return NativeKotlinHistoryCsvResult.InvalidHistory
             when(completion) {
+                is NativeKotlinMixedHistoryCompletion.Freestyle -> {
+                    val workout=completion.workout
+                    if(workout.source.athleteId!=history.athleteId ||
+                        workout.workoutId!=manifest.workoutId ||
+                        workout.finishedByEventId!=manifest.finishEventId ||
+                        workout.revision!=manifest.originalJournalRevision ||
+                        manifest.savedCorrectionRevision!=0L ||
+                        KotlinFreestyleWorkoutDomain.replay(workout.workoutId,workout.source,
+                            workout.receipts)!=workout)
+                        return NativeKotlinHistoryCsvResult.InvalidHistory
+                    for((exercise,record) in workout.observations())if(!add(
+                        manifest.completionOrder,"FREESTYLE",manifest.workoutId,
+                        workout.source.gymId,exercise.exerciseId,exercise.slotId,record.setKey,
+                        "MAIN",record.type,record.outcome,null,null,null,record.actual,
+                        completedAtEpochMillis=manifest.completedAtEpochMillis,
+                        physicalBasis=exercise.basis))
+                        return NativeKotlinHistoryCsvResult.TooLarge
+                }
                 is NativeKotlinMixedHistoryCompletion.Measured -> {
                     val stored=completion.stored
                     if(stored.athleteId!=history.athleteId ||

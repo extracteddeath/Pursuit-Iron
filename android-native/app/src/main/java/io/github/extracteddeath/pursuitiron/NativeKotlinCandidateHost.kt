@@ -165,10 +165,13 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val measuredHistoryTransactions=NativeKotlinMeasuredHistoryTransaction(
         historyStore,measuredParentHistoryStore,revisionFence,localAthlete,
         NativeHistoryCompletionClock.System)
+    private val freestyleStore=NativeFreestyleWorkoutFileStore(
+        root,revisionFence,localAthlete,authoringSourceStore,historyStore,
+        NativeHistoryCompletionClock.System)
     private val mixedHistoryReader=NativeKotlinMixedHistoryReadCoordinator(
         historyStore,journalStore,correctionStore,customIssuedStore,
         approvalStore,localAthlete,revisionFence,customSavedCorrections,
-        measuredParentHistoryStore)
+        measuredParentHistoryStore,freestyleStore)
     private val outstandingCustomInventory=NativeKotlinCustomOutstandingWorkoutInventory(
         customPreparedStore,customIssuedStore)
     private val fixedNamedDraftReview=NativeKotlinNamedPercentageDraftReview(
@@ -1786,11 +1789,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val pending=(historyStore.open(signed.ownerKey,signed.athleteId)
             as? NativeHistoryLedgerResult.Durable)?.ledger?.pending
         when(pending) {
-            // Freestyle Finish remains an internal transaction candidate
-            // until the common History reader and UI are integrated.
             is NativeHistoryWriteIntent.FreestyleFinish ->
-                return NativeKotlinMixedHistoryReadResult.Rejected(
-                    NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION)
+                freestyleStore.recover(signed.ownerKey,pending.workoutId)
             is NativeHistoryWriteIntent.MeasuredFinish ->
                 measuredHistoryTransactions.recover(signed.ownerKey,signed.athleteId)
             is NativeHistoryWriteIntent.CustomFinish ->

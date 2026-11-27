@@ -124,6 +124,14 @@ class NativeFreestyleWorkoutFileStore(
         committed(current,entry,true)
     }
 
+    /** Used by the common mixed reader under its complete owner-fenced
+     * ledger read. Avoid reopening the whole manifest for every entry. */
+    internal fun readManifestReceipt(owner:String,athlete:String,entry:KotlinHistoryManifestEntry)
+        :NativeFreestyleResult=guarded(owner,entry.workoutId){current->
+        if(current.athleteId!=athlete)return@guarded reject(NativeFreestyleRefusal.NOT_AUTHORIZED)
+        committed(current,entry,true)
+    }
+
     /** The canonical manifest owns completion. Only the exact prepared intent
      * can advance the persisted active journal, even after a process death. */
     private fun replayFinish(owner:NativeKotlinOwnerIdentity,ledger:NativeHistoryLedger):NativeFreestyleResult {
@@ -188,7 +196,7 @@ class NativeFreestyleWorkoutFileStore(
         replayFinish(current,prepared.ledger)
     }
 
-    internal fun recover(owner:String,workout:String):NativeFreestyleResult=guarded(owner,workout){current->
+    fun recover(owner:String,workout:String):NativeFreestyleResult=guarded(owner,workout){current->
         val manifest=ledger(current)?:return@guarded reject(NativeFreestyleRefusal.HISTORY_NOT_READY)
         if(manifest.pending?.workoutId!=workout)
             return@guarded reject(NativeFreestyleRefusal.HISTORY_NOT_READY)

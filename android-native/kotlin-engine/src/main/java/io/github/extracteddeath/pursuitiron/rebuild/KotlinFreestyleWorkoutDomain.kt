@@ -41,6 +41,18 @@ data class KotlinFreestyleWorkout(
     val mayPublishHistory:Boolean get()=false
     val mayChangeProgram:Boolean get()=false
 }
+/** Factual view in exercise order, with exact stable slot and effective event. */
+data class KotlinFreestyleObservation(
+    val exercise:KotlinFreestyleExercise,
+    val record:KotlinFreestyleOperation.Record
+)
+fun KotlinFreestyleWorkout.observations():List<KotlinFreestyleObservation> =
+    exercises.flatMap{exercise->
+        effectiveSets.values.filter{it.slotId==exercise.slotId}.map{
+            KotlinFreestyleObservation(exercise,it)
+        }
+    }
+
 data class KotlinFreestyleRoutineSlot(val exerciseId:String,val setTypes:List<DraftSetType>)
 data class KotlinFreestyleRoutine(
     val routineId:String,val athleteId:String,val name:String,

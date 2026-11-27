@@ -10,9 +10,11 @@ data class NativeMixedWorkingSetFact(
     /** Custom cycles may repeat the same movement in distinct authored slots. */
     val customSlotId: String?,
     val outcome: KotlinJournalSetOutcome,
-    val issuedLoad: DraftSetLoad,
+    val issuedLoad: DraftSetLoad?,
     val actual: KotlinPerformedSet?,
-    val effectiveEventId: String
+    val effectiveEventId: String,
+    val physicalUnit:LoadUnit?=(issuedLoad as? DraftSetLoad.Verified)?.unit,
+    val physicalBasis:LoadBasis?=(issuedLoad as? DraftSetLoad.Verified)?.basis
 )
 
 data class NativeMixedLastExercise(
@@ -106,9 +108,11 @@ object NativeKotlinMixedHistoryFactsDomain {
         val customSlot: String?,
         val mainWorking: Boolean,
         val outcome: KotlinJournalSetOutcome,
-        val issuedLoad: DraftSetLoad,
+        val issuedLoad: DraftSetLoad?,
         val actual: KotlinPerformedSet?,
-        val eventId: String
+        val eventId: String,
+        val physicalUnit:LoadUnit?=(issuedLoad as? DraftSetLoad.Verified)?.unit,
+        val physicalBasis:LoadBasis?=(issuedLoad as? DraftSetLoad.Verified)?.basis
     )
 
     private fun normalize(load: BigDecimal) =
@@ -144,6 +148,23 @@ object NativeKotlinMixedHistoryFactsDomain {
         for (completion in timeline.completions) {
             val manifest = completion.manifest
             val visits = when (completion) {
+                is NativeKotlinMixedHistoryCompletion.Freestyle -> {
+                    val workout=completion.workout
+                    if(workout.source.athleteId!=timeline.athleteId)
+                        return reject(NativeMixedFactsRefusal.CROSS_ATHLETE)
+                    if(workout.workoutId!=manifest.workoutId ||
+                        workout.finishedByEventId!=manifest.finishEventId ||
+                        workout.revision!=manifest.originalJournalRevision ||
+                        manifest.savedCorrectionRevision!=0L ||
+                        KotlinFreestyleWorkoutDomain.replay(workout.workoutId,workout.source,
+                            workout.receipts)!=workout)
+                        return reject(NativeMixedFactsRefusal.MANIFEST_MISMATCH)
+                    workout.observations().map{(exercise,record)->
+                        Visit(exercise.exerciseId,record.setKey,exercise.slotId,
+                            record.type==DraftSetType.WORKING,record.outcome,null,
+                            record.actual,record.eventId,exercise.unit,exercise.basis)
+                    }
+                }
                 // Exact timed/distance/band outcomes belong to their typed
                 // history view. They MUST NOT produce rep PR, 1RM,
                 // Strength Standards, Last loaded-set or machine comparisons.
@@ -188,6 +209,7 @@ object NativeKotlinMixedHistoryFactsDomain {
                 }
             }
             val issuedGymId=when(completion) {
+                is NativeKotlinMixedHistoryCompletion.Freestyle ->completion.workout.source.gymId
                 is NativeKotlinMixedHistoryCompletion.Measured ->
                     completion.stored.journal.approvedPlan.gymId
                 is NativeKotlinMixedHistoryCompletion.Composer ->
@@ -199,7 +221,7 @@ object NativeKotlinMixedHistoryFactsDomain {
                 val working = visits.filter { it.exercise == exercise && it.mainWorking }
                     .map { NativeMixedWorkingSetFact(
                         it.setKey, it.customSlot, it.outcome, it.issuedLoad,
-                        it.actual, it.eventId) }
+                        it.actual, it.eventId,it.physicalUnit,it.physicalBasis) }
                 // A skipped/latest poor session must never be replaced by an
                 // older successful session in Last.
                 last[exercise] = NativeMixedLastExercise(exercise,
@@ -209,16 +231,17 @@ object NativeKotlinMixedHistoryFactsDomain {
             for (visit in visits) {
                 if (!visit.mainWorking ||
                     visit.outcome != KotlinJournalSetOutcome.COMPLETED) continue
-                val target = visit.issuedLoad as? DraftSetLoad.Verified ?: continue
+                val unit=visit.physicalUnit ?:continue
+                val basis=visit.physicalBasis ?:continue
                 val actual = visit.actual ?: continue
                 val load = actual.load ?: continue
-                val assisted=target.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT
-                if (actual.unit != target.unit || actual.reps !in 1..100 ||
+                val assisted=basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT
+                if (actual.unit != unit || actual.reps !in 1..100 ||
                     (if(assisted)load<BigDecimal.ZERO else load<=BigDecimal.ZERO) ||
                     load > BigDecimal("100000") ||
                     load.stripTrailingZeros().scale() > 3) continue
                 val key = NativeMixedPhysicalLoadKey(
-                    visit.exercise, target.unit, target.basis)
+                    visit.exercise, unit, basis)
                 val physical = normalize(load)
                 val record = NativeMixedCompletedLoadFact(key, physical, actual.reps,
                     manifest.workoutId, manifest.completionOrder, visit.setKey,
@@ -239,7 +262,7 @@ object NativeKotlinMixedHistoryFactsDomain {
                         KotlinMachineAlternativesDomain.validInstanceId(machineId)) {
                         val station=NativeMixedMachineLoadKey(issuedGymId,
                             visit.exercise,checkNotNull(machineId),
-                            target.unit,target.basis)
+                            unit,basis)
                         val earlier=lowestAssistanceByMachine[station]
                         if (earlier == null || AssistedHistoryRanking.prefers(
                                 physical, record.reps, record.completionOrder,
@@ -249,7 +272,7 @@ object NativeKotlinMixedHistoryFactsDomain {
                     continue
                 }
                 if(!KotlinSetNumberAuthorityDomain.machineTagContradictsFreeBarbell(
-                        target.basis,machineId)) {
+                        basis,machineId)) {
                     if (actual.reps == 1) {
                         val previous=bestSingle[key]
                         if(previous==null || physical>previous.actualLoad ||
@@ -262,7 +285,7 @@ object NativeKotlinMixedHistoryFactsDomain {
                         (physical.compareTo(old.actualLoad) == 0 && actual.reps >= old.reps))
                         highest[key] = record
                     val loadKey = key to physical
-                    if (target.basis == LoadBasis.BARBELL_TOTAL &&
+                    if (basis == LoadBasis.BARBELL_TOTAL &&
                         actual.reps in StrengthStandardsMeasurementDomain.estimateRepRange &&
                         actual.reps >= (estimateSets[loadKey]?.reps ?: 0))
                         estimateSets[loadKey] = record
@@ -278,7 +301,7 @@ object NativeKotlinMixedHistoryFactsDomain {
                     KotlinMachineAlternativesDomain.validInstanceId(machineId)) {
                     val machineKey=NativeMixedMachineLoadKey(issuedGymId,
                         visit.exercise,checkNotNull(machineId),
-                        target.unit,target.basis)
+                        unit,basis)
                     val oldMachine=highestByMachine[machineKey]
                     if(oldMachine==null || physical>oldMachine.actualLoad ||
                         (physical.compareTo(oldMachine.actualLoad)==0 &&

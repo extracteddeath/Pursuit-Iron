@@ -205,6 +205,32 @@ class StarterCatalogPrescribingAcceptanceTest {
         assertEquals(baseIds.toSet()+setOf("bodyweight_crunch"),unselected.chosenExerciseIds.toSet())
         assertTrue(unselected.generation?.candidate?.catalogReview?.requestedExerciseIds
             ?.none{it in explicit}==true)
+        // The adaptive shortlist must also use only offered choices. Full
+        // physical availability never amounts to approval of a specialist.
+        val policy=checkNotNull(unselected.policy)
+        val ordinary=(baseIds+listOf("bodyweight_crunch")).map{
+            choice(byId.getValue(it)).copy(maximumVisits=3)
+        }
+        val adaptive=AthleteExerciseSelectionRequest(review(athlete),policy,catalog,
+            ordinary,setOf(ComposerFocus.FULL_BODY),2)
+        val shortlist=CoachAthleteExerciseSelectionDomain.review(adaptive)
+        assertNotEquals(AthleteSelectionStatus.INPUT_UNRESOLVED,shortlist.status)
+        assertTrue(shortlist.choices.isNotEmpty())
+        assertTrue(shortlist.choices.all{chosen->ordinary.any{it==chosen}})
+        assertTrue(shortlist.choices.none{it.exerciseId in explicit})
+        for(id in explicit) {
+            val offered=choice(byId.getValue(id)).copy(requiredVisits=1)
+            val selected=CoachAthleteExerciseSelectionDomain.review(
+                adaptive.copy(offered=ordinary+offered))
+            assertEquals(id,offered,selected.choices.singleOrNull{it.exerciseId==id})
+            assertFalse(id,selected.mayIssueWorkout)
+            assertFalse(id,selected.mayOverwriteCustomProgram)
+            val invalid=CoachAthleteExerciseSelectionDomain.review(adaptive.copy(
+                offered=ordinary+offered.copy(selectedLoad=checkNotNull(offered.selectedLoad).add(n("0.5")))))
+            assertEquals(id,AthleteSelectionStatus.INPUT_UNRESOLVED,invalid.status)
+            assertTrue(id,invalid.issues.any{it.kind==AthleteSelectionProblem.UNAVAILABLE_REQUIRED_EXERCISE})
+            assertTrue(id,invalid.choices.none{it.exerciseId==id})
+        }
         for(id in explicit) {
             val selection=baseLoads+(id to checkNotNull(calibratedLoad(byId.getValue(id))))
             val selected=CoachFirstProgramStartDomain.review(request.copy(startingLoads=selection))

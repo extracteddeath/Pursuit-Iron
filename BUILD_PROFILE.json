@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 75,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1056-r931dd90022515d73",
-  "uiMilestone": "Build 1056 · Workout history, volume and progression reliability"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1057-r554183a3726a27cd",
+  "uiMilestone": "Build 1057 · Native engine parity and issued workout reliability"
 }

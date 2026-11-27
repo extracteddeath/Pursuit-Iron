@@ -556,7 +556,7 @@ assert.ok(
   swapRank.includes('sameFamilyOnly:Boolean=false') &&
   swapRank.includes('choice.variantId,choice.attachmentId,displayLabel(choice.exerciseId)') &&
   swapRank.includes('CoachExerciseChoiceSearchDomain.tokens(search)') &&
-  swapRank.includes('CoachExerciseChoiceSearchDomain.matches(terms)') &&
+  swapRank.includes('CoachExerciseChoiceSearchDomain.matches(terms,choice.exerciseId)') &&
   sharedExerciseSearch.includes("value.replace('_',' ').replace('-',' ')") &&
   sharedExerciseSearch.includes('tokens.all{searchable.contains(it)}') &&
   swapRank.includes('thenByDescending {it.sameRole}') &&

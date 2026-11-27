@@ -29,11 +29,7 @@ internal object NativeCustomFinishReceipt {
         // Previously issued snapshots retain their exact legacy bytes.
         val journalBytes=NativeCustomWorkoutJournalCodec.encode(
             NativeCustomWorkoutJournalRecord(owner,journal))
-        val adjusted=journal.receipts.any{
-            it.operation is CustomWorkoutJournalOperation.AdjustRemaining
-        }
-        val bytes=NativeKotlinCustomWorkoutSnapshotCodec.encode(
-            journal.snapshot,allowMidSessionKeys=adjusted)
+        val bytes=NativeCustomWorkoutJournalCodec.encodeEffectiveSnapshot(journal)
         val hash=MessageDigest.getInstance("SHA-256")
         listOf(owner,athlete,journal.workoutId,
             journal.preparedConsentFingerprint).forEach {

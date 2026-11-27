@@ -213,6 +213,18 @@ internal object NativeCustomWorkoutJournalCodec {
         return current
     }
 
+    /** Internal transport shared by journal and Finish receipt hashing.
+     * Callers must first verify the complete receipt replay through encode;
+     * this never grants issuance or independently trusts a shifted key. */
+    internal fun encodeEffectiveSnapshot(state:CustomWorkoutJournalDraft):ByteArray {
+        val adjusted=state.receipts.any{it.operation is CustomWorkoutJournalOperation.AdjustRemaining}
+        val warmupTagged=state.receipts.any{
+            (it.operation as? CustomWorkoutJournalOperation.AdjustRemaining)?.request?.warmupChange!=null
+        }
+        return NativeKotlinCustomWorkoutSnapshotCodec.encode(state.snapshot,
+            allowMidSessionKeys=adjusted,allowWarmupEditKeys=warmupTagged)
+    }
+
     fun encode(record:NativeCustomWorkoutJournalRecord):ByteArray {
         require(id.matches(record.ownerKey))
         val state=record.journal
@@ -265,7 +277,7 @@ internal object NativeCustomWorkoutJournalCodec {
         }
         val version=if(warmupTagged) VERSION else if(methodTagged) 8 else if(adjusted) 7 else if(exactDecimal) 6 else if(stageTagged) 5 else if(machineTagged) 4
             else if(notes) 3 else if(swapped) 2 else 1
-        val snapshot=NativeKotlinCustomWorkoutSnapshotCodec.encode(state.snapshot,allowMidSessionKeys=adjusted,allowWarmupEditKeys=warmupTagged)
+        val snapshot=encodeEffectiveSnapshot(state)
         val original=if(swapped || adjusted)
             NativeKotlinCustomWorkoutSnapshotCodec.encode(state.originalSnapshot)
             else snapshot

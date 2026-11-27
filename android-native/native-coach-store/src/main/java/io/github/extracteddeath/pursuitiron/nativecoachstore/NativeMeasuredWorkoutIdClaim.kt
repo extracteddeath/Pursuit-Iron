@@ -19,10 +19,19 @@ internal object NativeMeasuredWorkoutIdClaim {
             .joinToString(""){"%02x".format(it.toInt() and 255)}
         return root.resolve("measured-parent-$hash.bin")
     }
+    /** The unreleased freestyle archive uses a scoped prefix, allowing
+     * cold Resume without opening another athlete owner's files. */
+    fun freestylePrefix(owner:String):String {
+        require(id.matches(owner))
+        val hash=MessageDigest.getInstance("SHA-256")
+            .digest(owner.toByteArray(Charsets.UTF_8))
+            .joinToString(""){"%02x".format(it.toInt() and 255)}
+        return "freestyle-$hash-"
+    }
     fun freestylePath(root:Path,owner:String,workout:String):Path {
         val measured=path(root,owner,workout)
-        return measured.resolveSibling(measured.fileName.toString()
-            .replaceFirst("measured-parent-","freestyle-"))
+        return measured.resolveSibling(freestylePrefix(owner)+
+            measured.fileName.toString().removePrefix("measured-parent-"))
     }
     private fun exists(file:Path):Boolean=Files.exists(file) || Files.isSymbolicLink(file)
     fun freestyleClaimed(root:Path,owner:String,workout:String):Boolean =

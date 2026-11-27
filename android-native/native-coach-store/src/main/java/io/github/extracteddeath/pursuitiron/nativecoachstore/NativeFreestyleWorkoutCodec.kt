@@ -94,7 +94,7 @@ internal object NativeFreestyleWorkoutCodec {
         }.toByteArray()
     }
 
-    fun decode(bytes:ByteArray,owner:String,athlete:String,workoutId:String):KotlinFreestyleWorkout {
+    fun decode(bytes:ByteArray,owner:String,athlete:String,workoutId:String?=null):KotlinFreestyleWorkout {
         require(bytes.size in 44..MAX_BYTES && id.matches(owner))
         val frame=DataInputStream(ByteArrayInputStream(bytes))
         val size=frame.readInt()
@@ -104,7 +104,9 @@ internal object NativeFreestyleWorkoutCodec {
         require(MessageDigest.isEqual(hash,MessageDigest.getInstance("SHA-256").digest(payload)))
         return DataInputStream(ByteArrayInputStream(payload)).use{input->
             require(input.readInt()==MAGIC && input.readInt()==VERSION)
-            require(input.readUTF()==owner && input.readUTF()==workoutId)
+            require(input.readUTF()==owner)
+            val archivedWorkoutId=input.readUTF()
+            require(id.matches(archivedWorkoutId) && (workoutId==null || workoutId==archivedWorkoutId))
             val source=KotlinFreestyleSource(input.readUTF(),input.readUTF(),
                 input.readUTF(),input.readLong())
             require(source.athleteId==athlete)
@@ -112,7 +114,7 @@ internal object NativeFreestyleWorkoutCodec {
             require(count in 0..KotlinWorkoutJournalDomain.MAX_RECEIPTS)
             val receipts=List(count){KotlinFreestyleReceipt(input.readLong(),input.operation())}
             require(input.available()==0)
-            checkNotNull(KotlinFreestyleWorkoutDomain.replay(workoutId,source,receipts))
+            checkNotNull(KotlinFreestyleWorkoutDomain.replay(archivedWorkoutId,source,receipts))
         }
     }
 }

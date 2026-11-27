@@ -22,6 +22,13 @@ sealed interface NativeFreestyleResult {
         NativeFreestyleResult
 }
 
+data class NativeFreestyleResumeCandidate(
+    val workoutId:String,val exerciseIds:List<String>,val recordedSets:Int
+)
+sealed interface NativeFreestyleInventoryResult {
+    data class Ready(val workouts:List<NativeFreestyleResumeCandidate>):NativeFreestyleInventoryResult
+    data class Rejected(val reason:NativeFreestyleRefusal):NativeFreestyleInventoryResult
+}
 data class NativeFreestyleRoutineLibrary(
     val revision:Long,val routines:List<KotlinFreestyleRoutine>
 )
@@ -174,9 +181,9 @@ class NativeFreestyleWorkoutFileStore(
         return committed(owner,entry,false)
     }
 
-    /** Internal source candidate. Do not route live UI through this until
-     * the shared mixed History reader accepts and displays freestyle facts. */
-    internal fun complete(owner:String,workout:String,operation:KotlinFreestyleOperation.Finish)
+    /** Owner-authorized explicit Finish, independently verified in mixed
+     * History by the host before presenting a completion recap. */
+    fun complete(owner:String,workout:String,operation:KotlinFreestyleOperation.Finish)
         :NativeFreestyleResult=guarded(owner,workout){current->
         var manifest=ledger(current)?:return@guarded reject(NativeFreestyleRefusal.HISTORY_NOT_READY)
         if(manifest.pending!=null) {
@@ -319,6 +326,44 @@ class NativeFreestyleWorkoutFileStore(
         val routine=library.routines.singleOrNull{it.routineId==routineId}
             ?:return@guarded reject(NativeFreestyleRefusal.ROUTINE_NOT_FOUND)
         start(owner,workout,routine)
+    }
+
+    /** Cold Resume inventory. Completed archive paths are excluded by the
+     * canonical ledger, not by a guessed timestamp or saved UI shortcut. */
+    fun reviewUnfinished(owner:String):NativeFreestyleInventoryResult {
+        fun denied(reason:NativeFreestyleRefusal)=NativeFreestyleInventoryResult.Rejected(reason)
+        if(!id.matches(owner))return denied(NativeFreestyleRefusal.INVALID_ID)
+        return runCatching {
+            fence.withOwnerTransaction(owner) {
+                val current=identity.signedInIdentity()?.takeIf{it.ownerKey==owner && id.matches(it.athleteId)}
+                    ?:return@withOwnerTransaction denied(NativeFreestyleRefusal.NOT_AUTHORIZED)
+                val manifest=ledger(current)
+                    ?:return@withOwnerTransaction denied(NativeFreestyleRefusal.HISTORY_NOT_READY)
+                if(!manifest.readyForHistoryReads)return@withOwnerTransaction denied(NativeFreestyleRefusal.HISTORY_NOT_READY)
+                if(!Files.exists(root))return@withOwnerTransaction NativeFreestyleInventoryResult.Ready(emptyList())
+                if(Files.isSymbolicLink(root) || !Files.isDirectory(root))
+                    return@withOwnerTransaction denied(NativeFreestyleRefusal.STORAGE_UNAVAILABLE)
+                val completed=manifest.completions.map{path(owner,it.workoutId).fileName.toString()}.toHashSet()
+                val pattern=Regex("^"+NativeMeasuredWorkoutIdClaim.freestylePrefix(owner)+"[a-f0-9]{64}\\.bin$")
+                val files=Files.list(root).use{stream->
+                    stream.filter{pattern.matches(it.fileName.toString()) && it.fileName.toString() !in completed}
+                        .limit(513).toArray().map{it as Path}
+                }
+                if(files.size>512)return@withOwnerTransaction denied(NativeFreestyleRefusal.ROUTINE_LIMIT)
+                val values=try {
+                    files.map{file->
+                        require(!Files.isSymbolicLink(file) && Files.isRegularFile(file) &&
+                            Files.size(file) in 44L..NativeFreestyleWorkoutCodec.MAX_BYTES.toLong())
+                        val state=NativeFreestyleWorkoutCodec.decode(Files.readAllBytes(file),owner,current.athleteId)
+                        require(path(owner,state.workoutId)==file && state.finishedByEventId==null)
+                        NativeFreestyleResumeCandidate(state.workoutId,
+                            state.exercises.map{it.exerciseId},state.effectiveSets.values.count{it.actual!=null})
+                    }.sortedBy{it.workoutId}
+                }catch(_:Exception){return@withOwnerTransaction denied(NativeFreestyleRefusal.CORRUPT)}
+                if(identity.signedInIdentity()!=current)return@withOwnerTransaction denied(NativeFreestyleRefusal.NOT_AUTHORIZED)
+                NativeFreestyleInventoryResult.Ready(Collections.unmodifiableList(values))
+            }
+        }.getOrElse{denied(NativeFreestyleRefusal.STORAGE_UNAVAILABLE)}
     }
 
     fun open(owner:String,workout:String):NativeFreestyleResult=guarded(owner,workout){

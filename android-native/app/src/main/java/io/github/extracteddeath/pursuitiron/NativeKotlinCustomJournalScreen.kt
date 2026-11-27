@@ -792,11 +792,7 @@ internal fun NativeKotlinCustomJournalScreen(
                             {pinnedSlotId=slot.slotId}
                         },
                         onSwap=null,
-                        onWarmup=upcoming?.first?.takeIf {slot->
-                            slot.sets.any{it.prescription.type==DraftSetType.WARMUP} ||
-                                current.originalSnapshot.slots.singleOrNull{it.slotId==slot.slotId}
-                                    ?.sets?.any{it.prescription.type==DraftSetType.WARMUP}==true
-                        }?.let {slot->{
+                        onWarmup=upcoming?.first?.let {slot->{
                             infoWarmupsOnly=true
                             infoSlotId=slot.slotId
                         }}
@@ -1616,9 +1612,19 @@ internal fun NativeKotlinCustomJournalScreen(
             as? MidSessionWorkingEditReview.Reviewed
         AlertDialog(
             onDismissRequest={warmupEdit=null},
-            title={Text(if(request.warmupChange==SessionWarmupChange.REPEAT_APPROVED)
-                "Repeat approved warm-up?" else "Remove unlogged warm-up?")},
+            title={Text(when(request.warmupChange){
+                SessionWarmupChange.ADD_FIRST_VERIFIED -> "Add reviewed warm-up?"
+                SessionWarmupChange.REPEAT_APPROVED -> "Repeat approved warm-up?"
+                else -> "Remove unlogged warm-up?"
+            })},
             text={Text(if(reviewed==null) "The workout changed. Open the warm-up details again."
+                else if(request.warmupChange==SessionWarmupChange.ADD_FIRST_VERIFIED) {
+                    val added=reviewed.after.single{it.setKey in reviewed.addedSetKeys}.prescription
+                    val load=(added.load as? DraftSetLoad.Verified)?.let{
+                        it.value.toPlainString()+" "+it.unit.name.lowercase()
+                    }?:"Bodyweight"
+                    "$load × ${added.reps.minimum} reps · ${added.restSeconds}s rest. Current stock and weekly session limits will be checked again. Working targets stay unchanged."
+                }
                 else if(request.warmupChange==SessionWarmupChange.REPEAT_APPROVED)
                     "Add one warm-up using the exact previously approved warm-up target. The current gym stock and session limits will be checked before saving."
                 else "Remove only the final unlogged warm-up. All working sets and actuals stay unchanged.")},
@@ -1692,6 +1698,24 @@ internal fun NativeKotlinCustomJournalScreen(
                 }
                 NativeKotlinWorkoutExerciseInfoSheet(
                     exerciseId=slot.exerciseId,
+                    onAddFirstWarmup=if(infoWarmupsOnly && !busy && !finished &&
+                        machineChoices.ready && !machineChoices.busy &&
+                        slot.sets.none{it.prescription.type==DraftSetType.WARMUP} &&
+                        journal?.originalSnapshot?.slots?.singleOrNull{it.slotId==slot.slotId}
+                            ?.sets?.none{it.prescription.type==DraftSetType.WARMUP}==true &&
+                        journal?.effectiveVisits?.keys?.none{visit->slot.sets.any{it.setKey==visit.setKey}}==true) ({
+                        busy=true
+                        scope.launch {
+                            try {
+                                val request=withContext(Dispatchers.IO){host.reviewFirstCustomWarmup(workoutId,slot.slotId)}
+                                if(request!=null && journal?.revision==request.expectedRevision) {
+                                    infoSlotId=null;infoWarmupsOnly=false;warmupEdit=request
+                                } else error="No verified lighter warm-up is available for this workout, equipment or training limit."
+                            } catch(cancelled:CancellationException){throw cancelled}
+                            catch(_:Exception){error="The warm-up could not be reviewed."}
+                            finally{busy=false}
+                        }
+                    })else null,
                     onRepeatWarmup=warmupAction(SessionWarmupChange.REPEAT_APPROVED),
                     onRemoveWarmup=warmupAction(SessionWarmupChange.REMOVE_PENDING),
                     sourceDescription="Issued custom workout · "+

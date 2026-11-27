@@ -4283,6 +4283,11 @@ internal class NativeKotlinCandidateHost(context:Context) {
         return trackedWorkout.adjustRemaining(owner.ownerKey,owner.athleteId,workoutId,operation,athleteConfirmed)
     }
 
+    fun reviewFirstCustomWarmup(workoutId:String,slotId:String):MidSessionWorkingEdit? {
+        val owner=localAthlete.signedInIdentity()?:return null
+        return customIssuedStore.reviewFirstWarmup(owner.ownerKey,workoutId,slotId)
+    }
+
     fun adjustIssuedCustomRemaining(workoutId:String,operation:CustomWorkoutJournalOperation,
         athleteConfirmed:Boolean):NativeCustomJournalResult {
         val owner=localAthlete.signedInIdentity()

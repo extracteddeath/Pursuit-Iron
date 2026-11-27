@@ -87,6 +87,35 @@ class NativeCustomWorkoutJournalCodecTest {
         assertEquals(state,NativeCustomWorkoutJournalCodec.decode(NativeCustomWorkoutJournalCodec.encode(record(state))).journal)
     }
 
+    @Test fun firstWeightedWarmupReceiptKeepsExactMassAndShiftedWorkingIdentity() {
+        val base=snapshot()
+        val slot=base.slots.single()
+        val load=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.MACHINE_STACK,java.math.BigDecimal("30.0"))
+        val working=slot.sets.single().copy(prescription=slot.sets.single().prescription.copy(
+            load=load,amplifier=null))
+        val source=base.copy(slots=listOf(slot.copy(sets=listOf(working))),knownSetAndRestSeconds=135)
+        val start=CustomWorkoutJournalDomain.begin("workout-1",source,"a".repeat(64))
+        val warm=load.copy(value=java.math.BigDecimal("22.50"))
+        val request=MidSessionWorkingEdit("workout-1",0,"raise-1",1,
+            warmupChange=SessionWarmupChange.ADD_FIRST_VERIFIED,firstWarmupLoad=warm)
+        val op=CustomWorkoutJournalOperation.AdjustRemaining("first-warm",0,request)
+        val added=accept(start,op)
+        val cold=NativeCustomWorkoutJournalCodec.decode(NativeCustomWorkoutJournalCodec.encode(record(added))).journal
+        assertEquals(added,cold)
+        assertEquals(request,(cold.receipts.single().operation as CustomWorkoutJournalOperation.AdjustRemaining).request)
+        val rows=cold.snapshot.slots.single().sets
+        assertEquals(warm,rows.first().prescription.load)
+        assertEquals(working.setKey,rows.last().setKey)
+        assertEquals(working.prescription,rows.last().prescription)
+        assertEquals(source,cold.originalSnapshot)
+        val wrong=request.copy(firstWarmupLoad=load)
+        assertTrue(MidSessionWorkingEditDomain.custom(start,wrong) is MidSessionWorkingEditReview.Rejected)
+        val removed=accept(cold,CustomWorkoutJournalOperation.AdjustRemaining("remove-first",1,
+            MidSessionWorkingEdit("workout-1",1,"raise-1",1,warmupChange=SessionWarmupChange.REMOVE_PENDING)))
+        assertEquals(source,removed.snapshot)
+        assertEquals(removed,NativeCustomWorkoutJournalCodec.decode(NativeCustomWorkoutJournalCodec.encode(record(removed))).journal)
+    }
+
     @Test fun warmupEditsReplayStableOriginalWorkingKeysAndExcludeRemovedWork() {
         val base=snapshot()
         val slot=base.slots.single()

@@ -820,11 +820,14 @@ class NativeKotlinTrackedWorkoutGatewayTest {
             KotlinJournalOperation.RecordSet("done-late",0,"dose-5",
                 KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(BigDecimal("200"),LoadUnit.LB,6,0)),
             KotlinJournalOperation.RecordSet("failed-late",1,"dose-4",
-                KotlinJournalSetOutcome.FAILED_ATTEMPT,KotlinPerformedSet(BigDecimal("200"),LoadUnit.LB,0,0)),
+                KotlinJournalSetOutcome.FAILED_ATTEMPT,KotlinPerformedSet(BigDecimal("200"),LoadUnit.LB,0,null)),
             KotlinJournalOperation.RecordSet("prior-skip",2,"dose-0",
                 KotlinJournalSetOutcome.SKIPPED,null))
-        for(op in operations)saved=(gateway().append("owner-1","athlete-1","dose-workout",op)
-            as NativeJournalFileResult.Durable).journal
+        for(op in operations) {
+            val result=gateway().append("owner-1","athlete-1","dose-workout",op)
+            assertTrue("${op.eventId}: $result",result is NativeJournalFileResult.Durable)
+            saved=(result as NativeJournalFileResult.Durable).journal
+        }
         val credits=mapOf("bench" to listOf(DeclaredMuscleCredit(TrainingMuscle.CHEST,
             MuscleCreditRole.DIRECT,BigDecimal.ONE)))
         fun review(j:KotlinWorkoutJournalState)=WorkoutRemainingExerciseDomain.generatedConcerns(j,credits)

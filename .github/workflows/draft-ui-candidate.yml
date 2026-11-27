@@ -86,7 +86,7 @@ jobs:
     # A single release identity is generated ONLY after all seven Chromium
     # shards and the full integration source group pass on the same PR head.
     needs: [source-contracts, ui-browser]
-    if: ${{ github.event.pull_request.draft && (github.event.pull_request.number == 414 || github.event.pull_request.number == 416 || github.event.pull_request.number == 420 || github.event.pull_request.number == 421 || github.event.pull_request.number == 422 || github.event.pull_request.number == 427 || github.event.pull_request.number == 430 || github.event.pull_request.number == 433 || github.event.pull_request.number == 434 || github.event.pull_request.number == 435 || github.event.pull_request.number == 438 || github.event.pull_request.number == 440 || github.event.pull_request.number == 669 || github.event.pull_request.number == 649 || github.event.pull_request.number == 679 || github.event.pull_request.number == 1169) && github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ github.event.pull_request.draft && (github.event.pull_request.number == 414 || github.event.pull_request.number == 416 || github.event.pull_request.number == 420 || github.event.pull_request.number == 421 || github.event.pull_request.number == 422 || github.event.pull_request.number == 427 || github.event.pull_request.number == 430 || github.event.pull_request.number == 433 || github.event.pull_request.number == 434 || github.event.pull_request.number == 435 || github.event.pull_request.number == 438 || github.event.pull_request.number == 440 || github.event.pull_request.number == 669 || github.event.pull_request.number == 649 || github.event.pull_request.number == 679 || github.event.pull_request.number == 1169 || github.event.pull_request.number == 1189) && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -114,7 +114,9 @@ jobs:
           import fs from 'node:fs';
           const file = 'RELEASE_MANIFEST.json';
           const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
-          manifest.uiMilestone = process.env.TARGET_BRANCH === 'fix/web-history-load-ownership-1126'
+          manifest.uiMilestone = process.env.TARGET_BRANCH === 'fix/web-native-stage3-parity'
+            ? `Build ${manifest.build} · Native engine parity and issued workout reliability`
+            : process.env.TARGET_BRANCH === 'fix/web-history-load-ownership-1126'
             ? `Build ${manifest.build} · Workout history, volume and progression reliability`
             : process.env.TARGET_BRANCH === 'fix/web-last-set-technique-quiet-machine-action-20261117'
             ? `Build ${manifest.build} · Final-set techniques and quiet machine switching`

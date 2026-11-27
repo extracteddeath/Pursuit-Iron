@@ -19,6 +19,10 @@ assert.match(policy,/remaining\(checkpoint,elapsed,wall\)/);
 assert.match(policy,/if\(elapsedAge>MAX_SECONDS\*1000L\+CLOCK_TOLERANCE_MILLIS\)return false/);
 assert.match(policy,/abs\(wallAge-elapsedAge\)<=CLOCK_TOLERANCE_MILLIS/);
 assert.match(policy,/fun adjust\(/);
+assert.match(policy,/fun pause\(/);
+assert.match(policy,/fun resume\(/);
+assert.match(policy,/pausedAtElapsed:Long\?=null/);
+assert.match(policy,/fields\.size==6 && fields\[0\]=="2"/);
 assert.match(policy,/fun decode\(raw:String\?\)/);
 assert.doesNotMatch(policy,/RecordSet\(|recordIssuedCustomSet\(|approve\(|issueWorkout\(|KotlinPerformedSet\(/);
 
@@ -33,6 +37,9 @@ assert.match(rest,/var observedEvent by remember\(workoutId,ownerId\).*mutableSt
 assert.match(rest,/restStore\.save\(scopeKey,latestReceiptOperationId,checkpoint\)/);
 assert.match(rest,/NativeRestCountdownPolicy\.valid\(/);
 assert.match(rest,/NativeRestCountdownPolicy\.adjust\(/);
+assert.match(rest,/NativeRestCountdownPolicy\.pause\(/);
+assert.match(rest,/NativeRestCountdownPolicy\.resume\(/);
+assert.match(rest,/Text\(if\(paused\)"Resume rest" else "Pause rest"\)/);
 assert.match(rest,/onLongClick = \{acknowledgeManualAction\(\);publish\(null\)\}/);
 assert.match(rest,/onClick = \{ acknowledgeManualAction\(\);begin\(prescribedSeconds\) \}/);
 assert.match(rest,/fun acknowledgeManualAction\(\) \{[\s\S]*?observedEvent=latestReceiptOperationId/);
@@ -57,6 +64,8 @@ assert.match(generated,/KotlinWorkoutRestDomain\.inspect\(journal/);
 assert.match(custom,/KotlinWorkoutRestDomain\.inspect\(current/);
 
 assert.match(tests,/normalCountdownRecoversAfterWorkoutMinimizeAndColdReopen/);
+assert.match(tests,/pausedCountdownSurvivesColdReopenAndResumesExactFractionalTime/);
+assert.match(tests,/pausedAdjustmentsAndRecoveryNeverInventTimeOrBypassClockValidation/);
 assert.match(tests,/quickAdjustChangesRemainingRestWithoutChangingAuthorisedTargets/);
 assert.match(tests,/clockChangesRebootsAndHistoricalRestAlwaysFailClosed/);
 assert.match(tests,/rejectsCorruptAndImpossiblePersistedSnapshots/);

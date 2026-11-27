@@ -18,7 +18,9 @@ internal data class NativeRestCountdownCheckpoint(
     val startedElapsed:Long,
     val startedWall:Long,
     val deadlineElapsed:Long,
-    val activeSeconds:Int
+    val activeSeconds:Int,
+    /** Monotonic instant at which the athlete explicitly paused this timer. */
+    val pausedAtElapsed:Long?=null
 )
 
 internal object NativeRestCountdownPolicy {
@@ -33,6 +35,9 @@ internal object NativeRestCountdownPolicy {
         val duration=checkpoint.deadlineElapsed-checkpoint.startedElapsed
         if(duration>MAX_SECONDS*1000L ||
             checkpoint.activeSeconds.toLong()!=(duration+999L)/1000L)return false
+        val paused=checkpoint.pausedAtElapsed
+        if(paused!=null && (paused<checkpoint.startedElapsed ||
+                paused>=checkpoint.deadlineElapsed || paused>elapsed))return false
         val elapsedAge=elapsed-checkpoint.startedElapsed
         val wallAge=wall-checkpoint.startedWall
         // Never resurrect an ancient 'Rest complete' from a past session.
@@ -43,7 +48,8 @@ internal object NativeRestCountdownPolicy {
     /** Null is stale/invalid, zero is completed. Times are rounded UP. */
     fun remaining(checkpoint:NativeRestCountdownCheckpoint,elapsed:Long,wall:Long):Long? {
         if(!valid(checkpoint,elapsed,wall))return null
-        return ((checkpoint.deadlineElapsed-elapsed).coerceAtLeast(0L)+999L)/1000L
+        val clock=checkpoint.pausedAtElapsed ?:elapsed
+        return ((checkpoint.deadlineElapsed-clock).coerceAtLeast(0L)+999L)/1000L
     }
 
     fun begin(seconds:Int,elapsed:Long,wall:Long):NativeRestCountdownCheckpoint? {
@@ -51,6 +57,31 @@ internal object NativeRestCountdownPolicy {
             elapsed>Long.MAX_VALUE-seconds*1000L)return null
         return NativeRestCountdownCheckpoint(elapsed,wall,
             elapsed+seconds*1000L,seconds)
+    }
+
+    /** Pause only a still-running, valid countdown; never resurrect expired rest. */
+    fun pause(checkpoint:NativeRestCountdownCheckpoint,elapsed:Long,wall:Long)
+        :NativeRestCountdownCheckpoint? {
+        if(checkpoint.pausedAtElapsed!=null || (remaining(checkpoint,elapsed,wall) ?:0L)<=0L)
+            return null
+        return checkpoint.copy(pausedAtElapsed=elapsed)
+    }
+
+    /** Move both clock anchors by the exact paused interval, preserving
+     * fractional seconds and the original active-time denominator. */
+    fun resume(checkpoint:NativeRestCountdownCheckpoint,elapsed:Long,wall:Long)
+        :NativeRestCountdownCheckpoint? {
+        val paused=checkpoint.pausedAtElapsed ?:return null
+        if(!valid(checkpoint,elapsed,wall))return null
+        val pausedFor=elapsed-paused
+        if(checkpoint.deadlineElapsed>Long.MAX_VALUE-pausedFor ||
+            checkpoint.startedWall>Long.MAX_VALUE-pausedFor)return null
+        val resumed=checkpoint.copy(
+            startedElapsed=checkpoint.startedElapsed+pausedFor,
+            startedWall=checkpoint.startedWall+pausedFor,
+            deadlineElapsed=checkpoint.deadlineElapsed+pausedFor,
+            pausedAtElapsed=null)
+        return resumed.takeIf{valid(it,elapsed,wall)}
     }
 
     /**
@@ -63,34 +94,42 @@ internal object NativeRestCountdownPolicy {
         changeSeconds:Int,elapsed:Long,wall:Long
     ):NativeRestCountdownCheckpoint? {
         if(remaining(checkpoint,elapsed,wall)==null)return null
-        val remainingMillis=(checkpoint.deadlineElapsed-elapsed).coerceAtLeast(0L)
+        val clock=checkpoint.pausedAtElapsed ?:elapsed
+        val remainingMillis=(checkpoint.deadlineElapsed-clock).coerceAtLeast(0L)
         if(remainingMillis==0L)return null
-        val elapsedSinceStart=elapsed-checkpoint.startedElapsed
+        val elapsedSinceStart=clock-checkpoint.startedElapsed
         val availableMillis=MAX_SECONDS*1000L-elapsedSinceStart
         val next=(remainingMillis+changeSeconds*1000L).coerceIn(0L,availableMillis)
         if(next==0L)return null
-        val nextDeadline=elapsed+next
+        if(clock>Long.MAX_VALUE-next)return null
+        val nextDeadline=clock+next
         val total=(elapsedSinceStart+next+999L)/1000L
         return checkpoint.copy(deadlineElapsed=nextDeadline,activeSeconds=total.toInt())
     }
 
-    fun encode(checkpoint:NativeRestCountdownCheckpoint):String =
-        listOf("1",checkpoint.startedElapsed,checkpoint.startedWall,
-            checkpoint.deadlineElapsed,checkpoint.activeSeconds).joinToString("|")
+    fun encode(checkpoint:NativeRestCountdownCheckpoint):String {
+        val paused=checkpoint.pausedAtElapsed
+        val base=listOf(if(paused==null)"1" else "2",checkpoint.startedElapsed,
+            checkpoint.startedWall,checkpoint.deadlineElapsed,checkpoint.activeSeconds)
+        return (if(paused==null)base else base+paused).joinToString("|")
+    }
 
     fun decode(raw:String?):NativeRestCountdownCheckpoint? {
         if(raw==null || raw.length>120)return null
         val fields=raw.split('|')
-        if(fields.size!=5 || fields[0]!="1")return null
+        val pausedVersion=fields.size==6 && fields[0]=="2"
+        if(!pausedVersion && (fields.size!=5 || fields[0]!="1"))return null
         val elapsed=fields[1].toLongOrNull() ?:return null
         val wall=fields[2].toLongOrNull() ?:return null
         val deadline=fields[3].toLongOrNull() ?:return null
         val seconds=fields[4].toIntOrNull() ?:return null
-        val result=NativeRestCountdownCheckpoint(elapsed,wall,deadline,seconds)
+        val paused=if(pausedVersion)fields[5].toLongOrNull() ?:return null else null
+        val result=NativeRestCountdownCheckpoint(elapsed,wall,deadline,seconds,paused)
         // A decoded timestamp has to be structurally valid before restoring.
         if(elapsed<=0L || wall<=0L || seconds !in 1..MAX_SECONDS ||
             deadline<=elapsed || deadline-elapsed>MAX_SECONDS*1000L ||
-            seconds.toLong()!=(deadline-elapsed+999L)/1000L)return null
+            seconds.toLong()!=(deadline-elapsed+999L)/1000L ||
+            (paused!=null && (paused<elapsed || paused>=deadline)))return null
         return result
     }
 }

@@ -116,6 +116,16 @@ internal fun NativeRestTimer(
         publish(NativeRestCountdownPolicy.adjust(
             checkpoint,seconds,elapsed,System.currentTimeMillis()))
     }
+    fun togglePause() {
+        val checkpoint=active ?:return
+        val elapsed=SystemClock.elapsedRealtime()
+        val wall=System.currentTimeMillis()
+        now=elapsed
+        acknowledgeManualAction()
+        publish(if(checkpoint.pausedAtElapsed==null)
+            NativeRestCountdownPolicy.pause(checkpoint,elapsed,wall)
+        else NativeRestCountdownPolicy.resume(checkpoint,elapsed,wall))
+    }
     LaunchedEffect(workoutId,ownerId,latestReceiptOperationId,autoCue,enabled) {
         if(enabled && latestReceiptOperationId != null &&
             latestReceiptOperationId!=observedEvent) {
@@ -150,7 +160,7 @@ internal fun NativeRestTimer(
                 break
             }
             now = elapsed
-            if (elapsed >= checkpoint.deadlineElapsed) break
+            if (checkpoint.pausedAtElapsed==null && elapsed >= checkpoint.deadlineElapsed) break
             delay(250L)
         }
     }
@@ -160,9 +170,11 @@ internal fun NativeRestTimer(
     val valid=remainingMaybe!=null
     val activeSeconds=active?.activeSeconds ?: 0
     val remaining=remainingMaybe ?:0L
+    val paused=active?.pausedAtElapsed!=null
     val time = "%d:%02d".format(remaining / 60, remaining % 60)
     val title = when {
         !valid -> "Start rest timer"
+        paused && remaining>0L -> "Rest paused · $time left"
         remaining > 0L -> "Rest · $time left"
         else -> "Rest complete"
     }
@@ -204,6 +216,10 @@ internal fun NativeRestTimer(
             Text(supporting, style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSecondaryContainer)
             if(valid && remaining>0L) {
+                TextButton(onClick={togglePause()},enabled=enabled,
+                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+                    Text(if(paused)"Resume rest" else "Pause rest")
+                }
                 Row(Modifier.fillMaxWidth(),
                     horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick={acknowledgeManualAction();adjust(-30)},enabled=enabled,

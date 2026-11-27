@@ -22,6 +22,48 @@ class NativeKotlinRestCountdownPolicyTest {
             reopened,elapsed+120_001L,wall+120_001L))
     }
 
+    @Test fun pausedCountdownSurvivesColdReopenAndResumesExactFractionalTime() {
+        val original=started(120)
+        val pauseOffset=15_250L
+        val paused=requireNotNull(NativeRestCountdownPolicy.pause(
+            original,elapsed+pauseOffset,wall+pauseOffset))
+        val reopened=requireNotNull(NativeRestCountdownPolicy.decode(
+            NativeRestCountdownPolicy.encode(paused)))
+        assertEquals(paused,reopened)
+        val resumedAt=elapsed+180_000L
+        val resumedWall=wall+180_000L
+        assertEquals(105L,NativeRestCountdownPolicy.remaining(reopened,resumedAt,resumedWall))
+        assertNull(NativeRestCountdownPolicy.pause(reopened,resumedAt,resumedWall))
+        val resumed=requireNotNull(NativeRestCountdownPolicy.resume(reopened,resumedAt,resumedWall))
+        assertNull(resumed.pausedAtElapsed)
+        assertEquals(120,resumed.activeSeconds)
+        assertEquals(resumedAt+104_750L,resumed.deadlineElapsed)
+        assertEquals(104L,NativeRestCountdownPolicy.remaining(resumed,resumedAt+750L,resumedWall+750L))
+        assertEquals(0L,NativeRestCountdownPolicy.remaining(resumed,resumedAt+104_750L,resumedWall+104_750L))
+        assertEquals(original,NativeRestCountdownPolicy.decode(NativeRestCountdownPolicy.encode(original)))
+    }
+
+    @Test fun pausedAdjustmentsAndRecoveryNeverInventTimeOrBypassClockValidation() {
+        val original=started(90)
+        val paused=requireNotNull(NativeRestCountdownPolicy.pause(original,elapsed+15_000L,wall+15_000L))
+        val later=elapsed+180_000L
+        val laterWall=wall+180_000L
+        val adjusted=requireNotNull(NativeRestCountdownPolicy.adjust(paused,30,later,laterWall))
+        assertEquals(paused.pausedAtElapsed,adjusted.pausedAtElapsed)
+        assertEquals(105L,NativeRestCountdownPolicy.remaining(adjusted,later,laterWall))
+        assertEquals(120,adjusted.activeSeconds)
+        assertNull(NativeRestCountdownPolicy.adjust(adjusted,-120,later,laterWall))
+        assertNull(NativeRestCountdownPolicy.resume(adjusted,elapsed-1L,laterWall))
+        assertNull(NativeRestCountdownPolicy.resume(adjusted,later,laterWall+120_000L))
+        assertNull(NativeRestCountdownPolicy.resume(original,later,laterWall))
+        assertNull(NativeRestCountdownPolicy.pause(original,elapsed+90_000L,wall+90_000L))
+        assertNull(NativeRestCountdownPolicy.decode("2|1000|2000|61000|60|61000"))
+        assertNull(NativeRestCountdownPolicy.decode("2|1000|2000|61000|60|999"))
+        assertNull(NativeRestCountdownPolicy.remaining(paused,
+            elapsed+NativeRestCountdownPolicy.MAX_SECONDS*1000L+61_000L,
+            wall+NativeRestCountdownPolicy.MAX_SECONDS*1000L+61_000L))
+    }
+
     @Test fun quickAdjustChangesRemainingRestWithoutChangingAuthorisedTargets() {
         val original=started(90)
         val plus=NativeRestCountdownPolicy.adjust(

@@ -519,11 +519,11 @@ assert.ok(
   liveJournalDomain.includes('CustomWorkoutJournalRefusal.SWAP_ALREADY_STARTED') &&
   liveJournalDomain.includes('CustomWorkoutJournalRefusal.SWAP_PROTECTED') &&
   liveJournalDomain.includes('prior.receipts.any') &&
-  liveJournalCodec.includes('private const val VERSION=8') &&
-  liveJournalCodec.includes('val version=if(methodTagged) VERSION else if(adjusted) 7 else if(exactDecimal) 6 else if(stageTagged) 5 else if(machineTagged) 4') &&
+  liveJournalCodec.includes('private const val VERSION=9') &&
+  liveJournalCodec.includes('val version=if(warmupTagged) VERSION else if(methodTagged) 8 else if(adjusted) 7 else if(exactDecimal) 6 else if(stageTagged) 5 else if(machineTagged) 4') &&
   liveJournalCodec.includes('is CustomWorkoutJournalOperation.AdjustRemaining->') &&
-  liveJournalCodec.includes('NativeMidSessionWorkingEditCodec.read(this,withMethod=version>=8)') &&
-  liveJournalCodec.includes('NativeMidSessionWorkingEditCodec.write(this,event.request,withMethod=version>=8)') &&
+  liveJournalCodec.includes('NativeMidSessionWorkingEditCodec.read(this,withMethod=version>=8,withWarmup=version>=9)') &&
+  liveJournalCodec.includes('NativeMidSessionWorkingEditCodec.write(this,event.request,withMethod=version>=8,withWarmup=version>=9)') &&
   liveJournalCodec.includes('if(version>=5)writeInt(event.visit.stage)') &&
   liveJournalCodec.includes('if(version>=5)readInt() else 1') &&
   liveJournalCodec.includes('if(version>=4)textOptional(value.machineInstanceId)') &&
@@ -546,6 +546,21 @@ assert.ok(
   read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt').includes('fun swapIssuedCustomExercise(') &&
   read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt').includes('fun undoIssuedCustomExerciseSwap('),
   'A live swap must be an authenticated source-verified, cold-replayable workout-only journal event with unchanged History ownership');
+
+// Warm-up edits must use the same owner-gated adjustment path and exact replay.
+assert.ok(
+  liveWorkout.includes('warmupEdit=request') &&
+  liveWorkout.includes('MidSessionWorkingEditDomain.custom(it,request)') &&
+  liveWorkout.includes('warmupChange=change') &&
+  liveWorkout.includes('machineChoices.ready') &&
+  liveWorkout.includes('submitRemainingEdit(CustomWorkoutJournalOperation.AdjustRemaining(') &&
+  liveJournalCodec.includes('allowWarmupEditKeys=warmupTagged') &&
+  liveJournalCodec.includes('allowWarmupEditKeys=version>=9') &&
+  liveJournalCodec.includes('if(result.snapshot!=snapshot)') &&
+  liveJournalStore.includes('NativeKotlinWorkoutMachineChoiceFileStore(root).read(') &&
+  liveJournalStore.includes('choices.machines[slot.exerciseId]!=slot.machineInstanceId') &&
+  liveJournalStore.includes('preflight.permitsRemainingEdit(ownerKey,existing.issued,operation.request,all)'),
+  'Warm-up editing must remain revision-fenced, stock-reviewed and replay-verified');
 
 // Web changelog 2523/2677/2248: ranked search and verified equipment are
 // visible in both program-draft and separately source-fenced live-workout swaps.

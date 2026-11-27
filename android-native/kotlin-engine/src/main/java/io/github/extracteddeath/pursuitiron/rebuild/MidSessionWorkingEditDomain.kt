@@ -15,8 +15,11 @@ data class MidSessionWorkingEdit(
     val reps:RepBand?=null,
     val restSeconds:Int?=null,
     /** Explicit session-only method intent; never itself changes issued numbers. */
-    val progressionMethod:SavedProgressionMethod?=null
+    val progressionMethod:SavedProgressionMethod?=null,
+    /** Explicit warm-up-only edit, never a new working-set target. */
+    val warmupChange:SessionWarmupChange?=null
 )
+enum class SessionWarmupChange { REPEAT_APPROVED, REMOVE_PENDING }
 enum class MidSessionWorkingEditRefusal {
     STALE_WORKOUT, FINISHED, UNKNOWN_OCCURRENCE, INVALID_REQUEST,
     PROTECTED_PROTOCOL, RESOLVED_WORK, NO_PENDING_WORK, SESSION_LIMIT, NO_CHANGE
@@ -124,7 +127,8 @@ object MidSessionWorkingEditDomain {
             request.expectedRevision !in 0 until 9_007_199_254_740_991L)
             return refused(MidSessionWorkingEditRefusal.STALE_WORKOUT)
         if(state.finishedByEventId!=null)return refused(MidSessionWorkingEditRefusal.FINISHED)
-        if(request.progressionMethod!=null)return refused(MidSessionWorkingEditRefusal.PROTECTED_PROTOCOL)
+        if(request.progressionMethod!=null || request.warmupChange!=null)
+            return refused(MidSessionWorkingEditRefusal.PROTECTED_PROTOCOL)
         val rows=state.snapshot.targets.filter{it.exerciseId==request.occurrenceId}
         return review(request,rows.map{Row(it,it.setKey,it.type,it.ordinal,it.load,
             it.reps,it.targetRir,it.activeSeconds,it.restSeconds)},
@@ -434,6 +438,65 @@ object MidSessionWorkingEditDomain {
             cycle,ProgramProgressionSlotKey(block.blockId,day.weekday,slotId)))
     }
 
+    /** Preserve issued keys and recorded facts. Only a pending warm-up at the
+     * end of the warm-up prefix may be removed; a repeat uses the exact signed
+     * warm-up prescription, not a guessed weight. The existing owner approval
+     * rechecks current stock, complete weekly dose and timing before saving. */
+    private fun warmupReview(state:CustomWorkoutJournalDraft,request:MidSessionWorkingEdit,
+        slot:CustomWorkoutSlotSnapshot):MidSessionWorkingEditReview<CustomWorkoutSetSnapshot> {
+        val working=slot.sets.filter{it.prescription.type==DraftSetType.WORKING}
+        val warm=slot.sets.takeWhile{it.prescription.type==DraftSetType.WARMUP}
+        val resolved=state.effectiveVisits.keys.map{it.setKey}.toSet()
+        if(request.reps!=null || request.restSeconds!=null || request.progressionMethod!=null ||
+            request.workingSetCount!=working.size || working.isEmpty() ||
+            warm.size+working.size!=slot.sets.size)
+            return refused(MidSessionWorkingEditRefusal.INVALID_REQUEST)
+        if(state.snapshot.blockPurpose!=CustomBlockPurpose.TRAINING ||
+            state.snapshot.shortSessionLimitMinutes!=null || slot.supersetGroup!=null ||
+            state.receipts.any{it.operation is CustomWorkoutJournalOperation.Swap ||
+                it.operation is CustomWorkoutJournalOperation.UndoSwap})
+            return refused(MidSessionWorkingEditRefusal.PROTECTED_PROTOCOL)
+        if(working.any{it.setKey in resolved})
+            return refused(MidSessionWorkingEditRefusal.RESOLVED_WORK)
+        val added=mutableListOf<String>()
+        val omitted=mutableListOf<String>()
+        val nextWarm=warm.toMutableList()
+        when(request.warmupChange) {
+            SessionWarmupChange.REPEAT_APPROVED -> {
+                val approved=state.originalSnapshot.slots.singleOrNull{it.slotId==slot.slotId}
+                    ?.sets?.lastOrNull{it.prescription.type==DraftSetType.WARMUP}
+                    ?:return refused(MidSessionWorkingEditRefusal.PROTECTED_PROTOCOL)
+                if(approved.prescription.amplifier!=null || approved.prescription.percentageIntent!=null ||
+                    !KotlinSetNumberAuthorityDomain.validIssuedLoad(approved.prescription.load))
+                    return refused(MidSessionWorkingEditRefusal.PROTECTED_PROTOCOL)
+                if(slot.sets.size>=20 || state.snapshot.slots.sumOf{it.sets.size}>=256)
+                    return refused(MidSessionWorkingEditRefusal.SESSION_LIMIT)
+                val key="mid-${request.expectedRevision+1}-1"
+                if((state.originalSnapshot.slots+state.snapshot.slots).any{s->s.sets.any{it.setKey==key}})
+                    return refused(MidSessionWorkingEditRefusal.INVALID_REQUEST)
+                added.add(key)
+                nextWarm.add(approved.copy(setKey=key,ordinalInSlot=warm.size+1))
+            }
+            SessionWarmupChange.REMOVE_PENDING -> {
+                val last=warm.lastOrNull()?:return refused(MidSessionWorkingEditRefusal.NO_PENDING_WORK)
+                if(last.setKey in resolved)return refused(MidSessionWorkingEditRefusal.RESOLVED_WORK)
+                omitted.add(last.setKey)
+                nextWarm.removeAt(nextWarm.lastIndex)
+            }
+            null ->return refused(MidSessionWorkingEditRefusal.INVALID_REQUEST)
+        }
+        val after=(nextWarm+working).mapIndexed{index,set->set.copy(ordinalInSlot=index+1)}
+        // Completed warm-ups remain at their original position with identical
+        // targets; only not-yet-recorded working positions may shift.
+        if(after.filter{it.setKey in resolved}!=slot.sets.filter{it.setKey in resolved})
+            return refused(MidSessionWorkingEditRefusal.RESOLVED_WORK)
+        return MidSessionWorkingEditReview.Reviewed(request,
+            Collections.unmodifiableList(slot.sets.toList()),
+            Collections.unmodifiableList(after),
+            Collections.unmodifiableList(added),Collections.unmodifiableList(omitted),
+            slot.sets.filter{it.setKey in resolved}.map{it.setKey})
+    }
+
     fun custom(state:CustomWorkoutJournalDraft,request:MidSessionWorkingEdit):
         MidSessionWorkingEditReview<CustomWorkoutSetSnapshot> {
         if(state.workoutId!=request.workoutId || state.revision!=request.expectedRevision ||
@@ -442,6 +505,7 @@ object MidSessionWorkingEditDomain {
         if(state.finishedByEventId!=null)return refused(MidSessionWorkingEditRefusal.FINISHED)
         val slot=state.snapshot.slots.singleOrNull{it.slotId==request.occurrenceId}
             ?:return refused(MidSessionWorkingEditRefusal.UNKNOWN_OCCURRENCE)
+        if(request.warmupChange!=null)return warmupReview(state,request,slot)
         val method=request.progressionMethod
         if(method!=null) {
             // A method-only receipt leaves the approved numbers untouched.

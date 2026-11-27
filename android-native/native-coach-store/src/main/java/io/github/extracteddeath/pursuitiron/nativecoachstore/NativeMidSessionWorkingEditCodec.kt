@@ -7,8 +7,9 @@ import java.io.DataOutputStream
 /** A compact common receipt payload, replayed by the existing journal reducer.
  * The encoded request is not a replacement snapshot or a permission grant. */
 internal object NativeMidSessionWorkingEditCodec {
-    fun write(out:DataOutputStream,request:MidSessionWorkingEdit,withMethod:Boolean=false) {
+    fun write(out:DataOutputStream,request:MidSessionWorkingEdit,withMethod:Boolean=false,withWarmup:Boolean=false) {
         require(withMethod || request.progressionMethod==null)
+        require(withWarmup || request.warmupChange==null)
         out.writeUTF(request.workoutId);out.writeLong(request.expectedRevision)
         out.writeUTF(request.occurrenceId);out.writeInt(request.workingSetCount)
         val reps=request.reps
@@ -22,8 +23,12 @@ internal object NativeMidSessionWorkingEditCodec {
             out.writeBoolean(method!=null)
             if(method!=null)out.writeUTF(method.name)
         }
+        if(withWarmup) {
+            out.writeBoolean(request.warmupChange!=null)
+            request.warmupChange?.let{out.writeUTF(it.name)}
+        }
     }
-    fun read(input:DataInputStream,withMethod:Boolean=false):MidSessionWorkingEdit {
+    fun read(input:DataInputStream,withMethod:Boolean=false,withWarmup:Boolean=false):MidSessionWorkingEdit {
         val workout=input.readUTF();val revision=input.readLong()
         val occurrence=input.readUTF();val count=input.readInt()
         val reps=if(input.readBoolean())RepBand(input.readInt(),input.readInt()) else null
@@ -33,6 +38,11 @@ internal object NativeMidSessionWorkingEditCodec {
             SavedProgressionMethod.entries.singleOrNull{it.name==name}
                 ?:throw java.io.IOException("invalid session progression method")
         } else null
-        return MidSessionWorkingEdit(workout,revision,occurrence,count,reps,rest,method)
+        val warmup=if(withWarmup && input.readBoolean()) {
+            val name=input.readUTF()
+            SessionWarmupChange.entries.singleOrNull{it.name==name}
+                ?:throw java.io.IOException("invalid warm-up edit")
+        } else null
+        return MidSessionWorkingEdit(workout,revision,occurrence,count,reps,rest,method,warmup)
     }
 }

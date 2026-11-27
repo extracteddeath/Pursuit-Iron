@@ -944,6 +944,26 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                         NativeCustomJournalRefusal.STALE_OR_INVALID_SET,
                         (decision as CustomWorkoutJournalDecision.Rejected).reason)
                 if(decision.replayed)return@withOwnerTransaction existing
+                // The live physical station choice is independent of the
+                // issued prescription. A repeated/removed warm-up or Undo
+                // cannot reintroduce a load from a different station.
+                val adjustment=when(operation) {
+                    is CustomWorkoutJournalOperation.AdjustRemaining ->operation
+                    is CustomWorkoutJournalOperation.UndoAdjustment ->
+                        journal.receipts.lastOrNull()?.operation as? CustomWorkoutJournalOperation.AdjustRemaining
+                    else ->null
+                }
+                val request=adjustment?.request
+                if(request?.warmupChange!=null) {
+                    val slot=journal.snapshot.slots.singleOrNull{it.slotId==request.occurrenceId}
+                        ?:return@withOwnerTransaction denied()
+                    val choices=(NativeKotlinWorkoutMachineChoiceFileStore(root).read(
+                        ownerKey,workoutId,true,journal.originalSnapshot.stamp.gymId)
+                        as? NativeWorkoutMachineChoiceResult.Saved)?.snapshot
+                        ?:return@withOwnerTransaction denied()
+                    if(choices.revision<=0 || choices.machines[slot.exerciseId]!=slot.machineInstanceId)
+                        return@withOwnerTransaction denied()
+                }
                 if(operation is CustomWorkoutJournalOperation.AdjustRemaining) {
                     val plan=(prepared.open(ownerKey,workoutId) as? NativeCustomPreparedRead.Found)?.workout
                         ?:return@withOwnerTransaction denied()

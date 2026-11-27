@@ -87,6 +87,62 @@ class NativeCustomWorkoutJournalCodecTest {
         assertEquals(state,NativeCustomWorkoutJournalCodec.decode(NativeCustomWorkoutJournalCodec.encode(record(state))).journal)
     }
 
+    @Test fun warmupEditsReplayStableOriginalWorkingKeysAndExcludeRemovedWork() {
+        val base=snapshot()
+        val slot=base.slots.single()
+        val warm=slot.sets.single().copy(prescription=CustomAuthoredSet(
+            DraftSetType.WARMUP,DraftSetLoad.ExplicitBodyweight,RepBand(5,5),null,30,60))
+        val working=slot.sets.single().copy(setKey="cycle-1:w1:d0:raise-1:s2",ordinalInSlot=2,
+            prescription=slot.sets.single().prescription.copy(amplifier=null))
+        val source=base.copy(slots=listOf(slot.copy(sets=listOf(warm,working))),
+            knownSetAndRestSeconds=225)
+        val start=CustomWorkoutJournalDomain.begin("workout-1",source,"a".repeat(64))
+        fun request(state:CustomWorkoutJournalDraft,change:SessionWarmupChange)=
+            MidSessionWorkingEdit("workout-1",state.revision,"raise-1",1,warmupChange=change)
+        fun cold(state:CustomWorkoutJournalDraft)=NativeCustomWorkoutJournalCodec.decode(
+            NativeCustomWorkoutJournalCodec.encode(record(state))).journal
+        val add=CustomWorkoutJournalOperation.AdjustRemaining("repeat",0,
+            request(start,SessionWarmupChange.REPEAT_APPROVED))
+        val added=cold(accept(start,add))
+        val rows=added.snapshot.slots.single().sets
+        assertEquals(listOf(key,"mid-1-1",working.setKey),rows.map{it.setKey})
+        assertEquals(warm.prescription,rows[1].prescription)
+        assertEquals(working.prescription,rows[2].prescription)
+        assertEquals(source,added.originalSnapshot)
+        assertEquals(315L,added.snapshot.knownSetAndRestSeconds)
+        assertTrue(runCatching{NativeKotlinCustomWorkoutSnapshotCodec.encode(added.snapshot)}.isFailure)
+        assertEquals(9,java.nio.ByteBuffer.wrap(NativeCustomWorkoutJournalCodec.encode(record(added)),4,4).int)
+        assertEquals(added,cold(added))
+        assertEquals(CustomWorkoutJournalDecision.Proposed(added,true),CustomWorkoutJournalDomain.reduce(added,add))
+        val removed=cold(accept(added,CustomWorkoutJournalOperation.AdjustRemaining("remove",1,
+            request(added,SessionWarmupChange.REMOVE_PENDING))))
+        assertEquals(source,removed.snapshot)
+        assertEquals(removed,cold(removed))
+        val without=cold(accept(removed,CustomWorkoutJournalOperation.AdjustRemaining("remove-original",2,
+            request(removed,SessionWarmupChange.REMOVE_PENDING))))
+        assertEquals(working.setKey,without.snapshot.slots.single().sets.single().setKey)
+        assertEquals(135L,without.snapshot.knownSetAndRestSeconds)
+        assertEquals(source,without.originalSnapshot)
+        assertTrue(runCatching{NativeKotlinCustomWorkoutSnapshotCodec.encode(without.snapshot)}.isFailure)
+        val restored=cold(accept(without,CustomWorkoutJournalOperation.UndoAdjustment("undo",3,"remove-original")))
+        assertEquals(source,restored.snapshot)
+        val main=cold(accept(restored,CustomWorkoutJournalOperation.Record("working",4,
+            CustomWorkoutVisitKey(working.setKey,CustomWorkoutVisitPart.MAIN),
+            KotlinJournalSetOutcome.COMPLETED,actual(10,1))))
+        assertEquals(MidSessionWorkingEditReview.Rejected(MidSessionWorkingEditRefusal.RESOLVED_WORK),
+            MidSessionWorkingEditDomain.custom(main,request(main,SessionWarmupChange.REPEAT_APPROVED)))
+        assertEquals(main,cold(main))
+        val warmLogged=cold(accept(main,CustomWorkoutJournalOperation.Record("warmup",5,
+            CustomWorkoutVisitKey(key,CustomWorkoutVisitPart.MAIN),
+            KotlinJournalSetOutcome.COMPLETED,actual(5))))
+        val finished=cold(accept(warmLogged,CustomWorkoutJournalOperation.Finish("finish",6)))
+        val evidence=(CustomWorkoutHistoryEvidenceDomain.project(finished) as CustomHistoryEvidenceResult.Candidate).evidence
+        assertEquals(source,finished.originalSnapshot)
+        assertEquals(listOf(DraftSetType.WARMUP,DraftSetType.WORKING),evidence.visits.map{it.setType})
+        assertEquals(listOf(5,10),evidence.visits.map{it.actual?.reps})
+        assertTrue(evidence.sessionAdjusted)
+    }
+
     @Test fun fullLegacyJournalCanResolveAnAmplifierAndColdReopenFinished() {
         var draft=initial()
         repeat(2048) { index ->

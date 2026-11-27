@@ -1,5 +1,7 @@
 package io.github.extracteddeath.pursuitiron.rebuild
 
+import java.math.BigDecimal
+
 /**
  * OPTIONAL recommendation for the generated-first-program -> reviewed native
  * cycle handoff. Default generated programs remain ordinary straight sets.
@@ -16,6 +18,10 @@ data class FirstProgramMyoFinisherChoice(
     val setIndex:Int,
     val setKey:String
 )
+
+/** One optional generated finisher, with exact target identity and recipe. */
+data class FirstProgramFinisherProposal(val choice:FirstProgramMyoFinisherChoice,
+    val technique:CustomSetAmplifier)
 
 object CoachFirstProgramMyoFinisherDomain {
     private fun stableStockedIsolation(exercise:DraftPrescribedExercise,
@@ -38,7 +44,54 @@ object CoachFirstProgramMyoFinisherDomain {
         catalog:List<CatalogMovement>,
         phase:TrainingPhase,
         experience:AthleteExperience
-    ):FirstProgramMyoFinisherChoice? {
+    ):FirstProgramMyoFinisherChoice? = select(sessions,catalog,phase,experience) { _,set ->
+        if(set.targetReps.minimum>=12 && set.targetReps.maximum<=20) prescribedTechnique() else null
+    }?.choice
+
+    /** New explicit opt-ins must use the exact independently reviewed gym
+     * stock. No effect on the legacy myo-only seed or its persisted bytes. */
+    fun recommendTechnique(sessions:List<DraftPrescribedSession>,catalog:List<CatalogMovement>,
+        phase:TrainingPhase,experience:AthleteExperience,
+        confirmedStock:Map<String,VerifiedLoadStock>,kind:CustomAmplifierKind):FirstProgramFinisherProposal? {
+        if(kind !in setOf(CustomAmplifierKind.MYO_REPS,CustomAmplifierKind.DROP_SET,
+            CustomAmplifierKind.LENGTHENED_PARTIALS) ||
+            catalog.map{it.exerciseId}.distinct().size!=catalog.size)return null
+        return select(sessions,catalog,phase,experience){movement,set->
+            val load=set.load as? DraftSetLoad.Verified ?:return@select null
+            val stock=confirmedStock[movement.equipmentId] ?:return@select null
+            val inspected=EquipmentLoadDomain.inspect(stock,load.value,load.unit) as? LoadInspection.Confirmed
+                ?:return@select null
+            if(!inspected.exact || inspected.basis!=load.basis)return@select null
+            val range=AdvancedAmplifierProtocolDomain.template(kind).activationReps
+            if(set.targetReps.minimum !in range || set.targetReps.maximum !in range)return@select null
+            when(kind) {
+                CustomAmplifierKind.MYO_REPS -> prescribedTechnique()
+                CustomAmplifierKind.DROP_SET -> {
+                    if(!load.basis.higherSettingIncreasesDifficulty)return@select null
+                    // A single roughly 15–25% reduction, using only exact
+                    // verified stock. Refuse a large/zero/unavailable step.
+                    val ceiling=load.value.multiply(BigDecimal("0.85"))
+                    val lower=(EquipmentLoadDomain.inspect(stock,ceiling,load.unit)
+                        as? LoadInspection.Confirmed)?.atOrBelow ?:return@select null
+                    if(lower<load.value.multiply(BigDecimal("0.75")) || lower.signum()<=0)return@select null
+                    CustomSetAmplifier(kind,8,10,followUpLoad=load.copy(value=lower),
+                        followUpActiveSeconds=40).takeIf{AdvancedAmplifierProtocolDomain.validDropSequence(load,it)}
+                }
+                CustomAmplifierKind.LENGTHENED_PARTIALS -> {
+                    // Start with narrowly reviewed stable variants rather
+                    // than assuming every cable or machine loads the stretch.
+                    if(experience!=AthleteExperience.ADVANCED ||
+                        movement.exerciseId !in setOf("seated_leg_curl","seated-calf"))return@select null
+                    CustomSetAmplifier(kind,3,0,followUpActiveSeconds=15)
+                }
+                else -> null
+            }?.takeIf{AdvancedAmplifierProtocolDomain.validStagedFollowUps(it)}
+        }
+    }
+
+    private fun select(sessions:List<DraftPrescribedSession>,catalog:List<CatalogMovement>,
+        phase:TrainingPhase,experience:AthleteExperience,
+        recipe:(CatalogMovement,DraftPrescribedSet)->CustomSetAmplifier?):FirstProgramFinisherProposal? {
         if(phase!=TrainingPhase.HYPERTROPHY ||
             experience==AthleteExperience.BEGINNER)return null
         val byId=catalog.associateBy{it.exerciseId}
@@ -61,8 +114,7 @@ object CoachFirstProgramMyoFinisherDomain {
                 // machine finisher on a mismatched basis or malformed weight.
                 if(!KotlinSetNumberAuthorityDomain.validIssuedLoad(load) ||
                     load.basis!=byId[exercise.exerciseId]?.expectedLoadBasis)continue
-                if(load.value.signum()<=0 || set.targetReps.minimum<12 ||
-                    set.targetReps.maximum>20 ||
+                if(load.value.signum()<=0 ||
                     (set.targetRir==null || set.targetRir !in 1..2))continue
                 // If a special back-off or different physical weight is
                 // already programmed, do not attach a same-load finisher.
@@ -70,9 +122,10 @@ object CoachFirstProgramMyoFinisherDomain {
                         !KotlinSetNumberAuthorityDomain.sameIssuedTarget(
                             it.value.load,set.load)
                     })continue
-                return FirstProgramMyoFinisherChoice(
+                val technique=recipe(byId.getValue(exercise.exerciseId),set) ?:continue
+                return FirstProgramFinisherProposal(FirstProgramMyoFinisherChoice(
                     session.dayIndex,index,exercise.exerciseId,
-                    last.index,set.stableSetKey)
+                    last.index,set.stableSetKey),technique)
             }
         }
         return null

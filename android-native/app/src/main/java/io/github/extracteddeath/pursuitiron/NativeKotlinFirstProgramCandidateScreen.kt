@@ -45,6 +45,7 @@ internal data class NativeFirstProgramState(
     val setupMinutes:Int=15,
     /** No automatic advanced techniques; consent is for one exact review. */
     val includeMyoFinisher:Boolean=false,
+    val optionalFinisher:CustomAmplifierKind?=null,
     val auditedMinutesByDayIndex:Map<Int,Long> = emptyMap()
 )
 internal class NativeKotlinFirstProgramController(
@@ -92,7 +93,7 @@ internal class NativeKotlinFirstProgramController(
                         else emptySet(),
                     extraFocuses=if(retained)before.extraFocuses else emptyList(),
                     preview=null,reviewedInput=null,canSaveDraft=false,
-                    includeMyoFinisher=false,auditedMinutesByDayIndex=emptyMap(),
+                    includeMyoFinisher=false,optionalFinisher=null,auditedMinutesByDayIndex=emptyMap(),
                     savedProgramId=null,eligibleMovements=emptyList(),
                     message="Verified setup loaded. Choose your own initial working weights; equipment inventory is not a strength test.")
                 val first=CoachFirstProgramStartDomain.review(
@@ -113,7 +114,7 @@ internal class NativeKotlinFirstProgramController(
             enteredLoads=if(raw.isBlank())s.enteredLoads-id
                 else s.enteredLoads+(id to raw),
             preview=null,reviewedInput=null,canSaveDraft=false,
-            savedProgramId=null,includeMyoFinisher=false,auditedMinutesByDayIndex=emptyMap(),message=null)
+            savedProgramId=null,includeMyoFinisher=false,optionalFinisher=null,auditedMinutesByDayIndex=emptyMap(),message=null)
     }
     fun toggleBodyweight(id:String) {
         val s=current.value
@@ -122,32 +123,32 @@ internal class NativeKotlinFirstProgramController(
             selectedBodyweightIds=if(id in s.selectedBodyweightIds)
                 s.selectedBodyweightIds-id else s.selectedBodyweightIds+id,
             preview=null,reviewedInput=null,canSaveDraft=false,
-            savedProgramId=null,includeMyoFinisher=false,auditedMinutesByDayIndex=emptyMap(),message=null)
+            savedProgramId=null,includeMyoFinisher=false,optionalFinisher=null,auditedMinutesByDayIndex=emptyMap(),message=null)
     }
     fun choosePhase(value:TrainingPhase) {
         val s=current.value
         if(!s.busy)current.value=s.copy(phase=value,preview=null,
-            reviewedInput=null,canSaveDraft=false,savedProgramId=null,includeMyoFinisher=false,auditedMinutesByDayIndex=emptyMap(),message=null)
+            reviewedInput=null,canSaveDraft=false,savedProgramId=null,includeMyoFinisher=false,optionalFinisher=null,auditedMinutesByDayIndex=emptyMap(),message=null)
     }
     fun chooseSetupMinutes(value:Int) {
         val s=current.value
         if(!s.busy && value in setOf(10,15,20,30))
             current.value=s.copy(setupMinutes=value,preview=null,reviewedInput=null,
-                canSaveDraft=false,savedProgramId=null,includeMyoFinisher=false,auditedMinutesByDayIndex=emptyMap(),message=null)
+                canSaveDraft=false,savedProgramId=null,includeMyoFinisher=false,optionalFinisher=null,auditedMinutesByDayIndex=emptyMap(),message=null)
     }
     fun addFocus(value:ComposerFocus) {
         val s=current.value
         if(!s.busy && s.extraFocuses.size<2)
             current.value=s.copy(extraFocuses=s.extraFocuses+value,
                 preview=null,reviewedInput=null,canSaveDraft=false,
-                savedProgramId=null,includeMyoFinisher=false,auditedMinutesByDayIndex=emptyMap(),message=null)
+                savedProgramId=null,includeMyoFinisher=false,optionalFinisher=null,auditedMinutesByDayIndex=emptyMap(),message=null)
     }
     fun removeLastFocus() {
         val s=current.value
         if(!s.busy && s.extraFocuses.isNotEmpty())
             current.value=s.copy(extraFocuses=s.extraFocuses.dropLast(1),
                 preview=null,reviewedInput=null,canSaveDraft=false,
-                savedProgramId=null,includeMyoFinisher=false,auditedMinutesByDayIndex=emptyMap(),message=null)
+                savedProgramId=null,includeMyoFinisher=false,optionalFinisher=null,auditedMinutesByDayIndex=emptyMap(),message=null)
     }
     fun preview()=run {
         val initial=current.value
@@ -179,7 +180,7 @@ internal class NativeKotlinFirstProgramController(
             CoachFirstProgramDraftConversionDomain.propose(
                 result,source.setup,source.catalog,
                 "first-preview","My first program",4,
-                includeMyoFinisher=initial.includeMyoFinisher)
+                includeMyoFinisher=initial.includeMyoFinisher,optionalFinisher=initial.optionalFinisher)
         else null
         val after=(host.readCustomAuthoringSource()
             as? NativeAuthoringSourceRead.Found)?.source
@@ -193,9 +194,9 @@ internal class NativeKotlinFirstProgramController(
             auditedMinutesByDayIndex=conversion?.auditedMinutesByDayIndex.orEmpty(),
             canSaveDraft=conversion?.status==
                 FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT,
-            message=if(initial.includeMyoFinisher &&
+            message=if((initial.includeMyoFinisher || initial.optionalFinisher!=null) &&
                 conversion?.status!=FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT)
-                    conversion?.reason ?: "Optional myo-reps cannot pass the current review."
+                    conversion?.reason ?: "The optional finisher cannot pass the current review."
                 else when(result.status) {
                 FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW ->
                     "An auditable first-program draft was generated. It is not saved or approved; review its muscle coverage, sets and intended effort."
@@ -208,7 +209,9 @@ internal class NativeKotlinFirstProgramController(
      * New consent is scoped to the exact verified preview; the host will
      * recompute both baseline and optional technique at durable save.
      */
-    fun chooseMyoFinisher(enabled:Boolean)=run {
+    fun chooseMyoFinisher(enabled:Boolean)=chooseFinisher(enabled,null)
+    fun chooseOptionalFinisher(kind:CustomAmplifierKind?)=chooseFinisher(false,kind)
+    private fun chooseFinisher(enabled:Boolean,kind:CustomAmplifierKind?)=run {
         val original=current.value
         val source=original.source ?:return@run
         val preview=original.preview ?:return@run
@@ -219,22 +222,23 @@ internal class NativeKotlinFirstProgramController(
             as? NativeAuthoringSourceRead.Found)?.source
         if(live!=source) {
             current.value=original.copy(source=null,preview=null,
-                canSaveDraft=false,includeMyoFinisher=false,auditedMinutesByDayIndex=emptyMap(),
+                canSaveDraft=false,includeMyoFinisher=false,optionalFinisher=null,auditedMinutesByDayIndex=emptyMap(),
                 message="Your saved gym or athlete changed. Reload the program review.")
             return@run
         }
         val conversion=CoachFirstProgramDraftConversionDomain.propose(
             preview,source.setup,source.catalog,
             "first-preview","My first program",4,
-            includeMyoFinisher=enabled)
+            includeMyoFinisher=enabled,optionalFinisher=kind)
         current.value=original.copy(
-            includeMyoFinisher=enabled,
+            includeMyoFinisher=enabled,optionalFinisher=kind,
             auditedMinutesByDayIndex=conversion.auditedMinutesByDayIndex,
             canSaveDraft=conversion.status==
                 FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT,
             message=if(conversion.status==FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT)
                 if(enabled)
                     "One reviewed myo-reps finisher is included in this draft. No extra reps are logged until you perform them."
+                else if(kind!=null)"One reviewed optional finisher is included. Log only performed repetitions."
                 else "Straight sets restored; no advanced technique will be included."
             else conversion.reason)
     }
@@ -249,7 +253,7 @@ internal class NativeKotlinFirstProgramController(
         val id="first-"+UUID.randomUUID().toString().replace("-","")
         val result=host.saveReviewedFirstProgramDraft(
             input,shown,source.revision,id,"My first program",4,true,
-            includeMyoFinisher=before.includeMyoFinisher)
+            includeMyoFinisher=before.includeMyoFinisher,optionalFinisher=before.optionalFinisher)
         if(result is NativeCustomDraftWriteResult.Committed &&
             host.readCustomCycleDraft(id) is NativeCustomDraftReadResult.Found) {
             current.value=before.copy(savedProgramId=id,canSaveDraft=false,
@@ -588,6 +592,18 @@ internal fun NativeKotlinFirstProgramCandidateScreen(
                                 athleteSetup.experience)
                         }
                     }
+                    val optionalChoices=remember(review,state.source){
+                        val source=state.source
+                        val athlete=source?.setup?.reviewed
+                        val prescribed=review.prescription
+                        if(source==null || athlete==null || prescribed==null)emptyMap()
+                        else listOf(CustomAmplifierKind.DROP_SET,CustomAmplifierKind.LENGTHENED_PARTIALS)
+                            .mapNotNull{kind->CoachFirstProgramMyoFinisherDomain.recommendTechnique(
+                                prescribed.sessions,source.catalog,review.policy?.phase ?:state.phase,
+                                athlete.experience,athlete.gym.confirmedStock,kind)?.let{kind to it}}
+                            .toMap()
+                    }
+                    val selectedOptional=optionalChoices[state.optionalFinisher]
                     val scheduled=review.generation?.candidate?.catalogReview?.draft
                     if(scheduled!=null) {
                         Text("${scheduled.visits.size} exercise visits · ${scheduled.sessions.size} training days",
@@ -603,11 +619,12 @@ internal fun NativeKotlinFirstProgramCandidateScreen(
                     }
                     review.prescription?.sessions?.forEach {session ->
                         val auditedMinutes=state.auditedMinutesByDayIndex[session.dayIndex]
-                            .takeIf{state.includeMyoFinisher &&
+                            .takeIf{(state.includeMyoFinisher || state.optionalFinisher!=null) &&
                                 (state.canSaveDraft || state.savedProgramId!=null)}
                         val estimate=auditedMinutes ?:session.estimatedMinutes
                         val qualifier=if(auditedMinutes!=null)"reviewed estimate"
-                            else if(state.includeMyoFinisher)"base estimate" else "estimated"
+                            else if(state.includeMyoFinisher)"base estimate"
+                            else if(state.optionalFinisher!=null)"base estimate" else "estimated"
                         Text("Day ${session.dayIndex+1} · $qualifier ${estimate ?: "?"} min",
                             style=MaterialTheme.typography.titleSmall)
                         session.exercises.forEachIndexed {exerciseIndex,exercise ->
@@ -623,6 +640,21 @@ internal fun NativeKotlinFirstProgramCandidateScreen(
                             // The opted-in technique belongs to ONE exact final
                             // working set; do not advertise it on every exercise
                             // or before the full cycle passes native review.
+                            if(selectedOptional?.choice?.dayIndex==session.dayIndex &&
+                                selectedOptional.choice.exerciseIndex==exerciseIndex &&
+                                selectedOptional.choice.exerciseId==exercise.exerciseId &&
+                                selectedOptional.choice.setKey==working.lastOrNull()?.stableSetKey &&
+                                (state.canSaveDraft || state.savedProgramId!=null)) {
+                                val amp=selectedOptional.technique
+                                Text("Final set ${working.size} of ${working.size} · "+
+                                    AdvancedAmplifierProtocolDomain.template(amp.kind).title+
+                                    " · ${amp.followUpReps} reps · ${amp.followUpRestSeconds} s rest",
+                                    style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.primary)
+                                (amp.followUpLoad as? DraftSetLoad.Verified)?.let{load->
+                                    Text("Verified drop: ${load.value.toPlainString()} ${load.unit.name.lowercase()}",
+                                        style=MaterialTheme.typography.bodySmall)
+                                }
+                            }
                             if(state.includeMyoFinisher &&
                                 (state.canSaveDraft || state.savedProgramId!=null) &&
                                 myoChoice?.dayIndex==session.dayIndex &&
@@ -669,6 +701,17 @@ internal fun NativeKotlinFirstProgramCandidateScreen(
                             style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
+                    if(state.savedProgramId==null)optionalChoices.forEach{(kind,proposal)->
+                        val label=AdvancedAmplifierProtocolDomain.template(kind).title
+                        Text("Optional $label · Day ${proposal.choice.dayIndex+1} · "+
+                            kotlinExerciseLabel(proposal.choice.exerciseId)+" · final working set",
+                            style=MaterialTheme.typography.bodyMedium)
+                        FilterChip(selected=state.optionalFinisher==kind,enabled=!state.busy,
+                            onClick={controller.chooseOptionalFinisher(if(state.optionalFinisher==kind)null else kind)},
+                            label={Text(if(state.optionalFinisher==kind)"Remove $label" else "Add $label")})
+                        Text(AdvancedAmplifierProtocolDomain.template(kind).techniqueCue,
+                            style=MaterialTheme.typography.bodySmall)
+                    }
                     if(state.canSaveDraft) {
                         Button(onClick={confirmingSave=true},
                             enabled=!state.busy,
@@ -712,7 +755,8 @@ internal fun NativeKotlinFirstProgramCandidateScreen(
         title={Text("Save this reviewed training draft?")},
         text={Text("Save the displayed four-week first block with its "+
             "exact weights, sets, reps, effort targets"+
-            (if(state.includeMyoFinisher)" and one optional myo-reps finisher" else "")+
+            (if(state.includeMyoFinisher)" and one optional myo-reps finisher"
+                else if(state.optionalFinisher!=null)" and one reviewed optional finisher" else "")+
             ". No earlier program is overwritten or workout issued. "+
             "You will review the full cycle before training.")},
         confirmButton={Button(

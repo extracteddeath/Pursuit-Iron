@@ -37,6 +37,44 @@ class CoachFirstProgramMyoFinisherDomainTest {
     )=CoachFirstProgramMyoFinisherDomain.recommend(
         listOf(s),listOf(catalog),phase,experience)
 
+    @Test fun generatedDropRequiresExactStockAndConservativeReductionOnFinalSet() {
+        val catalog=movement()
+        val sessions=listOf(session(exercise()))
+        fun choose(stock:List<BigDecimal>,kind:CustomAmplifierKind=CustomAmplifierKind.DROP_SET)=
+            CoachFirstProgramMyoFinisherDomain.recommendTechnique(sessions,listOf(catalog),
+                TrainingPhase.HYPERTROPHY,AthleteExperience.ADVANCED,
+                mapOf("cable-curl-machine" to VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.CABLE_STACK,stock)),kind)
+        val exact=choose(listOf(BigDecimal("20"),BigDecimal("28"),BigDecimal("30"),BigDecimal("35")))!!
+        assertEquals("curl-set-2",exact.choice.setKey)
+        assertEquals(CustomAmplifierKind.DROP_SET,exact.technique.kind)
+        assertEquals(load.copy(value=BigDecimal("28")),exact.technique.followUpLoad)
+        assertEquals(1,exact.technique.followUpRounds)
+        assertNull(choose(listOf(BigDecimal("20"),BigDecimal("35"))))
+        assertNull(choose(listOf(BigDecimal("28"),BigDecimal("30"))))
+        assertNull(choose(listOf(BigDecimal("28"),BigDecimal("35")),CustomAmplifierKind.REST_PAUSE))
+        assertNull(choose(listOf(BigDecimal("28"),BigDecimal("35")),CustomAmplifierKind.LENGTHENED_PARTIALS))
+        assertEquals(load,sessions.single().exercises.single().sets.last().load)
+    }
+
+    @Test fun generatedPartialsRequireReviewedVariantAndAdvancedOptIn() {
+        val catalog=movement().copy(exerciseId="seated_leg_curl",familyId="knee_flexion",
+            variantId="seated-machine",equipmentId="seated-leg-curl-machine",expectedLoadBasis=LoadBasis.EXERCISE_OVERRIDE)
+        val target=load.copy(basis=LoadBasis.EXERCISE_OVERRIDE)
+        val ex=exercise(sets=listOf(set(1,weight=target),set(2,weight=target))).copy(exerciseId=catalog.exerciseId)
+        fun choose(experience:AthleteExperience,stock:Map<String,VerifiedLoadStock>)=
+            CoachFirstProgramMyoFinisherDomain.recommendTechnique(listOf(session(ex)),listOf(catalog),
+                TrainingPhase.HYPERTROPHY,experience,stock,CustomAmplifierKind.LENGTHENED_PARTIALS)
+        val stock=mapOf("seated-leg-curl-machine" to VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.EXERCISE_OVERRIDE,listOf(BigDecimal("30"),BigDecimal("35"))))
+        val proposal=choose(AthleteExperience.ADVANCED,stock)!!
+        assertEquals(1,proposal.choice.setIndex)
+        assertEquals(CustomAmplifierKind.LENGTHENED_PARTIALS,proposal.technique.kind)
+        assertEquals(0,proposal.technique.followUpRestSeconds)
+        assertNull(proposal.technique.followUpLoad)
+        assertNull(choose(AthleteExperience.INTERMEDIATE,stock))
+        assertNull(choose(AthleteExperience.ADVANCED,emptyMap()))
+    }
+
     @Test fun optInCandidateSelectsExactlyFinalVerifiedWorkingSet() {
         val first=session(exercise(sets=listOf(
             set(0,type=DraftSetType.WARMUP),set(1),set(2))))

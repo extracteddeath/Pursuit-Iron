@@ -125,6 +125,22 @@ class NativeKotlinFirstProgramSeedFileStoreTest {
         assertEquals(setOf(1,2),wireVersions.toSet())
     }
 
+    @Test fun newFinisherSeedsColdReopenWithoutRewritingLegacyVersions() {
+        for(kind in listOf(CustomAmplifierKind.DROP_SET,CustomAmplifierKind.LENGTHENED_PARTIALS)) {
+            val source=seed().copy(cycleId=kind.name.lowercase(),optionalFinisher=kind)
+            assertEquals(NativeFirstProgramSeedWrite.Committed,store().create("owner-1",source))
+            val recovered=(store().read("owner-1",source.cycleId) as NativeFirstProgramSeedRead.Found).seed
+            assertEquals(source.copy(startingLoads=mapOf("db_bench" to BigDecimal("25"),"db_row" to BigDecimal("30"))),recovered)
+            assertFalse(recovered.includeMyoFinisher)
+            assertEquals(NativeFirstProgramSeedWrite.Rejected(NativeFirstProgramSeedRefusal.INVALID_SEED),
+                store().create("owner-1",source.copy(includeMyoFinisher=true)))
+        }
+        assertEquals(NativeFirstProgramSeedWrite.Rejected(NativeFirstProgramSeedRefusal.INVALID_SEED),
+            store().create("owner-1",seed().copy(optionalFinisher=CustomAmplifierKind.CLUSTER)))
+        assertEquals(setOf(CustomAmplifierKind.DROP_SET,CustomAmplifierKind.LENGTHENED_PARTIALS),
+            (store().inventoryOwner("owner-1") as NativeFirstProgramSeedInventory.Verified).seeds.mapNotNull{it.optionalFinisher}.toSet())
+    }
+
     @Test fun changingOnlyOptInFlagDoesNotOverwritePriorSeed() {
         assertEquals(NativeFirstProgramSeedWrite.Committed,
             store().create("owner-1",seed()))

@@ -1,5 +1,6 @@
 package io.github.extracteddeath.pursuitiron.nativecoachstore
 
+import io.github.extracteddeath.pursuitiron.rebuild.CustomAmplifierKind
 import io.github.extracteddeath.pursuitiron.rebuild.ComposerFocus
 import io.github.extracteddeath.pursuitiron.rebuild.TrainingPhase
 import java.io.ByteArrayInputStream
@@ -36,7 +37,8 @@ data class NativeFirstProgramSeed(
     val extraFocuses:List<ComposerFocus>,
     val nonSetSeconds:Int,
     /** Explicit opt-in, never a silent generated training change. */
-    val includeMyoFinisher:Boolean=false
+    val includeMyoFinisher:Boolean=false,
+    val optionalFinisher:CustomAmplifierKind?=null
 )
 
 enum class NativeFirstProgramSeedRefusal {
@@ -80,6 +82,7 @@ class NativeKotlinFirstProgramSeedFileStore(
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val magic=0x50494653 // PIFS
     private val version=2
+    private val techniqueVersion=3
     private val originalVersion=1
     private val maxBytes=8192
 
@@ -96,6 +99,8 @@ class NativeKotlinFirstProgramSeedFileStore(
         }+".bin")
     }
     private fun valid(s:NativeFirstProgramSeed):Boolean {
+        if(s.optionalFinisher!=null && (s.includeMyoFinisher ||
+            s.optionalFinisher !in setOf(CustomAmplifierKind.DROP_SET,CustomAmplifierKind.LENGTHENED_PARTIALS)))return false
         if(!id.matches(s.cycleId) || s.title.isBlank() ||
             s.title.length>120 || s.blockWeeks !in 1..52 ||
             s.sourceRevision !in 1..9_007_199_254_740_991L ||
@@ -119,7 +124,7 @@ class NativeKotlinFirstProgramSeedFileStore(
         DataOutputStream(body).use {out->
             // Keep every unmodified legacy seed byte-identical.
             out.writeInt(magic)
-            out.writeInt(if(seed.includeMyoFinisher)version else originalVersion)
+            out.writeInt(if(seed.optionalFinisher!=null)techniqueVersion else if(seed.includeMyoFinisher)version else originalVersion)
             out.writeUTF(ownerKey);out.writeUTF(athleteId)
             out.writeUTF(seed.cycleId);out.writeUTF(seed.title)
             out.writeInt(seed.blockWeeks);out.writeLong(seed.sourceRevision)
@@ -136,7 +141,8 @@ class NativeKotlinFirstProgramSeedFileStore(
             bodyweight.forEach(out::writeUTF)
             out.writeInt(seed.extraFocuses.size)
             seed.extraFocuses.forEach{out.writeUTF(it.name)}
-            if(seed.includeMyoFinisher)out.writeBoolean(true)
+            if(seed.optionalFinisher!=null)out.writeUTF(seed.optionalFinisher.name)
+            else if(seed.includeMyoFinisher)out.writeBoolean(true)
         }
         val payload=body.toByteArray()
         require(payload.size+36<=maxBytes)
@@ -166,7 +172,7 @@ class NativeKotlinFirstProgramSeedFileStore(
         return DataInputStream(ByteArrayInputStream(content)).use {data->
             if(data.readInt()!=magic)throw IOException("First-program magic changed")
             val storedVersion=data.readInt()
-            if(storedVersion !in originalVersion..version ||
+            if(storedVersion !in originalVersion..techniqueVersion ||
                 data.readUTF()!=ownerKey || data.readUTF()!=athleteId)
                 throw IOException("First-program owner, version or format changed")
             val cycleId=data.readUTF()
@@ -196,9 +202,10 @@ class NativeKotlinFirstProgramSeedFileStore(
             val focuses=(0 until focusesCount).map {
                 ComposerFocus.valueOf(data.readUTF())
             }
-            val withMyo=if(storedVersion>=2)data.readBoolean() else false
+            val withMyo=if(storedVersion==version)data.readBoolean() else false
+            val technique=if(storedVersion==techniqueVersion)CustomAmplifierKind.valueOf(data.readUTF()) else null
             val seed=NativeFirstProgramSeed(cycleId,title,weeks,
-                revision,policy,phase,loads,bodyweight,focuses,overhead,withMyo)
+                revision,policy,phase,loads,bodyweight,focuses,overhead,withMyo,technique)
             if(data.available()!=0 ||
                 requestedCycleId!=null && cycleId!=requestedCycleId ||
                 !valid(seed))throw IOException("Invalid first-program seed")

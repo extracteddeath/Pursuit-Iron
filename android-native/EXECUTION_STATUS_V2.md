@@ -1,5 +1,5 @@
 # Pursuit Iron — execution status v2
-**As of:** 2026-11-27. **Target:** architecture/kotlin-engine-rebuild. **Latest observed integrated SHA:** `04123c0cddf09f33d2bd97cbc7ea5d1b761db38a` (#1188).
+**As of:** 2026-11-27. **Target:** architecture/kotlin-engine-rebuild. **Latest observed integrated SHA:** `062c69389798e6afd77ddef155a50086618cbdd5` (#1191).
 Authority: [MASTER_DEVELOPMENT_PLAN.md](MASTER_DEVELOPMENT_PLAN.md) and [EXECUTION_MILESTONES_V2.json](EXECUTION_MILESTONES_V2.json). Original inventories are immutable v1 provenance, not current stage assignments.
 
 ## Honest baseline
@@ -20,7 +20,7 @@ Authority: [MASTER_DEVELOPMENT_PLAN.md](MASTER_DEVELOPMENT_PLAN.md) and [EXECUTI
 | S3A | Workout execution lifecycle | 3 | 3 | Source-certified 3/3 + 3/3 on #1154; device pending |
 | S3B | Exercise catalog and swap | 759 | 8 | Integrated catalog, physical provenance, discovery and swap evidence; row-level source exit review pending |
 | S3C | Techniques and supersets | 10 | 13 | Integrated technique journeys; row-level source exit review pending S3B |
-| S3D | Session tools and restrictions | 5 | 5 | Integrated session tools; mid-session progression selection and exact acceptance review remain |
+| S3D | Session tools and restrictions | 5 | 5 | Integrated session tools and authored/generated session progression consent; exact source exit review remains |
 | S4A | Athlete inputs and constraints | 6 | 14 | Not source-certified; inspect existing implementation |
 | S4B | Program and template generation | 105 | 5 | Not source-certified; inspect existing implementation |
 | S4C | Cycle and phase construction | 6 | 18 | Not source-certified; inspect existing implementation |
@@ -196,3 +196,13 @@ All rows below have both required exact-head workflow conclusions verified as su
 - S3D: #1188 passed the actual cumulative-volume regression, including adjusted Finish and cold inventory, with the exact native source inventory corrected. It adds shared count/rep/rest editing and exact Undo; it does not prove an in-workout progression-method choice carried to a post-Finish consent flow. The existing future progression review is read-only until explicit saved-program consent. Verify the original CHECK-ADJUST-MID requirement and close any missing method-selection path before claiming source exit. Review time-trim and injury cases without reimplementing existing owners.
 - Web: Build 1057 (#1189) exact head `8726e70f77d8861d15a0417b588a5b3f35195ff4` passed release, hosted, core, independent engine and phone/offline workflows; merged main as `63cd017af9956630afa7e2474d6eaeac39b2a99e`. Catalog and issued-workout cohort changes included. Native #1188 adjustments still require a separate outcome-based web parity review; do not assume all native improvements were ported.
 - No change to denominators, no device acceptance and no APK. No new runtime code or owners in this ledger change.
+
+
+## Stage 3D integrated progression consent evidence
+
+| PR | Scope | Exact tested head and required workflows | Integrated squash |
+| --- | --- | --- | --- |
+| #1190 | Authored session-method receipts, exact revision/stock gate, undo, cold restore, independent future-program review | `cc3284abf5191471a5e7c57bc73abb000d5469ea`; engine 46059025990, Compose 46059026015 | `092e7d8b877b1cd3e9ab4899012e75cf50e628ce` |
+| #1191 | Real generated first-program session method through corrected durable journal, Finish and separate future slot edit/consent | `d846cdac896fb54ed06dda42f64fa175d55267ac`; engine 46065238612, Compose 46065238590 | `062c69389798e6afd77ddef155a50086618cbdd5` |
+
+The generated first-program and authored cycle workout routes share the same journal owner. The lower-level Composer path has no saved method DTO and remains outside this progression evidence. A session choice is a recorded method intent, not an unauthorized recalculation of already-issued numeric targets. All source gates remain subject to the frozen acceptance matrix and applicable layers. No device acceptance or APK is claimed.

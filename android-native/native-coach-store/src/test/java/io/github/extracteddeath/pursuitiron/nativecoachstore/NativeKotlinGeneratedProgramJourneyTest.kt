@@ -126,9 +126,20 @@ class NativeKotlinGeneratedProgramJourneyTest {
         phase:TrainingPhase=TrainingPhase.HYPERTROPHY,
         includeHipMachines:Boolean=false,includeTrapBar:Boolean=false,
         includeNewTargets:Boolean=false,blockWeeks:Int=4,
-        includeMyoFinisher:Boolean=false
+        includeMyoFinisher:Boolean=false,
+        optionalFinisher:CustomAmplifierKind?=null
     ):Pair<CustomTrainingCycle,CustomCoachAuditInputs> {
-        val input=request(split,phase,includeHipMachines,includeTrapBar,includeNewTargets).copy(policyVersion=policyVersion)
+        val baseInput=request(split,phase,includeHipMachines,includeTrapBar,includeNewTargets).copy(policyVersion=policyVersion)
+        // Explicitly calibrate a stable, stretch-position calf machine for
+        // the partials opt-in. Do not force an unsuitable generated exercise.
+        val input=if(optionalFinisher==CustomAmplifierKind.LENGTHENED_PARTIALS){
+            val profile=checkNotNull(baseInput.setup.reviewed)
+            baseInput.copy(setup=baseInput.setup.copy(reviewed=profile.copy(
+                gym=profile.gym.copy(confirmedStock=profile.gym.confirmedStock+mapOf(
+                    "seated-calf-machine" to VerifiedLoadStock.Totals(LoadUnit.LB,
+                        LoadBasis.EXERCISE_OVERRIDE,listOf(n("15"),n("20"),n("25"))))))),
+                startingLoads=(baseInput.startingLoads-"db_calf_raise")+("seated-calf" to n("20")))
+        }else baseInput
         assertEquals(AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW,input.setup.status)
         val generated=CoachFirstProgramStartDomain.review(input)
         val draft=generated.generation?.candidate?.catalogReview?.draft
@@ -140,7 +151,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
             FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,generated.status)
         val proposed=CoachFirstProgramDraftConversionDomain.propose(
             generated,input.setup,catalog,cycleId,"Four day first program",blockWeeks,
-            includeMyoFinisher=includeMyoFinisher)
+            includeMyoFinisher=includeMyoFinisher,optionalFinisher=optionalFinisher)
         assertEquals(proposed.reason,FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT,
             proposed.status)
         val cycle=checkNotNull(proposed.cycle)
@@ -157,7 +168,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
                 .create(owner,NativeFirstProgramSeed(
                     cycleId,cycle.title,blockWeeks,1,input.policyVersion,
                     phase,input.startingLoads,input.selectedBodyweightExerciseIds,emptyList(),900,
-                    includeMyoFinisher=includeMyoFinisher)))
+                    includeMyoFinisher=includeMyoFinisher,optionalFinisher=optionalFinisher)))
         assertTrue(disk.consent.confirm(owner,cycleId,1,1,0,inputs,true)
             is NativeCustomSignoffWrite.Committed)
         val enrollment=NativeKotlinHistoryEnrollmentCoordinator(
@@ -909,12 +920,18 @@ class NativeKotlinGeneratedProgramJourneyTest {
     @Test fun generatedProgramWithExplicitPartialsKeepsSameActualAndSeparateHistory() =
         generatedTechniqueJourney(CustomAmplifierKind.LENGTHENED_PARTIALS)
 
-    private fun generatedTechniqueJourney(kind:CustomAmplifierKind) {
-        val (generated,inputs)=saveGenerated(includeHipMachines=true,includeMyoFinisher=true)
-        // The first-program generator only offers optional myo-reps.
-        // Other techniques are explicit athlete-authored changes to that
-        // generated cycle, not automatic selection or silent mutation.
-        val cycle=if(kind==CustomAmplifierKind.MYO_REPS)generated else {
+    @Test fun generatedOptInDropUsesExactSeedAndColdHistoryWithoutManualReauthoring() =
+        generatedTechniqueJourney(CustomAmplifierKind.DROP_SET,directOptIn=true)
+
+    @Test fun generatedOptInPartialsUseExactSeedAndColdHistoryWithoutManualReauthoring() =
+        generatedTechniqueJourney(CustomAmplifierKind.LENGTHENED_PARTIALS,directOptIn=true)
+
+    private fun generatedTechniqueJourney(kind:CustomAmplifierKind,directOptIn:Boolean=false) {
+        val (generated,inputs)=saveGenerated(includeHipMachines=true,
+            includeMyoFinisher=!directOptIn,optionalFinisher=kind.takeIf{directOptIn})
+        // Retain legacy authored technique journeys as separate evidence.
+        // Direct opt-in must use the initial reviewed draft, not an edit.
+        val cycle=if(directOptIn || kind==CustomAmplifierKind.MYO_REPS)generated else {
             val block=generated.blocks.single()
             val updated=generated.copy(revision=generated.revision+1,
                 blocks=listOf(block.copy(days=block.days.map{day->
@@ -957,7 +974,20 @@ class NativeKotlinGeneratedProgramJourneyTest {
         val disk=Disk()
         val seed=(NativeKotlinFirstProgramSeedFileStore(disk.root,disk.fence,identity)
             .read(owner,cycleId) as NativeFirstProgramSeedRead.Found).seed
-        assertTrue(seed.includeMyoFinisher)
+        assertEquals(!directOptIn,seed.includeMyoFinisher)
+        assertEquals(kind.takeIf{directOptIn},seed.optionalFinisher)
+        if(directOptIn) {
+            val source=(disk.sources.read(owner) as NativeAuthoringSourceRead.Found).source
+            val replayInput=FirstProgramStartRequest(source.setup,source.catalog,seed.startingLoads,
+                seed.bodyweightExercises,seed.phase,seed.extraFocuses,
+                seed.nonSetSeconds,seed.policyVersion)
+            val replay=CoachFirstProgramDraftConversionDomain.propose(
+                CoachFirstProgramStartDomain.review(replayInput),replayInput.setup,catalog,
+                seed.cycleId,seed.title,seed.blockWeeks,optionalFinisher=seed.optionalFinisher)
+            // Same calibrated source and seed must reproduce the saved cycle.
+            assertEquals(cycle,replay.cycle)
+            assertTrue(replay.auditedMinutesByDayIndex.isNotEmpty())
+        }
         var exercised=0
         val completed=mutableListOf<String>()
         for((index,day) in days.withIndex()) {
@@ -1010,7 +1040,8 @@ class NativeKotlinGeneratedProgramJourneyTest {
                 assertEquals(listOf(first),CustomWorkoutExecutionDomain.followUpVisits(journal,set))
                 assertEquals(amp.followUpRestSeconds,
                     KotlinWorkoutRestDomain.inspect(journal,first).automaticCue?.seconds)
-                val stageWeight=if(kind==CustomAmplifierKind.DROP_SET)n("15") else n("25")
+                val stageWeight=if(kind==CustomAmplifierKind.DROP_SET)
+                    (amp.followUpLoad as DraftSetLoad.Verified).value else n("25")
                 val wrongWeight=if(kind==CustomAmplifierKind.DROP_SET)n("25") else n("20")
                 val mini=CustomWorkoutJournalOperation.Record("mini-$index",journal.revision,
                     first,KotlinJournalSetOutcome.COMPLETED,
@@ -1063,8 +1094,9 @@ class NativeKotlinGeneratedProgramJourneyTest {
                 assertEquals(n("25"),activation.actual?.load)
                 assertEquals(if(kind==CustomAmplifierKind.MYO_REPS)2 else 1,followUps.size)
                 assertTrue(followUps.all{it.setKey==activation.setKey && it.amplifierKind==kind})
-                assertEquals(if(kind==CustomAmplifierKind.DROP_SET)n("15") else n("25"),
-                    followUps.first().actual?.load)
+                val expectedFollowUp=if(kind==CustomAmplifierKind.DROP_SET)
+                    (finishers.single().amplifier?.followUpLoad as DraftSetLoad.Verified).value else n("25")
+                assertEquals(expectedFollowUp,followUps.first().actual?.load)
                 assertEquals(0,followUps.first().actual?.actualRir)
                 assertEquals(KotlinJournalSetOutcome.COMPLETED,followUps.first().outcome)
                 if(kind==CustomAmplifierKind.MYO_REPS) {

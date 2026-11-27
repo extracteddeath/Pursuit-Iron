@@ -308,20 +308,20 @@ class StarterCatalogPrescribingAcceptanceTest {
         }
     }
 
-    @Test fun deficitPendlayRowNeedsConfirmedRaisedPlatformInAdditionToBarbellStock() {
+    @Test fun deficitPendlayRowDoesNotRequireADedicatedStepPlatform() {
         val id="deficit-pendlay-row"
         val move=byId.getValue(id)
         val gym=stockFor(listOf(id))
-        assertTrue(move.requiredFacilityIds.contains("step-platform"))
+        assertFalse(move.requiredFacilityIds.contains("step-platform"))
         fun inspect(candidate:CatalogGym)=CoachExerciseCatalogDomain.review(
             StarterExerciseTranche.forGym(template(),listOf(choice(move)),candidate))
-        val noPlatform=inspect(gym.copy(availableFacilityIds=
-            gym.availableFacilityIds-"step-platform"))
-        assertNull(noPlatform.composedRequest)
-        assertTrue(noPlatform.issues.any{
-            it.exerciseId==id && it.kind==CatalogIssueType.FACILITY_UNAVAILABLE
+        val ordinaryBarbellGym=gym.copy(availableFacilityIds=emptySet())
+        assertTrue(inspect(ordinaryBarbellGym).issues.isEmpty())
+        val noBarbell=inspect(ordinaryBarbellGym.copy(confirmedStock=emptyMap()))
+        assertNull(noBarbell.composedRequest)
+        assertTrue(noBarbell.issues.any{
+            it.exerciseId==id && it.kind==CatalogIssueType.EQUIPMENT_UNAVAILABLE
         })
-        assertTrue(inspect(gym).issues.isEmpty())
     }
 
     @Test fun switchingMachinesHandlesAndUnverifiedWeightsRefusesInvalidDraft() {

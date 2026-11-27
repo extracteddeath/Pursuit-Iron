@@ -175,6 +175,64 @@ class StarterCatalogPrescribingAcceptanceTest {
         }
     }
 
+    @Test fun everyRealStandardIdentityIsDiscoverableAndAuthorableOnlyWithItsOwnPhysicalStock() {
+        val allStock=stockFor(catalog.map{it.exerciseId})
+        val gym=ReviewedGymProfile("full-catalog-gym",LoadUnit.LB,
+            allStock.confirmedStock,allStock.availableFacilityIds,allStock.availableAttachmentIds)
+        val athlete=ReviewedAthleteSetup(
+            "profile-1","athlete-1",AthleteTrainingGoal.HYPERTROPHY,
+            AthleteExperience.ADVANCED,ComposerSplit.FULL_BODY,
+            setOf(0,2,4),"America/New_York",SessionTimeBucket.SIXTY_TO_NINETY,
+            HardSessionLimit.NO_HARD_LIMIT,gym,true,false,true,3,
+            emptySet(),emptySet(),emptySet(),emptySet(),emptySet(),emptySet(),setOf(1,3,5,6))
+        fun review(profile:ReviewedAthleteSetup)=AthleteSetupReview(
+            AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW,emptyList(),profile)
+        val all=CustomExerciseAuthoringDomain.picker(review(athlete),catalog)
+        assertEquals(catalog.map{it.exerciseId}.toSet(),all.map{it.exerciseId}.toSet())
+        assertEquals(catalog.size,all.size)
+        val options=all.associateBy{it.exerciseId}
+        for(move in catalog) {
+            val option=options.getValue(move.exerciseId)
+            assertEquals(move.familyId,option.familyId)
+            assertEquals(move.variantId,option.variantId)
+            assertEquals(move.attachmentId,option.attachmentId)
+            assertEquals(move.expectedLoadBasis,option.loadBasis)
+            assertEquals(move.credits,option.muscleCredits)
+            assertEquals(move.role,option.role)
+            assertEquals(move.pattern,option.pattern)
+            val load=calibratedLoad(move)?.let{
+                DraftSetLoad.Verified(LoadUnit.LB,checkNotNull(move.expectedLoadBasis),it)
+            }?:DraftSetLoad.ExplicitBodyweight
+            val set=CustomAuthoredSet(DraftSetType.WORKING,load,
+                checkNotNull(move.sourcePracticalReps),2,40,90)
+            fun validate(profile:ReviewedAthleteSetup,selected:CustomAuthoredSet=set)=
+                CustomExerciseAuthoringDomain.reviewFreshSets(review(profile),
+                    listOf(move),move.exerciseId,listOf(selected))
+            assertNull(move.exerciseId,validate(athlete))
+            assertEquals(move.exerciseId,CustomAuthoringRefusal.EXERCISE_UNAVAILABLE,
+                validate(athlete.copy(excludedExerciseIds=setOf(move.exerciseId))))
+            if(load is DraftSetLoad.Verified) {
+                val equipmentId=checkNotNull(move.equipmentId)
+                assertEquals(move.exerciseId,CustomAuthoringRefusal.EXERCISE_UNAVAILABLE,
+                    validate(athlete.copy(gym=gym.copy(confirmedStock=gym.confirmedStock-equipmentId))))
+                assertEquals(move.exerciseId,CustomAuthoringRefusal.INATTAINABLE_LOAD,
+                    validate(athlete,set.copy(load=load.copy(value=load.value.add(n("0.5"))))))
+                assertEquals(move.exerciseId,CustomAuthoringRefusal.INATTAINABLE_LOAD,
+                    validate(athlete,set.copy(load=load.copy(unit=LoadUnit.KG))))
+            } else {
+                assertEquals(move.exerciseId,CustomAuthoringRefusal.EXERCISE_UNAVAILABLE,
+                    validate(athlete.copy(allowBodyweight=false)))
+            }
+            move.attachmentId?.let{attachment->
+                assertEquals(move.exerciseId,CustomAuthoringRefusal.EXERCISE_UNAVAILABLE,
+                    validate(athlete.copy(gym=gym.copy(availableAttachments=gym.availableAttachments-attachment))))
+            }
+            for(facility in move.requiredFacilityIds)
+                assertEquals(move.exerciseId,CustomAuthoringRefusal.EXERCISE_UNAVAILABLE,
+                    validate(athlete.copy(gym=gym.copy(availableFacilities=gym.availableFacilities-facility))))
+        }
+    }
+
     private data class RealGymScenario(
         val title:String,
         val exercises:List<String>,

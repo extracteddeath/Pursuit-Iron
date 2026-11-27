@@ -175,18 +175,50 @@ class StarterCatalogPrescribingAcceptanceTest {
         }
     }
 
-    @Test fun everyRealStandardIdentityIsAuthorableAndProjectsCorrectedActualsWithItsOwnStock() {
+    private fun fullCatalogAthlete():ReviewedAthleteSetup {
         val allStock=stockFor(catalog.map{it.exerciseId})
         val gym=ReviewedGymProfile("full-catalog-gym",LoadUnit.LB,
             allStock.confirmedStock,allStock.availableFacilityIds,allStock.availableAttachmentIds)
-        val athlete=ReviewedAthleteSetup(
+        return ReviewedAthleteSetup(
             "profile-1","athlete-1",AthleteTrainingGoal.HYPERTROPHY,
             AthleteExperience.ADVANCED,ComposerSplit.FULL_BODY,
             setOf(0,2,4),"America/New_York",SessionTimeBucket.SIXTY_TO_NINETY,
             HardSessionLimit.NO_HARD_LIMIT,gym,true,false,true,3,
             emptySet(),emptySet(),emptySet(),emptySet(),emptySet(),emptySet(),setOf(1,3,5,6))
-        fun review(profile:ReviewedAthleteSetup)=AthleteSetupReview(
-            AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW,emptyList(),profile)
+    }
+    private fun review(profile:ReviewedAthleteSetup)=AthleteSetupReview(
+        AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW,emptyList(),profile)
+
+    @Test fun explicitWebVariantsRequireTheirOwnCalibrationBeforeFirstProgramSelection() {
+        val athlete=fullCatalogAthlete()
+        val explicit=listOf("high-inc-db-press","bottom-half-db-fly",
+            "deficit-pendlay-row","low-to-high-face-pull","leaning-cable-ohext",
+            "ad-press-barbell","ad-press-smith")
+        val baseIds=listOf("barbell_bench","back_squat","one_arm_db_row",
+            "db_rdl","db_lateral_raise","db_curl","db_overhead_triceps","db_calf_raise")
+        val baseLoads=baseIds.associateWith{checkNotNull(calibratedLoad(byId.getValue(it)))}
+        val request=FirstProgramStartRequest(review(athlete),catalog,
+            baseLoads,setOf("bodyweight_crunch"),TrainingPhase.HYPERTROPHY,
+            nonSetSecondsPerDay=900)
+        val unselected=CoachFirstProgramStartDomain.review(request)
+        assertTrue(explicit.all{id->unselected.eligibleMovements.any{it.exerciseId==id}})
+        assertEquals(baseIds.toSet()+setOf("bodyweight_crunch"),unselected.chosenExerciseIds.toSet())
+        assertTrue(unselected.generation?.candidate?.catalogReview?.requestedExerciseIds
+            ?.none{it in explicit}==true)
+        for(id in explicit) {
+            val selection=baseLoads+(id to checkNotNull(calibratedLoad(byId.getValue(id))))
+            val selected=CoachFirstProgramStartDomain.review(request.copy(startingLoads=selection))
+            assertEquals(id,selection.keys+setOf("bodyweight_crunch"),selected.chosenExerciseIds.toSet())
+            assertFalse(id,selected.mayIssueWorkout)
+            val invalid=CoachFirstProgramStartDomain.review(request.copy(startingLoads=
+                selection+(id to selection.getValue(id).add(n("0.5")))))
+            assertEquals(id,FirstProgramStartStatus.INVALID_CALIBRATION,invalid.status)
+            assertNull(id,invalid.generation)
+        }
+    }
+
+    @Test fun everyRealStandardIdentityIsAuthorableAndProjectsCorrectedActualsWithItsOwnStock() {
+        val athlete=fullCatalogAthlete()
         val all=CustomExerciseAuthoringDomain.picker(review(athlete),catalog)
         assertEquals(catalog.map{it.exerciseId}.toSet(),all.map{it.exerciseId}.toSet())
         assertEquals(catalog.size,all.size)

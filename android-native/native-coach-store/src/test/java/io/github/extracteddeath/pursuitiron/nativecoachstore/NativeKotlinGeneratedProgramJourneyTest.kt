@@ -114,6 +114,8 @@ class NativeKotlinGeneratedProgramJourneyTest {
         val timeline=NativeKotlinMixedHistoryReadCoordinator(
             history,composer,KotlinNativeSavedCorrectionFileStore(root,composer),
             journals,authority,identity,fence,corrections)
+        val sessionBasic=NativeKotlinCustomBasicNextReview(
+            fence,identity,drafts,sources,preflight,timeline,machines,journals,consent,choices)
         fun next(inputs:CustomCoachAuditInputs)=NativeKotlinCustomNextCycleSessionReview(
             fence,identity,drafts,sources,consent,timeline,
             NativeKotlinCustomOutstandingWorkoutInventory(prepared,journals),prepared
@@ -1196,6 +1198,22 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(frozen,journal.snapshot)
         assertEquals(prior.effectiveVisits,journal.effectiveVisits)
         assertEquals(mapOf(selected.slotId to SavedProgressionMethod.MANUAL),journal.sessionProgressionChoices)
+        val pending=selected.sets.first{set->
+            set.prescription.type==DraftSetType.WORKING &&
+                CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN) !in journal.effectiveVisits}
+        val sessionReview=checkNotNull(Disk().sessionBasic.reviewSession(owner,id,pending.setKey,n("5")))
+        assertEquals(journal.revision,sessionReview.journalRevision)
+        assertEquals(SavedProgressionMethod.MANUAL,sessionReview.method)
+        when(val projection=sessionReview.projection){
+            is CustomBasicHistoryResult.Reviewed->{
+                assertEquals(BasicProgressionDecision.MANUAL_REPEAT,projection.candidate.decision)
+                assertTrue(projection.candidate.increasedOrdinals.isEmpty())
+                assertFalse(projection.maySaveProgram)
+            }
+            is CustomBasicHistoryResult.ManualBodyweight->assertEquals(selected.slotId,projection.slotId)
+            else->fail("Expected actual manual evaluator result, got $projection")
+        }
+        assertNull(Disk().sessionBasic.reviewSession("foreign",id,pending.setKey,n("5")))
         assertEquals(journal,(Disk().journals.open(owner,id) as NativeCustomJournalResult.Durable).issued.journal)
         assertEquals(cycle,(Disk().drafts.read(owner,cycleId) as NativeCustomDraftReadResult.Found).draft)
         assertEquals(originalConsent,Disk().consent.read(owner,cycleId,inputs))

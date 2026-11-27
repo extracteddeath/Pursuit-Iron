@@ -222,7 +222,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
     // This is only a verified read; it cannot prepare, issue or save a set.
     private val customBasicNextReview=NativeKotlinCustomBasicNextReview(
         revisionFence,localAthlete,customDraftStore,authoringSourceStore,
-        customWorkoutPreflight,mixedHistoryReader,machineRosters)
+        customWorkoutPreflight,mixedHistoryReader,machineRosters,
+        customIssuedStore,customCycleSignoffs,workoutMachineChoices)
     private val ownerFutureWeekProposals=NativeKotlinReviewedFutureWeekProposal(
         revisionFence,localAthlete,customDraftStore,authoringSourceStore,
         customCycleSignoffs,adaptiveCyclePermissions,coachSettings,
@@ -4251,6 +4252,11 @@ internal class NativeKotlinCandidateHost(context:Context) {
                     maximumReviewStep,assistance,machineScope)
             }
         }.getOrNull()
+    }
+
+    fun reviewSessionCustomProgression(workoutId:String,setKey:String):NativeCustomSessionBasicReview? {
+        val owner=localAthlete.signedInIdentity()?:return null
+        return customBasicNextReview.reviewSession(owner.ownerKey,workoutId,setKey,BigDecimal("5"))
     }
 
     fun reviewLiveCustomNextSet(

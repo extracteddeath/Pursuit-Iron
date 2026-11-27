@@ -102,6 +102,8 @@ object NativeKotlinCurrentLoadCoachReview {
                     completion.evidence.visits.any { it.exerciseId == exerciseId }
                 // Keep typed occurrences in chronological history so they
                 // fence out older rep evidence; never count them as reps.
+                is NativeKotlinMixedHistoryCompletion.Freestyle ->
+                    completion.workout.observations().any {it.exercise.exerciseId==exerciseId}
                 is NativeKotlinMixedHistoryCompletion.Measured ->
                     completion.stored.journal.approvedPlan.sets.any {
                         it.exerciseId == exerciseId
@@ -134,7 +136,8 @@ object NativeKotlinCurrentLoadCoachReview {
         // filtering for the requested approved day.
         val after=appearances.dropWhile {it!==lastTwo[0]}
         if(after.any {it is NativeKotlinMixedHistoryCompletion.Custom ||
-                it is NativeKotlinMixedHistoryCompletion.Measured})
+                it is NativeKotlinMixedHistoryCompletion.Measured ||
+                it is NativeKotlinMixedHistoryCompletion.Freestyle})
             return refuse(NativeCurrentLoadReviewRefusal.CUSTOM_OR_UNWEIGHTED_INTERVENING_VISIT)
         if(after.any {it is NativeKotlinMixedHistoryCompletion.Composer &&
                 it.evidence.source!=source})

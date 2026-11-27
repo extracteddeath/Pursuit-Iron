@@ -456,9 +456,11 @@ assert.ok(exerciseTrendDomain.includes('timeline.completions') &&
   exerciseTrendDomain.includes('DraftSetType.WORKING') &&
   exerciseTrendDomain.includes('KotlinJournalSetOutcome.COMPLETED') &&
   exerciseTrendDomain.includes('StrengthStandardsMeasurementDomain.convert(') &&
-  exerciseTrendDomain.includes('issued.basis,window') &&
+  exerciseTrendDomain.includes('NativeExerciseTrendKey(basis,window') &&
+  exerciseTrendDomain.includes('NativeKotlinMixedHistoryCompletion.Freestyle') &&
+  exerciseTrendDomain.includes('Visit(exercise.unit,exercise.basis,record.actual,entry.workout.source.gymId)') &&
   exerciseTrendDomain.includes('NativeExerciseTrendKey(null,window)') &&
-  exerciseTrendDomain.includes('actual.unit!=issued.unit') &&
+  exerciseTrendDomain.includes('actual.unit!=unit') &&
   exerciseTrendDomain.includes('val canPrescribeWorkout:Boolean get()=false') &&
   exerciseTrendUi.includes('NativeExercisePerformanceTrendDomain.project(') &&
   exerciseTrendUi.includes('PursuitFactualLinePlot(') &&

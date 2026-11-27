@@ -519,8 +519,10 @@ assert.ok(
   liveJournalDomain.includes('CustomWorkoutJournalRefusal.SWAP_ALREADY_STARTED') &&
   liveJournalDomain.includes('CustomWorkoutJournalRefusal.SWAP_PROTECTED') &&
   liveJournalDomain.includes('prior.receipts.any') &&
-  liveJournalCodec.includes('private const val VERSION=6') &&
-  liveJournalCodec.includes('val version=if(exactDecimal) VERSION else if(stageTagged) 5 else if(machineTagged) 4') &&
+  liveJournalCodec.includes('private const val VERSION=7') &&
+  liveJournalCodec.includes('val version=if(adjusted) VERSION else if(exactDecimal) 6 else if(stageTagged) 5 else if(machineTagged) 4') &&
+  liveJournalCodec.includes('is CustomWorkoutJournalOperation.AdjustRemaining->') &&
+  liveJournalCodec.includes('NativeMidSessionWorkingEditCodec.read(this)') &&
   liveJournalCodec.includes('if(version>=5)writeInt(event.visit.stage)') &&
   liveJournalCodec.includes('if(version>=5)readInt() else 1') &&
   liveJournalCodec.includes('if(version>=4)textOptional(value.machineInstanceId)') &&
@@ -1045,3 +1047,31 @@ assert.ok(journey.includes('NativeKotlinFreestyleWorkoutScreen(host,') &&
   freestyle.includes('host.recoverPendingNativeHistory()') &&
   freestyle.includes('host.finishFreestyle(id,finish)'),
   'Freestyle must use explicit native Start/Resume, actual input, shared timer and canonical Finish recovery');
+
+// Both native workout surfaces use the same revision-bound session edit.
+const remainingEditUi=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeRemainingEditSheet.kt');
+const generatedEditUi=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutCandidateScreen.kt');
+const remainingEditHost=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt');
+assert.ok(remainingEditUi.includes('currentRevision!=anchor.revision') &&
+  remainingEditUi.includes('Confirm workout-only change') &&
+  remainingEditUi.includes('preview!=null') &&
+  generatedEditUi.includes('MidSessionWorkingEditDomain.generated(it,request)') &&
+  liveWorkout.includes('MidSessionWorkingEditDomain.custom(it,request)') &&
+  remainingEditHost.includes('trackedWorkout.adjustRemaining(') &&
+  remainingEditHost.includes('customIssuedStore.adjustRemaining(') &&
+  liveJournalStore.includes('val census=inventory(ownerKey) as? NativeIssuedInventoryResult.Found') &&
+  liveJournalStore.includes('val all=census.workouts.map{it.journal}') &&
+  liveJournalStore.includes('preflight.permitsRemainingEdit(ownerKey,existing.issued,operation.request,all)'),
+  'Remaining-work edits must use a revision-bound review and authenticated journal route, not direct UI mutation');
+
+const customFinishProgressionHandoff=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinProgramSwapHandoff.kt');
+assert.ok(liveWorkout.includes('NativeKotlinProgramProgressionHandoffDomain.review(current)') &&
+  liveWorkout.includes('Review future progression in Plan') &&
+  customFinishProgressionHandoff.includes('journal.finishedByEventId==null') &&
+  customFinishProgressionHandoff.includes('draft.revision!=request.issuedCycleRevision') &&
+  customFinishProgressionHandoff.includes('draft.athleteId!=request.athleteId') &&
+  journey.includes('cycleController.open(checkNotNull(pendingProgramProgressionReview).cycleId)') &&
+  cycleUi.includes('NativeKotlinProgramProgressionHandoffDomain.canOpenExactEdit(request,draft)') &&
+  cycleUi.includes('controller.chooseExerciseProgression(') &&
+  cycleUi.includes('Keep my saved progression'),
+  'Verified custom Finish must offer exact-source future progression review without writing program or history');

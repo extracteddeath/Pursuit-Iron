@@ -24,7 +24,16 @@ internal object NativeCustomFinishReceipt {
     fun compute(
         owner:String,athlete:String,journal:CustomWorkoutJournalDraft
     ):String {
-        val bytes=NativeKotlinCustomWorkoutSnapshotCodec.encode(journal.snapshot)
+        // Validate the complete journal by replay BEFORE permitting the
+        // revision-scoped extra set keys in its effective snapshot.
+        // Previously issued snapshots retain their exact legacy bytes.
+        val journalBytes=NativeCustomWorkoutJournalCodec.encode(
+            NativeCustomWorkoutJournalRecord(owner,journal))
+        val adjusted=journal.receipts.any{
+            it.operation is CustomWorkoutJournalOperation.AdjustRemaining
+        }
+        val bytes=NativeKotlinCustomWorkoutSnapshotCodec.encode(
+            journal.snapshot,allowMidSessionKeys=adjusted)
         val hash=MessageDigest.getInstance("SHA-256")
         listOf(owner,athlete,journal.workoutId,
             journal.preparedConsentFingerprint).forEach {
@@ -38,8 +47,7 @@ internal object NativeCustomFinishReceipt {
         // not only the issued target snapshot. Equal targets with different
         // performed sets must never share a global history receipt identity.
         hash.update("custom-receipt-v2".toByteArray(Charsets.UTF_8))
-        hash.update(NativeCustomWorkoutJournalCodec.encode(
-            NativeCustomWorkoutJournalRecord(owner,journal)))
+        hash.update(journalBytes)
         return "custom-v2-"+hash.digest().joinToString("") {
             "%02x".format(it.toInt() and 255)
         }

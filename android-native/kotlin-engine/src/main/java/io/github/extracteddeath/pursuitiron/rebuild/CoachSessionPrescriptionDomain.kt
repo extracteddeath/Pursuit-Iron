@@ -228,6 +228,33 @@ object CoachSessionPrescriptionDomain {
     }
 
     /** Recompute from the request; never trust externally fabricated drafts. */
+    /** One dose/time projection for ordinary generation and owner-reviewed
+     * workout-only edits. No set or credit is fabricated by this projection. */
+    internal fun auditPrescription(
+        composed:ComposerDraft,options:Map<String,ComposerExerciseOption>,
+        sessions:List<DraftPrescribedSession>
+    ):WeeklyDoseFeasibilityReport {
+        val exposures=sessions.flatMap {session->
+            session.exercises.flatMap {exercise->
+                val credits=checkNotNull(options[exercise.exerciseId]).credits
+                val finalSetKey=session.exercises.lastOrNull()
+                    ?.sets?.lastOrNull()?.stableSetKey
+                exercise.sets.map {set->
+                    // The issued target remains untouched. Only the
+                    // session-duration estimate excludes post-finish rest.
+                    val estimatedRest=if(set.stableSetKey==finalSetKey)0
+                        else set.restSeconds
+                    PlannedWorkingExposure(set.stableSetKey,session.dayIndex,
+                        if(set.type==DraftSetType.WARMUP)
+                            ExposureSetKind.WARMUP else ExposureSetKind.WORKING,
+                        if(set.type==DraftSetType.WARMUP)emptyList() else credits,
+                        set.activeSeconds,estimatedRest)
+                }
+            }
+        }
+        return WeeklyDoseFeasibilityDomain.audit(composed.week.copy(exposures=exposures))
+    }
+
     fun draft(request:ComposerRequest,
         policies:List<ExercisePrescriptionPolicy>):SessionPrescriptionDraft {
         validatePolicies(policies,request)
@@ -277,25 +304,7 @@ object CoachSessionPrescriptionDomain {
                 Collections.unmodifiableList(exercises),null)
         }
         val audit=if(conflicts.isEmpty()) {
-            val exposures=sessions.flatMap {session->
-                session.exercises.flatMap {exercise->
-                    val credits=checkNotNull(options[exercise.exerciseId]).credits
-                    val finalSetKey=session.exercises.lastOrNull()
-                        ?.sets?.lastOrNull()?.stableSetKey
-                    exercise.sets.map {set->
-                        // The issued target remains untouched. Only the
-                        // session-duration estimate excludes post-finish rest.
-                        val estimatedRest=if(set.stableSetKey==finalSetKey)0
-                            else set.restSeconds
-                        PlannedWorkingExposure(set.stableSetKey,session.dayIndex,
-                            if(set.type==DraftSetType.WARMUP)
-                                ExposureSetKind.WARMUP else ExposureSetKind.WORKING,
-                            if(set.type==DraftSetType.WARMUP)emptyList() else credits,
-                            set.activeSeconds,estimatedRest)
-                    }
-                }
-            }
-            WeeklyDoseFeasibilityDomain.audit(composed.week.copy(exposures=exposures))
+            auditPrescription(composed,options,sessions)
         } else null
         val timed=sessions.map {s->
             s.copy(estimatedMinutes=audit?.sessions?.firstOrNull {

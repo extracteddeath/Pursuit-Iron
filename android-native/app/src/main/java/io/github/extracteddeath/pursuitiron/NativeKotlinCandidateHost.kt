@@ -4269,6 +4269,20 @@ internal class NativeKotlinCandidateHost(context:Context) {
         return trackedWorkout.open(owner.ownerKey,owner.athleteId,workoutId)
     }
 
+    fun adjustIssuedComposerRemaining(workoutId:String,operation:KotlinJournalOperation,
+        athleteConfirmed:Boolean):NativeJournalFileResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeJournalFileResult.Rejected(NativeJournalFileRefusal.NOT_AUTHORIZED)
+        return trackedWorkout.adjustRemaining(owner.ownerKey,owner.athleteId,workoutId,operation,athleteConfirmed)
+    }
+
+    fun adjustIssuedCustomRemaining(workoutId:String,operation:CustomWorkoutJournalOperation,
+        athleteConfirmed:Boolean):NativeCustomJournalResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.NOT_AUTHORIZED)
+        return customIssuedStore.adjustRemaining(owner.ownerKey,workoutId,operation,athleteConfirmed)
+    }
+
     fun recordWorkoutOperation(
         workoutId:String,operation:KotlinJournalOperation
     ):NativeJournalFileResult {

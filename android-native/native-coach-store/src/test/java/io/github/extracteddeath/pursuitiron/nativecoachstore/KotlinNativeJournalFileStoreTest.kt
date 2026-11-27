@@ -36,6 +36,42 @@ class KotlinNativeJournalFileStoreTest {
         return result as NativeJournalFileResult.Durable
     }
 
+    @Test fun remainingWorkAdjustmentAndUndoColdReopenWithoutChangingOriginalFacts() {
+        val writer=store()
+        ok(writer.issue("owner-1",snapshot,identity))
+        val before=ok(writer.append("owner-1",snapshot,identity,completed("first",0,"set-1",10))).journal
+        val request=MidSessionWorkingEdit("workout-1",1,"db-press",3,RepBand(10,12),180)
+        val edit=KotlinJournalOperation.AdjustRemaining("adjust",1,request)
+        assertEquals(NativeJournalFileResult.Rejected(NativeJournalFileRefusal.SWAP_SOURCE_UNAVAILABLE),
+            writer.appendStored("owner-1","workout-1",edit){_,_->true})
+        val adjusted=ok(writer.append("owner-1",snapshot,identity,edit)).journal
+        assertEquals(snapshot,adjusted.originalSnapshot)
+        assertEquals(before.effectiveSets,adjusted.effectiveSets)
+        assertEquals(targets.first(),adjusted.snapshot.targets.first())
+        assertEquals(listOf("set-1","set-2","mid-2-1"),adjusted.snapshot.targets.map{it.setKey})
+        assertEquals(180,adjusted.snapshot.targets.last().restSeconds)
+        assertEquals(adjusted,ok(store().open("owner-1",snapshot,identity)).journal)
+        assertTrue(ok(store().append("owner-1",snapshot,identity,edit)).replayed)
+        val restored=ok(store().append("owner-1",snapshot,identity,KotlinJournalOperation.UndoAdjustment("undo",2,"adjust"))).journal
+        assertEquals(snapshot,restored.snapshot)
+        assertEquals(before.effectiveSets,restored.effectiveSets)
+        assertEquals(restored,ok(store().open("owner-1",snapshot,identity)).journal)
+        val again=edit.copy(eventId="again",expectedJournalRevision=3,request=request.copy(expectedRevision=3))
+        val changed=ok(store().append("owner-1",snapshot,identity,again)).journal
+        assertEquals("mid-4-1",changed.snapshot.targets.last().setKey)
+        val next=ok(store().append("owner-1",snapshot,identity,completed("second",4,"set-2",11))).journal
+        assertEquals(NativeJournalFileResult.Rejected(NativeJournalFileRefusal.JOURNAL_REJECTED,
+            KotlinJournalRefusal.INVALID_ADJUSTMENT),store().append("owner-1",snapshot,identity,
+            KotlinJournalOperation.UndoAdjustment("late-undo",5,"again")))
+        assertEquals(next,ok(store().open("owner-1",snapshot,identity)).journal)
+        ok(store().append("owner-1",snapshot,identity,completed("third",5,"mid-4-1",12)))
+        val done=ok(store().append("owner-1",snapshot,identity,KotlinJournalOperation.Finish("finish",6))).journal
+        val evidence=(KotlinWorkoutHistoryEvidenceDomain.project(done) as KotlinHistoryProjectionResult.Candidate).evidence
+        assertEquals(listOf(10,11,12),evidence.sets.map{it.actual?.reps})
+        assertEquals(KotlinHistoryProgressionGate.UNVERIFIED_RECORDED_EVIDENCE,evidence.exerciseReviews.single().progressionGate)
+        assertEquals(done,ok(store().open("owner-1",snapshot,identity)).journal)
+    }
+
     @Test fun submittedDecimalScaleAndMachineSurviveColdReopenAndExactRetry() {
         val s=store()
         ok(s.issue("owner-1",snapshot,identity))

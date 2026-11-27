@@ -135,6 +135,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     }
     var swapError by remember(workoutId){mutableStateOf<String?>(null)}
     var undoConfirm by remember(workoutId){mutableStateOf<String?>(null)}
+    var adjustment by remember(workoutId){mutableStateOf<NativeRemainingEditAnchor?>(null)}
     val referenceMode=display.referenceMode
     var historyExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var infoSetKey by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
@@ -1188,6 +1189,15 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     }
     // Factual planned set details are derived from the currently recovered
     // journal, not guessed from a movement name or the old web catalog.
+    adjustment?.let{anchor->
+        val active=journal
+        NativeRemainingEditSheet(anchor,active?.revision,state.busy,
+            review={request->
+                active?.let{MidSessionWorkingEditDomain.generated(it,request)}
+            },
+            onApply={request->adjustment=null;controller.adjustRemaining(request)},
+            onDismiss={adjustment=null})
+    }
     infoSetKey?.let {key ->
         val occurrence=occurrenceBySetKey[key]
         val targets=occurrence?.sets.orEmpty().map{it.target}
@@ -1271,6 +1281,27 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         pendingExerciseSkip=NativeExerciseSkipRequest(
                             exerciseId,revision)
                     })
+                }else null,
+                onAdjustRemaining=if(!infoWarmupsOnly && !multipleOccurrences &&
+                    !state.busy && journal?.finishedByEventId==null)journal?.let{current->
+                    val working=targets.filter{it.type==DraftSetType.WORKING}
+                    val pending=working.filter{it.setKey !in current.effectiveSets}
+                    pending.lastOrNull()?.let{last->
+                        ({
+                            adjustment=NativeRemainingEditAnchor(workoutId,current.revision,exerciseId,
+                                exerciseId,working.size,working.size-pending.size,last.reps,last.restSeconds)
+                            infoSetKey=null
+                        })
+                    }
+                }else null,
+                onUndoAdjustment=if(!infoWarmupsOnly && !state.busy)journal?.let{current->
+                    current.lastAdjustment?.let{undo->
+                        val edit=current.receipts.lastOrNull()?.operation as? KotlinJournalOperation.AdjustRemaining
+                        if(edit?.request?.occurrenceId==exerciseId)({
+                            infoSetKey=null
+                            controller.undoRemainingAdjustment(undo.eventId,current.revision)
+                        })else null
+                    }
                 }else null,
                 onUndoWorkoutSwap=if(!infoWarmupsOnly &&
                     infoActions.mayRequestUndoSwap)infoUndo?.let{event->

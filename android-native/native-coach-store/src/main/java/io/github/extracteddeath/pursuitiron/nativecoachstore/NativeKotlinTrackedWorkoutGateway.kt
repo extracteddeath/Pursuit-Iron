@@ -125,6 +125,8 @@ class NativeKotlinTrackedWorkoutGateway(
     ): NativeJournalFileResult = fenced(owner, athlete, unavailable()) {
         if (!verifyHistory(owner, athlete)) return@fenced unavailable()
         when (operation) {
+            is KotlinJournalOperation.AdjustRemaining,
+            is KotlinJournalOperation.UndoAdjustment,
             is KotlinJournalOperation.SwapExercise,
             is KotlinJournalOperation.UndoSwap ->
                 NativeJournalFileResult.Rejected(
@@ -240,6 +242,23 @@ class NativeKotlinTrackedWorkoutGateway(
                 NativeJournalFileRefusal.SWAP_SOURCE_UNAVAILABLE)
         workout.swapExercise(owner,workoutId,eventId,expectedRevision,
             previousExerciseId,replacementExerciseId,intents)
+    }
+
+    /** Reviewed one-session edits share the existing owner and History fence.
+     * A generic append cannot enter this route. */
+    fun adjustRemaining(
+        owner:String,athlete:String,workoutId:String,
+        operation:KotlinJournalOperation,athleteConfirmed:Boolean
+    ):NativeJournalFileResult=fenced(owner,athlete,unavailable()) {
+        if(!athleteConfirmed || !verifyHistory(owner,athlete))return@fenced unavailable()
+        val opened=workout.open(owner,workoutId)
+        if(opened !is NativeJournalFileResult.Durable)return@fenced opened
+        if(!authorized(owner,athlete,opened.journal))
+            return@fenced NativeJournalFileResult.Rejected(NativeJournalFileRefusal.NOT_AUTHORIZED)
+        val manifest=(ledger.open(owner,athlete) as? NativeHistoryLedgerResult.Durable)?.ledger
+            ?:return@fenced unavailable()
+        if(!manifest.readyForHistoryReads)return@fenced unavailable()
+        workout.adjustRemaining(owner,workoutId,operation,manifest.completions)
     }
 
     fun undoSwap(

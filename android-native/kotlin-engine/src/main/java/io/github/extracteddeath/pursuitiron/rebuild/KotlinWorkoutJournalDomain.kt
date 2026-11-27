@@ -63,6 +63,17 @@ sealed interface KotlinJournalOperation {
     ):KotlinJournalOperation
 
     /** User-authored, per-session note. Never a training target or set fact. */
+    /** Single-session edit; owner must independently revalidate the
+     * reviewed source, constraints and explicit athlete consent. */
+    data class AdjustRemaining(
+        override val eventId:String,override val expectedJournalRevision:Long,
+        val request:MidSessionWorkingEdit
+    ):KotlinJournalOperation
+    data class UndoAdjustment(
+        override val eventId:String,override val expectedJournalRevision:Long,
+        val adjustmentEventId:String
+    ):KotlinJournalOperation
+
     data class SessionNote(
         override val eventId:String,
         override val expectedJournalRevision:Long,
@@ -88,7 +99,8 @@ data class KotlinWorkoutJournalState(
     val effectiveSets: Map<String, KotlinJournalReceipt>,
     val finishedByEventId: String?,
     /** Immutable initial issuance: survives every later Swap/Undo receipt. */
-    val originalSnapshot:KotlinStagedWorkout=snapshot
+    val originalSnapshot:KotlinStagedWorkout=snapshot,
+    val lastAdjustment:MidSessionUndo<KotlinStagedWorkout>?=null
 ) {
     val sessionNote:String get()=receipts.asReversed().firstNotNullOfOrNull {
         (it.operation as? KotlinJournalOperation.SessionNote)?.text
@@ -106,7 +118,7 @@ enum class KotlinJournalRefusal {
     UNKNOWN_SET, ALREADY_RECORDED, INVALID_CORRECTION,
     INVALID_VALUES, INCOMPLETE_WORKOUT,
     SWAP_ALREADY_STARTED, SWAP_INVALID_TARGET, SWAP_IDENTITY_CONFLICT,
-    SWAP_UNDO_UNAVAILABLE, INVALID_SESSION_NOTE
+    SWAP_UNDO_UNAVAILABLE, INVALID_SESSION_NOTE, INVALID_ADJUSTMENT
 }
 
 sealed interface KotlinJournalDecision {
@@ -190,7 +202,20 @@ object KotlinWorkoutJournalDomain {
         val nextReceipt=KotlinJournalReceipt(nextRevision,operation)
         val nextSetReceipts=LinkedHashMap(journal.effectiveSets)
         var nextSnapshot=journal.snapshot
+        var undo:MidSessionUndo<KotlinStagedWorkout>?=null
         val finish=when(operation) {
+            is KotlinJournalOperation.AdjustRemaining -> {
+                nextSnapshot=MidSessionWorkingEditDomain.generatedSnapshot(journal,operation.request)
+                    ?:return KotlinJournalDecision.Rejected(KotlinJournalRefusal.INVALID_ADJUSTMENT)
+                undo=MidSessionUndo(operation.eventId,journal.snapshot)
+                null
+            }
+            is KotlinJournalOperation.UndoAdjustment -> {
+                val last=journal.lastAdjustment?.takeIf{it.eventId==operation.adjustmentEventId}
+                    ?:return KotlinJournalDecision.Rejected(KotlinJournalRefusal.INVALID_ADJUSTMENT)
+                nextSnapshot=last.before
+                null
+            }
             is KotlinJournalOperation.RecordSet -> {
                 val target=journal.snapshot.targets.firstOrNull {
                     it.setKey==operation.setKey
@@ -211,6 +236,11 @@ object KotlinWorkoutJournalDomain {
                 null
             }
             is KotlinJournalOperation.SwapExercise -> {
+                // Existing swap Undo reconstructs its source from issuance.
+                // Do not lose a prior adjustment by swapping that occurrence.
+                if(journal.receipts.any{
+                    (it.operation as? KotlinJournalOperation.AdjustRemaining)?.request?.occurrenceId==operation.previousExerciseId
+                })return KotlinJournalDecision.Rejected(KotlinJournalRefusal.INVALID_ADJUSTMENT)
                 val earlier=journal.snapshot.targets.filter{
                     it.exerciseId==operation.previousExerciseId
                 }
@@ -342,7 +372,7 @@ object KotlinWorkoutJournalDomain {
         return KotlinJournalDecision.Proposed(
             journal.copy(snapshot=nextSnapshot,revision=nextRevision,
                 receipts=nextReceipts,effectiveSets=nextSets,
-                finishedByEventId=finish),false
+                finishedByEventId=finish,lastAdjustment=undo),false
         )
     }
 }

@@ -212,7 +212,9 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     permissionHost:NativeKotlinCandidateHost?=null,
     programSwapReview:NativeKotlinProgramSwapHandoff?=null,
     onProgramSwapReviewDismiss:()->Unit={},
-    onManagePhysicalMachine:(String)->Unit={}
+    onManagePhysicalMachine:(String)->Unit={},
+    programProgressionReview:NativeKotlinProgramProgressionHandoff?=null,
+    onProgramProgressionReviewDismiss:()->Unit={}
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
     val programPicker by controller.programPicker.collectAsStateWithLifecycle()
@@ -603,6 +605,26 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
         } else {
             if(signed && policyReady)
                 NativeFixedNamedSelectionPanel(draft,state,controller)
+            programProgressionReview?.let{request->
+                val matched=NativeKotlinProgramProgressionHandoffDomain.canOpenExactEdit(request,draft)
+                PursuitCard(highlighted=true) {
+                    Text("Review future progression",style=MaterialTheme.typography.titleMedium)
+                    Text("Choose a progression method in the existing program day editor. Saved workout targets and actuals will not change. Review and approve the updated cycle before issuing another workout.",
+                        style=MaterialTheme.typography.bodySmall)
+                    if(matched)Button(enabled=!busy,modifier=Modifier.fillMaxWidth(),
+                        onClick={
+                            showProgramEditor=true
+                            expandedBlockId=request.blockId
+                            expandedDayKey=programDayKey(request.blockId,request.weekday)
+                            onProgramProgressionReviewDismiss()
+                        }){Text("Open this program day")}
+                    else Text("The original program revision or exercise day no longer matches. No edit was applied.",
+                        color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall)
+                    TextButton(enabled=!busy,onClick=onProgramProgressionReviewDismiss){
+                        Text("Keep my saved progression")
+                    }
+                }
+            }
             programSwapReview?.let {request->
                 val matched=NativeKotlinProgramSwapHandoffDomain
                     .canOpenExactEdit(request,draft)

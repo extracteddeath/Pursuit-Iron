@@ -29,6 +29,8 @@ internal fun NativeKotlinWorkoutExerciseInfoSheet(
     onSkipRemainingExercise:(()->Unit)?=null,
     /** Undo is offered only for a still-unlogged replacement. */
     onUndoWorkoutSwap:(()->Unit)?=null,
+    onAdjustRemaining:(()->Unit)?=null,
+    onUndoAdjustment:(()->Unit)?=null,
     unavailableReason:String?=null,
     onHistory:()->Unit,
     onDismiss:()->Unit
@@ -80,9 +82,20 @@ internal fun NativeKotlinWorkoutExerciseInfoSheet(
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            if(onSkipRemainingExercise!=null || onUndoWorkoutSwap!=null) {
+            if(onSkipRemainingExercise!=null || onUndoWorkoutSwap!=null ||
+                onAdjustRemaining!=null || onUndoAdjustment!=null) {
                 HorizontalDivider()
                 Text("Workout actions",style=MaterialTheme.typography.titleSmall)
+                onAdjustRemaining?.let{adjust->
+                    OutlinedButton(onClick=adjust,enabled=!busy,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)){
+                        Text("Adjust remaining sets…")
+                    }
+                }
+                onUndoAdjustment?.let{undo->
+                    OutlinedButton(onClick=undo,enabled=!busy,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)){
+                        Text("Undo session adjustment")
+                    }
+                }
                 onUndoWorkoutSwap?.let{undo->
                     OutlinedButton(onClick=undo,enabled=!busy,
                         modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)) {

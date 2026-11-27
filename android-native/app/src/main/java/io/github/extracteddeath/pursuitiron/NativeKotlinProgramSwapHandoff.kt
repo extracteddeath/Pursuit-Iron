@@ -91,3 +91,34 @@ internal object NativeKotlinProgramSwapHandoffDomain {
             request.originalExerciseId
     }
 }
+
+// The progression review is navigation only. Reopen the exact signed source;
+// never infer a future method from actuals or copy a session edit into Plan.
+internal data class NativeKotlinProgramProgressionHandoff(
+    val cycleId:String,
+    val athleteId:String,
+    val issuedCycleRevision:Long,
+    val blockId:String,
+    val weekday:Int,
+    val originalSlots:List<Pair<String,String>>
+)
+internal object NativeKotlinProgramProgressionHandoffDomain {
+    fun review(journal:CustomWorkoutJournalDraft):NativeKotlinProgramProgressionHandoff? {
+        if(journal.finishedByEventId==null)return null
+        val original=journal.originalSnapshot
+        if(original.blockPurpose!=CustomBlockPurpose.TRAINING || original.slots.isEmpty())
+            return null
+        return NativeKotlinProgramProgressionHandoff(original.stamp.cycleId,
+            original.stamp.athleteId,original.stamp.cycleRevision,original.blockId,
+            original.weekday,original.slots.map{it.slotId to it.exerciseId})
+    }
+    fun canOpenExactEdit(request:NativeKotlinProgramProgressionHandoff,
+        draft:CustomTrainingCycle):Boolean {
+        if(draft.athleteId!=request.athleteId || draft.cycleId!=request.cycleId ||
+            draft.revision!=request.issuedCycleRevision)return false
+        val day=draft.blocks.singleOrNull{it.blockId==request.blockId}
+            ?.days?.singleOrNull{it.weekday==request.weekday}?:return false
+        return request.originalSlots.isNotEmpty() &&
+            day.slots.map{it.slotId to it.exerciseId}.containsAll(request.originalSlots)
+    }
+}

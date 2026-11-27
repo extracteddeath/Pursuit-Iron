@@ -170,6 +170,31 @@ export function reconcileSurplusWorkingRows(sets, fresh) {
     return kept.length === sets.length ? sets : kept;
 }
 
+export function repairUnearnedIssuedIncrease(set, index) {
+    if (!set || set.done || set.warm || set.sub || set.added || set.liveAdjustment
+        || set.valueOwner !== 'prescription' || set.auto !== true || set.weightOwner === 'user') return set;
+    const trace = set.target?.decisionTrace, source = trace?.source, issued = trace?.target;
+    if (trace?.schemaVersion !== 1 || trace.ownership !== 'prescription'
+        || trace.workingSetIndex !== index || !Number.isInteger(trace.issuedWorkingSetCount)
+        || index >= trace.issuedWorkingSetCount || !source || source.summaryOnly
+        || !(Number(source.load) > 0) || !(Number(source.reps) > 0)
+        || source.unit !== issued?.unit || !(Number(issued.load) > Number(source.load))
+        || String(set.weight) !== String(set.target?.w) || String(set.reps) !== String(set.target?.prefillReps)
+        || Number(set.weight) !== issued.load || Number(set.reps) !== issued.reps) return set;
+    const action = trace.evaluation?.action, reason = trace.evaluation?.reasonCode;
+    const band = numberPair(set.target?.reps, null, 1);
+    const hold = ['add_reps','hold','hold_load','review'].includes(action);
+    const unearned = action === 'increase_load' && reason === 'per_set_progression_success'
+        && band && Number(source.reps) < band[1];
+    if (!hold && !unearned) return set;
+    const weight = String(source.load);
+    return { ...set, weight, suggested: undefined, hint: undefined,
+        target: { ...set.target, w: weight, decisionTrace: { ...trace,
+            evaluation: { ...trace.evaluation, correctedFromLoad: issued.load,
+                safeguards: [...new Set([...(trace.evaluation?.safeguards || []), 'unearned_position_increase_repaired'])] },
+            target: { ...issued, load: Number(source.load) } } } };
+}
+
 export function refreshPendingSetTargets(sets, fresh) {
     if (!Array.isArray(sets) || !Array.isArray(fresh)) return sets;
     sets = reconcileSurplusWorkingRows(reconcileRestoredLiveAdjustments(sets), fresh);
@@ -177,7 +202,10 @@ export function refreshPendingSetTargets(sets, fresh) {
     let ordinal = 0, changed = false;
     const out = sets.map(s => {
         if (!s || s.warm || s.sub || s.added) return s;
-        const target = work[ordinal++];
+        const index = ordinal++;
+        const repaired = repairUnearnedIssuedIncrease(s, index);
+        if (repaired !== s) { changed = true; return repaired; }
+        const target = work[index];
         if (!target || s.done || s.liveAdjustment || s.valueOwner !== 'prescription' || s.auto !== true
             || s.target?.prefillReps == null
             || String(s.weight) !== String(s.target?.w)

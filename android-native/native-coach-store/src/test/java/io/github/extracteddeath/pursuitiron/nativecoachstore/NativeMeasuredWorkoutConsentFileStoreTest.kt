@@ -591,13 +591,41 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
         assertTrue(parent().record("owner-1",plan.workoutId,MeasuredWorkoutOperation.Record(
             "carry-corrected",15L,carry.setKey,MeasuredSetOutcome.COMPLETED,revised.actual,
             "measured-3")) is NativeMeasuredWorkoutStoreResult.Durable)
+        // Correct every other typed row through its exact receipt rather than
+        // assuming the carry-only correction establishes all 14 identities.
+        var revision=16L
+        for(set in plan.sets.filter{it.setKey!=carry.setKey}) {
+            val before=(parent().open("owner-1",plan.workoutId)
+                as NativeMeasuredWorkoutStoreResult.Durable).stored.journal
+            assertEquals(revision,before.revision)
+            val effective=checkNotNull(before.bySetKey.getValue(set.setKey).effectiveRecord)
+            val original=effective.operation as MeasuredJournalOperation.Record
+            val priorActual=checkNotNull(original.actual)
+            val corrected=priorActual.copy(sides=priorActual.sides.map{side->
+                side.copy(amount=side.amount+1)
+            })
+            val correction=MeasuredWorkoutOperation.Record("correct-${set.setKey}",
+                revision,set.setKey,MeasuredSetOutcome.COMPLETED,corrected,
+                original.eventId)
+            val saved=parent().record("owner-1",plan.workoutId,correction)
+            assertTrue("${set.exerciseId}: $saved",saved is NativeMeasuredWorkoutStoreResult.Durable)
+            revision++
+            val cold=(parent().open("owner-1",plan.workoutId)
+                as NativeMeasuredWorkoutStoreResult.Durable).stored.journal
+            assertEquals(revision,cold.revision)
+            assertEquals(plan,cold.approvedPlan)
+            assertEquals(corrected,(cold.bySetKey.getValue(set.setKey).effectiveRecord
+                ?.operation as MeasuredJournalOperation.Record).actual)
+            assertEquals(before.bySetKey-set.setKey,cold.bySetKey-set.setKey)
+        }
         val beforeFinish=parent().open("owner-1",plan.workoutId)
         assertTrue(beforeFinish is NativeMeasuredWorkoutStoreResult.Durable)
-        assertEquals(16L,(beforeFinish as NativeMeasuredWorkoutStoreResult.Durable)
+        assertEquals(30L,revision)
+        assertEquals(revision,(beforeFinish as NativeMeasuredWorkoutStoreResult.Durable)
             .stored.journal.revision)
         val completed=NativeKotlinMeasuredHistoryTransaction(
             history,parent(),fence,identity).complete("owner-1","athlete-1",
-                plan.workoutId,MeasuredWorkoutOperation.Finish("mixed-finish",16L))
+                plan.workoutId,MeasuredWorkoutOperation.Finish("mixed-finish",revision))
         assertTrue(completed.toString(),
             completed is NativeMeasuredFinishResult.Committed)
         val replayed=NativeKotlinMeasuredHistoryReadCoordinator(
@@ -610,8 +638,8 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
             historySet.approvedPlan.sets.map{it.exerciseId})
         assertEquals(15,historySet.bySetKey.values.count{it.effectiveRecord!=null})
         assertEquals(plan,historySet.approvedPlan)
-        val expected=listOf("43 s","43 s","24.5 m · External 25 lb per hand · Elapsed 35 s",
-            "15 reps · Band band-blue","Left 43 s · External 25 lb added")
+        val expected=listOf("44 s","44 s","24.5 m · External 25 lb per hand · Elapsed 35 s",
+            "16 reps · Band band-blue","Left 44 s · External 25 lb added")
         for((index,set) in plan.sets.withIndex()){
             val saved=historySet.bySetKey.getValue(set.setKey)
             val result=MeasuredWorkoutResultReviewDomain.review(set,saved)
@@ -621,8 +649,14 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
             val actual=checkNotNull((saved.effectiveRecord?.operation
                 as MeasuredJournalOperation.Record).actual)
             assertEquals(set.sides,actual.sides.map{it.side}.toSet())
-            if(set.sides.size==2)assertEquals(mapOf(MeasuredSide.LEFT to 43,
-                MeasuredSide.RIGHT to 39),actual.sides.associate{it.side to it.amount})
+            assertEquals(set.exerciseId,set.sides.associateWith{side->when(set.exerciseId){
+                "farmers"->2450
+                "suitcase-carry"->2439
+                "band-pushup"->16
+                else->if(side==MeasuredSide.RIGHT && set.sides.size==2)40 else 44
+            }},actual.sides.associate{it.side to it.amount})
+            assertEquals(if(set.setKey==carry.setKey)"carry-corrected" else "correct-${set.setKey}",
+                (saved.effectiveRecord?.operation as MeasuredJournalOperation.Record).eventId)
         }
         assertEquals(historySet,(parent().open("owner-1",plan.workoutId)
             as NativeMeasuredWorkoutStoreResult.Durable).stored.journal)

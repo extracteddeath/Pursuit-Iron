@@ -136,6 +136,8 @@ val stageKotlinBetaSources=tasks.register<StageKotlinBetaSources>(
             // Exercise Info skip/undo eligibility is read-only; journal
             // confirmation and ownership remain in the existing host.
             "**/NativeWorkoutInfoActionPolicy.kt",
+            // Shared revision-bound remaining-work review for both native loggers.
+            "**/NativeRemainingEditSheet.kt",
             "**/NativeComponents.kt",
             "**/NativeRestTimer.kt",
             "**/NativeExerciseFavorites.kt",

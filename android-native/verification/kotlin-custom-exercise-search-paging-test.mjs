@@ -15,7 +15,7 @@ const search=readFileSync(
 assert.match(sheet,/available,replacing\?\.exerciseId,search=search/);
 assert.match(sheet,/displayLabel=::kotlinExerciseLabel/);
 assert.match(rank,/CoachExerciseChoiceSearchDomain\.tokens\(search\)/);
-assert.match(rank,/CoachExerciseChoiceSearchDomain\.matches\(terms\)/);
+assert.match(rank,/CoachExerciseChoiceSearchDomain\.matches\(terms,choice\.exerciseId\)/);
 assert.match(search,/tokens\.all\s*\{\s*searchable\.contains\(it\)\s*\}/);
 for(const field of [
  'choice.exerciseId','choice.familyId','choice.variantId',

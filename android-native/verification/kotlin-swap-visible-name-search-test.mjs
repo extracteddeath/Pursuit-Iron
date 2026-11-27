@@ -60,7 +60,7 @@ const customUi=readFileSync(
     'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomExerciseSheet.kt','utf8');
 for(const domain of [engine,custom]) {
     assert.ok(domain.includes('CoachExerciseChoiceSearchDomain.tokens(search)'));
-    assert.ok(domain.includes('CoachExerciseChoiceSearchDomain.matches(terms)'));
+    assert.ok(domain.includes('CoachExerciseChoiceSearchDomain.matches(terms,option.exerciseId)'));
 }
 assert.ok(customUi.includes('available,replacing?.exerciseId,search=search'));
 assert.ok(customUi.includes('displayLabel=::kotlinExerciseLabel'));

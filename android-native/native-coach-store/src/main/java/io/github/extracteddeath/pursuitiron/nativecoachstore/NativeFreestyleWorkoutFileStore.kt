@@ -8,11 +8,12 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
+import java.security.MessageDigest
 
 enum class NativeFreestyleRefusal {
     INVALID_ID, NOT_AUTHORIZED, SOURCE_UNAVAILABLE, HISTORY_NOT_READY,
     ID_CONFLICT, NOT_STARTED, CORRUPT, INVALID_RECEIPT, FINISH_REQUIRES_HISTORY,
-    STORAGE_UNAVAILABLE
+    STORAGE_UNAVAILABLE, FINISH_MISMATCH
 }
 sealed interface NativeFreestyleResult {
     data class Durable(val workout:KotlinFreestyleWorkout,val replayed:Boolean):NativeFreestyleResult
@@ -28,7 +29,8 @@ class NativeFreestyleWorkoutFileStore(
     private val fence:NativeKotlinApprovalRevisionFence,
     private val identity:NativeKotlinCurrentIdentity,
     private val source:NativeKotlinCustomAuthoringSourceFileStore,
-    private val history:NativeKotlinHistoryManifestFileStore
+    private val history:NativeKotlinHistoryManifestFileStore,
+    private val clock:NativeHistoryCompletionClock=NativeHistoryCompletionClock.Undated
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private fun reject(reason:NativeFreestyleRefusal)=NativeFreestyleResult.Rejected(reason)
@@ -85,6 +87,99 @@ class NativeFreestyleWorkoutFileStore(
             ?:return false
         return ledger.readyForHistoryReads && ledger.hasCompletionCapacity &&
             ledger.completions.none{it.workoutId==workout}
+    }
+
+    private fun finishReceipt(owner:String,workout:KotlinFreestyleWorkout):String {
+        require(workout.finishedByEventId!=null)
+        val digest=MessageDigest.getInstance("SHA-256")
+        digest.update("pursuit-freestyle-finish-v1".toByteArray(Charsets.UTF_8))
+        digest.update(NativeFreestyleWorkoutCodec.encode(owner,workout))
+        return "freestyle-v1-"+digest.digest().joinToString(""){"%02x".format(it.toInt() and 255)}
+    }
+    private fun ledger(owner:NativeKotlinOwnerIdentity):NativeHistoryLedger? =
+        (history.open(owner.ownerKey,owner.athleteId) as? NativeHistoryLedgerResult.Durable)
+            ?.ledger?.takeIf{it.ownerKey==owner.ownerKey && it.athleteId==owner.athleteId}
+
+    private fun committed(owner:NativeKotlinOwnerIdentity,entry:KotlinHistoryManifestEntry,
+        replayed:Boolean):NativeFreestyleResult {
+        val saved=read(owner.ownerKey,owner.athleteId,entry.workoutId)
+        val state=(saved as? NativeFreestyleResult.Durable)?.workout?:return saved
+        if(state.finishedByEventId!=entry.finishEventId ||
+            state.revision!=entry.originalJournalRevision || entry.savedCorrectionRevision!=0L ||
+            finishReceipt(owner.ownerKey,state)!=entry.storedReceiptId)
+            return reject(NativeFreestyleRefusal.FINISH_MISMATCH)
+        return NativeFreestyleResult.Durable(state,replayed)
+    }
+
+    /** The canonical manifest owns completion. Only the exact prepared intent
+     * can advance the persisted active journal, even after a process death. */
+    private fun replayFinish(owner:NativeKotlinOwnerIdentity,ledger:NativeHistoryLedger):NativeFreestyleResult {
+        val intent=ledger.pending as? NativeHistoryWriteIntent.FreestyleFinish
+            ?:return reject(NativeFreestyleRefusal.HISTORY_NOT_READY)
+        val loaded=read(owner.ownerKey,owner.athleteId,intent.workoutId)
+        val state=(loaded as? NativeFreestyleResult.Durable)?.workout?:return loaded
+        val next=KotlinFreestyleWorkoutDomain.reduce(state,intent.operation)
+            as? KotlinFreestyleDecision.Proposed?:return reject(NativeFreestyleRefusal.FINISH_MISMATCH)
+        if(next.workout.finishedByEventId!=intent.operation.eventId ||
+            next.workout.revision!=intent.operation.expectedRevision+1)
+            return reject(NativeFreestyleRefusal.FINISH_MISMATCH)
+        if(!next.replayed) {
+            val written=save(owner,next.workout)
+            if(written !is NativeFreestyleResult.Durable)return written
+        }
+        if(identity.signedInIdentity()!=owner)return reject(NativeFreestyleRefusal.NOT_AUTHORIZED)
+        val entry=KotlinHistoryManifestEntry(ledger.completions.size.toLong()+1,
+            intent.workoutId,finishReceipt(owner.ownerKey,next.workout),
+            intent.operation.eventId,next.workout.revision,0,intent.completedAtEpochMillis)
+        val finalized=history.finalize(owner.ownerKey,owner.athleteId,intent,entry)
+            as? NativeHistoryLedgerResult.Durable ?:return reject(NativeFreestyleRefusal.HISTORY_NOT_READY)
+        if(finalized.ledger.pending!=null || finalized.ledger.completions.lastOrNull()!=entry)
+            return reject(NativeFreestyleRefusal.HISTORY_NOT_READY)
+        return committed(owner,entry,false)
+    }
+
+    /** Internal source candidate. Do not route live UI through this until
+     * the shared mixed History reader accepts and displays freestyle facts. */
+    internal fun complete(owner:String,workout:String,operation:KotlinFreestyleOperation.Finish)
+        :NativeFreestyleResult=guarded(owner,workout){current->
+        var manifest=ledger(current)?:return@guarded reject(NativeFreestyleRefusal.HISTORY_NOT_READY)
+        if(manifest.pending!=null) {
+            if(manifest.pending !is NativeHistoryWriteIntent.FreestyleFinish)
+                return@guarded reject(NativeFreestyleRefusal.HISTORY_NOT_READY)
+            val recovered=replayFinish(current,manifest)
+            if(recovered !is NativeFreestyleResult.Durable)return@guarded recovered
+            manifest=ledger(current)?:return@guarded reject(NativeFreestyleRefusal.HISTORY_NOT_READY)
+        }
+        val existing=manifest.completions.singleOrNull{it.workoutId==workout}
+        if(existing!=null) {
+            if(existing.finishEventId!=operation.eventId ||
+                existing.originalJournalRevision!=operation.expectedRevision+1 ||
+                !existing.storedReceiptId.startsWith("freestyle-v1-"))
+                return@guarded reject(NativeFreestyleRefusal.FINISH_MISMATCH)
+            return@guarded committed(current,existing,true)
+        }
+        if(!manifest.readyForHistoryReads || !manifest.hasCompletionCapacity)
+            return@guarded reject(NativeFreestyleRefusal.HISTORY_NOT_READY)
+        val opened=read(owner,current.athleteId,workout)
+        val prior=(opened as? NativeFreestyleResult.Durable)?.workout?:return@guarded opened
+        val proposed=KotlinFreestyleWorkoutDomain.reduce(prior,operation)
+            as? KotlinFreestyleDecision.Proposed?:return@guarded reject(NativeFreestyleRefusal.FINISH_MISMATCH)
+        if(proposed.replayed)return@guarded reject(NativeFreestyleRefusal.FINISH_MISMATCH)
+        // Ensure the bounded archive is encodable BEFORE a pending intent
+        // can block the entire owner's History.
+        NativeFreestyleWorkoutCodec.encode(owner,proposed.workout)
+        val intent=NativeHistoryWriteIntent.FreestyleFinish(workout,operation,clock.observe())
+        val prepared=history.prepare(owner,current.athleteId,manifest.revision,intent)
+            as? NativeHistoryLedgerResult.Durable
+            ?:return@guarded reject(NativeFreestyleRefusal.HISTORY_NOT_READY)
+        replayFinish(current,prepared.ledger)
+    }
+
+    internal fun recover(owner:String,workout:String):NativeFreestyleResult=guarded(owner,workout){current->
+        val manifest=ledger(current)?:return@guarded reject(NativeFreestyleRefusal.HISTORY_NOT_READY)
+        if(manifest.pending?.workoutId!=workout)
+            return@guarded reject(NativeFreestyleRefusal.HISTORY_NOT_READY)
+        replayFinish(current,manifest)
     }
 
     fun open(owner:String,workout:String):NativeFreestyleResult=guarded(owner,workout){

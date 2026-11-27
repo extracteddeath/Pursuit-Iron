@@ -52,7 +52,7 @@ data class NativeKotlinMixedHistoryTimeline(
 enum class NativeKotlinMixedHistoryRefusal {
     INVALID_SCOPE, NOT_AUTHORIZED, NOT_ENROLLED,
     PENDING_TRANSACTION, INVALID_MANIFEST, UNVERIFIED_COMPOSER,
-    UNVERIFIED_CUSTOM, UNVERIFIED_MEASURED, MANIFEST_CHANGED, STORAGE_UNAVAILABLE
+    UNVERIFIED_CUSTOM, UNVERIFIED_MEASURED, UNVERIFIED_FREESTYLE, MANIFEST_CHANGED, STORAGE_UNAVAILABLE
 }
 
 sealed interface NativeKotlinMixedHistoryReadResult {
@@ -883,7 +883,11 @@ class NativeKotlinMixedHistoryReadCoordinator(
         val values = ArrayList<NativeKotlinMixedHistoryCompletion>(
             ledger.completions.size)
         for (entry in ledger.completions) {
-            if (entry.storedReceiptId.startsWith("measured-")) {
+            if (entry.storedReceiptId.startsWith("freestyle-")) {
+                // This receipt type is not yet published by the UI. Fail
+                // closed instead of interpreting it as a generated program.
+                return rejected(NativeKotlinMixedHistoryRefusal.UNVERIFIED_FREESTYLE)
+            } else if (entry.storedReceiptId.startsWith("measured-")) {
                 val stored=(measuredStore?.open(owner,entry.workoutId)
                     as? NativeMeasuredWorkoutStoreResult.Durable)?.stored
                     ?:return rejected(NativeKotlinMixedHistoryRefusal.UNVERIFIED_MEASURED)

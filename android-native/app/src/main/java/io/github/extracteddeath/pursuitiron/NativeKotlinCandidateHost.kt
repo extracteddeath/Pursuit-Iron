@@ -1786,6 +1786,11 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val pending=(historyStore.open(signed.ownerKey,signed.athleteId)
             as? NativeHistoryLedgerResult.Durable)?.ledger?.pending
         when(pending) {
+            // Freestyle Finish remains an internal transaction candidate
+            // until the common History reader and UI are integrated.
+            is NativeHistoryWriteIntent.FreestyleFinish ->
+                return NativeKotlinMixedHistoryReadResult.Rejected(
+                    NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION)
             is NativeHistoryWriteIntent.MeasuredFinish ->
                 measuredHistoryTransactions.recover(signed.ownerKey,signed.athleteId)
             is NativeHistoryWriteIntent.CustomFinish ->

@@ -1114,6 +1114,116 @@ class NativeKotlinGeneratedProgramJourneyTest {
             as NativeCustomDraftReadResult.Found).draft)
     }
 
+    @Test fun generatedTwentyMinuteChoiceProtectsEssentialWorkAndNeverInventsFit() =
+        verifyGeneratedTimeChoice(20,false)
+
+    @Test fun generatedThirtyMinuteChoiceUsesTheSameSignedPreparationAndFinish() =
+        verifyGeneratedTimeChoice(30,false)
+
+    @Test fun generatedFortyFiveMinuteChoiceCanUndoToFullBeforeIssue() =
+        verifyGeneratedTimeChoice(45,true)
+
+    private fun verifyGeneratedTimeChoice(minutes:Int,undo:Boolean) {
+        val (cycle,inputs)=saveGenerated()
+        val disk=Disk()
+        val originalConsent=disk.consent.read(owner,cycleId,inputs)
+        val day=cycle.blocks.single().days.minBy{it.weekday}
+        val id="generated-time-$minutes"
+        val full=(disk.preflight.inspect(owner,cycleId,1,day.weekday,inputs)
+            as NativeCustomPreflightResult.ReviewedPreview).session
+        val signed=disk.preflight.reviewShorter(owner,cycleId,1,day.weekday,inputs,minutes)
+            as NativeCustomShortSessionPreflight.Reviewed
+        val review=signed.review
+        assertEquals(CustomShorterSessionReviewDomain.inspect(full,minutes),review)
+        assertEquals(full.knownSetAndRestSeconds+checkNotNull(full.declaredNonSetSeconds).toLong(),
+            review.originalEstimatedSeconds)
+        assertTrue(review.explanation.isNotBlank())
+        val fullSets=full.slots.flatMap{it.sets}
+        val byKey=fullSets.associateBy{it.setKey}
+        assertEquals(fullSets.map{it.setKey},fullSets.map{it.setKey}.filter{
+            it in review.retainedSetKeys || it in review.omittedSetKeys})
+        assertTrue(review.retainedSetKeys.intersect(review.omittedSetKeys.toSet()).isEmpty())
+        assertEquals(fullSets.size,review.retainedSetKeys.size+review.omittedSetKeys.size)
+        val protected=full.slots.filter{it.role==ComposerRole.PRIMARY || it.pinned}
+        assertTrue(protected.flatMap{it.sets}.all{it.setKey in review.retainedSetKeys})
+        assertEquals(NativeCustomPreparedRead.Missing,disk.prepared.open(owner,id))
+        val fit=review.status in setOf(CustomShortSessionStatus.ALREADY_FITS,
+            CustomShortSessionStatus.READY_FOR_ATHLETE_REVIEW)
+        val expected:CustomWorkoutDaySnapshot
+        if(fit) {
+            assertTrue(checkNotNull(review.reviewedEstimatedSeconds)<=minutes*60L)
+            assertEquals(NativeCustomPrepareResult.Rejected(NativeCustomPrepareRefusal.CONFIRMATION_REQUIRED),
+                disk.prepared.prepareShorter(owner,id,cycleId,1,day.weekday,inputs,signed,false))
+            val prepared=disk.prepared.prepareShorter(owner,id,cycleId,1,day.weekday,inputs,signed,true)
+            assertTrue(prepared.toString(),prepared is NativeCustomPrepareResult.Prepared)
+            val shortened=(prepared as NativeCustomPrepareResult.Prepared).workout
+            assertEquals(minutes,shortened.snapshot.shortSessionLimitMinutes)
+            assertEquals(review.omittedSetKeys,shortened.snapshot.shortSessionOmittedSetKeys)
+            assertEquals(review.retainedSetKeys,shortened.snapshot.slots.flatMap{it.sets}.map{it.setKey})
+            assertEquals(review.retainedSetKeys.map{byKey.getValue(it)},shortened.snapshot.slots.flatMap{it.sets})
+            assertEquals(shortened,(Disk().prepared.open(owner,id) as NativeCustomPreparedRead.Found).workout)
+            if(undo) {
+                val shown=Disk().prepared.previewTimeUndo(owner,id,cycleId,1,day.weekday,inputs,Disk().journals)
+                    as NativeCustomTimeUndoPreview.Ready
+                assertEquals(full,shown.full)
+                assertEquals(shortened,shown.shortened)
+                assertEquals(NativeCustomTimeUndoWrite.Rejected(NativeCustomTimeUndoRefusal.CONFIRMATION_REQUIRED),
+                    Disk().prepared.acceptTimeUndo(shown,inputs,Disk().journals,false))
+                val restored=Disk().prepared.acceptTimeUndo(shown,inputs,Disk().journals,true)
+                assertTrue(restored.toString(),restored is NativeCustomTimeUndoWrite.Restored)
+                expected=(restored as NativeCustomTimeUndoWrite.Restored).prepared.snapshot
+                assertEquals(full,expected)
+            } else expected=shortened.snapshot
+        } else {
+            // A 20/30-minute limit may be physically impossible for a real
+            // generated day. Never weaken essential work to force a pass.
+            assertFalse("The ordinary generated 45-minute fixture should fit: $review",undo)
+            assertEquals(CustomShortSessionStatus.PROTECTED_WORK_EXCEEDS_LIMIT,review.status)
+            assertTrue(checkNotNull(review.reviewedEstimatedSeconds)>minutes*60L)
+            assertEquals(NativeCustomPrepareResult.Rejected(NativeCustomPrepareRefusal.INVALID_SELECTION),
+                disk.prepared.prepareShorter(owner,id,cycleId,1,day.weekday,inputs,signed,true))
+            assertEquals(NativeCustomPreparedRead.Missing,disk.prepared.open(owner,id))
+            val prepared=disk.prepared.prepare(owner,id,cycleId,1,day.weekday,inputs)
+            assertTrue(prepared.toString(),prepared is NativeCustomPrepareResult.Prepared)
+            expected=full
+        }
+        var journal=(Disk().journals.issue(owner,id,cycleId,1,day.weekday,inputs)
+            as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals(expected,journal.originalSnapshot)
+        val rows=expected.slots.flatMap{it.sets}
+        val actuals=rows.map{row->
+            val load=row.prescription.load as? DraftSetLoad.Verified
+            KotlinPerformedSet(load?.value,load?.unit,
+                row.prescription.exactRepTarget?:row.prescription.reps.minimum,null)
+        }
+        for((i,row) in rows.withIndex()) {
+            val logged=Disk().journals.record(owner,id,CustomWorkoutJournalOperation.Record(
+                "generated-time-set-$i",journal.revision,CustomWorkoutVisitKey(row.setKey,CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,actuals[i]))
+            assertTrue(logged.toString(),logged is NativeCustomJournalResult.Durable)
+            journal=(logged as NativeCustomJournalResult.Durable).issued.journal
+        }
+        assertEquals(0,journal.unresolvedVisitCount)
+        val finish=CustomWorkoutJournalOperation.Finish("generated-time-finish",journal.revision)
+        fun finishCold()=Disk().let{d->NativeKotlinCustomHistoryTransaction(d.history,d.journals,d.fence,identity)
+            .complete(owner,athlete,id,finish)}
+        val finished=finishCold()
+        assertTrue(finished.toString(),finished is NativeCustomFinishResult.Committed)
+        assertTrue(finishCold() is NativeCustomFinishResult.Committed)
+        val cold=(Disk().journals.open(owner,id) as NativeCustomJournalResult.Durable).issued.journal
+        val evidence=(CustomWorkoutHistoryEvidenceDomain.project(cold) as CustomHistoryEvidenceResult.Candidate).evidence
+        assertEquals(rows.map{it.setKey},evidence.visits.map{it.setKey})
+        assertEquals(actuals,evidence.visits.map{it.actual})
+        assertEquals(expected.shortSessionLimitMinutes,evidence.shortSessionLimitMinutes)
+        assertEquals(expected.shortSessionOmittedSetKeys,evidence.shortSessionOmittedSetKeys)
+        assertEquals(expected.shortSessionOmittedSetKeys.isNotEmpty(),evidence.prescriptionEditedForTime)
+        assertEquals(expected,cold.originalSnapshot)
+        assertEquals(cycle,(Disk().drafts.read(owner,cycleId) as NativeCustomDraftReadResult.Found).draft)
+        assertEquals(originalConsent,Disk().consent.read(owner,cycleId,inputs))
+        assertEquals(listOf(id),(Disk().history.open(owner,athlete) as NativeHistoryLedgerResult.Durable)
+            .ledger.completions.map{it.workoutId})
+    }
+
     @Test fun generatedWorkoutRestReadsDurableReceiptsAndNeverRestartsFromCorrections() {
         val (cycle,inputs)=saveGenerated()
         val day=cycle.blocks.single().days.first()

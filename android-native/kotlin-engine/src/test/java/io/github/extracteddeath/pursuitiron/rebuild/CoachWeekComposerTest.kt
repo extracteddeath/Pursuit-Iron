@@ -922,4 +922,55 @@ class CoachWeekComposerTest {
         assertTrue(result.explanations.any {it.contains("may exist")})
     }
 
+
+    @Test fun consolidateShortCurlVisitsWithoutMergingMuscleIdentities() {
+        val curl=option("curl",TrainingMuscle.BICEPS,ComposerPattern.ISOLATION,
+            gap=1).copy(role=ComposerRole.ACCESSORY)
+        val hammer=option("hammer",TrainingMuscle.BRACHIALIS,ComposerPattern.ISOLATION,
+            gap=1).copy(role=ComposerRole.ACCESSORY)
+        val press=chestOption.copy(requiredVisits=1,maximumVisits=1)
+        val row=backOption.copy(requiredVisits=1,maximumVisits=1)
+        val squat=legOption.copy(requiredVisits=1,maximumVisits=1)
+        val request=base(exerciseOptions=listOf(curl,hammer,press,row,squat),
+            bands=bounds(dose(chest,"2","2","2",1),dose(lats,"2","2","2",1),
+                dose(quads,"2","2","2",1),
+                dose(TrainingMuscle.BICEPS,"4","4","4",1),
+                dose(TrainingMuscle.BRACHIALIS,"4","4","4",1)),
+            schedule=days(listOf(0,2,4),min=1,max=90),
+            patterns=1,maxPerDay=4).copy(preferConsolidatedAccessories=true)
+        val seed=listOf(
+            ComposerVisit(0,press.exerciseId,press.pattern,2),
+            ComposerVisit(1,row.exerciseId,row.pattern,2),
+            ComposerVisit(2,squat.exerciseId,squat.pattern,2),
+            ComposerVisit(0,curl.exerciseId,curl.pattern,2),
+            ComposerVisit(1,curl.exerciseId,curl.pattern,2),
+            ComposerVisit(0,hammer.exerciseId,hammer.pattern,2),
+            ComposerVisit(1,hammer.exerciseId,hammer.pattern,2))
+        val permission=ComposerRepairPermissions.GENERATED_DRAFT
+        val result=CoachWeekComposer.rebalanceForReview(request,seed,permission)
+        val arms=result.filter{it.exerciseId in setOf("curl","hammer")}
+        assertEquals(2,arms.size)
+        assertEquals(setOf("curl","hammer"),arms.map{it.exerciseId}.toSet())
+        assertTrue(arms.all{it.sets==4})
+        assertEquals(2,arms.map{it.dayIndex}.distinct().size)
+        assertEquals(seed.sumOf{it.sets},result.sumOf{it.sets})
+        assertEquals(seed,CoachWeekComposer.rebalanceForReview(request,seed))
+        val protected=request.copy(bounds=request.bounds.map{
+            if(it.muscle==TrainingMuscle.BICEPS)
+                it.copy(minimumDirectDays=2) else it})
+        val retained=CoachWeekComposer.rebalanceForReview(protected,seed,permission)
+        assertEquals(2,retained.count{it.exerciseId=="curl"})
+        val pinned=request.copy(exercises=request.exercises.map{
+            if(it.exerciseId=="hammer")it.copy(requiredVisits=2) else it})
+        assertEquals(2,CoachWeekComposer.rebalanceForReview(pinned,seed,permission)
+            .count{it.exerciseId=="hammer"})
+        val capped=request.copy(exercises=request.exercises.map{
+            if(it.exerciseId=="hammer")it.copy(maximumSetsPerVisit=3) else it})
+        assertEquals(2,CoachWeekComposer.rebalanceForReview(capped,seed,permission)
+            .count{it.exerciseId=="hammer"})
+        assertEquals(4,CoachWeekComposer.rebalanceForReview(
+            request.copy(preferConsolidatedAccessories=false),seed,permission)
+            .count{it.exerciseId in setOf("curl","hammer")})
+    }
+
 }

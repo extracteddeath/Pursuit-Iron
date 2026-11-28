@@ -398,9 +398,10 @@ export function createMusclePrescriptions(request, phase = initialPhaseForGoal(r
  * Translate the selected session-time band into a productive weekly dose target.
  *
  * The lower edge is capacity the athlete explicitly made available, but it is not a clock-filling
- * quota. Short/standard bands first fund the minimum -> preferred region. Longer bands progressively
- * unlock the still-modeled preferred -> upper region so 60-90, 90-120 and 120+ do not collapse to
- * the same prescription. Phase scaling preserves real powerbuilding/strength tapering.
+ * quota. Short/standard bands first fund the minimum -> preferred region. Longer bands
+ * allow explicitly prioritized muscles to approach their modeled upper region; available
+ * time alone does not justify pushing every ordinary muscle above its preferred dose.
+ * Phase scaling preserves real powerbuilding/strength tapering.
  */
 export function productiveTimeBandDoseTarget(request, prescription, phase) {
     // Optional regions stay opt-in. Extra time may deepen useful work for modeled targets, but it must
@@ -424,6 +425,8 @@ export function productiveTimeBandDoseTarget(request, prescription, phase) {
     else if (averageMinimumMinutes >= 20) {
         accumulationTarget = prescription.minimum + (prescription.preferred - prescription.minimum) * .35;
     }
+    if (prescription.priority === 'normal' || prescription.priority === 'maintenance')
+        accumulationTarget = Math.min(accumulationTarget, prescription.preferred);
     const phaseScale = phase === 'hypertrophy_accumulation' ? 1 : phase === 'mixed_accumulation' ? .74 : 0;
     if (phaseScale <= 0)
         return prescription.minimum;

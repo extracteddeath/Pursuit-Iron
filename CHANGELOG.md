@@ -1,5 +1,6 @@
 ## Build 1061 — Volume-aware capacity trimming
 
+- Longer time bands no longer reserve or bid above preferred volume for ordinary muscles solely because time is available. Explicit priority muscles retain audited surplus capacity.
 - Prefer preserving minimum and preferred muscle stimulus when shortening generated sessions. Report unresolved time limits rather than certifying unfinished repairs. User-owned prescriptions and strength roles remain protected.
 
 ## Build 1060 — Executable workout duration

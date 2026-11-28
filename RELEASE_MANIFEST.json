@@ -5,7 +5,7 @@
   "build": 1061,
   "engineVersion": "0.65.10",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "9d15b279e1a005ae53bb72a16416e4a29f951bf69363186dcad14e4fa42e0eb0",
+  "runtimeAggregate": "0abb608938b8468ae459c7820a31c3f8fa8194a90ceffef856f1c87e0c68a6e6",
   "runtimeFiles": {
     "modules/app-storage-ownership.js": "765ef4d37d4f73967fee7ef1942de229e905e112c7735b53de86a8e7106b3e39",
     "modules/backup-restore-panel.js": "194d953c2478a300c21e303c19fd7dd27ac436ddef21bcacaa7b8299d60123df",
@@ -28,7 +28,7 @@
     "modules/main.js": "0547cb25708ed6a5a4b62a80d306986e694b35789854114f515707845c1ce5fb",
     "modules/mobile-lifecycle.js": "458023a822f15a8f03dba82ab4e7eeb005f965968a3d92bc07568e248a46ff47",
     "modules/next-engine/adaptive-cycle-upgrade.js": "9aca95fb3fb63e7968694df0b10032f47aca5ad1906f65d795f62edd9437bf9b",
-    "modules/next-engine/allocator.js": "2b6e9a494c6297fe1cfb5070518d21934efc9e9ae33ca8fcdc34a73e03263e4b",
+    "modules/next-engine/allocator.js": "04ea575d13d1eaa2bbd8a228ba1295ba49fbbfd24223ba03f800824302e8e07d",
     "modules/next-engine/app-shell-adapter.js": "d12ad7fa6b4b367938c5299f718e8cde384ac525af3e244a10148559e1fce9ef",
     "modules/next-engine/arbiter.js": "cba22ac9d8a0dbd76177b3dd639f9794263f266c10f639fc1bab6009ac937c5d",
     "modules/next-engine/arm-coverage.js": "9216b888436bf51205be384a80efa14d26d93c5c3462471721318f93f36db1ce",
@@ -66,7 +66,7 @@
     "modules/next-engine/performance.js": "eb7713aef2c05601c47a21e95313a25bcf861ff5d69646ca4225fdf64271bb54",
     "modules/next-engine/phase-policy.js": "31770fb6bc4f3834acfc321e95206a9be384faa3731e97f60cec814cabd3150f",
     "modules/next-engine/phase-transition.js": "40f2b4c8730f2a3a1abb12c01e37a4941826ee61357a6c7e740c17b3ee91fc7c",
-    "modules/next-engine/prescription.js": "635f5a313c2833c143073b88fffc59561a42d6d19be6e82a46b3c2f9baec4eb8",
+    "modules/next-engine/prescription.js": "707f14d171f6fd8caf6a3303c3c4005a211bc03121ec6211d337ff442da94e09",
     "modules/next-engine/progression-style.js": "6f2f3f7bad9d9e7e71481546fc35c3fae72887b557caa968ffb224661d0ed898",
     "modules/next-engine/public-mev.js": "67dbea2b8390b89c6a9d5244b7af4593123fe3a163df073b611ba1e507853bb0",
     "modules/next-engine/realizer-arm-repair.js": "7ff412a918888273518c5fcfe14c0d36f0dbfabbe385e81f2fb5a74d9596a7a4",
@@ -164,9 +164,9 @@
   "uiFiles": {
     "modules/App.js": "1244a929d06fbdeae5836be45e3df58c6d1c465496f97c4828768bb5454a0c6c",
     "index.html": "2c506542aaf676709e108e88890d7e82fe7cbecb6d6449cf1180d7911bd42d24",
-    "sw.js": "f3292a7d6634b443e83e70ba46f245083aa888bf19eb1f8464692191247829db",
-    "BUILD_PROFILE.json": "ea80fc74abcfd579cf1f4044f130e25117445212ec6550eee92b507d9e68aa3e",
-    "CHANGELOG.md": "1f8419da1abfc57e3aace6c16b6b1c00e941797eaa91f42e8673ac5571efc158",
+    "sw.js": "94d40f4b7510139787605e77f04a041c462a42b6c40b462618cc6e05f317e043",
+    "BUILD_PROFILE.json": "0d570ec2d1bfc8118909b0c0b49429d1bef60fcb086817f37160209cbd1fcb51",
+    "CHANGELOG.md": "c69a9407c3bc6125b107a06e9fc1819aded1336b4a20555bd6383ae648637823",
     "app.css": "c975f7ec8afdc7f45ce419c4a0e94cbdd3c051ed4f29d0e9ad4182bd4ef52602",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
@@ -174,6 +174,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1061-r95f298d8449ebd96",
-  "uiMilestone": "Build 1061 · Protect useful volume when fitting the clock"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1061-r1b1b089c47e4a4c8",
+  "uiMilestone": "Build 1061 · Productive volume and capacity"
 }

@@ -474,7 +474,10 @@ object CoachWeekComposer {
     private fun withinCandidateLimits(
         request:ComposerRequest,
         current:Cost,
-        candidate:WeeklyDoseFeasibilityReport
+        baseline:WeeklyDoseFeasibilityReport,
+        candidate:WeeklyDoseFeasibilityReport,
+        baselineWorkingSets:Int,
+        candidateWorkingSets:Int
     ):Boolean {
         if(candidate.muscles.values.any {
             it.finding==DoseFinding.ABOVE_MRV
@@ -482,10 +485,23 @@ object CoachWeekComposer {
         if(candidate.sessions.any {
             it.finding==TimeWindowFinding.ABOVE_USER_HARD_LIMIT
         })return false
-        if(current.hardSatisfied && candidate.muscles.values.any { finding ->
-            finding.effectiveWorkingSets >
-                request.bounds.first {it.muscle==finding.muscle}.mav
-        })return false
+        if(current.hardSatisfied) {
+            // Required main lifts or authored visits may already put one
+            // muscle above MAV. Do not freeze useful work for other muscles,
+            // but never increase that existing surplus merely to fill time.
+            if(candidate.muscles.values.any { finding ->
+                val preferred=request.bounds.first {it.muscle==finding.muscle}.mav
+                val before=baseline.muscles.getValue(finding.muscle).effectiveWorkingSets
+                finding.effectiveWorkingSets>maxOf(preferred,before)
+            })return false
+            if(candidateWorkingSets>baselineWorkingSets) {
+                val beforeGap=baseline.muscles.values.fold(zero) {n,m->n+m.gapToMav}
+                val afterGap=candidate.muscles.values.fold(zero) {n,m->n+m.gapToMav}
+                // Extra sets must actually address a preferred-dose gap.
+                // Equal-work relocations/swaps can still improve time or spacing.
+                if(afterGap>=beforeGap)return false
+            }
+        }
         return true
     }
 
@@ -623,7 +639,8 @@ object CoachWeekComposer {
                         check.sessions[before.dayIndex].finding!=
                             TimeWindowFinding.WITHIN_PREFERENCE
                 })return
-                if(!withinCandidateLimits(request,current,check))return
+                if(!withinCandidateLimits(request,current,audit,check,
+                    chosen.sumOf{it.sets},trial.sumOf{it.sets}))return
                 val trialCost=cost(request,trial,check,options)
                 if(trialCost<best) {
                     best=trialCost
@@ -821,7 +838,8 @@ object CoachWeekComposer {
                 greedyCandidateEvaluations++
                 val candidate=toWeek(request,trial,map)
                 val check=WeeklyDoseFeasibilityDomain.audit(candidate)
-                if(!withinCandidateLimits(request,current,check))continue
+                if(!withinCandidateLimits(request,current,audit,check,
+                    chosen.sumOf{it.sets},trial.sumOf{it.sets}))continue
                 val candidateCost=cost(request,trial,check,map)
                 if(candidateCost<best) {
                     best=candidateCost

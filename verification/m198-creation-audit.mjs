@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { EXERCISE_MAP } from '../modules/next-engine/exercise-db.js';
 import { generateNextProgramForShell, splitBuildability } from '../modules/next-engine/app-shell-adapter.js';
 import { generateNextCycleForShell, nextCycleTemplatesForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { SUPPORTED_SPLIT_FAMILIES, splitSupportsTrainingDays } from '../modules/next-engine/topology.js';
+import { auditShellVolume } from '../modules/next-engine/volume-repair.js';
 
 const EQ = {
   full: ['barbell','rack','bench','dumbbell','cable','machine','smith','leg_press','pullup_bar','bodyweight'],
@@ -41,6 +43,19 @@ const programCases=[
  ['FB dumbbell gym',{split:'full_body',days:3,session:'s60',equipment:EQ.db,barbellCap:null}],['FB machine gym',{split:'full_body',days:3,session:'s60',equipment:EQ.machine,barbellCap:null}],
  ['StrengthFB barbell gym',{split:'strength_fb',days:3,session:'s90',goal:'strength',equipment:EQ.barbell,barbellCap:3}]
 ];
+// Keep the audit aligned with the real topology registry, rather than a
+// hand-maintained subset that silently misses new split families. Custom is
+// authored, not an automatic split; existing conversion tests own that route.
+const generatedFamilies = SUPPORTED_SPLIT_FAMILIES.filter(split=>split!=='custom');
+for (const split of generatedFamilies) {
+ const possible = [2,3,4,5,6].filter(days=>splitSupportsTrainingDays(split,days));
+ if (!possible.length) throw new Error('No audit schedule for registered split '+split);
+ const days = possible.includes(4) ? 4 : possible.includes(5) ? 5 : possible[0];
+ for (const goal of ['hypertrophy','strength','both']) {
+  if (!programCases.some(([,p])=>p.split===split&&(p.goal??base.goal)===goal))
+   programCases.push([`Registry ${split} ${goal}`,{split,days,goal,session:'s90'}]);
+ }
+}
 const cycleCases=[
  ['Powerbuilding FB3 s60','powerbuilding',{split:'full_body',days:3,session:'s60'}],['Powerbuilding FB3 s90','powerbuilding',{split:'full_body',days:3,session:'s90'}],
  ['Powerbuilding FB5 s90','powerbuilding',{split:'full_body',days:5,session:'s90'}],['Powerbuilding FB3 s120','powerbuilding',{split:'full_body',days:3,session:'s120'}],
@@ -54,17 +69,33 @@ const cycleCases=[
  ['Foundation FB3 beginner','foundation',{split:'full_body',days:3,session:'s90',experience:'beginner'}],['Foundation UL4 beginner','foundation',{split:'upper_lower',days:4,session:'s90',experience:'beginner'}]
 ];
 const rows=[],failures=[];
+const exactWeekQuality = program => {
+ const audit = auditShellVolume(program,legacyExercises);
+ return {missing: audit.missing===true, issues:audit.issues.map(i=>({region:i.region,status:i.status,week:i.week,actual:i.v,minimum:i.mev,upper:i.mrv})),
+  weeks:(audit.weeks??[]).map((w,i)=>({week:i+1,sets:w.sessions.reduce((n,s)=>n+s.exercises.reduce((m,e)=>m+e.sets,0),0),
+   sessions:w.sessions.map(s=>({day:s.shellDayId,minutes:s.estimatedMinutes,maximum:s.maxMinutes,sets:s.exercises.reduce((m,e)=>m+e.sets,0)}))})),
+  timeIssues:audit.timeIssues??[]};
+};
+const recordQuality = (label,quality) => {
+ console.log('EXACT_PROGRAM_QUALITY '+JSON.stringify({label,...quality}));
+ if(quality.missing||quality.timeIssues.length)
+  failures.push('EXACT EXECUTABLE QUALITY: '+label+' missing or over-time week');
+ if(quality.issues.some(i=>i.status==='over'))
+  failures.push('EXCESS REGIONAL DOSE: '+label+' '+JSON.stringify(quality.issues.filter(i=>i.status==='over')));
+};
 const summarizeError=err=>({code:err?.code??err?.name??'Error',message:String(err?.message??err),recovery:err?.recovery?.findings?.slice?.(0,4)?.map?.(f=>`${f.severity}:${f.code}`)});
 for(let i=0;i<programCases.length;i++){
  const [label,patch]=programCases[i],cfg={...base,...patch,name:`Audit ${label}`},verdict=splitBuildability(cfg,legacyExercises);let built=null,error=null;
  try{built=generateNextProgramForShell({config:cfg,banned:[],legacyExercises,seed:19800+i});}catch(err){error=summarizeError(err);}
  const pass=!!built&&built.nextProgram?.audit?.result==='pass';rows.push({kind:'program',label,wizard:verdict.ok,built:pass,error});
+ if(pass)recordQuality(label,exactWeekQuality(built.program));
  if(verdict.ok&&!pass)failures.push(`PROGRAM CONTRACT MISMATCH: ${label} enabled→reject ${error?.code}: ${error?.message}`);
 }
 for(let i=0;i<cycleCases.length;i++){
  const [label,templateId,patch]=cycleCases[i],goal=templateGoal.get(templateId)??'both',cfg={...base,...patch,goal,name:`Audit ${label}`},verdict=splitBuildability(cfg,legacyExercises);
  for(const adaptBetweenBlocks of [false,true]){let built=null,error=null;try{built=generateNextCycleForShell({templateId,config:cfg,banned:[],legacyExercises,seed:19900+i*2+(adaptBetweenBlocks?1:0),adaptBetweenBlocks,makeId:(()=>{let n=0;return()=>`audit-${i}-${adaptBetweenBlocks?'a':'l'}-${++n}`;})()});}catch(err){error=summarizeError(err);}
   const blocks=built?.blocks??[],pass=blocks.length>0&&blocks.every(b=>b?.nextEngine?.program?.audit?.result==='pass');rows.push({kind:'cycle',label,adapt:adaptBetweenBlocks,wizard:verdict.ok,built:pass,blocks:blocks.length,error});
+  if(pass)for(const [index,block] of blocks.entries())recordQuality(label+' '+(adaptBetweenBlocks?'adaptive':'locked')+' block '+(index+1),exactWeekQuality(block));
   if(verdict.ok&&!pass)failures.push(`CYCLE CONTRACT MISMATCH: ${label} ${adaptBetweenBlocks?'adaptive':'locked'} enabled→reject ${error?.code}: ${error?.message}`);
  }
 }
@@ -72,7 +103,7 @@ const monotonic=[['FB3','full_body',3],['FB5','full_body',5],['UL4','upper_lower
 for(const [label,split,days] of monotonic){let seenBuildable=false;for(const session of ['s60','s90','s120']){const verdict=splitBuildability({...base,split,days,session},legacyExercises);if(seenBuildable&&!verdict.ok)failures.push(`NON-MONOTONIC TIME CAPACITY: ${label} builds shorter but ${session} is blocked (${verdict.kind??'unknown'})`);seenBuildable||=verdict.ok;}}
 console.table(rows.map(r=>({kind:r.kind,case:r.label+(r.kind==='cycle'?` ${r.adapt?'adaptive':'locked'}`:''),wizard:r.wizard?'enabled':'blocked',final:r.built?'PASS':'FAIL',code:r.error?.code??''})));
 const enabled=rows.filter(r=>r.wizard).length,mismatches=rows.filter(r=>r.wizard&&!r.built).length;
-console.log(`M198 creation audit: ${rows.length} routes; ${enabled} wizard-enabled; ${mismatches} enabled→build mismatches; ${monotonic.length} time-capacity ladders.`);
+console.log(`M198 creation audit: ${rows.length} routes; ${generatedFamilies.length} registered automatic split families; ${enabled} wizard-enabled; ${mismatches} enabled→build mismatches; ${monotonic.length} time-capacity ladders.`);
 if(failures.length){console.error('\n'+failures.join('\n'));throw new Error(`M198 creation audit found ${failures.length} contract failures.`);}
 assert.ok(rows.some(r=>r.kind==='program'&&r.label==='ULPPL5 s90'&&r.built),'ULPPL 60–90 must build');
 assert.ok(rows.some(r=>r.kind==='cycle'&&r.label==='Powerbuilding FB5 s90'&&r.adapt&&r.built),'Adaptive Full Body 5-day 60–90 powerbuilding must build');

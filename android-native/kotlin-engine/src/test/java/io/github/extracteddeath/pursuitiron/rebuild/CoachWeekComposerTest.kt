@@ -335,6 +335,29 @@ class CoachWeekComposerTest {
         assertTrue(result.explanations.isNotEmpty())
     }
 
+    @Test fun requiredSurplusDoesNotFreezeProductiveWorkForOtherMuscles() {
+        val press=chestOption.copy(minimumSetsPerVisit=4,
+            maximumSetsPerVisit=4,requiredVisits=1,maximumVisits=1)
+        val row=backOption.copy(maximumVisits=1)
+        val leg=legOption.copy(minimumSetsPerVisit=2,
+            maximumSetsPerVisit=2,maximumVisits=1)
+        val request=base(exerciseOptions=listOf(press,row,leg),
+            schedule=days(calendar=listOf(0,2,4),min=30,max=60,
+                overhead=300),patterns=1,
+            bands=bounds(dose(chest,"2","2","5",1),
+                dose(lats,"2","4","5",1),dose(quads,"2","2","2",1)))
+        val authored=listOf(
+            ComposerVisit(0,press.exerciseId,press.pattern,4),
+            ComposerVisit(1,row.exerciseId,row.pattern,2),
+            ComposerVisit(2,leg.exerciseId,leg.pattern,2))
+        val result=CoachWeekComposer.rebalanceForReview(request,authored,
+            ComposerRepairPermissions(mayAdjustSets=true))
+        assertEquals(4,result.single{it.exerciseId==press.exerciseId}.sets)
+        assertEquals(4,result.single{it.exerciseId==row.exerciseId}.sets)
+        assertEquals(2,result.single{it.exerciseId==leg.exerciseId}.sets)
+        assertEquals(8,authored.sumOf{it.sets})
+    }
+
     @Test fun noJunkSetsAreAddedPastMavToFakeLongSession() {
         val schedule=days(min=75,max=90,overhead=300)
         val request=base(schedule=schedule,

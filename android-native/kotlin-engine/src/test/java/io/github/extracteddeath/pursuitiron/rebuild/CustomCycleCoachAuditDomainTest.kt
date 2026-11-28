@@ -1173,6 +1173,32 @@ class CustomCycleCoachAuditDomainTest {
         assertFalse(invalid.canIssueWorkout)
     }
 
+    @Test fun weekSpecificAmplifierCannotBypassFullTimeAudit() {
+        fun authored(seconds:Int?)=cycle(overrides=mapOf("block-1" to listOf(
+            CustomWeekSlotOverride(2,0,"slot-0",listOf(
+                authoredSet().copy(amplifier=CustomSetAmplifier(
+                    CustomAmplifierKind.MYO_REPS,4,20,
+                    followUpActiveSeconds=seconds,followUpRounds=3)))))))
+        val unknown=CustomCycleCoachAuditDomain.review(
+            authored(null),setup(),StarterExerciseTranche.movements(),inputs())
+        assertNotEquals(CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,unknown.status)
+        assertTrue(unknown.issues.any {
+            it.kind==CustomCoachIssueKind.NON_SET_TIME_UNDECLARED &&
+                it.location=="amplifiers"
+        })
+        assertEquals(330L,unknown.weeks[0].estimatedSecondsByDay[0])
+        assertNull(unknown.weeks[1].estimatedSecondsByDay[0])
+        assertEquals(330L,unknown.weeks[2].estimatedSecondsByDay[0])
+        val measured=CustomCycleCoachAuditDomain.review(
+            authored(75),setup(),StarterExerciseTranche.movements(),inputs())
+        assertEquals(measured.issues.toString(),
+            CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,measured.status)
+        assertEquals(465L,measured.weeks[1].estimatedSecondsByDay[0])
+        assertEquals(330L,measured.weeks[1].estimatedSecondsByDay[2])
+        assertTrue(measured.weeks.all{it.workingSets==3})
+        assertFalse(measured.mayIssueWorkout)
+    }
+
     @Test fun reviewedWeekSecondsCountEveryAdvancedRestAndActiveStage() {
         val amp=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,20,
             followUpActiveSeconds=75,followUpRounds=3)

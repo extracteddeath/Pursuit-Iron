@@ -5,7 +5,7 @@
   "build": 1061,
   "engineVersion": "0.65.10",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "2c9619d175da27e08e98ddf0dd23dd55c73573ede0190c2bc91ee573d05e9565",
+  "runtimeAggregate": "26e2a63b3e789b15518281478b224ed764eac11efea730f96d6ec92787cdbcc5",
   "runtimeFiles": {
     "modules/app-storage-ownership.js": "765ef4d37d4f73967fee7ef1942de229e905e112c7735b53de86a8e7106b3e39",
     "modules/backup-restore-panel.js": "194d953c2478a300c21e303c19fd7dd27ac436ddef21bcacaa7b8299d60123df",
@@ -70,7 +70,7 @@
     "modules/next-engine/progression-style.js": "6f2f3f7bad9d9e7e71481546fc35c3fae72887b557caa968ffb224661d0ed898",
     "modules/next-engine/public-mev.js": "67dbea2b8390b89c6a9d5244b7af4593123fe3a163df073b611ba1e507853bb0",
     "modules/next-engine/realizer-arm-repair.js": "7ff412a918888273518c5fcfe14c0d36f0dbfabbe385e81f2fb5a74d9596a7a4",
-    "modules/next-engine/realizer-capacity-repair.js": "40cd651bd52663cd1b79dd17407f4c5bb0cbc15fdcfb019e00820dcb99a30b78",
+    "modules/next-engine/realizer-capacity-repair.js": "78e96af1ab0b6de3f76606cbbf2f439a82218f29f6918f7fb8c967ce42811f91",
     "modules/next-engine/realizer-dose-ledger.js": "382df127aa38f7dd3143f505a054477abc05f3b6904d38fc084354d16ca131e9",
     "modules/next-engine/realizer-dose-repair.js": "ced39a3cd0048ad61214dba1ce6483df27ce1fcd0d75e8be81aa18f418b30c08",
     "modules/next-engine/realizer-fragment-repair.js": "f2a8a0a243ef0b73c40267ac46e8fd47b57f956afffd41535d86417d7bd49c5c",
@@ -164,8 +164,8 @@
   "uiFiles": {
     "modules/App.js": "1244a929d06fbdeae5836be45e3df58c6d1c465496f97c4828768bb5454a0c6c",
     "index.html": "2c506542aaf676709e108e88890d7e82fe7cbecb6d6449cf1180d7911bd42d24",
-    "sw.js": "a2c86464cafe83d54ec5bbbd600faf4b72d373d1576904518f9d9a539f135661",
-    "BUILD_PROFILE.json": "89af6535bee01c735d7a2440cbba2482d37baf651169071f3c0115798e7b9408",
+    "sw.js": "4dfbc5da7833ffede9b642978ce2964e8c8803c75b5c22bf3831024233693a8e",
+    "BUILD_PROFILE.json": "08a2b0c272bf17dccb588b78bb06257cbb6c75c301f60acdb4403d196b9964d6",
     "CHANGELOG.md": "c69a9407c3bc6125b107a06e9fc1819aded1336b4a20555bd6383ae648637823",
     "app.css": "c975f7ec8afdc7f45ce419c4a0e94cbdd3c051ed4f29d0e9ad4182bd4ef52602",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
@@ -174,6 +174,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1061-r3e779824ce6526d8",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1061-r0cb116f82b426b83",
   "uiMilestone": "Build 1061 · Productive volume and capacity"
 }

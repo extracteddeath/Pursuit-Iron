@@ -63,3 +63,11 @@ for (const minMinutes of [20, 40, 60, 90, 120]) {
     'explicit muscle priorities retain extra productive capacity');
 }
 console.log('M196 capacity-band regression: pass');
+
+// The realizer must not re-introduce a duration-driven above-preferred target.
+const { usefulTarget } = await import('../modules/next-engine/realizer-capacity-repair.js');
+for (const phase of ['hypertrophy_accumulation','mixed_accumulation','strength_accumulation','peak']) {
+    const ctx = {phase,request:{schedule:{days:[{minMinutes:120}]}},accumulationFloorExpansion:.72,latePhaseExpansion:.15};
+    assert.equal(usefulTarget(ctx,ordinary),ordinary.preferred);
+    assert.ok(usefulTarget(ctx,prioritized)<=prioritized.upper);
+}

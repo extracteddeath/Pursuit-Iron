@@ -177,8 +177,10 @@ export function auditShellVolume(program, legacyExercises = []) {
             fix: status === 'under' ? 'Add useful sets to existing movements first; rebalance other work if the session is full.' : 'Reduce accessory sets while protecting the rest of the plan.' });
     }
     issues.sort((a, b) => (a.status === 'under' ? 0 : 1) - (b.status === 'under' ? 0 : 1) || b.need - a.need);
+    const timeIssues = weeks.flatMap((w, wi) => w.sessions.filter(s => s.estimatedMinutes > s.maxMinutes)
+        .map(s => ({ week: wi + 1, dayId: s.shellDayId, minutes: s.estimatedMinutes, maximum: s.maxMinutes })));
     return { issues, volBias: Object.fromEntries(issues.map(i => [i.part, i.status === 'under' ? Math.ceil(i.need) : -Math.ceil(i.need)])),
-        targets, weeks, missing: weeks.some(w => w.missing) };
+        targets, weeks, timeIssues, missing: weeks.some(w => w.missing) };
 }
 
 function baseSessions(program, legacyExercises, snapshot = null) {
@@ -494,8 +496,7 @@ export function reconcileShellWeekDose(program, legacyExercises = []) {
         }
     }
     const after = auditShellVolume(current, legacyExercises);
-    const timeIssues = after.weeks.flatMap((w, wi) => w.sessions.filter(s => s.estimatedMinutes > s.maxMinutes)
-        .map(s => ({ week: wi + 1, dayId: s.shellDayId, minutes: s.estimatedMinutes, maximum: s.maxMinutes })));
+    const timeIssues = after.timeIssues ?? [];
     return { program: current, after, timeIssues, changes, changed: current !== program,
         status: !after.missing && !after.issues.length && !timeIssues.length ? (changes.length ? 'success' : 'unchanged')
             : changes.length ? 'partial' : 'unable' };
@@ -506,6 +507,21 @@ export function reconcileShellWeekDose(program, legacyExercises = []) {
 export function enforceShellWeekCapacity(program, legacyExercises = []) {
     let current = program;
     const changes = [];
+    const context = snapshotContext(program, legacyExercises);
+    const targets = shellVolumeTargets(program, context.request);
+    const prescriptions = createMusclePrescriptions(context.request, phaseOf(program));
+    // Hard capacity still wins when all options are costly. Prefer trims
+    // that lose no additional necessary stimulus; consider both the public
+    // regional ledger and the internal muscle ledger, not only clock time.
+    const increasedGap = (before, after, floor) =>
+        Math.max(0, Math.max(0, floor - after) - Math.max(0, floor - before));
+    const loss = (before, after) => ({
+        minimum: targets.reduce((n, t) => n + increasedGap(before.regions[t.region], after.regions[t.region], t.mev), 0)
+            + prescriptions.reduce((n, p) => n + increasedGap(before.muscleLedger[p.muscle].fractionalSets,
+                after.muscleLedger[p.muscle].fractionalSets, p.minimum), 0),
+        preferred: prescriptions.reduce((n, p) => n + increasedGap(before.muscleLedger[p.muscle].fractionalSets,
+            after.muscleLedger[p.muscle].fractionalSets, p.preferred), 0)
+    });
     for (let week = 1; week <= workWeeks(program); week++) {
         for (let guard = 0; guard < 400; guard++) {
             const before = captureShellVolumeSnapshot(current, week, legacyExercises);
@@ -519,12 +535,16 @@ export function enforceShellWeekCapacity(program, legacyExercises = []) {
                     || shellPrescriptionFieldOwner(current, current.overrides?.[key] ?? {}, 'sets') === 'user') continue;
                 const candidate = { ...current, nextWeekPrescriptions: { ...current.nextWeekPrescriptions,
                     [key]: { ...current.nextWeekPrescriptions[key], [week]: { ...prior, sets: exercise.sets - 1 } } } };
-                const after = captureShellVolumeSnapshot(candidate, week, legacyExercises);
+                const after = captureShellVolumeSnapshot(candidate, week, legacyExercises, null, context);
+                if (!after || after.missing) continue;
                 const next = after.sessions.find(s => s.shellDayId === session.shellDayId);
+                if (!next) continue;
                 const saved = session.estimatedMinutes - next.estimatedMinutes;
-                if (saved >= 0) proposals.push({ candidate, key, saved: saved || .01, dayId: session.shellDayId });
+                if (saved >= 0) proposals.push({ candidate, key, saved: saved || .01,
+                    dayId: session.shellDayId, ...loss(before, after) });
             }
-            const best = proposals.sort((a, b) => b.saved - a.saved || a.key.localeCompare(b.key))[0];
+            const best = proposals.sort((a, b) => a.minimum - b.minimum || a.preferred - b.preferred
+                || b.saved - a.saved || a.key.localeCompare(b.key))[0];
             if (!best) {
                 const error = new NextShellAdapterError('NEXT_WEEK_CAPACITY_EXCEEDED', 'The final weekly prescription cannot fit the session limit while preserving strength work and user-owned sets. Increase session time or reduce the requested work.',
                     { suggestions: [{ code: 'increase_time', title: 'Choose a longer session' }, { code: 'reduce_work', title: 'Reduce requested work' }] });
@@ -534,6 +554,14 @@ export function enforceShellWeekCapacity(program, legacyExercises = []) {
             current = best.candidate;
             changes.push({ week, sets: [{ key: best.key, delta: -1 }], reason: 'session_capacity' });
         }
+    }
+    // The bounded trim loop cannot certify an unfinished or incomplete week.
+    const final = auditShellVolume(current, legacyExercises);
+    if (final.missing || final.timeIssues.length) {
+        const error = new NextShellAdapterError('NEXT_WEEK_CAPACITY_EXCEEDED',
+            'The final weekly prescription could not be verified within the session limit. Review the requested work before accepting this program.');
+        error.details = { sessions: final.timeIssues };
+        throw error;
     }
     return { program: current, changes };
 }
@@ -741,10 +769,11 @@ export function finalizeGeneratedShellVolume(program, legacyExercises = []) {
 function attachRegionalDose(program, legacyExercises, changes) {
     const after = auditShellVolume(program, legacyExercises);
     return { ...program, nextEngine: { ...program.nextEngine,
-        regionalDose: { status: after.issues.length ? 'partial' : changes.length ? 'success' : 'unchanged',
+        regionalDose: { status: after.missing || after.issues.length || after.timeIssues.length
+                ? 'partial' : changes.length ? 'success' : 'unchanged',
             changed: changes.length > 0, changes,
             remaining: after.issues.map(i => ({ region: i.region, status: i.status, actual: i.v,
-                minimum: i.mev, upper: i.mrv, week: i.week })), timeIssues: [] } } };
+                minimum: i.mev, upper: i.mrv, week: i.week })), timeIssues: after.timeIssues } } };
 }
 
 /** Verified transaction: existing set allocation, then reallocation, then one compatible new

@@ -3,7 +3,8 @@ import { summarizeSession, sessionPrescriptionRows, computeCell, exerciseAt, EXE
     planOverview, plannedWeek, estimateMinutes, estimateMinutesFor, dayMuscleBreakdown, paceFactor,
     generateNextProgramForShell, planShorterSession, phaseFor, weekIntent } from '../modules/engine-api.js';
 import { phaseLabel } from '../modules/next-engine/phase-policy.js';
-import { captureShellVolumeSnapshot } from '../modules/next-engine/volume-repair.js';
+import { captureShellVolumeSnapshot, estimateShellDayMinutes } from '../modules/next-engine/volume-repair.js';
+import { markUserPrescriptionOverride } from '../modules/next-engine/shell-projection.js';
 import { config, ids } from './m265-generation-fixture.mjs';
 
 import { summaryProgram } from './m324-session-summary-fixture.mjs';
@@ -83,12 +84,37 @@ for (const [days, split] of [[3, 'full_body'], [4, 'upper_lower'], [5, 'ulppl']]
             });
             assert.deepEqual(s.exercises.map(row => ({ id: row.id, sets: row.cell.sets })), expected);
             assert.equal(s.sets, view.sessions[index].exercises.reduce((n, ex) => n + ex.sets, 0));
+            assert.equal(s.budgetMinutes, view.sessions[index].estimatedMinutes,
+                'Saved executable duration, generator audit and Plan use one clock');
+            assert.equal(s.minutes, Math.round(s.budgetMinutes * pace.factor));
+            assert.equal(estimateMinutes(generated, d, week), s.budgetMinutes);
+            assert.equal(estimateMinutesFor(generated, d, week, pace), s.minutes);
             assert.equal(plan.weeks[week - 1].days[index].sets, s.sets);
             assert.equal(plan.weeks[week - 1].days[index].minutes, s.minutes);
             assert.equal(s.exCount, sessionPrescriptionRows(generated, d, week).length);
             sessions++;
         }
     }
+    // A user-edited rest prescription must affect the audited duration and
+    // display together, rather than silently using a goal-based legacy rest.
+    const edited = structuredClone(generated);
+    const dayEdited = edited.days[0];
+    const slot = dayEdited.exercises.findIndex((_, i) => computeCell(edited, dayEdited,
+        exerciseAt(edited, dayEdited, i, 1), i, 1).sets >= 2);
+    assert.ok(slot >= 0);
+    const key = `${dayEdited.id}:${slot}`;
+    const oldCell = computeCell(edited, dayEdited, exerciseAt(edited, dayEdited, slot, 1), slot, 1);
+    edited.overrides = {...edited.overrides,
+        [key]: markUserPrescriptionOverride(edited.overrides?.[key], 'rest', Number(oldCell.rest) + 120)};
+    const editedSnapshot = captureShellVolumeSnapshot(edited, 1, EXERCISES);
+    assert.equal(estimateShellDayMinutes(edited, dayEdited, 1, EXERCISES),
+        editedSnapshot.sessions[0].estimatedMinutes);
+    const editedSummary = summarizeSession(edited, dayEdited, 1);
+    assert.equal(editedSummary.budgetMinutes, editedSnapshot.sessions[0].estimatedMinutes);
+    assert.equal(editedSummary.minutes, editedSummary.budgetMinutes);
+    assert.ok(editedSummary.budgetMinutes > summarizeSession(generated, generated.days[0], 1).budgetMinutes,
+        'Longer explicitly authored rest must increase the planned clock');
+    assert.equal(editedSummary.sets, summarizeSession(generated, generated.days[0], 1).sets);
     assert.equal(JSON.stringify(generated), before, 'Summaries are pure projections, never plan regeneration');
 }
 console.log(`PASS M324: ${sessions} generated day/week comparisons, alternating names/muscles/counts, shared display/budget clocks, revision-aware pacing and scoped shorter-session estimates.`);

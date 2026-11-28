@@ -3,7 +3,7 @@ import { sanitizeMachineVariants } from '../next-engine/machine-instances.js';
 import { EXERCISE_MAP as NEXT_EXERCISE_MAP } from "../next-engine/exercise-db.js";
 import { canonicalRepRange, generateNextProgramForShell, getNextShellCell, markUserPrescriptionOverride, nextExerciseIdForShellExercise } from "../next-engine/app-shell-adapter.js";
 import { avoidableExerciseOverlap } from "../next-engine/exercise-economy.js";
-import { captureShellVolumeSnapshot, auditShellVolume, shellDayMuscleBreakdown } from "../next-engine/volume-repair.js";
+import { captureShellVolumeSnapshot, auditShellVolume, shellDayMuscleBreakdown, estimateShellDayMinutes } from "../next-engine/volume-repair.js";
 import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, normalizeHistoryEntries, normalizeHistoryRevisions, validHistoryDate, resolveHistoryDayIndex } from '../next-engine/history-contract.js';
 import { cycleBlockMetadata, editableProgramWeeks } from "../program-duration.js";
 import { SUPPORTED_PHASES, phaseLabel } from '../next-engine/phase-policy.js';
@@ -473,11 +473,16 @@ function sessionPrescriptionRows(program, day, weekIndex) {
 function summarizeSession(program, day, weekIndex, pace = null) {
     const exercises = sessionPrescriptionRows(program, day, weekIndex);
     const lead = exercises.find(row => row.slot === day.primaryIndex) || exercises[0];
+    // Use the audited executable clock once for both duration fields. A
+    // deliberate shorter-session snapshot retains its own frozen duration.
+    const engineMinutes = sessionDurationPlan(program, day, weekIndex) ? null
+        : estimateShellDayMinutes(program, day, weekIndex, EXERCISES);
     return { exercises, sets: exercises.reduce((n, row) => n + Number(row.cell.sets), 0),
         exCount: exercises.length, lead: lead?.ex.name ?? null,
         lifts: exercises.map(row => row.ex.name),
-        minutes: estimateMinutesFor(program, day, weekIndex, pace, exercises),
-        budgetMinutes: estimateMinutes(program, day, weekIndex, exercises) };
+        minutes: engineMinutes === null ? estimateMinutesFor(program, day, weekIndex, pace, exercises)
+            : Math.round(engineMinutes * ((pace && pace.factor) || 1)),
+        budgetMinutes: engineMinutes ?? estimateMinutes(program, day, weekIndex, exercises) };
 }
 
 function perWeekOf(program) {
@@ -1106,6 +1111,8 @@ function sessionDurationPlan(program, day, weekIndex) {
 function daySeconds(program, day, weekIndex, withTransitions, rows = null) {
     const shortened = sessionDurationPlan(program, day, weekIndex);
     if (shortened) return shortened.estimatedMinutes * 60;
+    const engineMinutes = estimateShellDayMinutes(program, day, weekIndex, EXERCISES);
+    if (engineMinutes !== null) return engineMinutes * 60;
     let sec = 0;
     (rows || sessionPrescriptionRows(program, day, weekIndex)).forEach(({ ex, slot, cell }) => {
         sec += exerciseSlotSec(ex, {

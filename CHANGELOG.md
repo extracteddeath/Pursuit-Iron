@@ -1,3 +1,7 @@
+## Build 1060 — Executable workout duration
+
+- Generated programs use the same saved prescription, set count, rest periods, technique time and superset accounting for Plan estimates and the engine capacity audit. Personal pace remains a separate display calibration. Legacy and explicitly shortened sessions retain their own timing paths.
+
 ## Build 1059 — Set-specific workout targets and quieter set-count review
 
 - Preserve exact prior working-set loads when an ordinary hold or per-set progression lacks a valid set-specific target. A later cable or machine set cannot borrow a heavier set's load without earning it.

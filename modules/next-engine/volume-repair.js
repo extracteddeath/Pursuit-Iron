@@ -699,6 +699,22 @@ export function rebalanceFocusedStrengthEntry(previous, program, legacyExercises
             comparison: 'last_hypertrophy_week_to_first_strength_week' } } };
 }
 
+// Strength accumulation retains productive work; it is not a peak/taper. An
+// already-large hypertrophy week may reduce fatigue, but never silently lose
+// half its working sets. Return a typed refusal when the approved session
+// duration/equipment constraints cannot safely support this continuity.
+export function strengthEntryMinimumSets(previousSets) {
+    if (!Number.isFinite(previousSets) || previousSets < 16) return 0;
+    // Moderate hypertrophy sources preserve >=70% across the strength
+    // transition. High-capacity weeks (68+ working sets) may not fit that
+    // proportion with strength-specific rest in the same approved session.
+    // Preserve >50% for 68–89 sets; truly exceptional weeks (90+ sets) may
+    // keep exactly 50% when the verified session limits cannot fit more.
+    // Peak is an explicit taper with a separate policy.
+    return previousSets >= 90 ? Math.ceil(previousSets * .5)
+        : previousSets >= 68 ? Math.floor(previousSets * .5) + 1
+        : Math.ceil(previousSets * .7);
+}
 // Preserve executable strength-week continuity using spare accessory capacity.
 // Only engine-owned cells are eligible. Each single-set addition must preserve
 // regional/muscle ceilings, session time and the complete engine audit vector.
@@ -708,8 +724,8 @@ export function preserveStrengthWeekContinuity(previous, program, legacyExercise
     const prior = priorSnapshot ?? captureShellVolumeSnapshot(previous, workWeeks(previous), legacyExercises);
     if (!prior || prior.missing) return program;
     const count = view => view.sessions.reduce((n, s) => n + s.exercises.reduce((m, e) => m + e.sets, 0), 0);
-    const previousSets = count(prior), floor = Math.ceil(previousSets * .5);
-    if (previousSets < 16) return program;
+    const previousSets = count(prior), floor = strengthEntryMinimumSets(previousSets);
+    if (!floor) return program;
     const context = snapshotContext(program, legacyExercises);
     const targets = shellVolumeTargets(program, context.request);
     const prescriptions = createMusclePrescriptions(context.request, 'strength_accumulation');
@@ -725,7 +741,7 @@ export function preserveStrengthWeekContinuity(previous, program, legacyExercise
             const baseline = audit(before);
             let accepted = null;
             const slots = before.sessions.flatMap(s => s.exercises)
-                .filter(e => !STRENGTH.has(e.role) && e.sets < 5
+                .filter(e => !STRENGTH.has(e.role) && e.sets < repairSetCap(context.request, e)
                     && shellPrescriptionFieldOwner(current, current.overrides?.[e.shellKey] ?? {}, 'sets') !== 'user')
                 .sort((a, b) => a.sets - b.sets || a.shellKey.localeCompare(b.shellKey));
             for (const exercise of slots) {

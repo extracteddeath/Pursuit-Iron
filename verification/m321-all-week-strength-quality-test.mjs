@@ -47,6 +47,11 @@ assert.equal(tied.executableWeakestPriorityLiftWeek,1);
 assert.throws(()=>summarizeStrengthWorkWeeks([]),
     error=>error?.code==='NEXT_CYCLE_REALIZED_WEEKS_MISSING');
 
+const { strengthEntryMinimumSets: repairFloor } = await import('../modules/next-engine/volume-repair.js');
+assert.equal(repairFloor, strengthEntryMinimumSets, 'Strength repair and acceptance use the same continuity rule');
+assert.equal(repairFloor(64),45, 'The reported regression requires 45, not 32 or 43 sets');
+assert.equal(findStrengthVolumeCliff(64,[{week:4,weeklySets:43}])?.week,4);
+assert.equal(findStrengthVolumeCliff(64,[{week:4,weeklySets:45}]),null);
 assert.equal(strengthEntryMinimumSets(60),42,'Normal strength entry preserves at least 70%');
 assert.equal(strengthEntryMinimumSets(82),42,
     'Large weeks below the extreme capacity class retain more than half');

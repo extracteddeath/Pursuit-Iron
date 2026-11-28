@@ -372,7 +372,8 @@ object CoachWeekComposer {
         /** Tie-break only: never compete with dose, time or training priority. */
         val sameStationCrowding:Int,
         val cableSmithVisits:Int,
-        val accessoryVisits:Int
+        val accessoryVisits:Int,
+        val accessorySetClustering:Int
     ):Comparable<Cost> {
         val hardSatisfied:Boolean get()=missingPrimaryDays==0 &&
             missingRequiredVisits==0 && emptyScheduledDays==0 &&
@@ -381,7 +382,7 @@ object CoachWeekComposer {
             {it.missingPrimaryDays},{it.missingRequiredVisits},
             {it.emptyScheduledDays},{it.missingDirectMuscleDays},
             {it.mevDeficitThousandths},{it.soft},
-            {it.accessoryVisits},{it.sameStationCrowding},{it.cableSmithVisits})
+            {it.accessoryVisits},{it.accessorySetClustering},{it.sameStationCrowding},{it.cableSmithVisits})
     }
     private fun unmetPrimaryDays(request:ComposerRequest,
         visits:List<ComposerVisit>):Set<Int> =
@@ -469,6 +470,12 @@ object CoachWeekComposer {
             crowding,stationVisits.size,
             if(request.preferConsolidatedAccessories)visits.count {
                 options.getValue(it.exerciseId).role==ComposerRole.ACCESSORY
+            } else 0,
+            if(request.preferConsolidatedAccessories)visits.filter {
+                options.getValue(it.exerciseId).role==ComposerRole.ACCESSORY
+            }.groupBy {it.dayIndex}.values.sumOf {day ->
+                val sets=day.sumOf {it.sets}
+                sets*sets
             } else 0)
     }
     /**

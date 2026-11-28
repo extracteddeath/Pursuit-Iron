@@ -329,6 +329,7 @@ object CustomCycleCoachAuditDomain {
                     "Each reviewed day needs explicit setup, transition and cooldown seconds.")
         }
         val measurements=mutableListOf<CustomCoachWeekMeasurement>()
+        var unresolvedAmplifierTiming=false
         if (structural.verifiedDraft != null &&
             structural.totalWeeks in 1..MAX_REVIEW_WEEKS) {
             for (weekNumber in 1..structural.totalWeeks) {
@@ -380,8 +381,10 @@ object CustomCycleCoachAuditDomain {
                                 missingAdvancedWork=true
                             } else seconds+=counted
                             if(set.amplifier!=null &&
-                                set.amplifier.followUpActiveSeconds==null)
+                                set.amplifier.followUpActiveSeconds==null) {
                                 missingAdvancedWork=true
+                                unresolvedAmplifierTiming=true
+                            }
                         }
                     }
                     touched.forEach {
@@ -613,14 +616,9 @@ object CustomCycleCoachAuditDomain {
 
         // Unknown amplifier working-time makes a complete exact session
         // time audit impossible; do not treat under-estimated minutes as ready.
-        if (structural.verifiedDraft!=null &&
-            cycle.blocks.any {block->block.days.any{day->day.slots.any{slot->
-                slot.sets.any{set->
-                    set.amplifier?.let{amp->
-                        amp.followUpActiveSeconds==null
-                    }==true
-                }
-            }}}) {
+        // The source is the measured executable weeks, not the base
+        // template: a week override can introduce or replace an amplifier.
+        if (unresolvedAmplifierTiming) {
             add(CustomCoachIssueKind.NON_SET_TIME_UNDECLARED,"amplifiers",
                 "Advanced-set follow-up active-work duration must be explicitly authored; unknown seconds cannot pass a hard time audit.")
         }

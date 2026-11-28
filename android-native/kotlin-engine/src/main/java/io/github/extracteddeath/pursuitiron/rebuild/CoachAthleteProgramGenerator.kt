@@ -613,12 +613,17 @@ object CoachAthleteProgramGenerator {
             if(proposal.status==AthleteCandidateStatus.CANDIDATE_FOR_REVIEW &&
                 actual?.status==GoalRealizationStatus.DELIVERED_FOR_REVIEW) {
                 feasibleCompared++
-                // Lexicographic choice: avoid adjacent same-focus/lift
-                // exposure; then prioritize actual authored MAV delivery
-                // before softer spacing, purpose and time preferences.
-                // No extra volume is added for the sake of a longer workout.
+                // Extra required-primary slots are feasibility alternatives,
+                // not a new frequency prescription. If a candidate meets
+                // all reviewed requirements with fewer mandatory exposures,
+                // prefer it over a candidate that pins another primary day.
+                // The normal quality score still ranks feasible candidates
+                // with the same number of pinned days by recovery and dose.
                 val week=checkNotNull(proposal.catalogReview?.draft)
-                val score=qualityScore(week,focus,purpose,weekdays)
+                val extraPrimary=(plans.count {it.requiredPrimaryExerciseId!=null}-
+                    policy.primaryLiftMinimumDays.values.sum()).coerceAtLeast(0)
+                val score=listOf(extraPrimary.toLong())+
+                    qualityScore(week,focus,purpose,weekdays)
                 if(strongestScore==null ||
                     betterLong(score,checkNotNull(strongestScore))) {
                     strongest=ViablePlacement(byDay,plans,proposal,emptyList())

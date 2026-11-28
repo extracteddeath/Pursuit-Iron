@@ -225,7 +225,7 @@ export function requestForBlock(baseRequest, baseConfig, spec, legacyExercises =
         const explicit = request.goal.liftFrequency ?? {};
         const targets = { bench_press: 2, back_squat: 2, deadlift: 1 };
         const practice = Object.fromEntries(Object.entries(targets)
-            .filter(([lift]) => available[lift] != null)
+            .filter(([lift]) => available[lift] != null && available[lift] !== 'maintenance')
             .map(([lift, frequency]) => [lift, explicit[lift] ?? frequency]));
         request.goal.liftFrequency = { ...explicit, ...practice };
         request.preferences = { ...request.preferences,
@@ -244,8 +244,11 @@ export function requestForBlock(baseRequest, baseConfig, spec, legacyExercises =
     request.preferences = { ...request.preferences,
         ...(spec.split ? { lockedSplit: spec.split, preferredSplit: spec.split } : {}) };
     if (spec.priorityLift) {
+        if (request.goal.explicitStrengthSelection === true &&
+            (!request.goal.liftPriorities?.[spec.priorityLift] || request.goal.liftPriorities[spec.priorityLift] === 'maintenance'))
+            throw new NextShellAdapterError('NEXT_CYCLE_EXCLUDED_LIFT', 'This block requests an excluded strength lift. Change the athlete strength preferences or the block focus.');
         request.goal.liftPriorities = { ...(request.goal.liftPriorities ?? {}), [spec.priorityLift]: 'primary' };
-        request.goal.liftFrequency = { [spec.priorityLift]: spec.frequency };
+        request.goal.liftFrequency = { ...(request.goal.liftFrequency ?? {}), [spec.priorityLift]: spec.frequency };
     } else if (!Object.keys(request.goal.liftFrequency ?? {}).length) {
         // This request is cloned from the cycle's original athlete input, not
         // the previous phase. Retain explicit athlete lift-frequency choices;

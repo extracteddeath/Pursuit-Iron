@@ -222,7 +222,20 @@ export function normalizeRequest(request) {
     for (const [lift, count] of Object.entries(rawLiftFrequency)) {
         if (!VALID_LIFTS.has(lift) || !Number.isInteger(count) || count < 1 || count > 3 || count > normalizedDays.length)
             throw new Error(`Requested ${lift} frequency must be 1–3 exposures and cannot exceed training days.`);
+        if (request.goal?.explicitStrengthSelection === true && (!liftPrioritiesInput[lift] || liftPrioritiesInput[lift] === 'maintenance'))
+            throw new Error('Cannot request weekly practice for an excluded strength lift: ' + lift);
         liftFrequency[lift] = count;
+    }
+    const rawVariants = request.preferences?.preferredStrengthVariants;
+    if (rawVariants !== undefined) {
+        requireRecord(rawVariants, 'Preferred strength variations');
+        for (const [lift, exerciseId] of Object.entries(rawVariants)) {
+            const def = EXERCISE_MAP.get(exerciseId) ?? (request.customExercises ?? []).find(ex => ex.id === exerciseId);
+            if (!VALID_LIFTS.has(lift) || typeof exerciseId !== 'string' || (def?.liftSpecificity?.[lift] ?? 0) <= .45)
+                throw new Error('Preferred strength variation is not a compatible lift: ' + lift);
+            if (request.goal?.explicitStrengthSelection === true && (!liftPrioritiesInput[lift] || liftPrioritiesInput[lift] === 'maintenance'))
+                throw new Error('Excluded lift cannot have a preferred variation: ' + lift);
+        }
     }
     const trainingAgeMonths = request.athlete?.trainingAgeMonths ?? 12;
     if (!Number.isFinite(trainingAgeMonths) || trainingAgeMonths < 0)
@@ -318,7 +331,7 @@ export function normalizeRequest(request) {
     };
     // Inference runs on the canonicalized request so case/whitespace normalization cannot alter
     // equipment feasibility or accidentally turn an explicit request into a different goal.
-    normalizedBase.goal.liftPriorities = Object.keys(liftPrioritiesInput).length
+    normalizedBase.goal.liftPriorities = request.goal?.explicitStrengthSelection === true || Object.keys(liftPrioritiesInput).length
         ? liftPrioritiesInput : inferredLiftPriorities(normalizedBase);
     return normalizedBase;
 }
@@ -440,7 +453,7 @@ export function createStrengthClaims(request, phase = initialPhaseForGoal(reques
     // original request did not name competition-lift priorities. In those phases, synthesize only the
     // minimum useful strength spine: one required S/B/D exposure, plus optional OHP when frequency allows.
     // Do not infer second/volume exposures here; those belong to explicit athlete strength priorities.
-    if (!Object.keys(priorities).length && ['strength_accumulation', 'intensification', 'peak'].includes(phase)) {
+    if (request.goal.explicitStrengthSelection !== true && !Object.keys(priorities).length && ['strength_accumulation', 'intensification', 'peak'].includes(phase)) {
         out.push({ id: 'bench_press-phase-heavy', lift: 'bench_press', role: 'heavy', importance: 'A', required: true });
         out.push({ id: 'back_squat-phase-heavy', lift: 'back_squat', role: 'heavy', importance: 'A', required: true });
         out.push({ id: 'deadlift-phase-heavy', lift: 'deadlift', role: 'heavy', importance: 'A', required: true });

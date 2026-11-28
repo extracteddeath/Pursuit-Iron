@@ -202,3 +202,32 @@ console.log('M344 real five-day ULPPL exercise-count transition: '+JSON.stringif
 assert.equal(JSON.stringify({ config, base }), before, 'Phase generation must not mutate athlete settings or past blocks');
 console.log('M344 actual Both / ULPPL phase training audit: ' + JSON.stringify(result));
 console.log('PASS M344: ULPPL Both strength/peak requires repeated bench and squat with a real Push incline variant; explicit intent remains intact.');
+
+// Explicit strength focus survives normalization and phase changes, while omitted
+// competition lifts remain excluded from strength claims (not muscle training).
+const selectedConfig = {...config, strengthPreferences: {
+    bench_press: {priority:'primary', frequency:2, secondaryExerciseId:'paused_bench'},
+    back_squat: {priority:'primary', frequency:2},
+    deadlift: {priority:'excluded'}
+}};
+const chosen = normalizeRequest(shellConfigToNextRequest(selectedConfig, [], EXERCISES, 34461));
+assert.equal(chosen.goal.liftPriorities.deadlift,'maintenance');
+assert.equal(chosen.goal.liftPriorities.overhead_press,'maintenance');
+assert.deepEqual(chosen.goal.liftFrequency,{bench_press:2,back_squat:2});
+for(const phase of ['hypertrophy_accumulation','strength_accumulation','intensification','peak']){
+    const req = normalizeRequest(requestForBlock(chosen,selectedConfig,{phase,weeks:5,split:'ulppl'}));
+    const claims=createStrengthClaims(req,phase);
+    assert.ok(claims.every(c=>c.lift==='bench_press'||c.lift==='back_squat'));
+    assert.equal(claims.filter(c=>c.lift==='bench_press').length,2);
+    assert.equal(claims.filter(c=>c.lift==='back_squat').length,2);
+    assert.equal(req.preferences.preferredStrengthVariants.bench_press,'paused_bench');
+}
+const customStrength = normalizeRequest(requestForBlock(chosen,selectedConfig,{phase:'strength_accumulation',weeks:5,split:'ulppl'}));
+const builtSelected=generateProgram(customStrength,{phase:'strength_accumulation',blockWeeks:5}).program;
+assert.equal(builtSelected.audit.result,'pass',JSON.stringify(builtSelected.audit));
+assert.ok(builtSelected.sessions.some(s=>s.exercises.some(e=>e.exerciseId==='paused_bench'&&e.role==='secondary_strength')));
+const excludedAll = normalizeRequest(shellConfigToNextRequest({...config,strengthPreferences:{}},[],EXERCISES,34462));
+assert.equal(createStrengthClaims(excludedAll,'strength_accumulation').length,0);
+assert.throws(()=>normalizeRequest(shellConfigToNextRequest({...config,strengthPreferences:{
+    bench_press:{priority:'primary',secondaryExerciseId:'not-a-lift'}
+}},[],EXERCISES,34463)),/compatible lift/);

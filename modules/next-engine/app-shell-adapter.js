@@ -168,9 +168,39 @@ export function shellConfigToNextRequest(config, banned = [], legacyExercises = 
         const shell = resolveLegacyExerciseByIdentity({ exerciseId, name: def.name }, legacyExercises, byId, byName);
         if (shell && !canPerform(shell)) avoided.add(exerciseId);
     }
+    // Omitted configuration retains existing defaults. An explicit selection
+    // is a complete athlete-owned focus list, including excluded strength lifts.
+    const selected = config.strengthPreferences;
+    const explicitStrength = selected != null;
+    const liftKeys = ['bench_press','back_squat','deadlift','overhead_press'];
+    const priorities = explicitStrength ? Object.fromEntries(liftKeys.map(lift => [lift, 'maintenance'])) : liftPriorities(config);
+    const frequencies = {}, variants = {};
+    if (explicitStrength) {
+        if (typeof selected !== 'object' || Array.isArray(selected))
+            throw new Error('Strength preferences must be a map of lifts.');
+        for (const [lift, row] of Object.entries(selected)) {
+            if (!liftKeys.includes(lift) || !row || typeof row !== 'object' || Array.isArray(row))
+                throw new Error('Invalid strength preference: ' + lift);
+            const priority = row.priority;
+            if (!['primary','high','normal','excluded'].includes(priority))
+                throw new Error('Invalid strength priority: ' + lift);
+            priorities[lift] = priority === 'excluded' ? 'maintenance' : priority;
+            if (priority === 'excluded') {
+                if (row.frequency != null || row.secondaryExerciseId != null)
+                    throw new Error('Excluded lifts cannot request a frequency or variation: ' + lift);
+                continue;
+            }
+            if (row.frequency != null) frequencies[lift] = row.frequency;
+            if (row.secondaryExerciseId != null) variants[lift] = row.secondaryExerciseId;
+        }
+        if (['five_three_one','five31_beginner','gzclp','rippler','jt','sbd_power','texas'].includes(split)
+            && Object.entries(liftPriorities(config)).some(([lift, priority]) => priority === 'high' && priorities[lift] === 'maintenance'))
+            throw new Error('This named strength system requires its main lifts. Choose a flexible split to exclude a required lift.');
+    }
     const request = {
         athlete: { experience: experienceOf(config.experience) },
-        goal: { type: goalOf(config.goal), musclePriorities: musclePriorities(config), liftPriorities: liftPriorities(config) },
+        goal: { type: goalOf(config.goal), musclePriorities: musclePriorities(config), liftPriorities: priorities,
+            ...(explicitStrength ? { liftFrequency: frequencies, explicitStrengthSelection: true } : {}) },
         schedule: scheduleOf(config),
         equipment: { available: equipmentOf(config), bodyweight: config.noBodyweight ? 'exclude' : 'allow', loading: loadingInventoryOf(config) },
         restrictions: {
@@ -179,6 +209,7 @@ export function shellConfigToNextRequest(config, banned = [], legacyExercises = 
         },
         preferences: {
             preferredSplit: split, lockedSplit: split, avoidedExercises: [...avoided],
+            ...(explicitStrength ? { preferredStrengthVariants: variants } : {}),
             volumeApproach: config.volumeApproach === 'minimalist' ? 'minimalist' : 'standard',
             // Persist the user's global method choice in the immutable request snapshot so later
             // blocks cannot silently fall back to Auto after honoring the choice at creation.
@@ -188,7 +219,7 @@ export function shellConfigToNextRequest(config, banned = [], legacyExercises = 
     };
     // Named strength structures are literal lift contracts; impossible equipment must fail closed.
     // Generic strength/mixed shell defaults remain equipment-aware so they do not invent impossible lifts.
-    if (!STRENGTH_STRUCTURES.has(split))
+    if (!explicitStrength && !STRENGTH_STRUCTURES.has(split))
         request.goal.liftPriorities = filterFeasibleLiftPriorities(request, request.goal.liftPriorities ?? {});
     return request;
 }

@@ -543,4 +543,57 @@ class StarterCatalogPrescribingAcceptanceTest {
         })
         assertNull(unbuildable.composedRequest)
     }
+
+    @Test fun focusedArmAndTrapFunctionsRemainSeparateAcrossFullBodyAndULPPL() {
+        val focusIds=linkedMapOf(
+            TrainingMuscle.CHEST to "barbell_bench",
+            TrainingMuscle.TRAPS to "db-shrug",
+            TrainingMuscle.BICEPS to "db_curl",
+            TrainingMuscle.BRACHIALIS to "hammer",
+            TrainingMuscle.TRICEPS to "db_overhead_triceps",
+            TrainingMuscle.WRIST_FLEXORS to "wrist-curl",
+            TrainingMuscle.WRIST_EXTENSORS to "reverse-wrist-curl")
+        for((muscle,id) in focusIds) {
+            val direct=byId.getValue(id).credits.filter {
+                it.role==MuscleCreditRole.DIRECT
+            }.map{it.muscle}.toSet()
+            assertTrue("$id must have its own direct muscle credit",muscle in direct)
+            if(muscle in setOf(TrainingMuscle.BICEPS,TrainingMuscle.BRACHIALIS,
+                    TrainingMuscle.WRIST_FLEXORS,TrainingMuscle.WRIST_EXTENSORS))
+                assertEquals(id,setOf(muscle),direct)
+        }
+        val ids=focusIds.values.toSet()+setOf("back_squat","one_arm_db_row",
+            "db_rdl","db_lateral_raise","db_calf_raise")
+        val loads=ids.associateWith{checkNotNull(calibratedLoad(byId.getValue(it)))}
+        for((split,days) in listOf(
+            ComposerSplit.FULL_BODY to setOf(0,2,4),
+            ComposerSplit.ULPPL to setOf(0,1,3,4,5))) {
+            val profile=fullCatalogAthlete().copy(split=split,
+                trainingWeekdays=days,declaredRestDays=(0..6).toSet()-days,
+                focusedMuscles=focusIds.keys)
+            val result=CoachFirstProgramStartDomain.review(
+                FirstProgramStartRequest(review(profile),catalog,loads,
+                    setOf("bodyweight_crunch"),TrainingPhase.HYPERTROPHY))
+            val policy=checkNotNull(result.policy)
+            val base=policy.baselineBounds.associateBy{it.muscle}
+            val target=policy.selectedBounds.associateBy{it.muscle}
+            for(muscle in focusIds.keys) {
+                val b=base.getValue(muscle)
+                val t=target.getValue(muscle)
+                assertTrue("$split $muscle preferred dose",t.mav>b.mav)
+                assertTrue("$split $muscle minimum dose",t.mev>b.mev)
+                assertTrue("$split $muscle direct frequency",
+                    t.minimumDirectDays>=if(days.size>=4)2 else 1)
+                assertFalse("$split $muscle was marked unsupported",
+                    muscle in result.unsupportedMuscles)
+            }
+            // A reviewable seed is not proof of a feasible emitted week.
+            // If the composer does deliver a week, its actual audit must pass.
+            if(result.generation?.status==AthleteGenerationStatus.GENERATED_FOR_REVIEW)
+                assertTrue(checkNotNull(result.generation.candidate?.catalogReview
+                    ?.draft?.audit).satisfiesDeclaredHardConstraints)
+            assertFalse(result.mayIssueWorkout)
+        }
+    }
+
 }

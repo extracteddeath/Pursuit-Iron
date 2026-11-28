@@ -922,4 +922,40 @@ class CoachWeekComposerTest {
         assertTrue(result.explanations.any {it.contains("may exist")})
     }
 
+
+    @Test fun lowerDayPermissionAllowsIsolatedTricepsButNotUpperCompoundReplacement() {
+        val upper=setOf(ComposerFocus.UPPER,ComposerFocus.FULL_BODY)
+        val lower=setOf(ComposerFocus.LOWER,ComposerFocus.FULL_BODY)
+        val press=option("press",chest,ComposerPattern.HORIZONTAL_PRESS,
+            focus=upper,required=2,visits=2,gap=1).copy(role=ComposerRole.PRIMARY)
+        val squat=option("squat",quads,ComposerPattern.SQUAT,
+            focus=lower,required=2,visits=2,gap=1).copy(role=ComposerRole.PRIMARY)
+        val extension=option("extension",TrainingMuscle.TRICEPS,
+            ComposerPattern.ISOLATION,focus=upper,required=3,visits=3,gap=1)
+            .copy(role=ComposerRole.ACCESSORY)
+        val compound=option("close-grip-press",TrainingMuscle.TRICEPS,
+            ComposerPattern.HORIZONTAL_PRESS,focus=upper,gap=1)
+            .copy(role=ComposerRole.SECONDARY)
+        val schedule=days(listOf(0,1,3,4),
+            listOf(ComposerFocus.UPPER,ComposerFocus.LOWER,
+                ComposerFocus.UPPER,ComposerFocus.LOWER),min=1,max=90)
+        val request=base(exerciseOptions=listOf(press,squat,extension,compound),
+            bands=bounds(dose(chest,"4","4","4",2),dose(quads,"4","4","4",2),
+                dose(TrainingMuscle.TRICEPS,"6","6","6",3)),
+            schedule=schedule,split=ComposerSplit.UPPER_LOWER,
+            patterns=1,maxPerDay=2)
+        val allowed=CoachWeekComposer.compose(request.copy(allowDirectTricepsOnLower=true))
+        assertEquals(ComposerStatus.FEASIBLE_DRAFT_FOR_REVIEW,allowed.status)
+        assertEquals(3,allowed.visits.count{it.exerciseId=="extension"})
+        val lowerVisits=allowed.visits.filter{it.dayIndex in setOf(1,3)}
+        assertTrue(lowerVisits.any{it.exerciseId=="extension"})
+        assertTrue(lowerVisits.none{it.exerciseId=="close-grip-press"})
+        for(day in setOf(1,3))
+            assertTrue(lowerVisits.any{it.dayIndex==day && it.exerciseId=="squat"})
+        val denied=CoachWeekComposer.compose(request.copy(allowDirectTricepsOnLower=false))
+        assertEquals(ComposerStatus.CONSTRAINTS_UNRESOLVED,denied.status)
+        assertTrue(denied.visits.none{it.dayIndex in setOf(1,3) &&
+            it.exerciseId in setOf("extension","close-grip-press")})
+    }
+
 }

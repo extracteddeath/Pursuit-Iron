@@ -305,9 +305,45 @@ object CoachWeekComposer {
         option.credits.any {it.muscle==TrainingMuscle.TRICEPS &&
             it.role==MuscleCreditRole.DIRECT}
 
+    private fun lowerFocus(focus:ComposerFocus)=
+        focus==ComposerFocus.LOWER || focus==ComposerFocus.LEGS
+
+    // Permission is not a change to stable catalog identity. Only isolated,
+    // triceps-only direct work may spill into a normally incompatible leg day.
+    private fun supplementalTriceps(option:ComposerExerciseOption,
+        focus:ComposerFocus,request:ComposerRequest):Boolean =
+        request.allowDirectTricepsOnLower && lowerFocus(focus) &&
+            focus !in option.allowedFocus &&
+            option.role==ComposerRole.ACCESSORY &&
+            option.pattern==ComposerPattern.ISOLATION && directTriceps(option) &&
+            option.credits.none {it.role==MuscleCreditRole.DIRECT &&
+                it.muscle!=TrainingMuscle.TRICEPS}
+
+    private fun focusCompatible(option:ComposerExerciseOption,
+        focus:ComposerFocus,request:ComposerRequest):Boolean =
+        !(lowerFocus(focus) && !request.allowDirectTricepsOnLower &&
+            directTriceps(option)) &&
+            (focus in option.allowedFocus || supplementalTriceps(option,focus,request))
+
+    // Supplemental work cannot become the sole reason a leg day is occupied.
+    private fun supplementalDaysHaveLegWork(request:ComposerRequest,
+        visits:List<ComposerVisit>,options:Map<String,ComposerExerciseOption>):Boolean =
+        request.days.indices.all {day ->
+            val focus=request.days[day].focus
+            val dayOptions=visits.filter {it.dayIndex==day}
+                .map {options.getValue(it.exerciseId)}
+            dayOptions.none {supplementalTriceps(it,focus,request)} ||
+                dayOptions.any {focus in it.allowedFocus &&
+                    !directTriceps(it) && it.credits.any {credit ->
+                        credit.role==MuscleCreditRole.DIRECT &&
+                        credit.muscle in setOf(TrainingMuscle.QUADS,
+                            TrainingMuscle.HAMSTRINGS,TrainingMuscle.GLUTES)
+                    }}
+        }
+
     private fun mayStart(option:ComposerExerciseOption,dayIndex:Int,
         request:ComposerRequest,visits:List<ComposerVisit>):Boolean {
-        if(request.days[dayIndex].focus !in option.allowedFocus)return false
+        if(!focusCompatible(option,request.days[dayIndex].focus,request))return false
         // A visit is unique by exercise AND training day. Replacement and
         // relocation searches must not create duplicate stable set keys.
         if(visits.any {it.exerciseId==option.exerciseId &&
@@ -315,11 +351,6 @@ object CoachWeekComposer {
         if(visits.count {it.exerciseId==option.exerciseId}>=option.maximumVisits)return false
         if(visits.count {it.dayIndex==dayIndex}>=
             request.maximumDifferentExercisesPerDay)return false
-        // Reject before scoring, not after an infeasible week is built.
-        if(request.days[dayIndex].focus in setOf(
-                ComposerFocus.LOWER,ComposerFocus.LEGS) &&
-            !request.allowDirectTricepsOnLower && directTriceps(option))
-            return false
         val barbellCap=request.maximumBarbellExercisesPerDay
         if(barbellCap!=null && isBarbell(option) &&
             visits.count {existing ->
@@ -502,7 +533,7 @@ object CoachWeekComposer {
         eligible:List<ComposerExerciseOption>
     ):List<String> {
         val viable=eligible.filter {option ->
-            request.days.any {it.focus in option.allowedFocus}
+            request.days.any {focusCompatible(option,it.focus,request)}
         }
         val ids=viable.map {it.exerciseId}.toSet()
         val conflicts=mutableListOf<String>()
@@ -541,7 +572,7 @@ object CoachWeekComposer {
                 val direct=useful.filter {it.second.role==MuscleCreditRole.DIRECT}
                 val visitCeiling=direct.sumOf {it.first.maximumVisits}
                 val eligibleDays=request.days.count {day ->
-                    direct.any {day.focus in it.first.allowedFocus}
+                    direct.any {focusCompatible(it.first,day.focus,request)}
                 }
                 if(minOf(visitCeiling,eligibleDays)<bound.minimumDirectDays)
                     conflicts+="${bound.muscle} direct-day frequency exceeds verified placement capacity."
@@ -591,6 +622,7 @@ object CoachWeekComposer {
             fun consider(trial:List<ComposerVisit>) {
                 if(evaluated>=MAX_REPAIR_EVALUATIONS_PER_PASS)return
                 evaluated++
+                if(!supplementalDaysHaveLegWork(request,trial,options))return
                 // Hard athlete-owned promises are not interchangeable
                 // numeric penalties. Never sacrifice any previously
                 // scheduled pin or named main lift to improve another goal.
@@ -773,6 +805,7 @@ object CoachWeekComposer {
                 mayStart(option,visit.dayIndex,request,accepted))
             accepted+=visit
         }
+        require(supplementalDaysHaveLegWork(request,accepted,options))
         return Collections.unmodifiableList(refine(request,accepted,eligible,
             permissions).visits)
     }
@@ -819,6 +852,7 @@ object CoachWeekComposer {
                     else ->continue
                 }
                 greedyCandidateEvaluations++
+                if(!supplementalDaysHaveLegWork(request,trial,map))continue
                 val candidate=toWeek(request,trial,map)
                 val check=WeeklyDoseFeasibilityDomain.audit(candidate)
                 if(!withinCandidateLimits(request,current,check))continue

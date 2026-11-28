@@ -115,11 +115,12 @@ function bidFor(p, state, phase) {
     const current = state.dose[p.muscle];
     if (current + .5 > p.upper)
         return null;
-    // As strength specificity rises, normal-priority bodybuilding work should maintain useful tissue,
-    // not keep bidding toward MRV simply because the clock has room. This creates real block contrast:
-    // accumulation can chase productive surplus, while strength/peak phases cap ordinary accessories
-    // around the modeled preferred region and reserve recovery for specific lifting.
-    if ((phase === 'strength_accumulation' || phase === 'intensification' || phase === 'peak')
+    // A longer session is capacity, not evidence that every normal muscle benefits
+    // from more work. Stop optional bidding at the modeled preferred dose in
+    // accumulation as well as strength/peak. Explicit focus still bids toward
+    // its upper bound, subject to fatigue cost, and required floors come first.
+    if ((phase === 'hypertrophy_accumulation' || phase === 'mixed_accumulation'
+        || phase === 'strength_accumulation' || phase === 'intensification' || phase === 'peak')
         && (p.priority === 'normal' || p.priority === 'maintenance')
         && current + .001 >= p.preferred)
         return null;
@@ -276,10 +277,9 @@ export function allocateTraining(request, muscles, strengthClaims, phase, option
         }
     }
     // Capacity-aware productive reservation. M50 restored the minimum→preferred part of the old time-
-    // bucket contract. M51 extends the same rule through the still-modeled preferred→upper region for
-    // genuinely longer buckets. This keeps 60–90, 90–120 and 120+ from sharing one effective ceiling:
-    // more explicitly available time can buy more recoverable work, but never beyond the muscle's upper
-    // landmark and never just to fill the clock.
+    // bucket contract. Longer buckets reserve additional time for prioritized muscle work,
+    // not an automatic surplus above preferred for every ordinary muscle. The same target
+    // function is used by downstream realization, so this policy cannot diverge by phase.
     if (phase === 'hypertrophy_accumulation' || phase === 'mixed_accumulation') {
         const productiveOrder = [...muscles].sort((a, b) => {
             const pa = PRIORITY_UTILITY[a.priority], pb = PRIORITY_UTILITY[b.priority];

@@ -1,3 +1,8 @@
+## Build 1061 — Volume-aware capacity trimming
+
+- Longer time bands no longer reserve or bid above preferred volume for ordinary muscles solely because time is available. Explicit priority muscles retain audited surplus capacity.
+- Prefer preserving minimum and preferred muscle stimulus when shortening generated sessions. Report unresolved time limits rather than certifying unfinished repairs. User-owned prescriptions and strength roles remain protected.
+
 ## Build 1060 — Executable workout duration
 
 - Generated programs use the same saved prescription, set count, rest periods, technique time and superset accounting for Plan estimates and the engine capacity audit. Personal pace remains a separate display calibration. Legacy and explicitly shortened sessions retain their own timing paths.

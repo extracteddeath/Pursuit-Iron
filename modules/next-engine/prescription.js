@@ -222,7 +222,20 @@ export function normalizeRequest(request) {
     for (const [lift, count] of Object.entries(rawLiftFrequency)) {
         if (!VALID_LIFTS.has(lift) || !Number.isInteger(count) || count < 1 || count > 3 || count > normalizedDays.length)
             throw new Error(`Requested ${lift} frequency must be 1–3 exposures and cannot exceed training days.`);
+        if (request.goal?.explicitStrengthSelection === true && (!liftPrioritiesInput[lift] || liftPrioritiesInput[lift] === 'maintenance'))
+            throw new Error('Cannot request weekly practice for an excluded strength lift: ' + lift);
         liftFrequency[lift] = count;
+    }
+    const rawVariants = request.preferences?.preferredStrengthVariants;
+    if (rawVariants !== undefined) {
+        requireRecord(rawVariants, 'Preferred strength variations');
+        for (const [lift, exerciseId] of Object.entries(rawVariants)) {
+            const def = EXERCISE_MAP.get(exerciseId) ?? (request.customExercises ?? []).find(ex => ex.id === exerciseId);
+            if (!VALID_LIFTS.has(lift) || typeof exerciseId !== 'string' || (def?.liftSpecificity?.[lift] ?? 0) <= .45)
+                throw new Error('Preferred strength variation is not a compatible lift: ' + lift);
+            if (request.goal?.explicitStrengthSelection === true && (!liftPrioritiesInput[lift] || liftPrioritiesInput[lift] === 'maintenance'))
+                throw new Error('Excluded lift cannot have a preferred variation: ' + lift);
+        }
     }
     const trainingAgeMonths = request.athlete?.trainingAgeMonths ?? 12;
     if (!Number.isFinite(trainingAgeMonths) || trainingAgeMonths < 0)
@@ -318,7 +331,7 @@ export function normalizeRequest(request) {
     };
     // Inference runs on the canonicalized request so case/whitespace normalization cannot alter
     // equipment feasibility or accidentally turn an explicit request into a different goal.
-    normalizedBase.goal.liftPriorities = Object.keys(liftPrioritiesInput).length
+    normalizedBase.goal.liftPriorities = request.goal?.explicitStrengthSelection === true || Object.keys(liftPrioritiesInput).length
         ? liftPrioritiesInput : inferredLiftPriorities(normalizedBase);
     return normalizedBase;
 }
@@ -398,9 +411,10 @@ export function createMusclePrescriptions(request, phase = initialPhaseForGoal(r
  * Translate the selected session-time band into a productive weekly dose target.
  *
  * The lower edge is capacity the athlete explicitly made available, but it is not a clock-filling
- * quota. Short/standard bands first fund the minimum -> preferred region. Longer bands progressively
- * unlock the still-modeled preferred -> upper region so 60-90, 90-120 and 120+ do not collapse to
- * the same prescription. Phase scaling preserves real powerbuilding/strength tapering.
+ * quota. Short/standard bands first fund the minimum -> preferred region. Longer bands
+ * allow explicitly prioritized muscles to approach their modeled upper region; available
+ * time alone does not justify pushing every ordinary muscle above its preferred dose.
+ * Phase scaling preserves real powerbuilding/strength tapering.
  */
 export function productiveTimeBandDoseTarget(request, prescription, phase) {
     // Optional regions stay opt-in. Extra time may deepen useful work for modeled targets, but it must
@@ -424,6 +438,8 @@ export function productiveTimeBandDoseTarget(request, prescription, phase) {
     else if (averageMinimumMinutes >= 20) {
         accumulationTarget = prescription.minimum + (prescription.preferred - prescription.minimum) * .35;
     }
+    if (prescription.priority === 'normal' || prescription.priority === 'maintenance')
+        accumulationTarget = Math.min(accumulationTarget, prescription.preferred);
     const phaseScale = phase === 'hypertrophy_accumulation' ? 1 : phase === 'mixed_accumulation' ? .74 : 0;
     if (phaseScale <= 0)
         return prescription.minimum;
@@ -437,7 +453,7 @@ export function createStrengthClaims(request, phase = initialPhaseForGoal(reques
     // original request did not name competition-lift priorities. In those phases, synthesize only the
     // minimum useful strength spine: one required S/B/D exposure, plus optional OHP when frequency allows.
     // Do not infer second/volume exposures here; those belong to explicit athlete strength priorities.
-    if (!Object.keys(priorities).length && ['strength_accumulation', 'intensification', 'peak'].includes(phase)) {
+    if (request.goal.explicitStrengthSelection !== true && !Object.keys(priorities).length && ['strength_accumulation', 'intensification', 'peak'].includes(phase)) {
         out.push({ id: 'bench_press-phase-heavy', lift: 'bench_press', role: 'heavy', importance: 'A', required: true });
         out.push({ id: 'back_squat-phase-heavy', lift: 'back_squat', role: 'heavy', importance: 'A', required: true });
         out.push({ id: 'deadlift-phase-heavy', lift: 'deadlift', role: 'heavy', importance: 'A', required: true });

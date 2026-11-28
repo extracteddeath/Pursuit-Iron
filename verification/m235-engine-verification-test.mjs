@@ -138,6 +138,7 @@ const fixedNow = 1791388800000;
 const originalNow = Date.now;
 const baselineTimes = [];
 let propertyChecks = 0;
+const actualGoldenRows = [];
 Date.now = () => fixedNow;
 try {
     for (const testCase of propertyCases) {
@@ -171,8 +172,7 @@ try {
                 name: golden[testCase.goldenIndex].name,
                 hash: projectionHash(projectionFor(first.program))
             };
-            assert.deepEqual(actual, golden[testCase.goldenIndex],
-                'Build 816 / Engine 0.64.16 differential changed in scenario ' + testCase.goldenIndex);
+            actualGoldenRows.push(actual);
         }
         propertyChecks++;
     }
@@ -319,6 +319,7 @@ await requireMutationKill(
     }
 );
 
+assert.deepEqual(actualGoldenRows, golden, 'All 13 certified generation differentials must match; property cases have completed');
 console.log(
     'PASS M235 Verification 2.0: ' + propertyChecks + ' deterministic property cases, 13/13 Build 816 differentials, '
     + 'stable historical replay, 2/2 mutation kills, acyclic lineage and performance budgets ('

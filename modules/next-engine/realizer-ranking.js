@@ -78,6 +78,11 @@ function strengthCandidate(a, session, request, chosen, catalog) {
             // Volume/secondary exposures should retain transfer without blindly repeating the highest-fatigue
             // competition lift. This makes paused bench / RDL-style secondary work viable when specificity
             // remains meaningful, while exact competition lifts still dominate primary-strength slots.
+            const variant = request.preferences?.preferredStrengthVariants?.[a.lift];
+            // The user's eligible secondary variation wins over default
+            // incline/flat rankings; the heavy primary and equipment gates stay unchanged.
+            if (variant && (x.id === variant) !== (y.id === variant))
+                return x.id === variant ? -1 : 1;
             const fatigue = (e) => e.fatigue.systemic + e.fatigue.axial * .8 + e.fatigue.lowerBack;
             // A five-day Both/ULPPL strength block should have a real
             // incline-biased second chest day, not have OHP or a second flat

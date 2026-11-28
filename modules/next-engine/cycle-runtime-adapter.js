@@ -15,7 +15,7 @@ import { historyDecision, withProgramExplainability } from './explainability.js'
 import { analyzeShellHistoryForNextEngine, carryForwardAvoidedExercises } from './workout-history-adapter.js';
 import { requestWithAthleteResponse } from './athlete-response.js';
 import { shellConfigToNextRequest, nextProgramToShellProgram, NextShellAdapterError } from './app-shell-adapter.js';
-import { repairShellVolume, reconcileLockedCycleWeekOverflows, finalizeGeneratedShellVolume, captureShellBaseProgram, captureShellVolumeSnapshot, rebalanceFocusedStrengthEntry, preserveStrengthWeekContinuity } from './volume-repair.js';
+import { repairShellVolume, reconcileLockedCycleWeekOverflows, finalizeGeneratedShellVolume, captureShellBaseProgram, captureShellVolumeSnapshot, rebalanceFocusedStrengthEntry, preserveStrengthWeekContinuity, strengthEntryMinimumSets } from './volume-repair.js';
 import { firstPassingCapacityProgram } from './capacity-generation.js';
 import { PUBLIC_MEV_REGIONS, PUBLIC_REGION_MUSCLE, publicMevLedger } from './public-mev.js';
 const phaseGoal = (phase) => phase === 'hypertrophy_accumulation' ? 'hypertrophy' :
@@ -225,7 +225,7 @@ export function requestForBlock(baseRequest, baseConfig, spec, legacyExercises =
         const explicit = request.goal.liftFrequency ?? {};
         const targets = { bench_press: 2, back_squat: 2, deadlift: 1 };
         const practice = Object.fromEntries(Object.entries(targets)
-            .filter(([lift]) => available[lift] != null)
+            .filter(([lift]) => available[lift] != null && available[lift] !== 'maintenance')
             .map(([lift, frequency]) => [lift, explicit[lift] ?? frequency]));
         request.goal.liftFrequency = { ...explicit, ...practice };
         request.preferences = { ...request.preferences,
@@ -244,8 +244,11 @@ export function requestForBlock(baseRequest, baseConfig, spec, legacyExercises =
     request.preferences = { ...request.preferences,
         ...(spec.split ? { lockedSplit: spec.split, preferredSplit: spec.split } : {}) };
     if (spec.priorityLift) {
+        if (request.goal.explicitStrengthSelection === true &&
+            (!request.goal.liftPriorities?.[spec.priorityLift] || request.goal.liftPriorities[spec.priorityLift] === 'maintenance'))
+            throw new NextShellAdapterError('NEXT_CYCLE_EXCLUDED_LIFT', 'This block requests an excluded strength lift. Change the athlete strength preferences or the block focus.');
         request.goal.liftPriorities = { ...(request.goal.liftPriorities ?? {}), [spec.priorityLift]: 'primary' };
-        request.goal.liftFrequency = { [spec.priorityLift]: spec.frequency };
+        request.goal.liftFrequency = { ...(request.goal.liftFrequency ?? {}), [spec.priorityLift]: spec.frequency };
     } else if (!Object.keys(request.goal.liftFrequency ?? {}).length) {
         // This request is cloned from the cycle's original athlete input, not
         // the previous phase. Retain explicit athlete lift-frequency choices;
@@ -266,22 +269,8 @@ function checkRequestedPractice(program, spec, request) {
 }
 const totalSets = program => program.sessions.reduce((n, session) =>
     n + session.exercises.reduce((sets, ex) => sets + (Number(ex.sets) || 0), 0), 0);
-// Strength accumulation retains productive work; it is not a peak/taper. An
-// already-large hypertrophy week may reduce fatigue, but never silently lose
-// half its working sets. Return a typed refusal when the approved session
-// duration/equipment constraints cannot safely support this continuity.
-export function strengthEntryMinimumSets(previousSets) {
-    if (!Number.isFinite(previousSets) || previousSets < 16) return 0;
-    // Moderate hypertrophy sources preserve >=70% across the strength
-    // transition. High-capacity weeks (68+ working sets) may not fit that
-    // proportion with strength-specific rest in the same approved session.
-    // Preserve >50% for 68–89 sets; truly exceptional weeks (90+ sets) may
-    // keep exactly 50% when the verified session limits cannot fit more.
-    // Peak is an explicit taper with a separate policy.
-    return previousSets >= 90 ? Math.ceil(previousSets * .5)
-        : previousSets >= 68 ? Math.floor(previousSets * .5) + 1
-        : Math.ceil(previousSets * .7);
-}
+// Compatibility export; the same policy now owns repair and verification.
+export { strengthEntryMinimumSets } from './volume-repair.js';
 // Split search adds a concrete split to every candidate, including the original split.
 // That is not itself a structural change. A roster-locked volume rescue is valid
 // when the executable schedule still matches and no new lift-frequency intent was

@@ -4,7 +4,7 @@ import { EXERCISES, computeCell, plannedWeek, weeklyVolume } from '../modules/en
 
 import { generateNextProgramForShell, nextProgramToShellProgram, getNextShellCell, markUserPrescriptionOverride } from '../modules/next-engine/app-shell-adapter.js';
 import { generateNextCycleForShell, convertProgramToNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
-import { auditShellVolume, captureShellVolumeSnapshot, reconcileShellWeekDose, repairShellVolume } from '../modules/next-engine/volume-repair.js';
+import { auditShellVolume, captureShellVolumeSnapshot, reconcileShellWeekDose, repairShellVolume, enforceShellWeekCapacity } from '../modules/next-engine/volume-repair.js';
 import { createMusclePrescriptions, normalizeRequest } from '../modules/next-engine/prescription.js';
 import { publicMevContractApplies, PUBLIC_REGION_MUSCLE } from '../modules/next-engine/public-mev.js';
 import { prescriptionForSimulationWeek } from '../modules/next-engine/simulation.js';
@@ -140,6 +140,24 @@ impossible.nextEngine.program.sessions.forEach(s => { s.maxMinutes = 1; });
 const timed = reconcileShellWeekDose(impossible, EXERCISES);
 assert.equal(timed.status, 'unable');
 assert.ok(timed.timeIssues.length > 0);
+assert.deepEqual(timed.timeIssues, auditShellVolume(impossible, EXERCISES).timeIssues,
+    'All volume audits must expose the same executable time overruns, even when sets are user-owned');
+const impossibleBefore = JSON.stringify(impossible);
+assert.throws(() => enforceShellWeekCapacity(impossible, EXERCISES),
+    error => error?.code === 'NEXT_WEEK_CAPACITY_EXCEEDED',
+    'A capacity fallback must not silently overwrite an extreme authored program');
+assert.equal(JSON.stringify(impossible), impossibleBefore);
+// Exercise a realistic high-volume edit with 5 working sets on every slot.
+const overloaded = clone(built.program);
+for (const d of overloaded.days) d.exercises.forEach((_, slot) => {
+    const key = `${d.id}:${slot}`;
+    overloaded.overrides[key] = markUserPrescriptionOverride(overloaded.overrides[key], 'sets', 5);
+});
+const originalOverload = JSON.stringify(overloaded);
+const overloadedAudit = auditShellVolume(overloaded, EXERCISES);
+assert.ok(overloadedAudit.issues.some(i => i.status === 'over') || overloadedAudit.timeIssues.length,
+    'High authored volume must be evaluated using all executable weeks, not the base template');
+assert.equal(JSON.stringify(overloaded), originalOverload);
 const incomplete = clone(owned);
 delete incomplete.nextWeekPrescriptions;
 assert.equal(reconcileShellWeekDose(incomplete, EXERCISES).status, 'unable');

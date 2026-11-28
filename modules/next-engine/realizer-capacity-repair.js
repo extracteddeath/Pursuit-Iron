@@ -123,12 +123,11 @@ for (const session of realized) {
                 const target = phase === 'hypertrophy_accumulation' || phase === 'mixed_accumulation'
                     ? productiveTimeBandDoseTarget(request, p, phase)
                     : p.preferred;
-                return { m, p, target, deficit: p.preferred - totals[m], room: p.upper - totals[m] };
+                return { m, p, target, deficit: target - totals[m], room: p.upper - totals[m] };
             })
-                // targetExercises is a complexity/capacity reference, not an instruction to manufacture
-                // optional maintenance-region filler. For modeled muscles, spare slots may still buy marginal
-                // adaptive work above preferred when useful upper-region room remains, matching M50 behavior.
-                .filter(x => x.target > 0 && x.p.priority !== 'maintenance' && x.room >= 2)
+                // An exercise-count preference cannot override useful dose.
+                // Stop when no compatible muscle has a meaningful target gap.
+                .filter(x => x.target > 0 && x.p.priority !== 'maintenance' && x.deficit >= 1 && x.room >= 2)
                 .sort((a, b) => {
                 const av = (Math.max(0, a.deficit) + .35 * Math.max(0, a.room)) * priorityWeight[a.p.priority];
                 const bv = (Math.max(0, b.deficit) + .35 * Math.max(0, b.room)) * priorityWeight[b.p.priority];
@@ -199,6 +198,10 @@ const { accumulationFloorExpansion, latePhaseExpansion, phase, request } = conte
 return (
 /* M230:PRESERVE:helper.usefulTarget:BEGIN */
 (p) => {
+        // All optional clock-filling stages must honor the allocator's
+        // ordinary-muscle ceiling. Required coverage repair remains separate.
+        if (p.priority === 'normal' || p.priority === 'maintenance')
+            return Math.min(p.upper, p.preferred);
         if (phase === 'hypertrophy_accumulation' || phase === 'mixed_accumulation') {
             if (p.priority === 'maintenance' && p.minimum === 0 && p.preferred === 0)
                 return 0;

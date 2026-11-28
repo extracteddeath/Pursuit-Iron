@@ -45,4 +45,29 @@ for (const asset of ['capacity-policy.js', 'app-shell-adapter.js', 'wizard-stabi
 assert.ok(sw.includes('"./modules/next-engine/app-shell-adapter.js"'), 'offline cache must include the base shell adapter');
 assert.ok(/c\.match\(r,\{ignoreSearch:true\}\)/.test(sw), 'offline runtime must resolve query-mapped adapter imports from the cached base module');
 
+// The reported five-day Week 1 has 121 working sets, including three direct
+// lateral/rear-delt exposures and 20 direct pulling sets. Available minutes
+// must not by themselves raise every ordinary muscle above its preferred dose.
+// This is a policy regression, not a reconstruction of the unknown generation seed.
+const { productiveTimeBandDoseTarget } = await import('../modules/next-engine/prescription.js');
+const ordinary = { muscle: 'side_delts', priority: 'normal', minimum: 6, preferred: 10, upper: 20 };
+const prioritized = { ...ordinary, priority: 'high' };
+for (const minMinutes of [20, 40, 60, 90, 120]) {
+  const request = { schedule: { days: Array.from({ length: 5 }, () => ({ minMinutes, maxMinutes: minMinutes + 30 })) } };
+  for (const phase of ['hypertrophy_accumulation', 'mixed_accumulation', 'strength_accumulation', 'peak']) {
+    assert.ok(productiveTimeBandDoseTarget(request, ordinary, phase) <= ordinary.preferred,
+      'ordinary muscle dose must not be increased merely to occupy a longer session');
+    assert.ok(productiveTimeBandDoseTarget(request, prioritized, phase) <= prioritized.upper);
+  }
+  if (minMinutes >= 60) assert.ok(productiveTimeBandDoseTarget(request, prioritized, 'hypertrophy_accumulation') > prioritized.preferred,
+    'explicit muscle priorities retain extra productive capacity');
+}
 console.log('M196 capacity-band regression: pass');
+
+// The realizer must not re-introduce a duration-driven above-preferred target.
+const { usefulTarget } = await import('../modules/next-engine/realizer-capacity-repair.js');
+for (const phase of ['hypertrophy_accumulation','mixed_accumulation','strength_accumulation','peak']) {
+    const ctx = {phase,request:{schedule:{days:[{minMinutes:120}]}},accumulationFloorExpansion:.72,latePhaseExpansion:.15};
+    assert.equal(usefulTarget(ctx,ordinary),ordinary.preferred);
+    assert.ok(usefulTarget(ctx,prioritized)<=prioritized.upper);
+}

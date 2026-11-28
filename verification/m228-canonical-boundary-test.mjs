@@ -12,6 +12,7 @@ const goldenFile = new URL('./fixtures/engine-816-golden.json', import.meta.url)
 const baseline = process.env.ENGINE_BASELINE ? await import(pathToFileURL(path.resolve(process.env.ENGINE_BASELINE, 'index.js'))) : api;
 const create = Boolean(process.env.WRITE_ENGINE_GOLDEN);
 const expected = create ? [] : JSON.parse(fs.readFileSync(goldenFile));
+const actualRows = [];
 if (!create) {
     const ex = api.shell.EX_BY_ID['bb-bench'];
     api.shell.setLoadInc(7, 'kg');
@@ -39,7 +40,24 @@ try {
         };
         const actual = { name: row.name ?? `${row.config.split}-${i}`, hash: hash(projection) };
         if (create) expected.push(actual);
-        else assert.deepEqual(actual, expected[i], `Build 816 differential scenario ${i}`);
+        else {
+            actualRows.push(actual);
+            // Keep the full deterministic comparison available even when a
+            // deliberate generation change affects more than one fixture.
+            console.log('GENERATION_DIFFERENTIAL ' + JSON.stringify({
+                index: i, ...actual, previousHash: expected[i]?.hash,
+                goal: row.config.goal, split: row.config.split, session: row.config.session,
+                phase: p.nextEngine.program.phase,
+                workingSetsByWeek: [1, 3, 6].map(week => p.days.reduce((sum, day) =>
+                    sum + day.exercises.reduce((n, id, slot) =>
+                        n + (Number(engine.shell.computeCell(p, day, id, slot, week).sets) || 0), 0), 0)),
+                sessions: p.nextEngine.program.sessions.map(s => ({
+                    intent: s.intent, estimatedMinutes: s.estimatedMinutes, maxMinutes: s.maxMinutes,
+                    exercises: s.exercises.map(e => [e.exerciseId, e.sets])
+                })),
+                audit: p.nextEngine.program.audit.result
+            }));
+        }
     }
 } finally { Date.now = now; }
 if (create) {
@@ -67,4 +85,5 @@ if (create) {
     }
     assert.doesNotMatch(fs.readFileSync(new URL('../engine-lab/canonical-export.mjs', import.meta.url), 'utf8'), /@babel\/(?:parser|traverse)|\btraverse\s*\(/);
 }
+if (!create) assert.deepEqual(actualRows, expected, 'All certified generation differential projections must match');
 console.log(`PASS M228: ${configs.length} Build 816 golden projections, one computation import/export boundary and browser-free computation; canonical exporter has zero declaration extraction.`);

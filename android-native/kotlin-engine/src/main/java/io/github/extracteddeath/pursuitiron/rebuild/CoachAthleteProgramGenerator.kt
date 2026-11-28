@@ -249,6 +249,17 @@ object CoachAthleteProgramGenerator {
             purposes,sessionFit,variation)
     }
 
+    // An explicit minimum is not a cap. A third (or later) primary
+    // exposure can win when it materially improves audited dose or recovery.
+    // Extra mandatory exposures lose only when those substantive factors
+    // tie; cosmetic duration and purpose ordering cannot justify them.
+    internal fun primaryPlacementQuality(
+        quality:List<Long>,extraPrimary:Int
+    ):List<Long> {
+        require(quality.size==6 && extraPrimary>=0)
+        return quality.take(3)+extraPrimary.toLong()+quality.drop(3)
+    }
+
     private fun spacingPenalty(calendar:List<Int>,categories:List<String>):Int {
         var penalty=0
         for(i in categories.indices)for(j in 0 until i) {
@@ -613,17 +624,14 @@ object CoachAthleteProgramGenerator {
             if(proposal.status==AthleteCandidateStatus.CANDIDATE_FOR_REVIEW &&
                 actual?.status==GoalRealizationStatus.DELIVERED_FOR_REVIEW) {
                 feasibleCompared++
-                // Extra required-primary slots are feasibility alternatives,
-                // not a new frequency prescription. If a candidate meets
-                // all reviewed requirements with fewer mandatory exposures,
-                // prefer it over a candidate that pins another primary day.
-                // The normal quality score still ranks feasible candidates
-                // with the same number of pinned days by recovery and dose.
+                // Compare actual recovery and productive dose before
+                // preferring fewer mandatory primary exposures. The
+                // authored frequency is a minimum, not an exact cap.
                 val week=checkNotNull(proposal.catalogReview?.draft)
                 val extraPrimary=(plans.count {it.requiredPrimaryExerciseId!=null}-
                     policy.primaryLiftMinimumDays.values.sum()).coerceAtLeast(0)
-                val score=listOf(extraPrimary.toLong())+
-                    qualityScore(week,focus,purpose,weekdays)
+                val score=primaryPlacementQuality(
+                    qualityScore(week,focus,purpose,weekdays),extraPrimary)
                 if(strongestScore==null ||
                     betterLong(score,checkNotNull(strongestScore))) {
                     strongest=ViablePlacement(byDay,plans,proposal,emptyList())

@@ -387,18 +387,40 @@ class CoachAthleteProgramGeneratorTest {
         val p=policy(s,primaries=mapOf("bench" to 2))
         val result=CoachAthleteProgramGenerator.generate(request(s=s,policy=p))
         assertEquals(3,result.intents.size)
-        assertEquals(2,result.intents.count {
+        // The reviewed policy is explicitly a minimum, not an exact
+        // exposure lock. Every selected exposure must have its own day.
+        val benchDays=result.intents.filter {
             it.requiredPrimaryExerciseId=="bench"
-        })
-        assertEquals(2,result.intents.filter {
-            it.requiredPrimaryExerciseId=="bench"
-        }.map {it.weekday}.distinct().size)
+        }
+        assertTrue(benchDays.size in 2..3)
+        assertEquals(benchDays.size,benchDays.map {it.weekday}.distinct().size)
         val matching=checkNotNull(result.candidate)
         assertNotNull(matching.realization)
         assertTrue(matching.issues.none {
             it.kind==AthleteCandidateIssueKind.GOAL_POLICY_UNRESOLVED
         })
         assertEquals(2,matching.realization?.primaryFrequencies?.single()?.requiredDays)
+    }
+
+    @Test fun extraPrimaryWinsOnlyForSubstantiveQualityNotClockPadding() {
+        fun better(a:List<Long>,b:List<Long>):Boolean {
+            val index=a.indices.firstOrNull{a[it]!=b[it]} ?:return false
+            return a[index]<b[index]
+        }
+        val two=CoachAthleteProgramGenerator.primaryPlacementQuality(
+            listOf(0L,1000L,20L,0L,30L,10L),0)
+        val productiveThird=CoachAthleteProgramGenerator.primaryPlacementQuality(
+            listOf(0L,0L,20L,0L,30L,10L),1)
+        val betterSpacingThird=CoachAthleteProgramGenerator.primaryPlacementQuality(
+            listOf(0L,1000L,0L,0L,30L,10L),1)
+        val cosmeticThird=CoachAthleteProgramGenerator.primaryPlacementQuality(
+            listOf(0L,1000L,20L,0L,0L,0L),1)
+        val fatiguedThird=CoachAthleteProgramGenerator.primaryPlacementQuality(
+            listOf(1L,0L,0L,0L,0L,0L),1)
+        assertTrue(better(productiveThird,two))
+        assertTrue(better(betterSpacingThird,two))
+        assertTrue(better(two,cosmeticThird))
+        assertTrue(better(two,fatiguedThird))
     }
 
     @Test fun strengthPurposeDaysGetActualPrimaryLiftsNotJustSkillLabels() {

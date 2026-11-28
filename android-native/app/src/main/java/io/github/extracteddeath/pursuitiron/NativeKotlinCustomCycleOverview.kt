@@ -23,6 +23,7 @@ internal fun authoredSetDescription(set:CustomAuthoredSet,number:Int):String {
 internal fun NativeKotlinCustomCycleOverview(
     cycle:CustomTrainingCycle,
     selection:NativeCustomNextCycleSlot?,
+    resolvedWeek:CustomResolvedWeek?=null,
     onEditDay:((blockId:String,weekday:Int)->Unit)?=null,
     onEditExercise:((blockId:String,weekday:Int,slotId:String)->Unit)?=null
 ) {
@@ -42,6 +43,10 @@ internal fun NativeKotlinCustomCycleOverview(
     val selectedBlock=cycle.blocks.firstOrNull {
         if(remainingWeek>it.weeks){remainingWeek-=it.weeks;false}else true
     }
+    val exactWeek=resolvedWeek?.takeIf {
+        it.cycleId==cycle.cycleId && it.cycleRevision==cycle.revision &&
+            it.absoluteWeek==week && it.blockId==selectedBlock?.blockId
+    }
     val days=listOf("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")
     val hasNextSession=selection is NativeCustomNextCycleSlot.Next ||
         selection is NativeCustomNextCycleSlot.Prepared ||
@@ -51,7 +56,9 @@ internal fun NativeKotlinCustomCycleOverview(
     }
     PursuitCard {
         Text("Program outline",style=MaterialTheme.typography.titleLarge)
-        Text("Base training schedule. Your workout preview includes any changes for its specific week.",
+        Text(if(exactWeek!=null)
+            "Current block: full plan for week ${exactWeek.absoluteWeek}. Other blocks show their base templates."
+            else "Base training schedule only. Week-specific prescription not yet verified.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
         if(hasNextSession && selectedBlock!=null) {
@@ -97,7 +104,9 @@ internal fun NativeKotlinCustomCycleOverview(
                     expanded=blockExpanded,
                     onToggle={blockExpanded=!blockExpanded}
                 )
-                if(blockExpanded)block.days.sortedBy{it.weekday}.forEach { day ->
+                val displayDays=exactWeek?.takeIf{it.blockId==block.blockId}
+                    ?.days ?: block.days
+                if(blockExpanded)displayDays.sortedBy{it.weekday}.forEach { day ->
                 val isNextDay=hasNextSession &&
                     block.blockId==selectedBlock?.blockId &&
                     day.weekday==weekday
@@ -114,7 +123,7 @@ internal fun NativeKotlinCustomCycleOverview(
                 }
                 PursuitDisclosureRow(
                     title="${days.getOrElse(day.weekday){"Day"}} · ${day.label}",
-                    subtitle=(if(isNextDay)"$selectedStatus · " else "")+
+                    subtitle=(if(isNextDay && exactWeek!=null)"$selectedStatus · " else "")+
                         "${day.slots.size} exercises",
                     expanded=expanded,onToggle={expanded=!expanded}
                 )

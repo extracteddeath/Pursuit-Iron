@@ -8,24 +8,29 @@ import io.github.extracteddeath.pursuitiron.rebuild.*
 
 /**
  * The next SESSION focus reflects the existing verified program and confirmed
- * next-day selection. It is a readable BASE outline, not a separate coach,
- * prediction, immutable issued workout or week-override authority.
+ * next-day selection and canonical reviewed week. Never count the block's
+ * base template as the selected workout when a week override is present.
  */
 @Composable
 internal fun NativeKotlinNextSessionBrief(
     cycle:CustomTrainingCycle,
     absoluteWeek:Int,
-    weekday:Int
+    weekday:Int,
+    resolvedWeek:CustomResolvedWeek?
 ) {
     if(absoluteWeek<1 || weekday !in 0..6)return
-    var withinBlock=absoluteWeek
-    val block=cycle.blocks.firstOrNull {
-        if(withinBlock>it.weeks) {
-            withinBlock-=it.weeks
-            false
-        } else true
-    } ?:return
-    val day=block.days.firstOrNull{it.weekday==weekday} ?:return
+    val week=resolvedWeek?.takeIf {
+        it.cycleId==cycle.cycleId && it.cycleRevision==cycle.revision &&
+            it.absoluteWeek==absoluteWeek
+    }
+    val day=week?.days?.singleOrNull{it.weekday==weekday}
+    val block=cycle.blocks.singleOrNull{it.blockId==week?.blockId}
+    if(day==null || block==null) {
+        Text("Week-specific prescription unavailable. Review the current program before training.",
+            style=MaterialTheme.typography.bodySmall,
+            color=MaterialTheme.colorScheme.onSurfaceVariant)
+        return
+    }
     val working=day.slots.sumOf{slot->
         slot.sets.count{it.type==DraftSetType.WORKING}
     }
@@ -57,7 +62,7 @@ internal fun NativeKotlinNextSessionBrief(
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
-    Text("Base program outline only. Exact week-specific sets, load changes and your current gym are verified in the workout preview before preparation.",
+    Text("Full plan for this exact week. Any explicitly approved shorter session or issued workout is shown separately.",
         style=MaterialTheme.typography.bodySmall,
         color=MaterialTheme.colorScheme.onSurfaceVariant)
 }

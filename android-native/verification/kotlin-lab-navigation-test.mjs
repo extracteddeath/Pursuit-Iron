@@ -273,8 +273,8 @@ assert.ok(outline.includes('val hasNextSession=selection is NativeCustomNextCycl
   outline.includes('!onlyNextBlock || !hasNextSession ||') &&
   outline.includes('selectedBlock==null || block.blockId==selectedBlock.blockId') &&
   outline.includes('if(showBlock)') &&
-  outline.includes('if(blockExpanded)block.days.sortedBy') &&
-  outline.includes('if(isNextDay)"$selectedStatus · "') &&
+  outline.includes('if(blockExpanded)displayDays.sortedBy') &&
+  outline.includes('if(isNextDay && exactWeek!=null)"$selectedStatus · "') &&
   outline.includes('is NativeCustomNextCycleSlot.ResumeIssued -> "Resume workout"') &&
   outline.includes('is NativeCustomNextCycleSlot.Prepared -> "Prepared workout"') &&
   outline.includes('is NativeCustomNextCycleSlot.Next -> "Next workout"'),
@@ -729,12 +729,12 @@ assert.ok(shared.includes('scrollState:ScrollState=rememberScrollState()') &&
   plan.includes('exerciseEditor=Triple(blockId,weekday,slotId)') &&
   plan.includes('controller.editReviewedExerciseSets('),
   'Program drilldown must preserve exact exercise-slot identity and native editor writes');
-assert.ok(plan.includes('NativeKotlinNextSessionBrief(draft,week,weekday)') &&
-  sessionBrief.includes('cycle.blocks.firstOrNull') &&
-  sessionBrief.includes('block.days.firstOrNull{it.weekday==weekday}') &&
+assert.ok(plan.includes('NativeKotlinNextSessionBrief(draft,week,weekday,resolvedPlanWeek)') &&
+  sessionBrief.includes('cycle.blocks.singleOrNull') &&
+  sessionBrief.includes('week?.days?.singleOrNull{it.weekday==weekday}') &&
   sessionBrief.includes('slot.sets.count{it.type==DraftSetType.WORKING}') &&
   sessionBrief.includes('PursuitMetricStrip') &&
-  sessionBrief.includes('Base program outline only.') &&
+  sessionBrief.includes('Full plan for this exact week.') &&
   !sessionBrief.includes('rememberCoroutineScope') &&
   !sessionBrief.includes('host.'),
   'Next session game plan must be display-only sourced from the exact selected day');

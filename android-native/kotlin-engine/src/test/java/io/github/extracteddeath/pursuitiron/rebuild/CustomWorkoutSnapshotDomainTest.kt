@@ -106,6 +106,33 @@ class CustomWorkoutSnapshotDomainTest {
             .sets.single().reps.minimum)
     }
 
+    @Test fun exactWeekPlanAndWorkoutUseIdenticalOccurrenceSetCounts() {
+        val original=cycle()
+        val version=original.copy(weekOverrides=mapOf("base" to listOf(
+            CustomWeekSlotOverride(1,0,"crunch-a-0",List(3){set()}),
+            CustomWeekSlotOverride(2,0,"crunch-a-0",List(5){set(12)}),
+            CustomWeekSlotOverride(3,0,"crunch-a-0",List(3){set()}))))
+        val availability=CustomExerciseAuthoringDomain.picker(
+            setup(),StarterExerciseTranche.movements()).map{it.availability}
+        val review=CustomTrainingCycleDomain.review(version,availability)
+        assertEquals(review.issues.toString(),
+            CustomCycleReviewStatus.READY_FOR_COACH_REVIEW,review.status)
+        for((week,count) in listOf(1 to 3,2 to 5,3 to 3)) {
+            val planned=checkNotNull(CustomTrainingCycleDomain.week(review,week))
+                .days.single{it.weekday==0}
+            val issued=(preview(version,week=week) as
+                CustomWorkoutSnapshotResult.Preview).snapshot
+            assertEquals(listOf(count,1),planned.slots.map{it.sets.size})
+            assertEquals(planned.slots.map{it.slotId to it.sets},
+                issued.slots.map{slot->slot.slotId to slot.sets.map{it.prescription}})
+            assertEquals(planned.slots.sumOf{slot->
+                slot.sets.count{it.type==DraftSetType.WORKING}},
+                issued.slots.sumOf{slot->
+                    slot.sets.count{it.prescription.type==DraftSetType.WORKING}})
+        }
+        assertEquals(1,version.blocks.single().days.first().slots.first().sets.size)
+    }
+
     @Test fun exactSupersetMembershipAndSetTargetsSurviveResolution() {
         val original=cycle()
         val pair=original.blocks.first().days.first().slots.map{

@@ -804,6 +804,45 @@ export function retainDoubleProgressionSetLoads(suggestion, previousLoads) {
         traceAdjustments: [...(suggestion.traceAdjustments || []), 'unearned_load_drop_prevented'] };
 }
 
+// Complete ordinary set-specific decisions against the current issued count.
+// The historical evaluator may have used a different set count or returned only
+// a lift-level hold. A representative (maximum) load is not evidence for a
+// later working set, particularly with coarse cable stacks and myo activation.
+export function retainComparableWorkingTargets(suggestion, previous, count, range, dynamic = false) {
+    if (!suggestion || suggestion.referenceOnly || !Array.isArray(previous)
+        || !Number.isInteger(count) || count < 1 || count > 20) return suggestion;
+    const ordinary = ['initial', 'add_reps', 'hold', 'hold_load', 'review'].includes(suggestion.action);
+    if (!ordinary && !(dynamic && suggestion.action === 'increase_load')) return suggestion;
+    const observed = previous.filter(row => row && !row.summary && Number(row.weight) > 0);
+    if (!observed.length) return suggestion;
+    const [lo, hi] = range;
+    const fallback = Math.min(...observed.map(row => Number(row.weight)));
+    let changed = !Array.isArray(suggestion.setTargets) || suggestion.setTargets.length !== count;
+    const targets = Array.from({ length: count }, (_, i) => {
+        const target = suggestion.setTargets?.[i], prior = previous[i];
+        const actual = prior && !prior.summary && Number(prior.weight) > 0 ? Number(prior.weight) : null;
+        const earned = dynamic && suggestion.action === 'increase_load' && actual !== null
+            && target?.earnedLoadIncrease === true && Number(target.previousLoad) === actual
+            && Number(target.weight) > actual && Number(prior.reps) >= hi;
+        if (earned) return target;
+        // An unlogged position has no earned increase. Preserve a bounded
+        // existing evaluator target (e.g. a skipped middle working set),
+        // but do not fabricate a heavier target when the evaluator omitted it.
+        const proposed = Number(target?.weight);
+        const verifiedReference = target && !target.earnedLoadIncrease
+            && observed.some(row => Number(row.weight) === proposed);
+        const weight = actual ?? (verifiedReference ? proposed : fallback);
+        if (target && Number(target.weight) === weight && !target.earnedLoadIncrease) return target;
+        changed = true;
+        const reps = Math.max(lo, Math.min(hi, Math.round(Number(target?.reps ?? prior?.reps) || lo)));
+        return { ...target, weight, reps, ...(actual !== null ? { previousLoad: actual } : {}), earnedLoadIncrease: false };
+    });
+    if (!changed) return suggestion;
+    return { ...suggestion, setTargets: targets, weight: dynamic
+        ? Math.max(...targets.map(target => Number(target.weight))) : targets[0].weight,
+        traceAdjustments: [...new Set([...(suggestion.traceAdjustments || []), 'positioned_load_preserved'])] };
+}
+
 // Review and Workout consume this same boundary. A user can decline one upcoming
 // load/rep recommendation without changing the progression method or stored history.
 function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history, applyReviewChoice = true) {
@@ -845,6 +884,22 @@ function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history
             const previousLoads = positionedPriorLoads(suggestion.last,
                 suggestion.setTargets?.length ?? 0, ex, fromUnit, unit);
             suggestion = retainDoubleProgressionSetLoads(suggestion, previousLoads);
+        }
+    }
+    if (suggestion?.last && !program.config?.percentScheme) {
+        const id = exerciseAt(program, day, slot, weekIndex), ex = EX_BY_ID[id];
+        const cell = ex && computeCell(program, day, id, slot, weekIndex);
+        const count = Number(cell?.sets);
+        if (ex && Number.isInteger(count) && count > 0 && count <= 20) {
+            const from = suggestion.lastUnit || unit;
+            const weights = positionedPriorLoads(suggestion.last, count, ex, from, unit);
+            const prior = weights.map((weight, index) => {
+                const row = previousWorkoutSet(suggestion.last, index);
+                return row && weight > 0 ? { weight, reps: row.r, summary: row.summary } : null;
+            });
+            const style = resolveStyle(program, ex, slot === day.primaryIndex, weekIndex, dayPerf, history, day.id);
+            suggestion = retainComparableWorkingTargets(suggestion, prior, count,
+                cellRepRange(cell, program, ex, slot === day.primaryIndex), style === 'dynamic');
         }
     }
     if (!suggestion || !applyReviewChoice || !program.sessionPlanChoices || !Object.keys(program.sessionPlanChoices).length) return suggestion;

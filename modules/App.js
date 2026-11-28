@@ -92,7 +92,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='1058';
+const __APP_VERSION__='4.0.0'; const __BUILD__='1059';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -12456,8 +12456,6 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                 const cell = computeCell(program, day, e.id, e.slot, weekIndex);
                 const isPrimary = e.slot === day.primaryIndex;
                 const wTotal = workOnly(e).length;
-                const plannedCount = workoutRowMatchesPrescription(program, day, e, weekIndex) && !cell.missing ? Number(cell.sets) : null;
-                const countDiffers = Number.isInteger(plannedCount) && plannedCount > 0 && plannedCount !== wTotal;
                 /* Select the last full working set, excluding warm-ups and mini-sets. */
                 const techTag = e.injuryAdjusted ? null : techSetTag(cell.tech);
                 const lastWorkRow = (() => {
@@ -12515,7 +12513,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                 return null;
                             return (_jsxs("div", { "data-noswipe": true, className: "wpb-workout-card wpb-warmup-card", children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-8 wpb-s956-marginbottom-8", children: [_jsx(Flame, { size: 15, color: C.accentInk }), _jsx("span", { className: "wpb-layout-strong-15", children: "Warm-up & mobility" }), _jsx("button", { onClick: () => { setShowWarmup(false); onSetWarmupCard?.(false); setSnack({ msg: "Warm-up card hidden — Settings can bring it back", undo: () => { onSetWarmupCard?.(true); setSnack(null); } }); }, "aria-label": "Hide the warm-up card from now on", className: "pressable hit wpb-warmup-hide", children: "Hide" })] }), moves.map((m, i) => (_jsxs("div", { className: "wpb-warmup-step", children: [_jsx("span", { className: "wpb-warmup-number", children: i + 1 }), _jsx("span", { className: "wpb-warmup-instruction", children: m })] }, i))), _jsx("button", { onClick: () => setShowWarmup(false), className: "pressable wpb-warmup-finish", children: "Warmed up \u2014 let\u2019s train" })] }));
                         })(), _jsxs("div", { className: "wpb-exercise-heading wpb-s956-display-flex wpb-s956-alignitems-flex-start wpb-s956-gap-8", children: [_jsxs("div", { className: "wpb-layout-grow-min", children: [_jsxs("div", { className: "wpb-exercise-title-row", children: [_jsx("div", { className: "wpb-exercise-name wpb-s960-fontsize-22px wpb-s960-fontweight-780 wpb-s960-letterspacing-neg-0-55px wpb-s960-lineheight-1-16 wpb-s960-overflowwrap-anywhere", children: ex.name }), _jsxs("div", { className: "wpb-s956-display-flex wpb-s956-flexdirection-column wpb-s956-alignitems-flex-end wpb-s956-gap-6 wpb-s956-flexshrink-0", children: [_jsxs("div", { className: "wpb-exercise-head-actions wpb-s956-display-flex wpb-s956-gap-8", children: [_jsx("button", { "aria-label": `Exercise info for ${ex.name}`, onClick: event => { infoOpenerRef.current = event.currentTarget; setInfo(true); }, title: "Exercise info", className: "pressable hit wpb-exercise-head-action", children: _jsx(Info, { size: 16 }) }), _jsx("button", { "aria-label": `History for ${ex.name}`, onClick: () => setHistSheet(true), title: "Exercise history", className: "pressable hit wpb-exercise-head-action", children: _jsx(History, { size: 16 }) }), confirmRemoveEx === ei ? (_jsxs("button", { onClick: () => removeExerciseFromSession(ei), title: "Tap again to skip for today", "aria-label": "Confirm skip exercise for today", className: "pressable hit wpb-exercise-head-action wpb-confirm-skip", children: [_jsx(SkipForward, { size: 14 }), " Skip?"] })) : (_jsx("button", { "aria-label": "Skip this exercise for today", onClick: () => setConfirmRemoveEx(ei), title: "Skip this exercise for today (stays in your program)", className: "pressable hit wpb-exercise-head-action", children: _jsx(SkipForward, { size: 15 }) }))] })] })] }), e.injuryAdjusted && _jsx(UiBanner, { className: "wpb-pain-banner", role: "note", "data-noswipe": true, icon: Activity, title: `Protecting your ${(PART_LABEL[e.injuryAdjusted] || e.injuryAdjusted).toLowerCase()}`, children: "Fewer sets today. A swap keeps the muscle working without the sore spot.", actionLabel: "Swap", actionVariant: "primary", onAction: () => setSwap(true) }), _jsx("div", { className: "wpb-exercise-tags", "data-exercise-tags": true,
-    children: exerciseSessionTags(ex, e, day, cell).map(tag => _jsx("span", { children: tag }, tag)) }), _jsxs("div", { className: "wpb-exercise-meta", children: [((e.added && !focus) || countDiffers) && _jsx("button", { type: "button", className: "wpb-session-choice wpb-adjust-sets pressable", "aria-label": "Adjust working sets for " + ex.name, onClick: () => setSetCountEdit({ index: ei, exerciseId: e.id, value: countDiffers ? Math.max(plannedCount, wDone, 1) : wTotal }), children: countDiffers ? `Plan ${plannedCount} · Workout ${wTotal} · Review` : `${wTotal} sets · Adjust` }), _jsx("div", { className: "wpb-exercise-set-context", children: focus ? PART_LABEL[ex.part] : `${(e.superset || (ei > 0 && data[ei - 1].superset)) ? "Round" : "Set"} ${Math.min(wDone + 1, wTotal)} of ${wTotal} · ${PART_LABEL[ex.part]}` }), !program.config?.percentScheme && (() => {
+    children: exerciseSessionTags(ex, e, day, cell).map(tag => _jsx("span", { children: tag }, tag)) }), _jsxs("div", { className: "wpb-exercise-meta", children: [e.added && !focus && _jsx("button", { type: "button", className: "wpb-session-choice wpb-adjust-sets pressable", "aria-label": "Adjust working sets for " + ex.name, onClick: () => setSetCountEdit({ index: ei, exerciseId: e.id, value: wTotal }), children: `${wTotal} sets · Adjust` }), _jsx("div", { className: "wpb-exercise-set-context", children: focus ? PART_LABEL[ex.part] : `${(e.superset || (ei > 0 && data[ei - 1].superset)) ? "Round" : "Set"} ${Math.min(wDone + 1, wTotal)} of ${wTotal} · ${PART_LABEL[ex.part]}` }), !program.config?.percentScheme && (() => {
                                             // name the progression style for EVERY exercise (not just dynamic double), so it's
                                             // always clear how this lift advances week to week.
                                             /* ⚠ ONE OWNER: THE LABEL NAMES THE METHOD THAT SETS THE LOADS. For a Pursuit Next program the loads come
@@ -13255,6 +13253,22 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                                             const active = v === curInc;
                                                             return (_jsx("button", { className: "pressable wpb-exinfo-weight-choice", "aria-pressed": active, onClick: () => onSetExLoadInc(ex.id, v, unit), children: v === 0 ? `Auto (${defStep}${unit})` : `+${v}${unit}` }, v));
                                                         }) }), _jsxs("div", { className: "wpb-exinfo-helper", children: ["Sets how much each ", _jsx("span", { className: "mono", children: "+ / \u2212" }), " tap and weekly bump moves the load for this exercise."] })] }));
+                                        })(), (() => {
+                                            const cell = computeCell(program, day, e.id, e.slot, weekIndex);
+                                            const count = workOnly(e).length;
+                                            const planned = workoutRowMatchesPrescription(program, day, e, weekIndex) && !cell.missing ? Number(cell.sets) : null;
+                                            const differs = Number.isInteger(planned) && planned > 0 && planned !== count;
+                                            if (!differs && !e.added) return null;
+                                            const done = workOnly(e).filter(row => row.done).length;
+                                            return _jsxs("div", { className: "wpb-exinfo-weight-step-card", children: [
+                                                _jsx("div", { className: "wpb-ey8", children: "Working sets" }),
+                                                _jsx("div", { className: "wpb-exinfo-helper", children: differs
+                                                    ? `${count} in this workout · ${planned} in the current plan. Logged work stays unchanged.`
+                                                    : `${count} in this workout.` }),
+                                                _jsx("button", { type: "button", className: "wpb-session-choice pressable", "aria-label": "Adjust working sets for " + ex.name,
+                                                    onClick: () => { setInfo(false); setSetCountEdit({ index: ei, exerciseId: e.id, value: differs ? Math.max(planned, done, 1) : count }); },
+                                                    children: "Adjust working sets" })
+                                            ] });
                                         })(), _jsx(WorkoutMachineInfoActions, {
                                             gym:gymProfile?.id===sessionGymId ? gymProfile : null,
                                             exerciseId:e.id,exerciseName:ex.name,
@@ -20052,35 +20066,6 @@ function App() {
         return nb;
     };
     const setBanFor = (id, on) => (on ? addBan(id) : removeBan(id));
-    /* Takes the PROGRAM it is biasing, so `volumeAdvice` can tell "you trained more than the plan
-       asked" from "you did exactly what the plan asked and the plan is over its own ceiling". It was
-       a zero-argument closure, which is precisely why the plan had no vote here. */
-
-
-    const volBiasFromHistory = (prog) => {
-        if (!history.length)
-            return null;
-        const bias = {};
-        /* THE MUTATING PATH. `autoregulate()` folds this into `autoBias` on every session start, so
-           this is the call site his report is actually about — pass the program or the plan has no vote. */
-        volumeAdvice(history, { program: prog }).forEach(a => { if (a.delta)
-            bias[a.part] = a.delta; });
-        // blend in the most recent subjective recovery feedback per muscle (RP-style titration)
-        const seen = {};
-        history.forEach(h => {
-            if (!h.feedback)
-                return;
-            Object.entries(h.feedback).forEach(([part, v]) => {
-                if (v == null || (seen[part] || 0) >= 2)
-                    return; // average the 2 most recent signals
-                seen[part] = (seen[part] || 0) + 1;
-                bias[part] = (bias[part] || 0) + v;
-            });
-        });
-        Object.keys(bias).forEach(p => { bias[p] = clamp(Math.round(bias[p]), -2, 2); if (!bias[p])
-            delete bias[p]; });
-        return Object.keys(bias).length ? bias : null;
-    };
     /* REBUILD A PREVIOUS-ENGINE PROGRAM on the Next engine, through the SAME path the wizard uses (generateNextWithShadow:
        shadow, canary and fail-closed handling included) — never a second route.
        Three promises: (1) the original is never destroyed — it is stored whole as `rebuiltFrom.program`, so the step is
@@ -21369,33 +21354,13 @@ function App() {
         const dp = { ...upNext.program, config: { ...upNext.program.config, deload: true } };
         startSession(day, weeksOf(dp) + 1, dp); // deload-intensity = light, reduced-volume session
     };
-    // Fold the latest performance + recovery feedback into a program's set volume right before it's
-    // trained, so each session is autoregulated to how you've actually been recovering — not frozen
-    // at whatever the bias was when the program was last generated. This is the closed loop that
-    // titrates volume toward your individual MAV/MRV instead of a fixed calendar ramp.
-    const autoregulate = (p) => {
-        if (!p || p.config?.progression === "manual" || p.config?.percentScheme)
-            return p;
-        const bias = volBiasFromHistory(p);
-        // Rebuild the per-session tweak from scratch in the dedicated `autoBias` field so it's applied to
-        // the designed slotBias baseline and can NEVER compound. Clearing autoBias first also means a
-        // session where recovery is neutral drops the previous session's tweak instead of inheriting it.
-        const next = { ...p, autoBias: undefined, days: p.days.map(d => ({ ...d })) };
-        if (!bias)
-            return next;
-        distributeVolBias(next, bias, "autoBias");
-        // summarise the adjustment so the session can briefly show that volume adapted to recovery
-        const up = Object.entries(bias).filter(([, v]) => v > 0).map(([k]) => PART_LABEL[k] || k);
-        const down = Object.entries(bias).filter(([, v]) => v < 0).map(([k]) => PART_LABEL[k] || k);
-        if (up.length || down.length)
-            next.autoTuned = { up, down };
-        return next;
-    };
+    // The saved week/slot prescription is authoritative before Start. Recovery advice and
+    // explicit program revisions may change it upstream; launching a workout cannot add or
+    // remove sets through a private legacy autoBias copy. Preview and direct launch agree.
     const startUpNext = () => {
         if (!upNext)
             return;
-        const p = autoregulate(upNext.program);
-        startSession(upNext.day, upNext.weekIndex, p);
+        startSession(upNext.day, upNext.weekIndex, upNext.program);
     };
     const openActive = () => {
         if (!upNext)

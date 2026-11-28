@@ -1,3 +1,9 @@
+## Build 1059 — Set-specific workout targets and quieter set-count review
+
+- Preserve exact prior working-set loads when an ordinary hold or per-set progression lacks a valid set-specific target. A later cable or machine set cannot borrow a heavier set's load without earning it.
+- Correct demonstrably unearned automatic increases in untouched resumed workout rows; preserve completed and manually edited work, the original issued set count, and technique activation ownership.
+- Move a genuine current-Plan versus issued-workout set-count difference into Exercise Info. Explicit adjustments still preserve logged work; no forced extra Review button in the workout logger.
+
 ## Build 1016 — Strength transition volume, set-count notes and original machine history
 
 - Strength accumulation following hypertrophy protects weekly working-set continuity without applying a peak taper or silently inventing sets that breach approved session capacity. Extremely high source-volume blocks use an explicit bounded continuity floor.

@@ -160,3 +160,86 @@ console.log('PASS M201: screenshot rep mismatch, immutable/manual resume, custom
     assert.notEqual(standard.action, 'increase_load', 'classic double still waits for all working sets');
 }
 console.log('PASS B845: incline dumbbell weight step below 25, real rack priority, set-specific dynamic double with safety gates.');
+
+
+// B1059: cable lateral raise history with a different prior evaluator count.
+// A missing fourth per-set target cannot default to the representative 15 lb.
+const { retainComparableWorkingTargets } = await import('../modules/training-domain/prescriptions.js');
+const { buildRuntimeSetTargets, refreshPendingSetTargets } = await import('../modules/next-engine/workout-runtime.js');
+const priorLateral = [{weight:15,reps:15},{weight:15,reps:12},{weight:10,reps:14},{weight:10,reps:13}];
+const incompleteLateral = {action:'hold',weight:15,setTargets:[{weight:15,reps:15},{weight:15,reps:12},{weight:10,reps:14}]};
+const correctedLateral = retainComparableWorkingTargets(incompleteLateral,priorLateral,4,[12,15],true);
+assert.deepEqual(correctedLateral.setTargets.map(t=>[t.weight,t.reps]),[[15,15],[15,12],[10,14],[10,13]]);
+assert.equal(retainComparableWorkingTargets(correctedLateral,priorLateral,4,[12,15],true),correctedLateral);
+const earnedLateral = retainComparableWorkingTargets({action:'increase_load',weight:20,setTargets:[
+    {weight:20,reps:12,previousLoad:15,earnedLoadIncrease:true},
+    {weight:15,reps:12}, {weight:10,reps:14}, {weight:15,reps:12,previousLoad:10,earnedLoadIncrease:true}
+]},priorLateral,4,[12,15],true);
+assert.deepEqual(earnedLateral.setTargets.map(t=>t.weight),[20,15,10,10]);
+assert.equal(retainComparableWorkingTargets({...incompleteLateral,referenceOnly:true},priorLateral,4,[12,15],true).setTargets.length,3);
+const three = retainComparableWorkingTargets(incompleteLateral,priorLateral,3,[12,15],true);
+assert.equal(three.setTargets.length,3,'fresh issue uses current Plan count');
+const runtimeLateral = buildRuntimeSetTargets({exerciseId:'cable_lateral_raise',cell:{sets:4,reps:[12,15],rir:[2,2],role:'hypertrophy_isolation'},workingLoad:15,setTargets:correctedLateral.setTargets,snapLoad:w=>w,includeWarmups:false});
+assert.deepEqual(runtimeLateral.map(t=>t.weight),[15,15,10,10]);
+const issuedRows=priorLateral.map((prior,index)=>{
+    const weight=index===3?15:prior.weight, reps=index===3?12:prior.reps;
+    return {weight:String(weight),reps:String(reps),auto:true,valueOwner:'prescription',done:false,
+        target:{w:String(weight),reps:'12-15',prefillReps:String(reps),decisionTrace:{
+            schemaVersion:1,programId:'p',dayId:'d',exerciseId:'cable-lat-raise',slot:1,weekIndex:3,
+            workingSetIndex:index,issuedWorkingSetCount:4,ownership:'prescription',
+            source:{load:prior.weight,reps:prior.reps,unit:'lb'},
+            evaluation:{action:'hold',reasonCode:'normal_progression'},
+            target:{load:weight,reps,unit:'lb'}
+        }}};
+});
+const restoredLateral=refreshPendingSetTargets(issuedRows,issuedRows.slice(0,3));
+assert.equal(restoredLateral.length,4,'do not erase an issued fourth working set on resume');
+assert.deepEqual(restoredLateral.map(t=>t.weight),['15','15','10','10']);
+assert.equal(restoredLateral[3].target.decisionTrace.evaluation.correctedFromLoad,15);
+assert.equal(refreshPendingSetTargets(restoredLateral,issuedRows.slice(0,3)),restoredLateral);
+const loggedLateral=[...issuedRows.slice(0,3),{...issuedRows[3],done:true}];
+assert.equal(refreshPendingSetTargets(loggedLateral,issuedRows.slice(0,3))[3],loggedLateral[3]);
+const editedLateral=[...issuedRows.slice(0,3),{...issuedRows[3],weightOwner:'user'}];
+assert.equal(refreshPendingSetTargets(editedLateral,issuedRows.slice(0,3))[3],editedLateral[3]);
+console.log('PASS B1059: positional mixed-load hold, verified earned increment, count mismatch and safe restored issued row repair.');
+
+// The plan, pre-start summary and new workout must have one working-set denominator.
+// The removed direct Home launcher used to inject +2 autoBias into a private custom copy.
+const { readFileSync } = await import('node:fs');
+const { buildSessionReview } = await import('../modules/session-tools.js');
+const { summarizeSession } = await import('../modules/engine-api.js');
+const hipDay = { id: 'lower', label: 'Lower', primaryIndex: 0, exercises: ['machine-hip-thrust'] };
+const hipPlan = { id: 'prestart-set-authority', custom: true, engineV: 4,
+    config: { weeks: 4, unit: 'lb', goal: 'both', progression: 'auto', experience: 'intermediate' },
+    days: [hipDay], overrides: { 'lower:0': { sets: 3, reps: '10-15', techOverride: null } } };
+const hip = EX_BY_ID['machine-hip-thrust'];
+const planBefore = JSON.stringify(hipPlan);
+for (const week of [1, 2, 3, 4]) {
+    const cell = computeCell(hipPlan, hipDay, hip.id, 0, week);
+    const preview = buildSessionReview(hipPlan, hipDay, week, 'lb', [], {});
+    const rows = prescribeSets(hipPlan, hipDay, hip, 0, week, 'lb', null, {}, {}, [], true);
+    assert.equal(cell.sets, 3);
+    assert.equal(summarizeSession(hipPlan, hipDay, week).sets, 3);
+    assert.equal(preview.exercises[0].effective.length, 3);
+    assert.equal(rows.filter(row => !row.warm && !row.sub).length, 3);
+    assert.ok(rows.filter(row => !row.warm && !row.sub).every(row => row.target.decisionTrace.issuedWorkingSetCount === 3));
+}
+assert.equal(JSON.stringify(hipPlan), planBefore);
+const legacyLaunchCopy = { ...hipPlan, autoBias: { 'lower:0': 2 } };
+assert.equal(computeCell(legacyLaunchCopy, hipDay, hip.id, 0, 1).sets, 5, 'reproduces the old private start-time override');
+const source = readFileSync('modules/App.js', 'utf8');
+const launch = source.slice(source.indexOf('    const startUpNext = () => {'), source.indexOf('    const openActive = () => {'));
+assert.match(launch, /startSession\(upNext\.day, upNext\.weekIndex, upNext\.program\)/);
+assert.doesNotMatch(launch, /autoregulate|autoBias|distributeVolBias/);
+assert.doesNotMatch(source, /const volBiasFromHistory\s*=/);
+console.log('PASS pre-start authoritative set count: Plan, summary, preview, working rows and issued denominator agree.');
+
+// A skipped middle set is not a completed observation, and an already-issued
+// evaluator target at a verified same-exercise load must not be silently cut.
+const skippedMiddle = retainComparableWorkingTargets({action:'hold',weight:60,setTargets:[
+    {weight:60,reps:20},{weight:60,reps:20},{weight:55,reps:18}
+]},[{weight:60,reps:20},null,{weight:55,reps:18}],3,[15,25]);
+assert.deepEqual(skippedMiddle.setTargets.map(t=>t.weight),[60,60,55]);
+const missingFourth = retainComparableWorkingTargets(skippedMiddle,
+    [{weight:60,reps:20},null,{weight:55,reps:18}],4,[15,25]);
+assert.deepEqual(missingFourth.setTargets.map(t=>t.weight),[60,60,55,55]);

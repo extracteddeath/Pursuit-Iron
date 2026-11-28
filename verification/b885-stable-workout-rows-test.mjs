@@ -22,3 +22,7 @@ assert.ok(css.includes('B1043 — One line per set') && css.includes(grid), 'Set
 assert.ok(!css.includes('content:"REPS"') && !css.includes('content:"LOAD"') && !app.includes('content:"Load"'), 'Column labels are not repeated on every row');
 assert.equal((workout.match(/!s\.done && isActive && _jsx\(StepButton/g)||[]).length, 4, 'Only the working set carries steppers');
 console.log('PASS B885 stable set-row contract: one reference, even fields, separated controls.');
+
+assert.ok(!workout.includes('Plan ${plannedCount} · Workout ${wTotal} · Review'), 'No disruptive Plan-vs-workout Review button in the logger');
+assert.ok(workout.includes('in this workout · ${planned} in the current plan. Logged work stays unchanged.'), 'A genuine difference is explained in Exercise Info');
+assert.ok(workout.includes('value: differs ? Math.max(planned, done, 1) : count'), 'Explicit set-count adjustment keeps completed work');

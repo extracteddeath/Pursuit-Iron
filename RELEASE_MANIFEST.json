@@ -2,10 +2,10 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 1058,
+  "build": 1059,
   "engineVersion": "0.65.10",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "b480b7fc75a9efa41a87d2cce7b0c1598dd8d5d8b108c3c8d7e26599876bf460",
+  "runtimeAggregate": "ebb7f691256ba2491b6e355a43ec3b47867bb53a2c3c004e054eb3aaea11749f",
   "runtimeFiles": {
     "modules/app-storage-ownership.js": "765ef4d37d4f73967fee7ef1942de229e905e112c7735b53de86a8e7106b3e39",
     "modules/backup-restore-panel.js": "194d953c2478a300c21e303c19fd7dd27ac436ddef21bcacaa7b8299d60123df",
@@ -101,7 +101,7 @@
     "modules/next-engine/weekly-recovery.js": "92cf14bd6ca28715d1d3f9ddde1cc0f42502892f230d69650f83bf6b921c111c",
     "modules/next-engine/workout-history-adapter.js": "b696675ec20d183bdd1564564dc9cab0fb6091b6d2245f2b212c2fe85151dbfb",
     "modules/next-engine/workout-replay.js": "1577d78ffa148fb4f33f6462fd348cc80c09fa3c89657672e0e0852d21b225d1",
-    "modules/next-engine/workout-runtime.js": "ade4d6ea9440bcee475c5e9cd894e50d1c58e410ea47ac4302e3f1fff8f0153d",
+    "modules/next-engine/workout-runtime.js": "4f47d8d03b8bdaec050b6229d6805c87f81588e65e654aa0da5f9c89962a017f",
     "modules/pain-check.js": "f11bb89908eaae484aecf2720b29139f4e518241bd103667b1caa7cc4389f1f7",
     "modules/plan-session-surfaces.js": "f22015e23f5776d1f10b8be2601ded40be2e03567a9945913ce2fbecf33e17af",
     "modules/program-code.js": "e5d8bc2de0f23f73961556608f1b136a44061d3163052c099d5ab8b4920d394f",
@@ -130,7 +130,7 @@
     "modules/training-domain/catalog.js": "5bdc0e2a387f379ae4f5a3e6a1d117d42d942bbcfaa8240bbfed707580a3ce21",
     "modules/training-domain/history-import.js": "13a1128e16c886e280feedd45beb7e340cd9a5fac8752741632fe4b08dbc9462",
     "modules/training-domain/loading-tools.js": "ee3a4aedf3c240207d0d35523f8e252a5214eef1911abd08f489f265686d9a0d",
-    "modules/training-domain/prescriptions.js": "fdabd811dcf4b6ae951038fc91dc7d084047607b7492fbf79133e9e7669560c7",
+    "modules/training-domain/prescriptions.js": "8985be351be704544f835cb848e4126db6bf0b7a987da560192e7a8e0a526fbc",
     "modules/training-domain/programs.js": "a0e3d245a142f442c06f44f99c41502ca0be12b7778c9265de678493c4dd9631",
     "modules/training-domain/records.js": "03f78ea63a0aceb842fff97ed7a6060533997887f305f908799335b6ef955d3a",
     "modules/training-domain/starting-load.js": "ccc48203a52f19cf9e38740087f4c3d5bae7c462104e46313024a9ee2ad56aa5",
@@ -162,11 +162,11 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "14fdfbf633a862ae34163baa16686790ca4491ff879813f2a58b6c6335266a60",
-    "index.html": "300658e355558344104cffe641eb0bde9423e7f0c41e013170d9567af2b2cf0f",
-    "sw.js": "a6e4c126ee6da04382bd070260207908c485add24ff47adeb607fef4dc185efd",
-    "BUILD_PROFILE.json": "b1e7bc96dca88ef32c0d08dec9758d0c9bd7b0485777c256ba51a2ee9f4c7fb0",
-    "CHANGELOG.md": "b2652caa581ef510ddbf292f8422749da1a1616e8c07b2de372922a2782a2539",
+    "modules/App.js": "23f6f51272dc08f6934d5d720fa5e6b914200d9a3d8b42ee3a735ac5e896c426",
+    "index.html": "dae98449e68b931fb514748db0aded81a9549c5c4d7fda35de26ade037883de7",
+    "sw.js": "16f9162b1229844f9e4747581defabb0d0c810b4fdaf2cf5ff22a7d679be252f",
+    "BUILD_PROFILE.json": "3cd86a78b94eb9cedebae53390b3c2350d790d038d548fe5a6c035f015b276eb",
+    "CHANGELOG.md": "a1027f698ce71fcbfd3e5069955c2a92376879efafd0936d3d532f2c5fe4079f",
     "app.css": "c975f7ec8afdc7f45ce419c4a0e94cbdd3c051ed4f29d0e9ad4182bd4ef52602",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
@@ -174,6 +174,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1058-r3bb5a85fe870573d",
-  "uiMilestone": "Build 1058 · Verified descending drop-set targets"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1059-ra07a557819dcbf48",
+  "uiMilestone": "Build 1059 · Set-specific targets, authoritative pre-start plan and cleaner workout review"
 }

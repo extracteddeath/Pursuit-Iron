@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 75,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1058-r3bb5a85fe870573d",
-  "uiMilestone": "Build 1058 · Verified descending drop-set targets"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1059-ra07a557819dcbf48",
+  "uiMilestone": "Build 1059 · Set-specific targets, authoritative pre-start plan and cleaner workout review"
 }

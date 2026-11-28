@@ -38,45 +38,69 @@ const snapshotContext = (program, legacyExercises) => {
         legacyMap: new Map(legacyExercises.map(e => [e.id, e])) };
 };
 
+// Resolve the live roster and exact prescribed cells once. The engine's
+// volume audit and the displayed duration must not maintain different rest,
+// technique, or superset calculations.
+function projectShellSession(program, day, di, week, context) {
+    const { exerciseMap, legacyMap } = context;
+    let missing = false;
+    const source = sessionForDay(program, day, di);
+    if (!source) return { session: null, missing: true };
+    const exercises = day.exercises.map((id, slot) => {
+        const key = keyOf(day, slot);
+        const exerciseId = resolveNextShellExerciseId(program, day, slot, legacyMap.get(id));
+        const def = exerciseMap.get(exerciseId);
+        const cell = getNextShellCell(program, day, slot, week);
+        if (!def || !cell || !Number.isFinite(cell.sets)) { missing = true; return null; }
+        const original = source.exercises.find(e => e.exerciseId === exerciseId) ?? source.exercises[slot];
+        return { ...original, exerciseId, name: def.name, sets: cell.sets, role: cell.role,
+            progressionStyle: cell.progressionStyle,
+            progressionSelection: cell.ownership.progressionStyle === 'user'
+                ? { ...original?.progressionSelection, source: 'manual', confidence: 'high', reason: 'You selected this progression method.' }
+                : original?.progressionSelection,
+            prescription: { ...original?.prescription,
+                reps: engineRange(cell.reps, original?.prescription?.reps),
+                rir: engineRange(cell.rir, original?.prescription?.rir),
+                restSeconds: cell.rest != null && cell.rest !== '' && Number.isFinite(Number(cell.rest)) && Number(cell.rest) >= 0 ? Number(cell.rest) : 90 },
+            advancedTechnique: advancedTechniqueFromCell(cell, original?.advancedTechnique),
+            supersetGroup: undefined,
+            shellKey: key, shellId: id, shellSlot: slot };
+    }).filter(Boolean);
+    for (let slot = 0; slot < exercises.length - 1; slot++) {
+        if (!program.config?.noSupersets && program.ss?.[keyOf(day, slot)] && !exercises[slot].supersetGroup && !exercises[slot + 1].supersetGroup) {
+            exercises[slot].supersetGroup = `${day.id}:pair:${slot}`;
+            exercises[slot + 1].supersetGroup = `${day.id}:pair:${slot}`;
+        }
+    }
+    return { session: { ...source, shellDayId: day.id, exercises,
+        estimatedMinutes: estimateSessionMinutes(exercises) }, missing };
+}
+
+// Read the same executable clock without building a muscle ledger for each
+// Plan/Home day. A missing projection is not a verified duration.
+export function estimateShellDayMinutes(program, day, week, legacyExercises = []) {
+    if (program?.engineSource !== 'pursuit-next' || !program.nextEngine?.program
+        || !program.nextEngine.request || !Array.isArray(program.days) || !day) return null;
+    const di = program.days.findIndex(d => d.id === day.id);
+    if (di < 0) return null;
+    const projected = projectShellSession(program, day, di, week, snapshotContext(program, legacyExercises));
+    return projected.missing ? null : projected.session?.estimatedMinutes ?? null;
+}
+
 // Read the live shell roster and the exact cells used by Program/Home/Workout. Neither the
 // immutable generation snapshot nor legacy slotBias is a substitute for a current prescription.
 export function captureShellVolumeSnapshot(program, week, legacyExercises = [], dayId = null, sharedContext = null) {
     if (!program?.nextEngine?.program || !program.nextEngine.request || !Array.isArray(program.days))
         return null;
-    const { request, exerciseMap, legacyMap } = sharedContext ?? snapshotContext(program, legacyExercises);
+    const context = sharedContext ?? snapshotContext(program, legacyExercises);
+    const { request, exerciseMap } = context;
     const sessions = [];
     let missing = false;
     program.days.forEach((day, di) => {
         if (dayId && day.id !== dayId) return;
-        const source = sessionForDay(program, day, di);
-        if (!source) { missing = true; return; }
-        const exercises = day.exercises.map((id, slot) => {
-            const key = keyOf(day, slot);
-            const exerciseId = resolveNextShellExerciseId(program, day, slot, legacyMap.get(id));
-            const def = exerciseMap.get(exerciseId);
-            const cell = getNextShellCell(program, day, slot, week);
-            if (!def || !cell || !Number.isFinite(cell.sets)) { missing = true; return null; }
-            const original = source.exercises.find(e => e.exerciseId === exerciseId) ?? source.exercises[slot];
-            return { ...original, exerciseId, name: def.name, sets: cell.sets, role: cell.role,
-                progressionStyle: cell.progressionStyle,
-                progressionSelection: cell.ownership.progressionStyle === 'user'
-                    ? { ...original?.progressionSelection, source: 'manual', confidence: 'high', reason: 'You selected this progression method.' }
-                    : original?.progressionSelection,
-                prescription: { ...original?.prescription,
-                    reps: engineRange(cell.reps, original?.prescription?.reps),
-                    rir: engineRange(cell.rir, original?.prescription?.rir),
-                    restSeconds: cell.rest != null && cell.rest !== '' && Number.isFinite(Number(cell.rest)) && Number(cell.rest) >= 0 ? Number(cell.rest) : 90 },
-                advancedTechnique: advancedTechniqueFromCell(cell, original?.advancedTechnique),
-                supersetGroup: undefined,
-                shellKey: key, shellId: id, shellSlot: slot };
-        }).filter(Boolean);
-        for (let slot = 0; slot < exercises.length - 1; slot++) {
-            if (!program.config?.noSupersets && program.ss?.[keyOf(day, slot)] && !exercises[slot].supersetGroup && !exercises[slot + 1].supersetGroup) {
-                exercises[slot].supersetGroup = `${day.id}:pair:${slot}`;
-                exercises[slot + 1].supersetGroup = `${day.id}:pair:${slot}`;
-            }
-        }
-        sessions.push({ ...source, shellDayId: day.id, exercises, estimatedMinutes: estimateSessionMinutes(exercises) });
+        const projected = projectShellSession(program, day, di, week, context);
+        if (projected.missing) missing = true;
+        if (projected.session) sessions.push(projected.session);
     });
     const events = createTrainingSetEvents(sessions, request.customExercises);
     const muscleLedger = deriveMuscleLedger(events);

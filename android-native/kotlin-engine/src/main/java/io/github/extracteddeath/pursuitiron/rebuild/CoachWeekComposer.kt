@@ -93,7 +93,9 @@ data class ComposerRequest(
     val allowDirectTricepsOnLower:Boolean=true,
     /** Empty preserves historical composition. New prescriptions supply
      * their actual per-visit warmups and working-set/rest durations. */
-    val visitTimings:List<ComposerVisitTiming> = emptyList()
+    val visitTimings:List<ComposerVisitTiming> = emptyList(),
+    /** Opt-in for new generation policies; archived policy replay stays unchanged. */
+    val preferConsolidatedAccessories:Boolean=false
 )
 data class ComposerVisit(val dayIndex:Int,val exerciseId:String,
     val pattern:ComposerPattern,val sets:Int)
@@ -369,7 +371,9 @@ object CoachWeekComposer {
         val soft:Long,
         /** Tie-break only: never compete with dose, time or training priority. */
         val sameStationCrowding:Int,
-        val cableSmithVisits:Int
+        val cableSmithVisits:Int,
+        val accessoryVisits:Int,
+        val accessorySetClustering:Int
     ):Comparable<Cost> {
         val hardSatisfied:Boolean get()=missingPrimaryDays==0 &&
             missingRequiredVisits==0 && emptyScheduledDays==0 &&
@@ -378,7 +382,7 @@ object CoachWeekComposer {
             {it.missingPrimaryDays},{it.missingRequiredVisits},
             {it.emptyScheduledDays},{it.missingDirectMuscleDays},
             {it.mevDeficitThousandths},{it.soft},
-            {it.sameStationCrowding},{it.cableSmithVisits})
+            {it.accessoryVisits},{it.accessorySetClustering},{it.sameStationCrowding},{it.cableSmithVisits})
     }
     private fun unmetPrimaryDays(request:ComposerRequest,
         visits:List<ComposerVisit>):Set<Int> =
@@ -463,7 +467,16 @@ object CoachWeekComposer {
         return Cost(missingPrimary,missingPinned,emptyDays,missingDirect,
             mevGap,mavGap*2L+short*180L+long*250L+
                 patternGap*400L+visits.sumOf {it.sets}*100L-priority*6L,
-            crowding,stationVisits.size)
+            crowding,stationVisits.size,
+            if(request.preferConsolidatedAccessories)visits.count {
+                options.getValue(it.exerciseId).role==ComposerRole.ACCESSORY
+            } else 0,
+            if(request.preferConsolidatedAccessories)visits.filter {
+                options.getValue(it.exerciseId).role==ComposerRole.ACCESSORY
+            }.groupBy {it.dayIndex}.values.sumOf {day ->
+                val sets=day.sumOf {it.sets}
+                sets*sets
+            } else 0)
     }
     /**
      * One candidate safety policy for BOTH initial generation and local
@@ -651,6 +664,39 @@ object CoachWeekComposer {
                         this[index]=visit.copy(sets=visit.sets-1)
                     })
             }
+            }
+            // Atomic consolidation: two short visits of the SAME accessory can
+            // become one fuller visit, without changing any working-set credits.
+            // Never delete a primary/secondary or cross exercise identities.
+            // Explicit opt-in and all structural permissions are required.
+            if(request.preferConsolidatedAccessories &&
+                permissions.mayAdjustSets && permissions.mayMoveVisits &&
+                permissions.mayReplaceExercises && permissions.mayAddVisits) {
+                for(source in chosen.indices) {
+                    if(evaluated>=MAX_REPAIR_EVALUATIONS_PER_PASS)break
+                    val from=chosen[source]
+                    val option=options.getValue(from.exerciseId)
+                    if(option.role!=ComposerRole.ACCESSORY)continue
+                    for(destination in chosen.indices) {
+                        if(evaluated>=MAX_REPAIR_EVALUATIONS_PER_PASS)break
+                        val to=chosen[destination]
+                        if(source==destination || from.exerciseId!=to.exerciseId ||
+                            from.dayIndex==to.dayIndex)continue
+                        val total=from.sets+to.sets
+                        if(total>option.maximumSetsPerVisit)continue
+                        // Pin/frequency/time/dose checks in consider remain
+                        // authoritative. Never consolidate an unmet direct-day
+                        // requirement or lose a required exercise visit.
+                        val trial=chosen.mapIndexedNotNull {index,visit->
+                            when(index) {
+                                source->null
+                                destination->visit.copy(sets=total)
+                                else->visit
+                            }
+                        }
+                        consider(trial)
+                    }
+                }
             }
             if(permissions.mayAddVisits && chosen.size<MAX_VISITS) {
                 for(option in eligible) {
